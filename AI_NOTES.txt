@@ -7943,3 +7943,6 @@ Malik: "jo cheezein ab use nahi kar raha nikal do" (OK). web-dukan.js MENU_OLD=f
 
 === v2.268.1 (13 Nov 2026) — rack size mein item tap = Transfer register (ghalti) ===
 Online Dukan ki tasveer `data-th` (thumb) aur pos-stock ka document click `[data-th]` (Transfer register) ek hi naam — item dabane par register khul jata tha. pos-stock handler ab #wdDlg ke andar ke click chhor deta hai.
+
+=== v2.269.0 (13 Nov 2026) — Online Dukan: refresh / dobara kholne par wahin ===
+Malik: "online dukan par hon to app refresh ya nayi open hone par wapas usi jagah". localStorage sam-wd-open {t, v, k} (paint mein taza, asal band par mit-ta); app.js wdResume (login ke 0.9 s baad, 12 ghante tak) -> openWebDukan(back) -> list / Racks / rack ka size wahi.

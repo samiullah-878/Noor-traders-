@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRows, shelfPack } from './dukan/khula.js?v=2.268.1';
-import { smartFind } from './dukan/dhoond.js?v=2.268.1';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRows, shelfPack } from './dukan/khula.js?v=2.269.0';
+import { smartFind } from './dukan/dhoond.js?v=2.269.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -26,6 +26,7 @@ const rkPh = k => 'rk_' + hash(k).toString(36);
 const KIND = { g: '🫙 Dabba', s: '🧺 Tora', n: '▦ Shelf' };   // v2.156.0: website dukan.js mein BILKUL yahi (rack ki tasveer ka id)
 const ago = t => { const m = Math.round((Date.now() - (Number(t) || 0)) / 60000); return !t ? '—' : m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
 const LS = 'sam-web-dukan';
+const WD_ON = 'sam-wd-open';   // v2.269.0: khirki khuli hai (app refresh / dobara khulne par wapas yahin)
 const pref = (() => { try { return JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch { return {}; } })();
 const keep = () => { try { localStorage.setItem(LS, JSON.stringify({ ck: W?.ck || '', f: W?.f || 'all' })); } catch {} };
 export const WEB_URL = () => new URL('dukan/', location.href.split('#')[0].replace(/[^/]*$/, '')).href;
@@ -74,8 +75,9 @@ function racksOf(L) {
 const rackName = k => String(W.racks.cn[k] || '').trim() || (k === KHK ? KH_NAME : title(k));
 
 // ---------- 🪟 khirki ----------
-export function webOpen(ctx) {
+export function webOpen(ctx, back) {
   A = ctx; W = fresh();
+  if (back && back.v === 'racks') W.view = 'racks'; else if (back && back.v === 'rsz' && back.k) { W.view = 'rsz'; W.rz = { k: String(back.k) }; }   // v2.269.0: app dobara khuli = wahin wapas
   let d = $('wdDlg');
   if (!d) {
     d = document.createElement('dialog'); d.id = 'wdDlg'; d.className = 'wd';
@@ -121,6 +123,7 @@ export function webClose() {
   if (un) { try { un(); } catch {} un = null; }
   if (rkT) { clearTimeout(rkT); rkFlush(W); }   // v2.177.0: baqi rack save foran
   clearTimeout(wsT); W = null;
+  try { localStorage.removeItem(WD_ON); } catch {}
   return true;
 }
 window.ntWebClose = webClose;
@@ -131,6 +134,7 @@ function paintSoon() { clearTimeout(psT); psT = setTimeout(paint, 60); }
 function paint() {
   if (!W || !$('wdDlg')) return;
   const v = W.view;
+  try { localStorage.setItem(WD_ON, JSON.stringify({ t: Date.now(), v, k: W.rz?.k || '' })); } catch {}
   $('wdT').textContent = v === 'crop' ? '✂️ Photo se items' : v === 'pick' ? '🔎 Ye kaun sa item?' : v === 'racks' ? '🗂 Racks ki tarteeb' : v === 'info' ? '🏪 Dukan ki maloomat' : v === 'ai' ? '🤖 Racks khud banao' : '🏪 Online Dukan';
   if (v === 'ai') return paintAi();
   if (v === 'net') { $('wdT').textContent = '🌐 Khula maal ki tasveerein'; return paintNet(); }

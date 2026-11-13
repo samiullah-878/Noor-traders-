@@ -27,8 +27,8 @@
 // phera cards. Purani alag entries (bilty/diesel/kharch/reading/tracker/driver — v2.92) bhi jor mein rehti hain.
 // Data: businesses/noor-traders/gaari/{id} kind 'phera' {date, startR, endR, trackerKm, bilties[{id,from,to,party,kiraya,comm,col}],
 //   kharche[{n,a}], diesel[{l,rate,amount,full}], status open|closed, note, by, byName, at, trackerTrips[{t,km,cut}] (v2.95.8)} + gaari/_config.
-import { smartHit } from './smart-search.js?v=2.268.1';
-import { firebaseConfig } from './config.js?v=2.268.1';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.269.0';
+import { firebaseConfig } from './config.js?v=2.269.0';   // v2.162.0: 📍 MacroDroid ka REST pata   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = (v, d = 0) => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: d });
@@ -750,7 +750,7 @@ async function fxCfgSave(wh) {
 // 🗑 trip hatao / ↩ wapas / 🔄 din naya — gaariDay/<din> {ft, fh, fk, fn, fd} (fx-app fxHidden / fxTotal — macro dobara parhe to hataya wapas nahi)
 async function fxHide(date, t, back) {
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.268.1');
+  const M = await import('./fx-app.js?v=2.269.0');
   let ft = [], fd = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {} try { fd = JSON.parse(d.fd || '[]') || []; } catch {}
   let fh = M.fxHidden(d.fh);
   if (back) { const h = fh.find(x => x[0] === t); if (!h) return; fh = fh.filter(x => x[0] !== t); if (!ft.some(x => x[0] === t)) ft.push([t, h[1]]); ft.sort((a, b) => a[0].localeCompare(b[0])); }
@@ -761,7 +761,7 @@ async function fxHide(date, t, back) {
 }
 async function fxUnhideAll(date) {   // v2.207.1: ↩ sab hataye hue wapas (ek tap)
   const d = gpsDays.get(date); if (!d || !isOwner()) return;
-  const M = await import('./fx-app.js?v=2.268.1'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
+  const M = await import('./fx-app.js?v=2.269.0'); let ft = []; try { ft = JSON.parse(d.ft || '[]') || []; } catch {}
   for (const [t, km] of M.fxHidden(d.fh)) if (!ft.some(x => x[0] === t)) ft.push([t, km]); ft.sort((a, b) => a[0].localeCompare(b[0]));
   const upd = { ft: JSON.stringify(ft), fh: '[]', fk: M.fxTotal(ft), fn: ft.length }; Object.assign(d, upd); openFalconDay(date, true);
   try { await cloud.setGaariDay(date, upd); notice(`↩ ${ft.length} trip wapas — din ${num(upd.fk, 1)} km · naqsha: 🔄 Abhi parho / Falcon dobara kholein`); } catch (e) { notice('❌ ' + (e?.message || e)); }
@@ -779,7 +779,7 @@ async function fxRun(force) {
   if (!isOwner() || fxRunning) return; if (!force && Date.now() - fxRunAt < 120000) return;
   fxRunning = true; fxRunAt = Date.now(); const st = m => { fxStMsg = m; const el = $('fxRunSt'); if (el) el.textContent = m; };
   try {
-    const M = await import('./fx-app.js?v=2.268.1');
+    const M = await import('./fx-app.js?v=2.269.0');
     st('⏳ Falcon ka naya text dekh raha hoon…');
     const r = await M.fxProcess(cloud, st);
     if (!r.n && force) st(`Koi naya Falcon text nahi${fxLast && N(fxLast.at) ? ' · aakhri ' + hm(N(fxLast.at)) : ''} — 📲 se parhwao`);   // v2.205.0 (malik: button dabaya, kuch nahi hua — khamosh nahi)
@@ -930,7 +930,7 @@ async function fxShots(files) {
   const st = m => { fxStMsg = m; const el = $('fxRunSt'); if (el) el.textContent = m; };
   st(`⏳ ${files.length} screenshot — 🤖 parh raha hoon…`);
   try {
-    const M = await import('./fx-app.js?v=2.268.1');
+    const M = await import('./fx-app.js?v=2.269.0');
     const r = await M.fxFromShots(cloud, files, { ai, shrink, onStatus: st });
     for (const [dd, u] of Object.entries(r.days)) gpsDays.set(dd, { ...(gpsDays.get(dd) || {}), ...u });
     const ds = Object.keys(r.days).sort();
@@ -1007,7 +1007,7 @@ async function fxDownload() {
   if (gKey == null) { try { gKey = await cloud.getGaariKey(); } catch { gKey = ''; } }
   if (!gKey) { notice('Pehle 🔑 chaabi banao (📱 Gaari phone setup)'); return; }
   try {
-    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.268.1');
+    const { FALCON_MACRO } = await import('./falcon-macro.js?v=2.269.0');
     const txt = JSON.stringify(FALCON_MACRO).split('__NT_URL__').join(ggUrl().replace('/gaariGps?', '/gaariFx?')).split('__NT_KEY__').join(gKey);   // v2.202.0: Falcon ka text gaariFx mein (app khud parhti hai — PC nahi)
     const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob([txt], { type: 'application/octet-stream' })); a.download = 'NT_Falcon_km.macro';
     document.body.appendChild(a); a.click(); setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 5000);
