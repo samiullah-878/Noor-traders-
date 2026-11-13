@@ -7767,3 +7767,7 @@ Malik: 'jo kharcha aur khaton wala print kar rahe hain — narration mein party 
 === 13 Nov 2026 — v2.246.0 / PC kh-wa v1.5 · wa-out v1.13 (wa-parchi v2.25 sirf dobara shuru): 🔔 WhatsApp reminder ===
 Malik: 'reminder bhi WhatsApp par · "Reminder Samiullah ne payment deni hai 7800 / 03450412515 / kal se jab tak off na karo" · "Reminder off" · "All reminder show" · "3 off" · sirf mujhe (number mera apna) · Mubeen ka apna reminder system apne number se · waqt 11 baje theek'.
 kh-wa: REM_RE / OFF_RE -> `remCmd` (sirf prFrom / prTo): lagana (kal se / aaj se / parson se; apna number + 'jab tak…' likhai se hata), list, 'N off', 'reminder off' (khPend stg x: 1 = haan). Data blueAccess/waRem-<number> {L:[{n,t,from,on,at}], next} — number kabhi dobara nahi lagta. `remTick` (sirf wa-out mein `startRem`, har 1 min, 11:00–21:00 PK): har number ko din ka EK paigham waOut rm-<number>-<din> (create = dohra nahi). App ki Reminder screen se ALAG (wahan nahi dikhte). Test: fake Firestore par lagana / list / tick / off — theek; asal WhatsApp par NAHI. AI nahi.
+
+
+=== 13 Nov 2026 — v2.246.1 / PC kh-wa v1.6: 🔔 reminder 1, 3, 5 baje ===
+Malik: 'reminder din mein 1 baje, 3 baje, sham mein 5 baje aana chahiye'. REM_HOURS [13, 15, 17] — har waqt ka alag paigham waOut rm-<number>-<din>-<ghanta>; PC us waqt band ho to on hote hi sirf CHALU waqt wala (purane waqt dobara nahi). 11 baje wala hata. Asal WhatsApp par test nahi.

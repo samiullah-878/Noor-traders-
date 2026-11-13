@@ -17,7 +17,8 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.5';   // v1.5 (13 Nov): 🔔 WhatsApp reminder — 'reminder <likhai> / kal se' · 'all reminder show' · '3 off' · 'reminder off'; roz 11 baje, jab tak off na ho; har number ka apna (malik, Mubeen)
+const VER = '1.6';   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
+// v1.5:   // v1.5 (13 Nov): 🔔 WhatsApp reminder — 'reminder <likhai> / kal se' · 'all reminder show' · '3 off' · 'reminder off'; roz 11 baje, jab tak off na ho; har number ka apna (malik, Mubeen)
 // v1.4:   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
 const pad3 = n => String(n).padStart(3, '0');
 const rsT = v => 'Rs ' + Math.round(Number(v) || 0).toLocaleString('en-PK');
@@ -153,7 +154,7 @@ function make({ biz, log = () => {} }) {
   }
   // ---- v1.5: 🔔 REMINDER (malik 13 Nov: 'reminder bhi WhatsApp par · "Reminder Samiullah ne payment deni hai 7800 / kal se jab tak off na karo" · "all reminder show" · "3 off" · sirf mujhe · Mubeen ka apna reminder system apne number se')
   //   blueAccess/waRem-<number> {L:[{n, t, from, on, at}], next} — har number ki apni list; roz REM_HOUR baje EK paigham (waOut rm-<number>-<din>, create = dohra nahi). AI nahi.
-  const REM_HOUR = 11, canRem = ph => base.prFrom.includes(ph) || base.prTo.includes(ph), RM = ph => BA.doc('waRem-' + ph);
+  const REM_HOURS = [13, 15, 17], REM_TXT = '1, 3 aur 5 baje', canRem = ph => base.prFrom.includes(ph) || base.prTo.includes(ph), RM = ph => BA.doc('waRem-' + ph);
   async function remGet(ph) { const sn = await RM(ph).get(), d = sn.exists ? sn.data() || {} : {}; return { L: Array.isArray(d.L) ? d.L : [], next: Number(d.next) || 1 }; }
   const remSave = (ph, R) => RM(ph).set({ L: R.L.slice(-200), next: R.next, at: Date.now() });
   const dayPlus = n => new Date(Date.now() + 5 * 3600000 + n * 86400000).toISOString().slice(0, 10), dShow = d => String(d).slice(8, 10) + '-' + String(d).slice(5, 7);
@@ -176,14 +177,14 @@ function make({ biz, log = () => {} }) {
     if (act.length >= 50) { await say(ph, 'kx-' + w, '✕ 50 reminder chalu hain — pehle kuch band karein ("3 off").'); return true; }
     const n = R.next, from = dayPlus(add); R.L.push({ n, t, from, on: true, at: Date.now() }); R.next = n + 1; await remSave(ph, R);
     log(`🔔 reminder ${n} (${name}): ${t}`);
-    await say(ph, 'kw-' + w, `✅ Reminder ${n} lag gaya\n${t}\n${add ? dShow(from) + ' se' : 'Aaj se'} roz subah ${REM_HOUR} baje — jab tak off na karein.\nBand: "${n} off" · List: "all reminder show"`); return true;
+    await say(ph, 'kw-' + w, `✅ Reminder ${n} lag gaya\n${t}\n${add ? dShow(from) + ' se' : 'Aaj se'} roz din mein ${REM_TXT} — jab tak off na karein.\nBand: "${n} off" · List: "all reminder show"`); return true;
   }
   const remSent = {};
   async function remTick() {
-    try { const h = new Date(Date.now() + 5 * 3600000).getUTCHours(); if (h < REM_HOUR || h >= 21 || cfg.on === false) return; const day = today();
-      for (const ph of [...new Set([...base.prFrom, ...base.prTo])]) { if (!ph || remSent[ph] === day) continue;
-        const R = await remGet(ph), due = R.L.filter(r => r.on !== false && String(r.from || '') <= day); remSent[ph] = day; if (!due.length) continue;
-        await say(ph, 'rm-' + ph + '-' + day, `🔔 Aaj ke reminder (${dShow(day)}):\n${remList(due)}\n\nBand karne ke liye: "${due[0].n} off"`); log(`🔔 ${who(ph)}: ${due.length} reminder bheje`); }
+    try { const h = new Date(Date.now() + 5 * 3600000).getUTCHours(), slot = REM_HOURS.filter(x => x <= h).pop(); if (!slot || h >= 21 || cfg.on === false) return; const day = today(), key = day + '-' + slot;
+      for (const ph of [...new Set([...base.prFrom, ...base.prTo])]) { if (!ph || remSent[ph] === key) continue;
+        const R = await remGet(ph), due = R.L.filter(r => r.on !== false && String(r.from || '') <= day); remSent[ph] = key; if (!due.length) continue;
+        await say(ph, 'rm-' + ph + '-' + key, `🔔 Reminder (${slot - 12} baje):\n${remList(due)}\n\nBand karne ke liye: "${due[0].n} off"`); log(`🔔 ${who(ph)}: ${due.length} reminder bheje`); }
     } catch (e) { log('🔔 reminder tick: ' + e.message); }
   }
   let remTimer = null; const startRem = () => { if (remTimer) return; remTimer = setInterval(remTick, 60000); if (remTimer.unref) remTimer.unref(); setTimeout(remTick, 20000); };
