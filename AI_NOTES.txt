@@ -7812,3 +7812,9 @@ Malik: 'search mein neeche wale arrow se items mein jaye, left / right se aage p
 - purchase.js keydown (sirf .pp-posr): search mein ↓ = pehli mili item · → / ↓ agli · ← pichhli · ↑ / Esc = wapas search · Tab = item bill mein + cursor us ki qatar ke pehle khane mein · Enter = pehle jaisa (jorna, search mein rehna).
 - Mili items ab ek patli qatar (2 line chhoti, side scroll), chuni hui peeli + neela ghera. Table ka min-height 372 hata (Total footer ke neeche chhup raha tha) — posFit hi oonchai tay karta hai.
 - AI nahi. PC par test nahi.
+
+
+=== v2.254.0 (13 Nov 2026) — PC POS Purchase: ↑ ↓ = upar / neeche wali qatar ===
+Malik: 'Amount / Pcs par neeche ka arrow dabane se raqam barh jati hai — us ko neeche wali row mein jana chahiye, upar wala bhi aisa hi'.
+- purchase.js keydown: table (.pp-postw) ke kisi bhi khane mein ↓ / ↑ = usi khane mein agli / pichhli qatar (raqam ab arrow se nahi badalti; khali khana ho to us se agli qatar). Branch select par bhi yehi.
+- AI nahi. PC par test nahi.

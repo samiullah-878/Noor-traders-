@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.253.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.253.0';
-import { blurScore, blurText } from './pic-check.js?v=2.253.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.254.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.254.0';
+import { blurScore, blurText } from './pic-check.js?v=2.254.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -290,6 +290,12 @@ window.addEventListener('resize', () => { if (document.querySelector('.pp-postw'
 document.addEventListener('keydown', e => {
   if (!document.querySelector('.pp-posr') || e.ctrlKey || e.altKey || e.metaKey) return;
   const t = e.target, hits = [...document.querySelectorAll('#list .sale-found [data-pp-add]')];
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && t && t.closest && t.closest('.pp-postw') && t.matches('input,select')) {
+    const td = t.closest('td'), tr = td && td.closest('tr'); if (!tr) return;
+    e.preventDefault();
+    const ix = [...tr.children].indexOf(td); let r = tr;
+    for (;;) { r = e.key === 'ArrowDown' ? r.nextElementSibling : r.previousElementSibling; if (!r) return; const x = r.classList.contains('pp-tr') && r.children[ix] && r.children[ix].querySelector('input,select'); if (x) { x.focus(); try { x.select && x.select(); } catch {} return; } }
+  }
   if (t && t.id === 'search') {
     if (e.key === 'ArrowDown' && hits.length) { e.preventDefault(); hits[0].focus(); }
     return;
