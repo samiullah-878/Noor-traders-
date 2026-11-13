@@ -7841,3 +7841,10 @@ Malik (photo, Jaanch card): 'is poori screen ko khatam kar do, POS purchase scre
 
 === v2.258.0 (13 Nov 2026) — PC POS Purchase: qatar ke aakhri khane se search ===
 Malik (photo, Retail khana): 'yahan end ke baad item name list par chala jaye'. Table ki qatar ke aakhri khane (Retail) mein Tab ya Enter = cursor item search mein (agli item likhne ke liye). AI nahi.
+
+
+=== v2.259.0 (13 Nov 2026) — PC POS Purchase: Total neeche + search mein do Enter ===
+Malik (photo): 'total quantity / total item / bill kul neeche' + 'pehli Enter par item (hamza ghee) par aaye, arrow se aage peeche, doosri Enter par select'.
+- posFit: table chhoti ho to bhi us ka dabba screen bhar leta hai (min-height inline important) -> Total ki line hamesha neeche, button ke upar.
+- Search mein Enter (naam likha ho) = pehli mili item par roshni (jorta nahi); ← → se badlo; doosri Enter / Tab = bill mein + cursor us ki qatar (Amount). Sirf hindse (6+, barcode scan) par Enter pehle jaisa — seedha jorta hai.
+- AI nahi. PC par test nahi.

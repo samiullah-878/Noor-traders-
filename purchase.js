@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.258.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.258.0';
-import { blurScore, blurText } from './pic-check.js?v=2.258.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.259.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.259.0';
+import { blurScore, blurText } from './pic-check.js?v=2.259.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -307,11 +307,12 @@ document.addEventListener('click', e => {
 document.addEventListener('focusin', e => { const r = e.target?.closest?.('#list tr[data-pp-jn]'); if (r && aiRows) { posJn = Number(r.dataset.ppJn); posJpaint(); } else if (e.target?.closest?.('#list .pp-tr[data-pp-sel]') && posJn >= 0) { posJn = -1; posJpaint(); } });
 function posFit() {
   const tw = document.querySelector('.pp-postw'), L = $('list'), F = $('actions'); if (!tw || !L) return;
-  tw.style.maxHeight = '';
+  tw.style.maxHeight = ''; tw.style.removeProperty('min-height');
   const r = tw.getBoundingClientRect(), k = r.height / (tw.offsetHeight || 1) || 1;
   const end = L.getBoundingClientRect().bottom + (window.scrollY || 0) * k, fr = F ? F.getBoundingClientRect() : null;
   const lim = fr && fr.height > 4 ? fr.top : window.innerHeight, over = end - lim + 8;
   if (over > 0) tw.style.maxHeight = Math.max(120, Math.round((r.height - over) / k)) + 'px';
+  else if (over < -4) tw.style.setProperty('min-height', Math.round((r.height - over) / k) + 'px', 'important');
   const f = tw.querySelector('tr.fresh') || tw.querySelector('tr.sel'); if (f && tw.style.maxHeight) { try { f.scrollIntoView({ block: 'nearest' }); } catch {} }
 }
 window.addEventListener('resize', () => { if (document.querySelector('.pp-postw')) posFit(); });
@@ -329,7 +330,7 @@ document.addEventListener('keydown', e => {
     for (;;) { r = e.key === 'ArrowDown' ? r.nextElementSibling : r.previousElementSibling; if (!r) return; const x = r.classList.contains('pp-tr') && r.children[ix] && r.children[ix].querySelector('input,select'); if (x) { x.focus(); try { x.select && x.select(); } catch {} return; } }
   }
   if (t && t.id === 'search') {
-    if (e.key === 'ArrowDown' && hits.length) { e.preventDefault(); hits[0].focus(); }
+    if ((e.key === 'ArrowDown' || (e.key === 'Enter' && !/^\d{6,}$/.test(String(t.value || '').trim()))) && hits.length) { e.preventDefault(); e.stopPropagation(); hits[0].focus(); }
     return;
   }
   const i = hits.indexOf(t); if (i < 0) return;
@@ -337,8 +338,8 @@ document.addEventListener('keydown', e => {
   if (e.key === 'ArrowRight' || e.key === 'ArrowDown') go(i + 1);
   else if (e.key === 'ArrowLeft') go(i - 1);
   else if (e.key === 'ArrowUp' || e.key === 'Escape') { e.preventDefault(); $('search')?.focus(); }
-  else if (e.key === 'Tab' && !e.shiftKey) {
-    e.preventDefault(); t.click();
+  else if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') {
+    e.preventDefault(); e.stopPropagation(); t.click();
     setTimeout(() => { const r = document.querySelector('.pp-postw tr.sel') || [...document.querySelectorAll('.pp-postw tr.pp-tr')].pop(), x = r && r.querySelector('input'); if (x) { x.focus(); try { x.select(); } catch {} } }, 120);
   }
 }, true);
