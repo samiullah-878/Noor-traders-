@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.15';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.16';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -199,9 +199,9 @@ async function main() {
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
-        if (KHW && ktx && ktx.length <= 300 && KHW.looks(ktx)) { const kn = await fromNum(m, s), kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, kt = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
+        if (KHW && ktx && ktx.length <= 300 && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looks(ktx)) { const kn = await fromNum(m, s), kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, kt = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
           if (kn) await KHW.apply({ text: ktx, from: kn, wid: m.key.id || '', ts: kt, quoted: String((kc && kc.stanzaId) || ''), quiet: false }); continue; }
-        if (KHW && KHW.looksName && ktx && KHW.looksName(ktx)) { const kn3 = await fromNum(m, s), kt3 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
+        if (KHW && KHW.looksName && ktx && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looksName(ktx)) { const kn3 = await fromNum(m, s), kt3 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
           if (kn3 && KHW.who(kn3) && await KHW.apply({ text: ktx, from: kn3, wid: m.key.id || '', ts: kt3, quoted: '', quiet: true, biz: true })) continue; }
         const kimg = c.imageMessage || (c.documentMessage && /^image\//i.test(String(c.documentMessage.mimetype || '')) ? c.documentMessage : null);
         if (KHW && KHW.who && (kimg || (ktx && ktx.length <= 60))) { const kn2 = await fromNum(m, s); if (kn2 && KHW.who(kn2)) { await inboxPut(m, c, kimg, ktx, kn2, s); continue; } }

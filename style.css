@@ -8002,3 +8002,58 @@ html body #dialogBody .kw-to small{flex:1 1 100%;font-size:13px;color:#475569}
 html body #dialogBody .kw-to button{min-height:36px;height:36px;padding:0 13px;border-radius:999px;border:1px solid #bfe3d0;background:linear-gradient(180deg,#fff,#e9f8f0)!important;color:#0b5a3c!important;font-size:14px;font-weight:600;white-space:nowrap}
 html body #dialogBody .kw-to button.kw-all{border-color:#cbd8f0;background:linear-gradient(180deg,#fff,#eef3ff)!important;color:#1d3b7a!important}
 html body #dialogBody .kw-to .kw-err{flex:1 1 100%;margin:2px 0 0;font-size:13.5px;color:#b42318}
+
+/* v2.247.0: 🖥 PC par Purchase = POS (Cognitive) software jaisi screen (malik 13 Nov: 'same fonts, same rang, purani screen nahi'). Sirf >=1100px, sirf Purchase bill (.pp-posr). Phone bilkul nahi badla. */
+@media (min-width:1100px){
+html body:has(.pp-posr) :is(#summary,#list,#actions){font-family:Tahoma,Verdana,"Segoe UI",sans-serif!important;font-size:13px!important;color:#111!important}
+html body:has(.pp-posr) #summary .pp-posr{background:#cfe4e8!important;border:1px solid #8fb3bb!important;border-radius:0!important;box-shadow:none!important;padding:6px 10px 8px!important;margin:0!important}
+html body:has(.pp-posr) #list{background:#cfe4e8!important;border:1px solid #8fb3bb!important;border-top:0!important;padding:6px 10px 10px!important;border-radius:0!important}
+html body #summary .pp-posh fieldset{border:1px solid #7fa3ab;margin:0 0 6px;padding:6px 10px 8px;display:grid;grid-template-columns:auto auto 1fr auto;gap:5px 18px;align-items:center;min-width:0}
+html body #summary .pp-posh legend{font-weight:700;font-size:13px;color:#111;padding:0 5px}
+html body #summary .pp-posh label{display:flex;align-items:center;gap:6px;font-weight:700;font-size:13px;color:#111;white-space:nowrap;margin:0}
+html body #summary .pp-posh .pp-posd{grid-column:4;justify-content:flex-end}
+html body #summary .pp-posh .pp-poss{grid-column:1/3}
+html body #summary .pp-posh :is(input,select,.pp-possup){height:24px!important;min-height:0!important;border:1px solid #7f9db9!important;border-radius:0!important;background:#fff!important;color:#111!important;font:400 13px Tahoma,Verdana,sans-serif!important;padding:1px 5px!important;box-shadow:none!important;width:170px}
+html body #summary .pp-posh input[readonly]{background:#eef3f4!important;color:#555!important}
+html body #summary .pp-posh .pp-possup{width:300px;text-align:left;cursor:pointer;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #summary .pp-posh .pp-possup.need,html body #summary .pp-posh .pp-need select{border-color:#c62828!important;background:#fff3f3!important}
+html body #summary .pp-posr .sale-total{background:transparent!important;border:0!important;box-shadow:none!important;padding:2px 0!important;display:flex;justify-content:flex-end;gap:10px;align-items:baseline;color:#111!important}
+html body #summary .pp-posr .sale-total small{color:#111!important;font-weight:700;font-size:13px}
+html body #summary .pp-posr .sale-total strong{color:#111!important;font:700 20px Tahoma,sans-serif!important;background:#fff;border:1px solid #7f9db9;padding:1px 10px;min-width:150px;text-align:right}
+html body #summary .pp-posr .pp-tools{display:flex!important;flex-wrap:wrap;gap:0!important;background:#e3eff1!important;border:1px solid #8fb3bb!important;padding:0!important;margin:4px 0 0!important;border-radius:0!important}
+html body #summary .pp-posr .pp-tools>button{all:unset;font:400 13px Tahoma,Verdana,sans-serif!important;color:#111!important;padding:4px 11px!important;cursor:pointer;border-right:1px solid #b9d0d5!important;white-space:nowrap}
+html body #summary .pp-posr .pp-tools>button:hover{background:#b9dbe2!important}
+html body #summary .pp-posr .pp-tools .pp-waic{font-weight:700!important;background:#fff3c4!important}
+html body #summary .pp-posr .pp-vseg{display:none!important}
+html body #summary .pp-posr .pp-bc{background:#e3eff1!important;border:1px solid #8fb3bb!important;border-radius:0!important;box-shadow:none!important;margin:0 0 6px!important}
+html body:has(.pp-posr) #list .pp-postw{border:1px solid #7f9db9!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;min-height:300px;max-height:none}
+html body:has(.pp-posr) #list .pp-tbl{font:400 13px Tahoma,Verdana,sans-serif!important;color:#111!important;border-collapse:collapse!important;width:100%!important}
+html body:has(.pp-posr) #list .pp-tbl th{background:#e8f1f3!important;color:#111!important;font:400 12.5px Tahoma,Verdana,sans-serif!important;text-transform:none!important;letter-spacing:0!important;padding:5px 6px!important;border:1px solid #c5d6da!important;text-align:left!important;white-space:nowrap}
+html body:has(.pp-posr) #list .pp-tbl td{padding:1px 3px!important;border:1px solid #dde7ea!important;background:#fff}
+html body:has(.pp-posr) #list .pp-tbl tr.sel td{background:#d9ecf7!important}
+html body:has(.pp-posr) #list .pp-tbl :is(input,select){height:22px!important;min-height:0!important;border:1px solid transparent!important;border-radius:0!important;background:transparent!important;font:400 13px Tahoma,Verdana,sans-serif!important;color:#111!important;padding:0 3px!important;box-shadow:none!important}
+html body:has(.pp-posr) #list .pp-tbl :is(input,select):focus{border-color:#3399ff!important;background:#fff!important;outline:0!important}
+html body:has(.pp-posr) #list .pp-tbl input.chg{background:#fff6c9!important}
+html body:has(.pp-posr) #list .pp-tbl td.nm button{font:400 13px Tahoma,Verdana,sans-serif!important;color:#111!important;background:transparent!important;border:0!important;padding:1px 2px!important;text-align:left}
+html body:has(.pp-posr) #list .pp-tbl td.nm b{font-weight:400!important}
+html body:has(.pp-posr) #list .pp-tbl td.nm small{display:block;font-size:10.5px!important;color:#667!important}
+html body:has(.pp-posr) #list .pp-tbl td.x button{all:unset;color:#c62828;cursor:pointer;padding:0 6px;font-weight:700}
+html body:has(.pp-posr) #list .pp-posf{display:flex;gap:26px;align-items:center;padding:6px 4px 2px;font:700 13px Tahoma,Verdana,sans-serif;color:#111}
+html body:has(.pp-posr) #list .pp-posf b{font-weight:400;margin-left:8px}
+html body:has(.pp-posr) #list .pp-posf .pp-posamt{margin-left:auto}
+html body:has(.pp-posr) #list .pp-posf .pp-posamt b{font:700 20px Tahoma,sans-serif;background:#fff;border:1px solid #7f9db9;padding:1px 12px;display:inline-block;min-width:170px;text-align:right}
+html body:has(.pp-posr) #list :is(.ws-chips,.sale-pay,.sale-found,.pp-billbar){background:#e3eff1!important;border:1px solid #8fb3bb!important;border-radius:0!important;box-shadow:none!important;font-family:Tahoma,Verdana,sans-serif!important}
+html body:has(.pp-posr) #list :is(.ws-chips,.sale-found,.mchips) button{border-radius:2px!important;background:#f4f8f9!important;border:1px solid #9fb9bf!important;color:#111!important;font:400 12.5px Tahoma,sans-serif!important;box-shadow:none!important;min-height:0!important;padding:3px 9px!important}
+html body:has(.pp-posr) #list .sale-pay input{border:1px solid #7f9db9!important;border-radius:0!important;background:#fff!important;height:24px!important;min-height:0!important}
+html body:has(.pp-posr) #list .empty{background:#fff!important;border:1px solid #7f9db9!important;border-radius:0!important;box-shadow:none!important;min-height:260px}
+html.lt body:has(.pp-posr) footer#actions,html body:has(.pp-posr) footer#actions{background:#cfe4e8!important;border-top:1px solid #8fb3bb!important;justify-content:flex-end!important;gap:6px!important;padding:5px 12px!important;box-shadow:none!important}
+html.lt body:has(.pp-posr) footer#actions>button,html body:has(.pp-posr) footer#actions>button{flex:0 0 auto!important;min-height:0!important;height:30px!important;border-radius:2px!important;background:#f1f6f7!important;border:1px solid #7f9db9!important;color:#111!important;font:400 13px Tahoma,Verdana,sans-serif!important;padding:2px 16px!important;box-shadow:none!important;width:auto!important}
+html.lt body:has(.pp-posr) footer#actions>button.got,html body:has(.pp-posr) footer#actions>button.got{font-weight:700!important;border-color:#2e7d32!important}
+html body:has(.pp-posr) dialog#dialog,html body:has(.pp-posr) #dialogBody{font-family:Tahoma,Verdana,"Segoe UI",sans-serif!important}
+html body:has(.pp-posr) #dialogBody :is(.jz-tabs button,.jc-card,.jz-row,.pp-aichoose button){border-radius:2px!important;box-shadow:none!important}
+html body:has(.pp-posr) dialog#dialog{background:#cfe4e8!important;border:1px solid #6f97a0!important;border-radius:0!important}
+}
+html body #dialogBody .pp-wai{display:grid;gap:6px;margin:8px 0 12px}
+html body #dialogBody .pp-wair{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 12px;border:1px solid #cfd8e6;border-radius:11px;background:#fff;color:#1a2d53;text-align:left;min-height:38px}
+html body #dialogBody .pp-wair.is-in{border-color:#1565c0;background:#e8f1ff}
+html body #dialogBody .pp-wair small{color:#5b6b85;white-space:nowrap}
