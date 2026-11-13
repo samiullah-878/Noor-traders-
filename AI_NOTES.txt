@@ -7997,3 +7997,13 @@ TEST: /tmp harness (playwright + naqli Firestore batchGet + naqli tasveerein): p
   Har screen par har shelf par WAHI items (4/3/2/1/2). ASAL phone par test NAHI hua — malik se photo maangi.
 YAAD: app (📐 Rack ka size) preview ASAL phone par test nahi. Item pehle se ~30% bare (shelf par ek-aadh kam) — zyada chahiye to Shelf 6 / 7.
 BAQI (malik ke OK par): 🤖 AI auto crop (Gemini box -> ✂️ Crop screen mein pehle se dabba), 2 rack photos hatana, baqi purane sawal.
+
+=== v2.274.0 (13 Nov 2026) — 🤖 Online Dukan: AI auto crop ===
+Malik (13 Nov 22:09, mere 2 raaston mein se): "1 bana do — background hatne ka koi issue nahi" (yani sirf auto crop; peecha mitana nahi chahiye).
+KYA BANA (sirf app web-dukan.js + style.css; website / data / rules / PC kuch nahi):
+- gotFile: ek item ki tasveer (shotFor = item id — item ka 📷 Camera / Gallery, 📐 Rack ka size ka 📸 Tasveer / ✂️ Crop) = crop screen khulte hi acRun():
+  bigBytes(C.bm, 768) -> A.aiImage(b64, AC_PROMPT) (wohi Gemini, app.js askImage, key aiConfig — malik + Full mulazim) -> acBox (box_2d [ymin,xmin,ymax,xmax] 0-1000, kai hon = sab se bara, 2.5% hashiya) -> C.box.
+- Haal ka chip #wdAc (strip): ⏳ dhoond raha · ✅ AI ka dabba — theek ho to Save · "AI tayyar — 🤖 AI dabayein" (malik ne beech mein dabba chhoo liya = C.touch, zabardasti nahi) · ✕ cheez nahi mili / AI nahi chala (+ notice wajah).
+- Footer chip 🤖 AI (data-wd acrun): AI wala dabba wapas (C.ai.box ho to naya sawal nahi), warna dobara chalao. acPaint sirf chip + dabba (poori screen dobara nahi).
+- AI SIRF dabba lagata hai — save hamesha malik ke ✅ Save par. Rack ki photo (kai items) aur 🗄 kai tasveerein ek saath (multi) par NAHI.
+TEST: browser harness (stub cloud + naqli aiImage): ok / beech mein chhua (hold) / cheez nahi / error / Save -> putWebPhoto — sab theek. ASAL Gemini ke saath test NAHI hua (dabba kitna sahi lagta hai malik batayega).

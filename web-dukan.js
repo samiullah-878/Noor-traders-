@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.273.0';
-import { smartFind } from './dukan/dhoond.js?v=2.273.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.274.0';
+import { smartFind } from './dukan/dhoond.js?v=2.274.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -703,14 +703,55 @@ async function gotFile(f) {
   const one = shotFor;
   W.crop = { bm, w, h, url: URL.createObjectURL(f), box: one ? { x: w * 0.06, y: h * 0.06, w: w * 0.88, h: h * 0.88 } : { x: w * 0.3, y: h * 0.3, w: w * 0.4, h: h * 0.4 }, one, done: [], back: shotBack }; shotBack = '';
   W.view = 'crop'; paint();
+  if (one) acRun();
+}
+// ---------- 🤖 v2.274.0: AI AUTO CROP (malik 13 Nov: "1 bana do — background hatne ka koi issue nahi") ----------
+//   Ek item ki tasveer (camera / gallery / ✂️ Crop) aate hi Gemini se us cheez ka dabba (box_2d 0-1000) -> ✂️ dabba khud lag jata hai; malik dekh kar Save (kone khench kar theek bhi kar sakta).
+//   Sirf DABBA (kaatna) — peecha mitana NAHI. Rack ki photo (kai items) par nahi (malik: wahan AI chhor do). Malik ne dabba chhoo liya ho to AI us par zabardasti nahi (🤖 AI chip se lagao).
+const AC_PROMPT = 'This photo was taken by a shopkeeper to show ONE retail product (a packet, box, bottle, jar, pouch, soap bar, tin, sachet strip or bag). It may lie on a table, stand on a shelf or be held in a hand, and other things may be visible around it. Return the tight bounding box of the MAIN product only: the single item the photo is about (the largest / most central one). If the photo shows a neat stack or pile of the same product, box the whole stack. Do NOT include the table, hand, background or neighbouring products. Answer ONLY with JSON like {"box_2d":[ymin,xmin,ymax,xmax]} using numbers 0-1000 (normalized to image height and width). If no product is visible answer {"box_2d":null}.';
+function acBox(out, C) {
+  const re = /box_2d"?\s*:\s*\[\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*,\s*(-?[\d.]+)\s*\]/g; let m, best = null;
+  while ((m = re.exec(String(out || '')))) {
+    let [y0, x0, y1, x1] = m.slice(1, 5).map(Number); if (![y0, x0, y1, x1].every(Number.isFinite)) continue;
+    [y0, x0, y1, x1] = [y0, x0, y1, x1].map(v => Math.max(0, Math.min(1000, v))); if (x1 < x0) [x0, x1] = [x1, x0]; if (y1 < y0) [y0, y1] = [y1, y0];
+    if (x1 - x0 < 50 || y1 - y0 < 50) continue;   // bohat chhota = shak
+    const a = (x1 - x0) * (y1 - y0); if (!best || a > best.a) best = { a, x0, y0, x1, y1 };   // kai dabbe aayein to sab se bara (asal cheez)
+  }
+  if (!best) return null;
+  const px = (best.x1 - best.x0) * 0.025, py = (best.y1 - best.y0) * 0.025, X0 = Math.max(0, best.x0 - px), Y0 = Math.max(0, best.y0 - py), X1 = Math.min(1000, best.x1 + px), Y1 = Math.min(1000, best.y1 + py);
+  return { x: X0 / 1000 * C.w, y: Y0 / 1000 * C.h, w: (X1 - X0) / 1000 * C.w, h: (Y1 - Y0) / 1000 * C.h };
+}
+const acChip = C => { const a = C && C.ai; if (!a) return '';
+  return a.run ? '<span class="wd-k" id="wdAc">🤖 AI dabba dhoond raha hai ⏳</span>' : a.st === 'ok' ? '<span class="wd-k ok" id="wdAc">🤖 AI ka dabba ✅ theek ho to Save</span>' : a.st === 'hold' ? '<span class="wd-k" id="wdAc">🤖 AI tayyar — 🤖 AI dabayein</span>'
+    : `<span class="wd-k bad" id="wdAc">🤖 ${a.st === 'no' ? 'AI ko cheez nahi mili' : 'AI nahi chala'} ✕ khud dabba banayein</span>`; };
+function acPaint() {   // sirf chip + dabba (poori screen dobara nahi — ungli ka kaam na toote)
+  const C = W && W.crop, st = $('wdStrip'); if (!C || W.view !== 'crop' || !st) return;
+  const o = $('wdAc'), h = acChip(C); if (o) o.outerHTML = h; else if (h) st.insertAdjacentHTML('beforeend', h);
+  const b = $('wdDlg')?.querySelector('[data-wd="acrun"]'); if (b) b.disabled = !!C.ai?.run;
+  boxPaint();
+}
+async function acRun(manual) {
+  const w = W, C = w && w.crop; if (!C || !C.one || !A.aiImage || C.ai?.run) return;
+  if (manual && C.ai?.box) { C.box = { ...C.ai.box }; C.ai = { run: false, st: 'ok', box: C.ai.box }; C.touch = 0; acPaint(); return; }   // AI wala dabba wapas (naya sawal nahi)
+  C.ai = { run: true }; if (manual) C.touch = 0; acPaint();
+  const mine = () => W === w && w.crop === C;
+  try {
+    const out = await A.aiImage(u8b64(await bigBytes(C.bm, 768)), AC_PROMPT);   // AI ko chhoti copy (tez)
+    if (!mine()) return;
+    const box = acBox(out, C);
+    if (!box) C.ai = { run: false, st: 'no' };
+    else if (C.touch) C.ai = { run: false, st: 'hold', box };   // malik khud dabba bana raha hai — us ka kaam mat bigaro
+    else { C.box = { ...box }; C.ai = { run: false, st: 'ok', box }; }
+  } catch (e) { if (!mine()) return; C.ai = { run: false, st: 'err' }; A.notice('🤖 AI nahi chala — khud dabba banayein (' + String(e && e.message || e).slice(0, 70) + ')'); }
+  acPaint();
 }
 function paintCrop() {
   const C = W.crop; if (!C) { W.view = 'list'; return paint(); }
   const it = C.one ? (items() || []).find(x => x.id === C.one) : null;
-  $('wdStrip').innerHTML = `<span>✂️ Ungli se item ke gird dabba banayein · kone khench kar chhota / bara</span>${C.done.length ? `<span class="wd-k ok">✅ Is photo se ${C.done.length}</span>` : ''}`;
+  $('wdStrip').innerHTML = `<span>${C.ai || (C.one && A.aiImage) ? '✂️ Dabba: kone khench kar chhota / bara' : '✂️ Ungli se item ke gird dabba banayein · kone khench kar chhota / bara'}</span>${acChip(C)}${C.done.length ? `<span class="wd-k ok">✅ Is photo se ${C.done.length}</span>` : ''}`;
   $('wdBody').innerHTML = `<div class="wd-cw" id="wdCw"><div class="wd-cimg"><img id="wdCi" src="${C.url}" alt="" draggable="false"><div class="wd-box" id="wdBox"><i data-h="tl"></i><i data-h="tr"></i><i data-h="bl"></i><i data-h="br"></i></div></div></div>${C.done.length ? `<p class="wd-done">${C.done.map(d => `✅ ${esc(d)}`).join(' · ')}</p>` : ''}`;
   $('wdFoot').innerHTML = C.one
-    ? `<button type="button" class="wd-chip" data-wd="back">✕ Rehne do</button><button type="button" class="wd-main" data-wd="cropsave">✅ Save — ${esc(it ? it.n : 'item')}</button>`
+    ? `<button type="button" class="wd-chip" data-wd="back">✕ Rehne do</button>${A.aiImage ? `<button type="button" class="wd-chip" data-wd="acrun"${C.ai?.run ? ' disabled' : ''} title="AI se dabba lagao">🤖 AI</button>` : ''}<button type="button" class="wd-main" data-wd="cropsave">✅ Save — ${esc(it ? it.n : 'item')}</button>`
     : `<button type="button" class="wd-chip" data-wd="rackpic">🖼 Nayi photo</button><button type="button" class="wd-chip" data-wd="cropbg" title="Ye poori photo website par rack ke peeche">🗂 Rack ke peeche</button><button type="button" class="wd-main" data-wd="pick">✂️ Ye kaun sa item? ›</button>`;
   const img = $('wdCi');
   img.style.maxHeight = Math.max(220, ($('wdBody').clientHeight || 400) - 50) + 'px';   // 100dvh nahi (html zoom)
@@ -729,7 +770,7 @@ function cropPointer() {
   const pt = e => { const r = imgRect(), C = W.crop, k = C.w / r.width; return { x: (e.clientX - r.left) * k, y: (e.clientY - r.top) * k }; };
   const clamp = B => { const C = W.crop, m = Math.max(24, Math.min(C.w, C.h) * 0.03); B.w = Math.max(m, Math.min(B.w, C.w)); B.h = Math.max(m, Math.min(B.h, C.h)); B.x = Math.max(0, Math.min(B.x, C.w - B.w)); B.y = Math.max(0, Math.min(B.y, C.h - B.h)); return B; };
   wrap.addEventListener('pointerdown', e => {
-    if (!W?.crop) return; e.preventDefault();
+    if (!W?.crop) return; e.preventDefault(); W.crop.touch = 1;
     const p = pt(e), B = W.crop.box, h = e.target.dataset && e.target.dataset.h;
     sx = p.x; sy = p.y; b0 = { ...B };
     mode = h ? h : (p.x >= B.x && p.x <= B.x + B.w && p.y >= B.y && p.y <= B.y + B.h) ? 'mv' : 'new';
@@ -909,6 +950,7 @@ function onClick(e) {
   if (k === 'pub') { sheetClose(); publish(); return; }
   if (k === 'rackpic') { sheet(`<h3 class="wd-st">📷 Rack ki photo</h3><p class="wd-note">Ek photo mein kai items — har item ke gird dabba bana kar naam chunein. Qareeb se, roshni mein photo saaf aati hai.</p><div class="wd-chips"><button type="button" class="wd-chip" data-shot="cam">📸 Camera</button><button type="button" class="wd-chip" data-shot="gal">🖼 Gallery</button></div>`); W.act = ''; return; }
   if (k === 'pick') { W.view = 'pick'; W.pck = W.pck || W.ck || ''; paint(); return; }
+  if (k === 'acrun') { acRun(true); return; }
   if (k === 'cropsave') { cropSave(W.crop.one); return; }
   if (k === 'mvrack') { mvSheet(); return; }
   if (k === 'hide') { const id = W.act; if (W.racks.hide[id]) delete W.racks.hide[id]; else W.racks.hide[id] = 1; sheetClose(); saveRacks(); return; }

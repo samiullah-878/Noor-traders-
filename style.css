@@ -8161,3 +8161,7 @@ html body #wdDlg .wd-zi.is-in{z-index:5}
 html body #wdDlg div.wd-zf.nop{opacity:1}
 #wdDlg .wd-zfc{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
 #wdDlg .wd-zb span{flex-wrap:wrap;overflow:visible}
+
+/* v2.274.0: 🤖 AI auto crop — haal ka chip (bara, nazar ke liye) */
+#wdDlg .wd-k#wdAc{height:27px;padding:0 10px;font-size:13.5px}
+#wdDlg .wd-f .wd-chip[data-wd="acrun"]:disabled{opacity:.5}
