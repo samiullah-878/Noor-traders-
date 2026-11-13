@@ -7963,3 +7963,21 @@ html body #dialogBody .jz-low button{flex:0 0 auto!important;width:auto!importan
 html body #dialogBody .jz-low .jz-prog{display:inline-flex!important;align-items:center;gap:5px;min-width:90px}
 html body #dialogBody .jz-low .jz-prog>span{width:50px!important;flex:0 0 50px}
 html body #dialogBody .jz-list.jz-first{margin-top:0!important}
+
+/* v2.250.1: 🤖 Jaanch ka card — khanon ke naam (Ctn / Pcs / Kh / W / R) bare (malik: 'naam small hai, nazar nahi aata'); PC par poora card EK screen mein (scroll nahi), Wholesale + Parchoon chips EK line */
+html body #dialogBody .jc-f{font-size:14px!important;font-weight:800!important;color:#1d2f4d!important}
+html body #dialogBody .jc-f small,html body #dialogBody .jc-sec{font-size:12.5px!important}
+@media (min-width:1100px){
+html.pcm body #dialogBody .jc-patti{max-height:120px!important;overflow:hidden!important;margin-bottom:4px!important}
+html.pcm body #dialogBody .jc-card{padding-top:4px!important;padding-bottom:4px!important}
+html.pcm body #dialogBody .jc-card :is(.jc-g4,.jc-g2,.jc-kulrow){margin:2px 0!important;gap:8px!important}
+html.pcm body #dialogBody .jc-card input{height:36px!important;min-height:0!important;padding-top:2px!important;padding-bottom:2px!important;font-size:17px!important}
+html.pcm body #dialogBody .jc-card .jc-sec{margin:2px 0!important;padding:0!important}
+html.pcm body #dialogBody .jc-card .jc-mrph{display:none!important}
+html.pcm body #dialogBody .jc-card .jc-g2.jc-mrp{grid-template-columns:repeat(4,minmax(0,1fr))!important}
+html.pcm body #dialogBody .rate-chips{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:4px 22px!important;margin:4px 0!important;padding:4px 8px!important}
+html.pcm body #dialogBody .rate-chips .rc-head{order:9!important;flex:0 0 auto!important;margin:0!important}
+html.pcm body #dialogBody .rate-chips .rc-head small{display:none!important}
+html.pcm body #dialogBody .rate-chips .rc-row{flex:0 1 auto!important;margin:0!important;flex-wrap:nowrap!important}
+html.pcm body #dialogBody .rate-chips .rc-row button{min-height:0!important;height:30px!important;padding:0 10px!important}
+}

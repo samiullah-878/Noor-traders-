@@ -7787,3 +7787,5 @@ Malik: 'reminder din mein 1 baje, 3 baje, sham mein 5 baje aana chahiye'. REM_HO
 13 Nov 2026 — v2.249.2: PC POS Purchase (malik ki tasveer): pos mode mein naam par bara mobile card nahi khulta (rates table mein + neeche % chips), Item Code khana wapas, supplier ke aksar-items chips 2 qatar (wrap), side scroll band, Branch select chaura. AI nahi.
 
 13 Nov 2026 — v2.250.0: malik 'Bill ki jaanch mein items ke naam upar chahiye, upar wale chips neeche, small, ek line mein — scroll kam se kam'. aiRender: list (jListRows) sab se pehle; tabs + ginti + Pakka se dobara + Bill/farq + ginti ka total + naqsha + supplier + Jaanch shuru + filter = .jz-low (neeche chipki ek line, side scroll). Sirf 'ginti kya hoti hai?' sawal (.pp-ask) upar rehta hai (jawab zaroori). Phone + PC dono. AI wahi purana.
+
+13 Nov 2026 — v2.250.1: Jaanch card (jCard): .jc-f khanon ke naam 14px mote (har device); PC (html.pcm) par bill ki patti 120px, inputs 36px, retail ka note chhupa, .rate-chips Wholesale + Parchoon EK line — maqsad: scroll ke baghair poora card. Sirf CSS. Asal PC par dekha nahi.
