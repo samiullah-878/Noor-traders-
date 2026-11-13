@@ -7818,3 +7818,7 @@ Malik: 'search mein neeche wale arrow se items mein jaye, left / right se aage p
 Malik: 'Amount / Pcs par neeche ka arrow dabane se raqam barh jati hai — us ko neeche wali row mein jana chahiye, upar wala bhi aisa hi'.
 - purchase.js keydown: table (.pp-postw) ke kisi bhi khane mein ↓ / ↑ = usi khane mein agli / pichhli qatar (raqam ab arrow se nahi badalti; khali khana ho to us se agli qatar). Branch select par bhi yehi.
 - AI nahi. PC par test nahi.
+
+
+=== v2.255.0 (13 Nov 2026) — PC POS Purchase: Amount khana CTN Price se pehle ===
+Malik: 'CTN price se pehle amount wala khana aaye'. gridHTML pos cols / ord: Item Description ke baad Amount, phir CTN Price · PCS Price · Pack Qty · Qty · Branch · R / W. Tab se item chunne par cursor ab Amount mein. AI nahi.

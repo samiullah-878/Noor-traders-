@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.254.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.254.0';
-import { blurScore, blurText } from './pic-check.js?v=2.254.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.255.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.255.0';
+import { blurScore, blurText } from './pic-check.js?v=2.255.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -636,7 +636,7 @@ function gridHTML(s, gopts) {
   const hint = v => v > 0 ? num(v) : '';
   const pos = posMode(), pkc = anyPk || pos;
   const cols = pos
-    ? [['No.', 'n'], ['Item Code', 'cd'], ['Item Description', 'nm'], ['CTN Price', 'r'], ['PCS Price', 'r'], ['Pack Qty', 'q'], ['Qty', 'q'], ...(gd ? [['Branch', 'g']] : []), ['Amount', 'a'], ['R.CTN', 'r'], ['R.PCS', 'r'], ['W.CTN', 'r'], ['W.PCS', 'r'], ...(rt ? [['Retail', 'r']] : []), ['', 'x']]
+    ? [['No.', 'n'], ['Item Code', 'cd'], ['Item Description', 'nm'], ['Amount', 'a'], ['CTN Price', 'r'], ['PCS Price', 'r'], ['Pack Qty', 'q'], ['Qty', 'q'], ...(gd ? [['Branch', 'g']] : []), ['R.CTN', 'r'], ['R.PCS', 'r'], ['W.CTN', 'r'], ['W.PCS', 'r'], ...(rt ? [['Retail', 'r']] : []), ['', 'x']]
     : [['#', 'n'], ['Code', 'cd'], ['Item', 'nm'], ...(anyPk ? [['Ctn', 'q']] : []), ['Pcs', 'q'], ...(anyPk ? [['Kh / Ctn', 'r']] : []), ['Kh / Pcs', 'r'], ...(gd ? [['Godam', 'g']] : []), ['Raqam', 'a'], ...(anyPk ? [['W Ctn', 'r']] : []), ['W Pcs', 'r'], ...(anyPk ? [['R Ctn', 'r']] : []), ['R Pcs', 'r'], ...(rt ? [['Retail', 'r']] : []), ['', 'x']];
   let tc = 0, tp = 0;
   const body = cart.map((l, i) => {
@@ -658,7 +658,7 @@ function gridHTML(s, gopts) {
       mrp: rt ? `<td class="r">${inp('mrp', i, v || '', l.oldMrp ? num(l.oldMrp) : 'retail')}</td>` : '',
       x: `<td class="x">${pos && lblOk() ? `<button type="button" class="pp-xl" data-pp-lbl="${i}" title="Barcode label">🏷</button>` : ''}<button type="button" class="danger sale-x" data-pp-del="${i}" aria-label="Hatao">✕</button></td>`,
     };
-    const ord = pos ? ['n', 'cd', 'nm', 'costc', 'costp', 'ctn', 'pcs', 'g', 'amt', 'rctn', 'rpcs', 'wctn', 'wpcs', 'mrp', 'x'] : ['n', 'cd', 'nm', 'ctn', 'pcs', 'costc', 'costp', 'g', 'amt', 'wctn', 'wpcs', 'rctn', 'rpcs', 'mrp', 'x'];
+    const ord = pos ? ['n', 'cd', 'nm', 'amt', 'costc', 'costp', 'ctn', 'pcs', 'g', 'rctn', 'rpcs', 'wctn', 'wpcs', 'mrp', 'x'] : ['n', 'cd', 'nm', 'ctn', 'pcs', 'costc', 'costp', 'g', 'amt', 'wctn', 'wpcs', 'rctn', 'rpcs', 'mrp', 'x'];
     const tr = `<tr class="pp-line pp-tr${open ? ' open' : ''}${l.k === selKey ? ' sel' : ''}${fl.warn.length ? ' warn' : ''}${i === cart.length - 1 && Date.now() - ppAddAt < 1800 ? ' fresh' : ''}" data-pp-line="${i}" data-pp-sel="${esc(l.k)}">${ord.map(k => C[k]).join('')}</tr>`;
     return tr + (open ? `<tr class="pp-trx"><td colspan="${cols.length}">${lineCardHTML(l, i, s, gopts)}</td></tr>` : '');
   }).join('');
