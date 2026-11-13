@@ -239,6 +239,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **📱 Gumnaam UID = device ki pehchan (v2.231.1, ghalti 11 Nov)**: jura hua phone Logout / ghalat password ke baad dobara login maangta tha — signOut se UID kho jata hai. auth-controller mein gumnaam user ke liye HAMESHA `out()` (kabhi seedha `sdk.signOut`); naya login / logout raasta banao to yehi. Malik us phone par khud login kare = dobara jorna parega (malik ko pehle batao).
 
+- **📦 Data ka naap (v2.262.0)**: 'app khul jati hai magar data der se' = ⏱ chip ka '📦 Ns' + ⏱ popup ki 📦 / ☁️ / 🧮 lines (`window.ntDataT`, cloud.js listen) — pehle yeh photo maango, phir theek karo (yaad dheeri / server dheera / hisaab dheera teen alag ilaaj).
 - **⏱ Boot ka intezar (v2.233.1)**: app ka ⏱ = session banne tak ka waqt (data nahi) — tap par qadam. Login ki jaanch ka koi raasta chup-chaap laute (paigham nahi) to boot 30 s splash par atakta hai: naya chup raasta banao to `controller.idle()` sach ho. Session / login ka faisla hamesha `getDocFromServer` se (cache ka purana 'nahi hai' = jhoota logout). 'App dheeri' ki shikayat = pehle ⏱ par tap ka popup maango, andaza nahi (11 Nov: pehle ghalat wajah bata di).
 
 - **🔑 Mulazim ka password KAHIN NAHI (v2.234.0, malik 11 Nov: 'password poori app mein kahin nahi — naya tareeqa')**: mulazim ke liye password ka koi khana / row / form wapas mat lao (login, screen badalna, yaad rakhna). Malik ka apna login + ⛔ Item band / ⇄ transfer ka password alag cheez hain — malik ke kehne par hi chhero.

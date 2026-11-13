@@ -7863,3 +7863,11 @@ Malik: 'AI khatam kar do, bas ek kaam karo — poore bill ki picture background 
 - Khirki ka naam '📄 Bill ki tasveer' (Tez / Pakka chips nahi), WhatsApp chips par '📄 Kholo'; button '📄 Bill ki tasveer' table ke upar ki line mein (data-mn-keep). Phone par AI pehle jaisa.
 - 'Background' ko maine 'table ke upar' samjha (table ke peeche tasveer = likhai parhi nahi jati) — malik se pakka karna hai.
 - AI: PC par nahi. Test nahi hua.
+
+
+=== v2.262.0 (13 Nov 2026) — 'data 30 second baad aata hai' ki JAANCH (abhi theek nahi kiya) ===
+Malik: 'app jaldi khul jati hai magar data 30 second baad aata hai' (apna phone, dukan Wi-Fi). ⏱ popup ki photo nahi mili -> pehle naap.
+- cloud.js listen(): window.ntDataT {t0 sunna shuru, c pehla snapshot ms, cn record, cc 1 = phone ki yaad, s server ka pehla, sn, m collect ms, r collect + next (hisaab + screen) ms}.
+- app.js: ⏱ chip mein '· 📦 Ns' (pehla data screen par) + ⏱ popup mein 4 nayi lines. Is se pata chalega: phone ki yaad (IndexedDB) dheeri / server dheera / hisaab dheera.
+- Shak: (a) poori blueKhata collection ek hi listener se (record barhte ja rahe) (b) cloud.js nwCheck 15 s. Naap dekh kar hi theek karna hai.
+- AI nahi.
