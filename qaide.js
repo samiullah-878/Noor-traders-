@@ -31,9 +31,7 @@ let O = null, el = null, hideT = 0, all = false, started = false, paused = false
 
 export function qdStart(o) {
   O = o || {}; if (started) return; started = true;
-  setTimeout(() => maybe(true), 3000);   // app khulte hi — har dafa
-  setInterval(maybe, 60e3);   // har minute dekho — 2 ghante ho gaye hon to agla qoul
-  document.addEventListener('visibilitychange', () => { if (!document.hidden) setTimeout(maybe, 1500); });
+  // v2.263.1 (malik 13 Nov: 'is ko band kar do — yeh jo pop aa raha hai'): card KHUD kabhi nahi aata (app khulte hi / 2 ghante / wapas aane par — teeno band). Sirf menu se haath se.
 }
 function maybe(open) {
   if (document.hidden || !O.owner?.()) return;
