@@ -87,7 +87,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.28';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.29';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -2126,10 +2126,11 @@ async function start(ZINDA) {
       if (!jpg && S2) for (const [w, q] of [[2000, 80], [1600, 76], [1280, 70], [1000, 64]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) { jpg = b; break; } } catch {} }
       if (!jpg) throw Error('tasveer bari / badal nahi saki');
       const id = 'w' + String(wid).replace(/[^A-Za-z0-9]/g, '').slice(-24);
-      await PAIM.doc(id).set({ img: jpg }); await PAI.doc(id).set({ at: Date.now(), nm: bzWho(from), n: 1 });
+      let th = ''; if (S2) { try { th = (await S2(jpg).rotate().resize({ width: 150, height: 150, fit: 'inside' }).jpeg({ quality: 55 }).toBuffer()).toString('base64'); if (th.length > 20000) th = ''; } catch {} }
+      await PAIM.doc(id).set({ img: jpg }); await PAI.doc(id).set({ at: Date.now(), nm: bzWho(from), n: 1, th });
       log(`🤖 purchase AI tasveer ${id.slice(-6)} (${Math.round(jpg.length / 1024)} KB) — ${bzWho(from)}`);
       try { ringAdd('🤖 Purchase AI tasveer — ' + bzWho(from)); } catch {}
-      await say('🤖 Bill ki tasveer Purchase ki AI screen par chali gayi.\nApp -> Purchase -> "📲 WhatsApp se aayi" se items lein.');
+      await say('✅ Parchi chali gayi — Purchase ki AI screen par.\nApp -> Purchase -> "📲 WhatsApp se aayi" se chun kar bill banayein.');
       try { const old = await PAI.where('at', '<', Date.now() - 3 * 86400000).limit(20).get(); for (const d of old.docs) { await PAIM.doc(d.id).delete().catch(() => {}); await d.ref.delete().catch(() => {}); } } catch {}
     } catch (e) { log('✕ purchase AI tasveer: ' + (e.message || e)); await say('✕ Tasveer AI screen par nahi gayi: ' + String(e.message || e).slice(0, 80)); }
   }
@@ -2151,7 +2152,7 @@ async function start(ZINDA) {
     if (ctx && ctx.stanzaId && !TR.par[ctx.stanzaId] && !bzPend.has(ctx.stanzaId)) {   // hamare bheje paigham (Mubeen wali parchi) par reply → asal parchi
       try { const o = await biz.collection('waOut').where('wid', '==', String(ctx.stanzaId)).limit(1).get(), pp = o.empty ? '' : String((o.docs[0].data() || {}).pp || ''); if (pp) ctx.stanzaId = pp; } catch (e) { log('⚠️ reply ka asal: ' + e.message); }
     }
-    if (im && (AI_RE.test(cap) || (aiHot.at && now - aiHot.at < 2 * 60000 && aiHot.from === from))) { if (!AI_RE.test(cap)) aiHot = { at: 0, from: '' }; return purAiPut(m, from, wid); }
+    if (im && (AI_RE.test(cap) || (aiHot.at && now - aiHot.at < 2 * 60000 && aiHot.from === from))) { if (!AI_RE.test(cap)) aiHot = { at: 0, from: '' }; if (ctx && ctx.stanzaId) bzPend.delete(String(ctx.stanzaId)); return purAiPut(m, from, wid); }
     if (!im && AI_RE.test(tx)) {
       const q0 = ctx && String(ctx.stanzaId || ''), pk0 = q0 && bzPend.has(q0) ? [q0] : [...bzPend.keys()].filter(k => bzPend.get(k).from === from && now - bzPend.get(k).at < 10 * 60000);
       if (!pk0.length) { aiHot = { at: now, from }; return; }

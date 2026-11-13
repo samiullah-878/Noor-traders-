@@ -7822,3 +7822,10 @@ Malik: 'Amount / Pcs par neeche ka arrow dabane se raqam barh jati hai — us ko
 
 === v2.255.0 (13 Nov 2026) — PC POS Purchase: Amount khana CTN Price se pehle ===
 Malik: 'CTN price se pehle amount wala khana aaye'. gridHTML pos cols / ord: Item Description ke baad Amount, phir CTN Price · PCS Price · Pack Qty · Qty · Branch · R / W. Tab se item chunne par cursor ab Amount mein. AI nahi.
+
+
+=== v2.256.0 / wa-out v1.17 / wa-parchi v2.29 (13 Nov 2026) — purani parchi par reply 'ai' ===
+Malik: 'Business number par bheji / forward ki parchi ke reply mein ai likhein to wo bhi AI mein aaye · kai parchiyan · jis ko chahein chun kar bill · larke ko reply aaye parchi chali gayi'.
+- wa-out inboxPut: likha 'ai' + reply (quotedMessage mein tasveer) = wohi purani tasveer WhatsApp se download -> waIn (qi 1) -> wa-parchi bizMsg -> purAiPut. Na mile = saaf paigham (photo dobara bhejein). Sirf ijazat wale number (pehle jaisa).
+- purAiPut: purAi doc mein chhoti tasveer `th` (base64, 150px) + jawab '✅ Parchi chali gayi'. App list mein chhoti tasveer + naam + waqt (tick -> 🤖 Parho, 4 tak ek bill — pehle jaisa).
+- AI: sirf app ka purana bill-parhna. PC par AI nahi. Asal WhatsApp par test nahi hua.

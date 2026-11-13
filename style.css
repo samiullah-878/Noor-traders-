@@ -7933,6 +7933,8 @@ html body #dialogBody .pp-wai{display:grid;gap:6px;margin:8px 0 12px}
 html body #dialogBody .pp-wair{display:flex;justify-content:space-between;gap:10px;align-items:center;padding:8px 12px;border:1px solid #cfd8e6;border-radius:11px;background:#fff;color:#1a2d53;text-align:left;min-height:38px}
 html body #dialogBody .pp-wair.is-in{border-color:#1565c0;background:#e8f1ff}
 html body #dialogBody .pp-wair small{color:#5b6b85;white-space:nowrap}
+html body #dialogBody .pp-wair b{flex:1;min-width:0;font-size:15px}
+html body #dialogBody .pp-waith{width:54px;height:54px;object-fit:cover;border-radius:8px;border:1px solid #cfd8e6;flex:0 0 auto}
 
 /* v2.249.0: Item report — Godam / Noor Traders stock gol ghere mein */
 html body .ir-ring{display:inline-block;border:1.5px solid #1565c0;border-radius:999px;padding:0 8px;margin:0 3px;font-weight:800;color:#0d3c78;background:#eef5ff;line-height:1.5;white-space:nowrap}

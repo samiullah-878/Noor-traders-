@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.255.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.255.0';
-import { blurScore, blurText } from './pic-check.js?v=2.255.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.256.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.256.0';
+import { blurScore, blurText } from './pic-check.js?v=2.256.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -2161,8 +2161,8 @@ const wai = (() => {
   function watch() { if (stop || !cloud?.listenPurAi) return; try { stop = cloud.listenPurAi(list => { const was = fresh().length; L = list || []; if (fresh().length !== was && document.querySelector('[data-pp-root]')) rerender(); if (document.querySelector('[data-wai-root]')) paint(); }); } catch {} }
   function body() {
     const F = fresh();
-    if (!F.length) return '<div data-wai-root="1"><p class="stat-note">Koi nayi tasveer nahi. Business WhatsApp par bill ki photo bhejein aur saath <b>ai</b> likhein.</p></div>';
-    return `<div data-wai-root="1"><p class="stat-note">Jo tasveerein ek hi bill ki hain un par tick karein (4 tak), phir 🤖 Parho.</p><div class="pp-wai">${F.map(x => `<button type="button" class="pp-wair${pick.has(x.id) ? ' is-in' : ''}" data-pp-waisel="${esc(x.id)}"><b>${pick.has(x.id) ? '☑' : '☐'} ${esc(x.nm || 'WhatsApp')}</b><small>${esc(tm(x.at))}${x.cap ? ' · ' + esc(x.cap) : ''}</small></button>`).join('')}</div>
+    if (!F.length) return '<div data-wai-root="1"><p class="stat-note">Koi nayi tasveer nahi. Business WhatsApp par bill ki photo bhejein aur saath <b>ai</b> likhein — ya pehle bheji photo par reply mein <b>ai</b>.</p></div>';
+    return `<div data-wai-root="1"><p class="stat-note">Jo tasveerein ek hi bill ki hain un par tick karein (4 tak), phir 🤖 Parho.</p><div class="pp-wai">${F.map(x => `<button type="button" class="pp-wair${pick.has(x.id) ? ' is-in' : ''}" data-pp-waisel="${esc(x.id)}"><b>${pick.has(x.id) ? '☑' : '☐'} ${esc(x.nm || 'WhatsApp')}</b>${x.th ? `<img class="pp-waith" alt="" src="data:image/jpeg;base64,${esc(x.th)}">` : ''}<small>${esc(tm(x.at))}${x.cap ? ' · ' + esc(x.cap) : ''}</small></button>`).join('')}</div>
       <button type="button" class="got" data-pp-waigo="1"${pick.size && !busy ? '' : ' disabled'}>${busy ? '⏳ Tasveer la raha…' : '🤖 Parho (' + pick.size + ')'}</button></div>`;
   }
   function paint() { const r = document.querySelector('[data-wai-root]'); if (r) r.outerHTML = body(); }

@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.16';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.17';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -185,6 +185,19 @@ async function main() {
     const t0 = m.messageTimestamp, ts = Number(t0 && typeof t0 === 'object' ? (t0.toNumber ? t0.toNumber() : t0.low) : t0) * 1000 || Date.now(); if (Date.now() - ts > 30 * 60000) return;
     const ctx = (c.extendedTextMessage && c.extendedTextMessage.contextInfo) || (img && img.contextInfo) || null;
     const d = { st: 'new', at: ts, from, rid, nm: String(m.pushName || '').replace(/[|"]/g, ' ').slice(0, 40), tx: String(img ? img.caption || '' : tx).slice(0, 300), q: String((ctx && ctx.stanzaId) || ''), fw: !!(ctx && ctx.isForwarded), im: 0, n: 0 };
+    if (!img && /^\s*a\.?i\.?\s*$/i.test(String(tx || '')) && ctx && ctx.stanzaId && ctx.quotedMessage) {
+      let qm = ctx.quotedMessage; qm = (qm.ephemeralMessage && qm.ephemeralMessage.message) || (qm.viewOnceMessage && qm.viewOnceMessage.message) || qm;
+      const qi = qm.imageMessage || (qm.documentMessage && /^image\//i.test(String(qm.documentMessage.mimetype || '')) ? qm.documentMessage : null);
+      if (qi) {
+        try {
+          if (Number(qi.fileLength) > 12 * 1024 * 1024) throw Error('tasveer 12 MB se bari');
+          const fake = { key: { remoteJid: m.key.remoteJid, id: String(ctx.stanzaId), fromMe: false, participant: ctx.participant || undefined }, message: qm };
+          const buf = await within(B.downloadMediaMessage(fake, 'buffer', {}, { logger, reuploadRequest: s && s.updateMediaMessage }), 60000, 'purani tasveer download'), P = 800000, n = Math.ceil(buf.length / P);
+          for (let i = 0; i < n; i++) await IN.doc(id + '_p' + i).set({ b: buf.subarray(i * P, (i + 1) * P) });
+          d.im = 1; d.n = n; d.mt = String(qi.mimetype || 'image/jpeg'); d.sz = buf.length; d.qi = 1;
+        } catch (e) { d.err = 'purani tasveer WhatsApp se nahi mili (' + String((e && e.message) || e).slice(0, 60) + ') — photo dobara bhej kar saath ai likhein'; }
+      }
+    }
     if (img) {
       if (Number(img.fileLength) > 12 * 1024 * 1024) d.err = 'tasveer 12 MB se bari';
       else { const buf = await within(B.downloadMediaMessage(m, 'buffer', {}, { logger, reuploadRequest: s && s.updateMediaMessage }), 60000, 'tasveer download'), P = 800000, n = Math.ceil(buf.length / P);
