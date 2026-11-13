@@ -26,7 +26,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.12';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.13';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -174,7 +174,7 @@ async function main() {
     return '';
   }
   // v1.7 (12 Nov): 🔢 KHARCHA WHATSAPP SE — ijazat wale number (kh-wa.js: malik / Mubeen / khWa.allow) ka paigham jo 3 hindson se shuru ho. Baqi har paigham pehle jaisa chhor diya jata hai (na parha, na log).
-  let KHW = null; try { KHW = require('./kh-wa.js')({ biz, log }); } catch (e) { log('⚠️ kh-wa.js nahi chala: ' + e.message); }
+  let KHW = null; try { KHW = require('./kh-wa.js')({ biz, log }); if (KHW.startRem) KHW.startRem(); } catch (e) { log('⚠️ kh-wa.js nahi chala: ' + e.message); }   // v1.13: 🔔 roz ke reminder isi service se (ek hi jagah)
   // v1.8 (12 Nov, malik: "business number hi main — main ya Mubeen parchi isi par bhejein, wohi print kare, baqi cheezein bhi wohi handle kare · mera / Mubeen ka number juda ho ya na ho"):
   //   📥 INBOX — ijazat wale number (kh-wa who(): malik / Mubeen / khWa.allow) ki TASVEER ya chhota likha paigham (<= 60 harf) → waIn/<id> (+ _p<i> tasveer ke hisse) → wa-parchi.js usay parhta hai
   //   (Print / Print auto / start / bill — wohi purane qaide). Gahakon ke paigham ab bhi nahi parhe jate (sirf location). 30 min se purana nahi.

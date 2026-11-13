@@ -17,7 +17,8 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.4';   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
+const VER = '1.5';   // v1.5 (13 Nov): 🔔 WhatsApp reminder — 'reminder <likhai> / kal se' · 'all reminder show' · '3 off' · 'reminder off'; roz 11 baje, jab tak off na ho; har number ka apna (malik, Mubeen)
+// v1.4:   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
 const pad3 = n => String(n).padStart(3, '0');
 const rsT = v => 'Rs ' + Math.round(Number(v) || 0).toLocaleString('en-PK');
 function normPh(x) {
@@ -32,7 +33,8 @@ const REP_RE = /^\s*reports?\s*$/i, STG_RE = /^\s*([1-5])(?!\d)(?:[\s:.\-]+(.*))
 const STOP = new Set('start,started,shuru,print,printauto,autoprint,auto,cancel,wapas,hatao,ok,okay,okey,yes,no,nahi,ji,jee,han,haan,hello,hi,hey,salam,slam,aoa,theek,thek,thik,thanks,thank,shukria,shukriya,done,test,acha,achha,bill,parchi,report,reports,kal,aaj,abhi,bhej,bhejo,kya,kia,hai,ha,g'.split(','));
 // sirf naam jaisa chhota paigham (Business number ki chat): 1-4 lafz, hindsa nahi, aam lafz nahi
 const looksName = t => { t = String(t || '').trim(); if (t.length < 3 || t.length > 40 || /[0-9?!@#:\/\\\n]/.test(t)) return false; const w = t.toLowerCase().split(/\s+/); return w.length <= 4 && !w.some(x => STOP.has(x.replace(/[^a-z]/g, ''))) && /[a-z\u0600-\u06ff]{3}/i.test(t); };
-const looks = t => { t = String(t || ''); return /^\s*\d{3}(?!\d)/.test(t) || CANCEL_RE.test(t) || PICK_RE.test(t) || REP_RE.test(t) || (P2_RE.test(t) && !/print/i.test(t)); };
+const REM_RE = /^\s*(all\s+)?(reminders?|remainders?)(?![a-z])/i, OFF_RE = /^\s*(\d{1,3})\s+off\s*[.!]*\s*$/i;
+const looks = t => { t = String(t || ''); return /^\s*\d{3}(?!\d)/.test(t) || REM_RE.test(t) || OFF_RE.test(t) || CANCEL_RE.test(t) || PICK_RE.test(t) || REP_RE.test(t) || (P2_RE.test(t) && !/print/i.test(t)); };
 // '1 Imran chokar 5000 [no]' · '3 Imran 5000 Aslam' -> { k, a, b, amt, daily, note }
 function parse2(text) {
   let t = String(text || '').replace(/\s+/g, ' ').trim(); const m = P2_RE.exec(t); if (!m || /print/i.test(t)) return null;
@@ -149,6 +151,42 @@ function make({ biz, log = () => {} }) {
     await pendSet(ph, { stg: 'n', a: L.map(x => x.id), w, by: name });
     await say(ph, 'kq-' + w, `${listTxt(L)}\n\nNaam ka number bhejein (0 = chhoro)`); return true;
   }
+  // ---- v1.5: 🔔 REMINDER (malik 13 Nov: 'reminder bhi WhatsApp par · "Reminder Samiullah ne payment deni hai 7800 / kal se jab tak off na karo" · "all reminder show" · "3 off" · sirf mujhe · Mubeen ka apna reminder system apne number se')
+  //   blueAccess/waRem-<number> {L:[{n, t, from, on, at}], next} — har number ki apni list; roz REM_HOUR baje EK paigham (waOut rm-<number>-<din>, create = dohra nahi). AI nahi.
+  const REM_HOUR = 11, canRem = ph => base.prFrom.includes(ph) || base.prTo.includes(ph), RM = ph => BA.doc('waRem-' + ph);
+  async function remGet(ph) { const sn = await RM(ph).get(), d = sn.exists ? sn.data() || {} : {}; return { L: Array.isArray(d.L) ? d.L : [], next: Number(d.next) || 1 }; }
+  const remSave = (ph, R) => RM(ph).set({ L: R.L.slice(-200), next: R.next, at: Date.now() });
+  const dayPlus = n => new Date(Date.now() + 5 * 3600000 + n * 86400000).toISOString().slice(0, 10), dShow = d => String(d).slice(8, 10) + '-' + String(d).slice(5, 7);
+  const remList = L => L.map(r => `${r.n}. ${r.t}${r.from > today() ? ' (' + dShow(r.from) + ' se)' : ''}`).join('\n');
+  async function remCmd(ph, name, w, text, ts) {
+    if (!canRem(ph)) { await say(ph, 'kx-' + w, '✕ Reminder abhi sirf malik aur Mubeen ke liye hai.'); return true; }
+    if (ts && Date.now() - ts > 10 * 60000) return true;
+    const R = await remGet(ph), act = R.L.filter(r => r.on !== false), off = OFF_RE.exec(text);
+    if (off) { const n = Number(off[1]), r = act.find(x => Number(x.n) === n); if (!r) { await say(ph, 'kx-' + w, `✕ Reminder ${n} nahi mila. List dekhein: all reminder show`); return true; }
+      r.on = false; r.offAt = Date.now(); await remSave(ph, R); await say(ph, 'kw-' + w, `✅ Reminder ${n} band: ${r.t}`); return true; }
+    const body = text.replace(/^\s*(all\s+)?(reminders?|remainders?)[\s:.\-]*/i, '').trim(), low = body.toLowerCase().replace(/[.\s]+/g, ' ').trim();
+    if (!low || /^(show|list|dikhao|dikha do|sab|all|sab dikhao)$/.test(low)) { await say(ph, 'kw-' + w, act.length ? `🔔 Aap ke reminder (${act.length}):\n${remList(act)}\n\nBand: "${act[0].n} off" · sab band: "reminder off"` : '🔔 Koi reminder nahi laga.\nLagane ke liye: reminder Imran se paisa lena hai\nkal se'); return true; }
+    if (/^(off|sab off|all off|band|sab band)$/.test(low)) { if (!act.length) { await say(ph, 'kx-' + w, '🔔 Koi reminder chalu nahi.'); return true; }
+      await pendSet(ph, { stg: 'x', w, by: name }); await say(ph, 'kq-' + w, `Sab ${act.length} reminder band karun?\n${remList(act)}\n\n1 = haan · 0 = nahi`); return true; }
+    let add = 0, lines = body.split(/\n+/).map(x => x.trim()).filter(Boolean);
+    lines = lines.map(x => { if (/(^|\s)parson(\s+se)?(\s|$)/i.test(x) && /se|^parson$/i.test(x)) add = Math.max(add, 2); else if (/(^|\s)kal\s+se(\s|$)|^kal$/i.test(x)) add = Math.max(add, 1);
+      return x.replace(/(^|\s)(kal|aaj|parson)\s+se(?=\s|$)/ig, ' ').replace(/^(kal|aaj|parson)$/i, '').replace(/jab\s*tak\b.*$/i, '').replace(/\.{2,}/g, ' ').split(/\s+/).filter(tk => normPh(tk) !== ph || !/\d{10}/.test(tk)).join(' ').trim(); }).filter(Boolean);
+    const t = lines.join(' · ').replace(/\s+/g, ' ').trim().slice(0, 200);
+    if (!t) { await say(ph, 'kx-' + w, '✕ Reminder ki likhai nahi mili. Aise likhein:\nreminder Imran se paisa lena hai 7800\nkal se'); return true; }
+    if (act.length >= 50) { await say(ph, 'kx-' + w, '✕ 50 reminder chalu hain — pehle kuch band karein ("3 off").'); return true; }
+    const n = R.next, from = dayPlus(add); R.L.push({ n, t, from, on: true, at: Date.now() }); R.next = n + 1; await remSave(ph, R);
+    log(`🔔 reminder ${n} (${name}): ${t}`);
+    await say(ph, 'kw-' + w, `✅ Reminder ${n} lag gaya\n${t}\n${add ? dShow(from) + ' se' : 'Aaj se'} roz subah ${REM_HOUR} baje — jab tak off na karein.\nBand: "${n} off" · List: "all reminder show"`); return true;
+  }
+  const remSent = {};
+  async function remTick() {
+    try { const h = new Date(Date.now() + 5 * 3600000).getUTCHours(); if (h < REM_HOUR || h >= 21 || cfg.on === false) return; const day = today();
+      for (const ph of [...new Set([...base.prFrom, ...base.prTo])]) { if (!ph || remSent[ph] === day) continue;
+        const R = await remGet(ph), due = R.L.filter(r => r.on !== false && String(r.from || '') <= day); remSent[ph] = day; if (!due.length) continue;
+        await say(ph, 'rm-' + ph + '-' + day, `🔔 Aaj ke reminder (${dShow(day)}):\n${remList(due)}\n\nBand karne ke liye: "${due[0].n} off"`); log(`🔔 ${who(ph)}: ${due.length} reminder bheje`); }
+    } catch (e) { log('🔔 reminder tick: ' + e.message); }
+  }
+  let remTimer = null; const startRem = () => { if (remTimer) return; remTimer = setInterval(remTick, 60000); if (remTimer.unref) remTimer.unref(); setTimeout(remTick, 20000); };
   async function stage(ph, name, w, text, d) {
     const pk = PICK_RE.exec(text), sm = STG_RE.exec(text);
     if (pk && Number(pk[1]) === 0 && pk[2] == null) { await pendDrop(ph); await say(ph, 'kx-' + w, '↩ Theek hai — chhor diya.'); return true; }
@@ -162,6 +200,11 @@ function make({ biz, log = () => {} }) {
       if (!pk || pk[2] != null) return false;
       const A = PT.get(d.pid), B = PT.get((d.b || [])[Number(pk[1]) - 1]); if (!okParty(A) || !okParty(B) || A.id === B.id) { await say(ph, 'kx-' + w, '✕ Yeh number list mein nahi.'); return true; }
       await pendDrop(ph); const r = await mkTransfer(A, B, d.amt, clean(d.w), ph, name); await say(ph, 'kw-' + w, r.txt, r.id); return true;
+    }
+    if (d.stg === 'x') {
+      if (!pk || pk[2] != null) return false; if (Number(pk[1]) !== 1) { await say(ph, 'kx-' + w, '1 = haan (sab band) · 0 = nahi'); return true; }
+      const R = await remGet(ph); let n = 0; for (const r of R.L) if (r.on !== false) { r.on = false; r.offAt = Date.now(); n++; }
+      await remSave(ph, R); await pendDrop(ph); await say(ph, 'kw-' + w, `✅ ${n} reminder band ho gaye.`); return true;
     }
     if (d.stg === 'r') {
       if (!pk || pk[2] != null) return false; const k = { 1: 'd', 2: 'l', 3: 'p', 4: 'all' }[Number(pk[1])]; if (!k) { await say(ph, 'kx-' + w, '✕ 1, 2, 3 ya 4 bhejein.'); return true; }
@@ -221,6 +264,7 @@ function make({ biz, log = () => {} }) {
   async function apply({ text, from, wid, ts, quoted, quiet, biz: inBiz }) {
     const ph = normPh(from), name = who(ph); if (!ph || !name || cfg.on === false) return false;
     const w = clean(wid); if (!w) return false;
+    if (REM_RE.test(text) || OFF_RE.test(text)) return await remCmd(ph, name, w, text, ts);
     if (CANCEL_RE.test(text)) {
       const q = clean(quoted); if (!q) return false;
       if (!isMalik(ph)) { await say(ph, 'kc-' + w, '✕ Cancel sirf malik kar sakta hai.'); return true; }
@@ -265,6 +309,6 @@ function make({ biz, log = () => {} }) {
     await say(ph, 'kw-' + w, `✅ ${p.code} ${party.name} · ${rsT(p.amt)} Akhrajat mein lag gaya${p.note ? '\n' + p.note : ''}\n↩ Ghalat ho to is paigham par reply mein "cancel" likhein.`, id);
     return true;
   }
-  return { apply, looks, looksName, who: ph => who(normPh(ph)), ver: VER };
+  return { apply, looks, looksName, startRem, remTick, who: ph => who(normPh(ph)), ver: VER };
 }
 module.exports = make; module.exports.parse = parse; module.exports.parse2 = parse2; module.exports.looksName = looksName; module.exports.pdfMake = pdfMake; module.exports.looks = looks; module.exports.normPh = normPh;

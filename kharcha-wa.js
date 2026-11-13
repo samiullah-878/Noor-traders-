@@ -26,6 +26,8 @@ function html() {
     <p class="kw-how">✍️ Aise likhein: <b>001 Imran ne paisa liya 4900</b><br>number · likhai · <b>raqam aakhir mein</b>. Jawab ✅ / ✕ WhatsApp par aata hai. Ghalat ho to jawab par reply mein <b>cancel</b>.</p>
     <p class="rw-h">📲 Naam se <small>(dukan ke Business number ki chat mein)</small></p>
     <p class="kw-how">① sirf naam likhein: <b>hafiz karahi</b> → naam ki list → number<br>② baqaya + kaam: <b>1 5000</b> li · <b>2 5000</b> di · <b>3 5000 Aslam</b> transfer · <b>4</b> PDF · <b>5</b> print (30 din)<br>📊 <b>reports</b> likhein (sirf malik) → 1 Daily Sale · 2 Larka-wise · 3 Profit · 4 teeno<br>↩ cancel sirf malik.</p>
+    <p class="rw-h">🔔 Reminder <small>(aap aur Mubeen — har ek ka apna)</small></p>
+    <p class="kw-how"><b>reminder Imran se paisa lena hai 7800</b> (neeche <b>kal se</b> likhein to kal se) → roz subah 11 baje WhatsApp par, jab tak off na karein<br><b>all reminder show</b> = list · <b>3 off</b> = wo band · <b>reminder off</b> = sab band</p>
     <p class="rw-h">💵 Payment li / di / transfer <small>(sab parties · bank nahi)</small></p>
     <p class="kw-how"><b>1 Imran 5000</b> = payment LI · <b>2 Imran 5000</b> = payment DI · <b>3 Imran 5000 Aslam</b> = transfer (Imran se Aslam ko)<br>Jawab mein app ke naam 1-2-3 aate hain — <b>number bhejein</b> to hi lagta hai (transfer: do number, jaise 1 2). Aakhir mein <b>no</b> = Daily Sale mein nahi. Ghalat = ✅ par reply <b>cancel</b>.</p>
     <p class="rw-h">Kahan likhein</p>
