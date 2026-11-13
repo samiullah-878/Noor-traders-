@@ -7940,3 +7940,6 @@ Wajah: Android Chrome ka back modal <dialog> ko khud band karta hai ('cancel' pr
 
 === v2.268.0 (13 Nov 2026) — Online Dukan ka ⋮ halka ===
 Malik: "jo cheezein ab use nahi kar raha nikal do" (OK). web-dukan.js MENU_OLD=false: Website kholo (header mein hai), Rack ki photos, Bane hue racks, Internet se tasveerein, Items chuno, AI racks, 'Rack photo par nahi' filter — sirf chhupe; data + website ki 2 rack photos wahi.
+
+=== v2.268.1 (13 Nov 2026) — rack size mein item tap = Transfer register (ghalti) ===
+Online Dukan ki tasveer `data-th` (thumb) aur pos-stock ka document click `[data-th]` (Transfer register) ek hi naam — item dabane par register khul jata tha. pos-stock handler ab #wdDlg ke andar ke click chhor deta hai.

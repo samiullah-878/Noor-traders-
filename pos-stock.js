@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.268.0';
-import { liveLabelsHTML } from './barcode.js?v=2.268.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.268.1';
+import { liveLabelsHTML } from './barcode.js?v=2.268.1';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -699,13 +699,13 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.268.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.268.1')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.268.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.268.1')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
@@ -729,7 +729,7 @@ export function stockRozApi() {
 let farqMod = null;
 const farqCan = () => seeStock() && (isOwner() || can('stock.farq'));
 async function farqOpenNow() { if (!farqCan()) { notice('⚖️ Stock farq — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { farqMod = farqMod || await import('./farq.js?v=2.268.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { farqMod = farqMod || await import('./farq.js?v=2.268.1'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // sab jagah (jo gini) ka asal farq — is round ki ginti
 function oxNet(id) { let net = 0, k = false, z = false, n = 0, pr = 0; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it))); net += f; n++; if (f < -0.001) k = true; if (f > 0.001) z = true; pr = Number(it.prate) || pr; } return n ? { net: r3(net), rs: net * pr, both: k && z, n } : null; }
 function oxHTML(r, c, diff) {
@@ -781,7 +781,7 @@ function qtrGinti(b, id) {
     return Math.abs(f) > 0.0005 ? { f: r3(f), round } : null; } catch { return null; }
 }
 async function qtrGo(o) { if (!qtrCan()) { notice('⇄ Transfer — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { qtrMod = qtrMod || await import('./qtr.js?v=2.268.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { qtrMod = qtrMod || await import('./qtr.js?v=2.268.1'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // jagah badli: sab se bara KAM (yahan maal kam = POS zyada) → sab se bari ZYADTI, tadad = dono mein chhoti
 function oxPair(id) {
   let k = null, z = null; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it)));
@@ -5181,7 +5181,7 @@ export function renderTransferHub(canDo = () => true) {
   $('list').innerHTML = `<div class="th-root"><div class="th-tiles">${canDo('stock.transfer') ? tile('new', '➕', 'Naya transfer note', 'Sirf majood maal · Ctn mein · ⤓ Sara', 'a') : ''}${canDo('stock.g2milao') && collect().branches.some(b => b !== 1) ? tile('g2m', '🧮', 'Stock milao', 'Dukan + godam ginti · 📊 % bacha · live', 'b') : ''}${canDo('stock.rack') ? (() => { const n = rackDue().length + pkDue().length; return tile('rack', '🧺', 'Rack bharo', (n ? `${n} items godam se lane` : rackAt || irData ? 'Sab rack bhare ✓' : 'Data aa raha hai') + (rackZero.length && isOwner() ? ` · ⚠️ ${rackZero.length} pcs 0` : ''), 'c' + (n ? ' rk-hot' : '')).replace('</button>', n ? `<i class="rk-badge">${n}</i></button>` : '</button>'); })() : ''}${canDo('stock.tc') ? tile('tc', '🧾', 'Transfer check', pend ? pend + ' baqi · scan karein' : 'Maal pohancha? Scan', 'b') : ''}${canDo('stock.reg') ? tile('reg', '📋', 'Transfer register', 'Din-war · PDF', 'c') : ''}${canDo('tr.barcode') && canDo('v:barcode') ? tile('bc', '🏷', 'Barcode', 'Label ginti · godam-war' + (isOwner() || canDo('tr.bcpaisa') ? ' · 💰 mazdoori' : ''), 'a') : ''}${canDo('app.gate') ? tile('gate', '🚪', 'Gate pass', 'Posted bill · godam ka maal · ✓ de diya', 'c') : ''}${canDo('stock.pkrep') ? tile('pk', '📦', 'Packet report', 'Godam 2 · barcode-war · 3 mahine', 'a') : ''}${canDo('v:irep') ? tile('irep', '📊', 'Item report', 'Item-war bikri', 'b') : ''}${canDo('v:larka') ? tile('larka', '👦', 'Larka report', 'Har larke ki sale', 'c') : ''}</div>
     ${thG ? `<div class="thg-pill"><span>🏬 Sirf <b>${esc(branchName(thG, names))}</b> ke notes</span><button type="button" data-th-g="0">✕ Sab</button></div>` : ''}${grp || (thG ? `<div class="th-empty">🏬<b>${esc(branchName(thG, names))} — aaj / kal koi note nahi</b><small>"✕ Sab" se poori list</small></div>` : '<div class="th-empty">⇄<b>Aaj / kal koi transfer note nahi</b><small>"Naya transfer note" se banayein</small></div>')}</div>`;
 }
-document.addEventListener('click', e => { const b = e.target.closest?.('[data-th-rp],[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel],[data-th-g]'); if (!b) return; const d = b.dataset;
+document.addEventListener('click', e => { if (e.target.closest?.('#wdDlg')) return; const b = e.target.closest?.('[data-th-rp],[data-th],[data-th-reg],[data-th-tc],[data-th-prn],[data-th-edit],[data-th-cancel],[data-th-g]'); if (!b) return; const d = b.dataset;
   if (d.thRp) { thRpOpen(d.thRp); return; }   // v2.133.6: 🖨 dobara print chip
   if (d.thG != null) { const g = Number(d.thG) || 0; thG = thG === g ? 0 : g; rerender(); if (thG) setTimeout(() => document.querySelector('.thg-pill')?.scrollIntoView?.({ block: 'nearest', behavior: 'smooth' }), 80); return; }   // v2.105.8: 🏬
   if (d.thTc) { openTransferCheck('nikle'); tcFromTh = true; tcShow(d.thTc); return; }   // v2.173.1: note par tap = SIRF usi note ki khirki (pehle bara card dhoondta tha jo v2.105.6 se nahi — sab notes ki ikathi list khul jati thi)
@@ -5327,8 +5327,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.268.0';
-import { recentPush } from './recent.js?v=2.268.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.268.1';
+import { recentPush } from './recent.js?v=2.268.1';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)
