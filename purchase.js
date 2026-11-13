@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.260.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.260.0';
-import { blurScore, blurText } from './pic-check.js?v=2.260.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.261.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.261.0';
+import { blurScore, blurText } from './pic-check.js?v=2.261.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -745,7 +745,7 @@ export function renderPP() {
     ${P && !supOpen && (!s.branches.length || Number(godam)) ? '<button type="button" class="pp-hdup" data-pp-hd="0">▴ Form band</button>' : ''}
     </div>
     ${cart.length && !pos ? `<div class="sale-total"><small>Purchase · ${cart.length} items</small><strong id="ppTotal">Rs ${num(total)}</strong></div>` : ''}
-    <div class="account-tools pp-tools">${waiChip()}<button type="button" data-pp-newitem="1" data-mn="pp.newitem" data-mn-i="➕" data-mn-t="Naya item" data-mn-s="POS mein naya item banao" data-mn-g="🧾 Purchase — kaam">➕ Naya item</button><button class="sh-wide" id="ppTodayBtn" data-pp-today="1" data-mn="pp.today" data-mn-i="📋" data-mn-t="Aaj ke bill" data-mn-s="app se bane · POS haalat" data-mn-n="${today.length || ''}" data-mn-g="🧾 Purchase — kaam">${todayLabel()}</button>${aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1" data-mn="pp.ai" data-mn-i="🤖" data-mn-t="Tasveer se" data-mn-s="bill ki photo se items" data-mn-g="🧾 Purchase — kaam">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length && !pos ? `<button class="sh-wide" data-pp-jopen="1" data-mn="pp.jaanch" data-mn-keep="1" data-mn-i="🔎" data-mn-t="Jaanch kholo" data-mn-s="AI ki parhi lines" data-mn-n="${aiRows.filter(r => !r.skip && !r.done).length || ''}" data-mn-g="🧾 Purchase — kaam">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${(() => { try { return typeof window.ntCan !== 'function' || window.ntCan('pur.check'); } catch { return true; } })() ? '<button class="sh-wide" data-bc-screen="1" data-mn="pp.check" data-mn-i="✅" data-mn-t="Bill check" data-mn-s="POS bills check / baqi" data-mn-g="🧾 Purchase — kaam">✅ Bill check</button>' : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1" data-mn="pp.pcbill" data-mn-i="✏️" data-mn-t="PC ka bill" data-mn-s="POS bill edit karein" data-mn-g="🧾 Purchase — kaam">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1" data-mn="pp.packs" data-mn-i="📦" data-mn-t="Carton khali" data-mn-s="carton size likhein" data-mn-n="${packGaps().length}" data-mn-g="🧾 Purchase — kaam">📦 Carton size khali (${packGaps().length})</button>` : ''}${canGrid() ? `<div class="pp-vseg" data-mn-seg="pp.view" data-mn-i="📊" data-mn-t="Bill ka look" data-mn-g="🧾 Purchase — kaam"><button type="button" class="${isGrid() ? 'is-in' : ''}" data-pp-view="grid">📊 Table</button><button type="button" class="${isRows() ? 'is-in' : ''}" data-pp-view="rows">☰ Lines</button><button type="button" class="${viewNow() === 'card' ? 'is-in' : ''}" data-pp-view="card">🗂 Card</button></div>` : ''}${supplier ? '<button data-pp-copy="1" data-mn="pp.copy" data-mn-i="📑" data-mn-t="Pichhla copy" data-mn-s="isi supplier ka pichhla bill" data-mn-g="🧾 Purchase — kaam">📑 Pichhla bill copy</button>' : ''}</div>
+    <div class="account-tools pp-tools">${waiChip()}<button type="button" data-pp-newitem="1" data-mn="pp.newitem" data-mn-i="➕" data-mn-t="Naya item" data-mn-s="POS mein naya item banao" data-mn-g="🧾 Purchase — kaam">➕ Naya item</button><button class="sh-wide" id="ppTodayBtn" data-pp-today="1" data-mn="pp.today" data-mn-i="📋" data-mn-t="Aaj ke bill" data-mn-s="app se bane · POS haalat" data-mn-n="${today.length || ''}" data-mn-g="🧾 Purchase — kaam">${todayLabel()}</button>${pos && canUse() ? '<button class="sh-wide" data-pp-ai="1" data-mn="pp.ai" data-mn-keep="1" data-mn-i="📄" data-mn-t="Bill ki tasveer" data-mn-s="bill ki photo upar lagao" data-mn-g="🧾 Purchase — kaam">📄 Bill ki tasveer</button>' : aiBillOf && canUse() ? '<button class="sh-wide" data-pp-ai="1" data-mn="pp.ai" data-mn-i="🤖" data-mn-t="Tasveer se" data-mn-s="bill ki photo se items" data-mn-g="🧾 Purchase — kaam">🤖 Bill ki tasveer se items</button>' : ''}${aiRows && aiRows.length && !pos ? `<button class="sh-wide" data-pp-jopen="1" data-mn="pp.jaanch" data-mn-keep="1" data-mn-i="🔎" data-mn-t="Jaanch kholo" data-mn-s="AI ki parhi lines" data-mn-n="${aiRows.filter(r => !r.skip && !r.done).length || ''}" data-mn-g="🧾 Purchase — kaam">🧾 Jaanch kholo (${aiRows.filter(r => !r.skip && !r.done).length} baqi)</button>` : ''}${(() => { try { return typeof window.ntCan !== 'function' || window.ntCan('pur.check'); } catch { return true; } })() ? '<button class="sh-wide" data-bc-screen="1" data-mn="pp.check" data-mn-i="✅" data-mn-t="Bill check" data-mn-s="POS bills check / baqi" data-mn-g="🧾 Purchase — kaam">✅ Bill check</button>' : ''}${canUse() && !edit ? '<button class="sh-wide" data-pp-pcbills="1" data-mn="pp.pcbill" data-mn-i="✏️" data-mn-t="PC ka bill" data-mn-s="POS bill edit karein" data-mn-g="🧾 Purchase — kaam">✏️ PC ka bill edit karein</button>' : ''}${packGaps().length ? `<button data-pp-packs="1" data-mn="pp.packs" data-mn-i="📦" data-mn-t="Carton khali" data-mn-s="carton size likhein" data-mn-n="${packGaps().length}" data-mn-g="🧾 Purchase — kaam">📦 Carton size khali (${packGaps().length})</button>` : ''}${canGrid() ? `<div class="pp-vseg" data-mn-seg="pp.view" data-mn-i="📊" data-mn-t="Bill ka look" data-mn-g="🧾 Purchase — kaam"><button type="button" class="${isGrid() ? 'is-in' : ''}" data-pp-view="grid">📊 Table</button><button type="button" class="${isRows() ? 'is-in' : ''}" data-pp-view="rows">☰ Lines</button><button type="button" class="${viewNow() === 'card' ? 'is-in' : ''}" data-pp-view="card">🗂 Card</button></div>` : ''}${supplier ? '<button data-pp-copy="1" data-mn="pp.copy" data-mn-i="📑" data-mn-t="Pichhla copy" data-mn-s="isi supplier ka pichhla bill" data-mn-g="🧾 Purchase — kaam">📑 Pichhla bill copy</button>' : ''}</div>
   </div>`;
   const si = $('search'); if (si) si.placeholder = '📷 scan ya item ka naam / code (Enter)';
   if (s.failed) { $('list').innerHTML = `<div class="empty"><strong>Items nahi mile</strong><p>${esc(s.failed)}</p></div>`; $('actions').innerHTML = ''; return; }
@@ -2205,8 +2205,8 @@ const wai = (() => {
   function body() {
     const F = day();
     if (!F.length) return inChoose ? '<div data-wai-root="1"></div>' : '<div data-wai-root="1"><p class="stat-note">Koi nayi tasveer nahi. Business WhatsApp par bill ki photo bhejein aur saath <b>ai</b> likhein — ya pehle bheji photo par reply mein <b>ai</b>.</p></div>';
-    return `<div data-wai-root="1"><p class="stat-note">📲 WhatsApp se aayi (aaj ki) — ek bill ki tasveeron par tick (4 tak), phir 🤖 Parho. ✓ = pehle parhi, dobara bhi khul sakti hai.</p><div class="pp-wai">${F.map(x => `<button type="button" class="pp-wair${pick.has(x.id) ? ' is-in' : ''}" data-pp-waisel="${esc(x.id)}">${x.th ? `<img class="pp-waith" alt="" src="data:image/jpeg;base64,${esc(x.th)}">` : ''}<b>${pick.has(x.id) ? '☑' : '☐'} ${esc(x.nm || 'WhatsApp')}</b><small>${x.dn ? '✓ parhi · ' : ''}${esc(tm(x.at))}</small></button>`).join('')}</div>
-      <button type="button" class="got" data-pp-waigo="1"${pick.size && !busy ? '' : ' disabled'}>${busy ? '⏳ Tasveer la raha…' : '🤖 Parho (' + pick.size + ')'}</button></div>`;
+    return `<div data-wai-root="1"><p class="stat-note">📲 WhatsApp se aayi (aaj ki) — ek bill ki tasveeron par tick (4 tak), phir ${posMode() ? '📄 Kholo' : '🤖 Parho'}. ✓ = pehle kholi, dobara bhi khul sakti hai.</p><div class="pp-wai">${F.map(x => `<button type="button" class="pp-wair${pick.has(x.id) ? ' is-in' : ''}" data-pp-waisel="${esc(x.id)}">${x.th ? `<img class="pp-waith" alt="" src="data:image/jpeg;base64,${esc(x.th)}">` : ''}<b>${pick.has(x.id) ? '☑' : '☐'} ${esc(x.nm || 'WhatsApp')}</b><small>${x.dn ? '✓ parhi · ' : ''}${esc(tm(x.at))}</small></button>`).join('')}</div>
+      <button type="button" class="got" data-pp-waigo="1"${pick.size && !busy ? '' : ' disabled'}>${busy ? '⏳ Tasveer la raha…' : (posMode() ? '📄 Kholo (' : '🤖 Parho (') + pick.size + ')'}</button></div>`;
   }
   let inChoose = false;
   function paint() { const r = document.querySelector('[data-wai-root]'); if (r) r.outerHTML = body(); }
@@ -2216,7 +2216,7 @@ const wai = (() => {
     open() { watch(); inChoose = false; pick = new Set(fresh().length === 1 ? [fresh()[0].id] : []); dlg('📲 WhatsApp se aayi bill ki tasveer', body()); },
     sel(id) { if (pick.has(id)) pick.delete(id); else if (pick.size < 4) pick.add(id); else notice('Ek bill mein 4 tasveer tak'); paint(); },
     async go() {
-      if (busy || !pick.size) return; if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; } if (!aiBillOf) { notice('Is login par AI nahi chalta'); return; }
+      if (busy || !pick.size) return; if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; } if (!aiBillOf && !posMode()) { notice('Is login par AI nahi chalta'); return; }
       busy = true; paint(); const ids = [...pick], files = [];
       try {
         for (const id of ids) { const u8 = await cloud.purAiImg(id); if (u8 && u8.length) files.push(new File([u8], 'wa-' + id + '.jpg', { type: 'image/jpeg' })); }
@@ -2230,13 +2230,14 @@ const wai = (() => {
 function waiChip() { const n = wai.left(); wai.watch(); return n ? `<button type="button" class="sh-wide pp-waic" data-pp-wai="1" data-mn="pp.wai" data-mn-keep="1" data-mn-i="📲" data-mn-t="WhatsApp se aayi" data-mn-s="bill ki tasveer — AI se items" data-mn-n="${n}" data-mn-g="🧾 Purchase — kaam">📲 WhatsApp se aayi (${n})</button>` : ''; }
 function aiItems() {
   if (aiBusy) { notice('AI abhi bill parh raha hai…'); return; }
-  if (!aiBillOf) { notice('Is login par AI nahi chalta'); return; }
+  const pos = posMode();
+  if (!aiBillOf && !pos) { notice('Is login par AI nahi chalta'); return; }
   camClear();
-  dlg('🤖 Bill ki tasveer se items', `${aiModeHTML()}<div class="pp-aichoose">
+  dlg(pos ? '📄 Bill ki tasveer' : '🤖 Bill ki tasveer se items', `${pos ? '' : aiModeHTML()}<div class="pp-aichoose">
       <button type="button" class="got" data-pp-aicam="1">📷 Camera se photo lo</button>
       <button type="button" data-pp-aigal="1">🖼️ Gallery se chunein</button>
       <button type="button" data-pp-newitem="1">➕ Naya item</button>
-    </div>${wai.chips()}<p class="stat-note">Lamba bill ho to camera se ek ek page lein (4 tak) — sab ek saath parhe jayenge.</p>`);
+    </div>${wai.chips()}<p class="stat-note">${pos ? 'Tasveer chunein — poora bill screen par upar lag jayega, items neeche table mein khud likhein (AI nahi).' : 'Lamba bill ho to camera se ek ek page lein (4 tak) — sab ek saath parhe jayenge.'}</p>`);
 }
 function aiPick(cam) {                    // cam: seedha peeche wala camera (capture) — warna gallery (kai tasveerein)
   const inp = document.createElement('input');
@@ -2271,6 +2272,7 @@ function camShow() {                      // li hui photos ki jhalak + agla page
 }
 async function aiRead(files, opt = {}) {   // v2.99.7: opt.agent = 🤖 agent se (dialog nahi, status opt.onStatus, galti throw)
   setBillPics(files);   // v2.2.0: wohi tasveerein screen par bhi
+  if (posMode() && !opt.agent) { aiRows = null; aiBillInfo = null; billPin = true; billHide = false; billIx = 0; billZoom = 1; camClear(); const d0 = $('dialog'); try { if (d0 && d0.open) d0.close(); } catch {} keepDraft(); rerender(); notice('📄 Bill ki tasveer upar lag gayi — items neeche table mein likhein'); return; }
   aiLastFiles = files; const mode = opt.mode || aiModeNow();   // v2.99.78
   aiBusy = true; aiRows = null; aiBillInfo = null; aiFmtAuto = ''; jView = 'list'; jIx = -1; jForceAsk = false;
   if (!opt.agent) dlg('🤖 Bill ki tasveer se items', '<p id="ppAiMsg" role="status">Tayyari…</p><div id="ppAiOut"></div>');

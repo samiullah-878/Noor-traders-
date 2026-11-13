@@ -7855,3 +7855,11 @@ Malik (photo, 'Bill ki tasveer se items'): 'yahan pictures chhote chips ki shaka
 - purchase.js wai: `day()` = 24 ghante ki sab (parhi hui bhi, '✓ parhi'), chips = chhoti tasveer + naam + waqt; 'Bill ki tasveer se items' khirki mein seedhe neeche (wai.chips()), alag 'WhatsApp se aayi' button hata. Tick -> 🤖 Parho (parhi hui dobara bhi). Ginti (badge) sirf nayi ki.
 - wa-parchi v2.30: purAi / purAiImg 1 din baad mitti hain (pehle 3 din) — safai nayi tasveer aane par chalti hai.
 - AI: wohi purana. Test nahi hua.
+
+
+=== v2.261.0 (13 Nov 2026) — PC POS Purchase: AI khatam, sirf bill ki tasveer upar ===
+Malik: 'AI khatam kar do, bas ek kaam karo — poore bill ki picture background par laga do jo hum select karein'.
+- purchase.js aiRead: posMode (PC) mein AI nahi chalta — chuni tasveer(ein) `billPics` + `billPin` = table ke upar poori tasveer (30vh, andar scroll, − / + zoom, agli tasveer, ⤢ poori screen, ▲ Chhupao, ✕). Items malik / larka table mein haath se likhta hai. v2.257 ka AI -> table (posJ, peeli / laal qatar) code maujood hai magar PC par ab AI chalta hi nahi (aiRows null).
+- Khirki ka naam '📄 Bill ki tasveer' (Tez / Pakka chips nahi), WhatsApp chips par '📄 Kholo'; button '📄 Bill ki tasveer' table ke upar ki line mein (data-mn-keep). Phone par AI pehle jaisa.
+- 'Background' ko maine 'table ke upar' samjha (table ke peeche tasveer = likhai parhi nahi jati) — malik se pakka karna hai.
+- AI: PC par nahi. Test nahi hua.

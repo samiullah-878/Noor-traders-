@@ -7988,6 +7988,12 @@ html body:has(.pp-posr) #list .pp-tbl tr.jy td{background:#fff8d6!important}
 html body:has(.pp-posr) #list .pp-tbl tr.jr td{background:#ffe9e6!important}
 html body:has(.pp-posr) #list .pp-tbl tr.jn td{background:#ffd9d4!important;color:#7a1c12;font-weight:700}
 html body:has(.pp-posr) #list .pp-tbl tr.jn td.nm button{color:#7a1c12!important;font-weight:700!important;max-width:none!important;cursor:pointer}
+/* v2.261.0: PC par AI nahi — chuni hui bill ki poori tasveer upar (scroll + zoom), items neeche table mein haath se */
+html body:has(.pp-posr) main #list .pp-billbar{position:relative!important;top:auto!important;border-radius:0!important;border:1px solid #7f9db9!important;padding:2px!important;margin:0 0 3px!important;box-shadow:none!important;background:#fff!important}
+html body:has(.pp-posr) main #list .pp-billbar .pp-billwrap{max-height:30vh!important;border-radius:0!important}
+html body:has(.pp-posr) main #list .pp-billbar .pp-billacts{position:absolute;right:22px;top:4px;margin:0!important;display:flex;gap:3px;background:rgba(255,255,255,.85);padding:2px}
+html body:has(.pp-posr) main #list .pp-billbar .pp-billacts button{all:unset;cursor:pointer;border:1px solid #7f9db9;background:#fff;padding:1px 9px;font:400 13px Tahoma,sans-serif;color:#111}
+html body:has(.pp-posr) main #list .pp-billbar.pp-billmin{padding:2px 6px!important}
 html body:has(.pp-posr) #list .pp-tbl tr.sel td{background:#d9ecf7!important}
 html body:has(.pp-posr) #list .pp-tbl :is(th,td).nm{position:static!important;box-shadow:none!important;max-width:none!important}
 html body:has(.pp-posr) #list .pp-tbl td.nm small{display:none!important}
