@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.266.1';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank } from './khula.js?v=2.266.1';
-import { smartFind } from './dhoond.js?v=2.266.1';
-import { makeKamra } from './kamra.js?v=2.266.1';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.267.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, shelfPack } from './khula.js?v=2.267.0';
+import { smartFind } from './dhoond.js?v=2.267.0';
+import { makeKamra } from './kamra.js?v=2.267.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -138,6 +138,7 @@ function build(d) {
   const hide = R.hide || {}, ic = R.ic || {}, hc = R.hc || {}, cn = R.cn || {};
   const groups = new Map(); S.items = new Map();
   // 📸 v2.158.0: asal rack ki photos — photo par jo item hai wo usi rack ka (bane hue rack mein dohra nahi)
+  S.sn = R.sn && typeof R.sn === 'object' ? R.sn : {}; S.sz = R.sz && typeof R.sz === 'object' ? R.sz : {};
   S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {}; S.draw = !!R.draw; S.cr = R.cr && typeof R.cr === 'object' ? R.cr : {};
   S.rps = Object.entries(R.rp && typeof R.rp === 'object' ? R.rp : {}).map(([pid, x]) => { let a = []; try { a = JSON.parse((x && x.s) || '[]'); } catch {}
     return { pid, k: String(x?.k || '').trim(), o: Number(x?.o) || 0, w: Number(x?.w) || 3, h: Number(x?.h) || 4, spots: (Array.isArray(a) ? a : []).filter(t => Array.isArray(t) && t[4]).map(t => ({ x: +t[0] || 0, y: +t[1] || 0, w: +t[2] || 0, h: +t[3] || 0, id: String(t[4]) })) }; })
@@ -178,8 +179,8 @@ function dims() {
   const cols = Math.max(4, Math.min(7, Math.floor((bw - 76) / 104)));   // v2.156.0: malik — har shelf par kam az kam 4
   const rows = Math.min(8, Math.max(2, Math.min(6, Math.floor((H - 96) / 118))) + 2);   // v2.156.0: 2 shelf zyada (racks kam)
   // v2.266.0 (malik 13 Nov: "ek shelf par mobile 7 items, PC par 10 · ek rack 5-6 shelf"): bane hue (auto) rack ka apna naap — khula / photo bays ka naap wahi
-  const sc = W >= 1100 ? 10 : 7, sr = Math.max(5, Math.min(6, Math.floor((H - 96) / 92)));
-  return { bw, cols, rows, per: cols * rows, sc, sr, sper: sc * sr };
+  const sc = 7, rh = Math.max(200, H - 96), sr = Math.max(5, Math.min(6, Math.floor((H - 96) / 92)));
+  return { bw, cols, rows, per: cols * rows, sc, sr, rh, sper: sc * sr };
 }
 
 // ---------- 🧴 bina tasveer: dabba / botal / pouch ----------
@@ -197,15 +198,17 @@ const gth = (it, px = 120) => { const k = it.id + '|' + it.k + '|' + px; if (!GT
 const picOf = (it, px) => PHURL.get(it.id) || (it.k && it.k !== 'n' ? gth(it, px) : '');
 const imgOf = (it, big) => { const u = picOf(it, big ? 280 : 120); return u ? `<img src="${u}" alt="">` : pkHTML(it, big); };
 
-function itemHTML(it) {
+function itemHTML(it, st) {
   const q = cnt(it.id);
-  return `<button type="button" class="it${q ? ' in-crate' : ''}" data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${imgOf(it)}</span><span class="tag"><small>Rs</small>${num(it.r)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
+  return `<button type="button" class="it${q ? ' in-crate' : ''}"${st ? ` style="${st}"` : ''} data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${imgOf(it)}</span><span class="tag"><small>Rs</small>${num(it.r)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
 }
 // v2.156.1: ⚡ malik — "aage peeche karte hain to lag aata hai": sirf qareeb ke racks mein maal (DOM chhota) — door ke rack khali dhancha (sign + shelf), paas aate hi bhar jate
 const NEAR = 2, FAR = 5;
 function shelvesHTML(b, D, fill) {
-  const rows = Math.min(D.sr, Math.max(5, Math.ceil(b.items.length / D.sc)));   // v2.266.0: 5-6 shelf
-  let h = ''; for (let s = 0; s < rows; s++) h += `<div class="shelf">${fill ? b.items.slice(s * D.sc, (s + 1) * D.sc).map(itemHTML).join('') : ''}</div>`;
+  // v2.267.0: har rack ka apna size (S.sn) + item ka qad (S.sz: s chhota / l bara) — bara zyada jagah + ooncha, sab shelf ke farsh par
+  const rows = b.rowsN, c = b.cols;
+  let h = ''; for (let s = 0; s < rows; s++) { const L = b.shelves[s] || [], mx = Math.max(1, ...L.map(it => szW(it.id, S.sz)));
+    h += `<div class="shelf fx">${fill ? L.map(it => { const w = szW(it.id, S.sz); return itemHTML(it, `--w:${(w / c).toFixed(4)};--hh:${(w / mx).toFixed(3)}`); }).join('') : ''}</div>`; }
   return { rows, h };
 }
 function fillNear(i) {
@@ -221,7 +224,7 @@ function fillNear(i) {
 function bayHTML(b, i, D) {
   const { rows, h } = shelvesHTML(b, D, false), sh = [h];
   const bg = RBG.get(b.rk.key);
-  return `<section class="bay cmp peg${D.bw < 700 ? ' d7' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${D.sc};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
+  return `<section class="bay cmp peg${D.bw / b.cols < 100 ? ' d7' : ''}${D.bw / b.cols >= 120 ? ' bg' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${b.cols};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
 }
 // ---------- 📸 v2.158.0: asal rack ki photo (bay) ----------
 const RPU = new Map();   // pid -> photo (blob url)
@@ -319,7 +322,8 @@ function renderAisle(keepId) {
   S.racks.forEach(rk => { rk.bay0 = bays.length;
     rk.photos.forEach((ph, j) => bays.push({ rk, photo: ph, p: j, parts: rk.photos.length, items: [...new Set(ph.spots.map(x => x.id))].map(id => S.items.get(id)).filter(Boolean) }));   // 📸 pehle asal photo
     const K = khPack(rk.loose, D); K.forEach((kh, j) => bays.push({ rk, kh, p: j, parts: K.length, items: [...kh.g, ...kh.s] }));   // 🌾 phir khula maal (dabbe + tore)
-    { const parts = Math.ceil(rk.rest.length / D.sper); for (let p = 0; p < parts; p++) bays.push({ rk, p, parts, items: rk.rest.slice(p * D.sper, (p + 1) * D.sper) }); }   // ▦ bane hue (malik ne band kiye to nahi)
+    { const c = rackCols(rk.key, S.sn), rowsN = S.sn[rk.key] ? rackRows(c, D.bw, D.rh, D.sr) : D.sr, sh = shelfPack(rk.rest, c, S.sz), parts = Math.ceil(sh.length / rowsN);
+      for (let p = 0; p < parts; p++) { const part = sh.slice(p * rowsN, (p + 1) * rowsN); bays.push({ rk, p, parts, cols: c, rowsN, shelves: part, items: part.flat() }); } }   // ▦ bane hue (malik ne band kiye to nahi)
     if (bays.length === rk.bay0) rk.bay0 = null; });
   let no = 0; S.racks.forEach(rk => { rk.no = rk.bay0 == null ? 0 : ++no; }); S.vis = S.racks.filter(rk => rk.bay0 != null);   // sirf nazar aane wale racks ginti mein
   S.bays = bays; S.bayOf = new Map();

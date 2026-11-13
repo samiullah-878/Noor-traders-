@@ -198,3 +198,14 @@ export function thumbOf(name, kind, px = 120) {
 }
 // packet ka naam: 0.25 kg = 250 g · 1 = 1 kg · Pcs wale = "6 Pcs"
 export function pkLab(q, u) { const kg = /^(kg|kgs|kilo|kilogram)$/i.test(String(u || '').trim()) || !u; if (!kg) return `${q} ${u}`; return q < 1 ? `${Math.round(q * 1000)} g` : `${+q.toFixed(3)} kg`; }
+
+// v2.267.0: 🔍 har rack ka apna size + item ka qad (malik 13 Nov) — app ka preview aur website EK qaida
+export const SZW = { s: 0.7, l: 1.5 };
+export const szW = (id, sz) => SZW[sz && sz[id]] || 1;
+export const rackCols = (k, sn) => { const n = Math.round(Number(sn && sn[k]) || 0); return n >= 2 && n <= 10 ? n : 7; };
+export function rackRows(cols, bw, rh, max) { return Math.max(2, Math.min(max || 6, Math.round(rh / (((bw - 40) / cols) * 1.3)))); }
+export function shelfPack(items, cols, sz) {
+  const out = []; let cur = [], w = 0;
+  for (const it of items) { const x = szW(it.id, sz); if (cur.length && w + x > cols + 0.01) { out.push(cur); cur = []; w = 0; } cur.push(it); w += x; }
+  if (cur.length) out.push(cur); return out;
+}

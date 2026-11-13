@@ -7925,3 +7925,11 @@ Malik (screenshots): 'search ka option sahi nahi (naam "lux 3i…" kat raha) · 
 (2) Website dukan.js `trimUrl` (setPhoto mein, bina AI): kinare ka median rang -> us se mukhtalif pixels ka dabba (96px par) + 7% hashiya -> asal tasveer se kaat (shak: kinara ek rang ka nahi >30% / dabba >78% ya <3% = asal). Purani lagi tasveerein bhi khud zoom (website par load ke waqt; Firestore mein asal hi). Test (Chrome + playwright): chhoti cheez = kati, poori frame / do-rang peecha / khali = nahi kati.
 (3) CSS: jaali 12px -> 7px chhote nuqte + upar roshni / neeche saya; tasveer dabba bhar ke (contain, neeche lagi), safed frame hata, shelf ke neeche saya.
 Malik ko bataya: 🏬 Kamra (chal kar dekhne wala 3D, ?kamra=1) pehle se bana hai, default band — OK par sab ke liye. AI nahi.
+
+=== v2.267.0 (13 Nov 2026) — 🔍 Har rack ka apna size + item ka qad ===
+Malik: "rack chip mein ungliyon se chhota bara · ek rack par 3, 2 ya 5 · large barha, baqi chhota · PC + mobile same ginti".
+- webDukan/racks: sn {rackKey: 2..10 fi shelf, na ho = 7} · sz {itemId: 's' | 'l'} (cloud.saveWebRacks).
+- dukan/khula.js: szW / rackCols / rackRows / shelfPack — app preview + website EK qaida.
+- dukan.js: bane hue bay = b.cols / b.rowsN / b.shelves, shelf `.fx` (flex, --w chaurai, --hh oonchai); PC par bhi 7 (pehle 10).
+- web-dukan.js: view 'rsz' (Racks list ka 🔍): pinch + chips, item tap = Chhota · Aam · Bara.
+- AI nahi. Asal phone par test nahi hua (pinch) — malik se photo.
