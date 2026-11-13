@@ -7963,3 +7963,16 @@ Malik: "yahan par khaton ke names nahi aane chahiye". recent.js: 'k:' (khata) wa
 
 === v2.271.0 (13 Nov 2026) — 🧱 Dher: item bara karo to mazeed copies jurein ===
 Malik (Lux ke dher ki photo): "item bara karein to mazeed soap jur jayein aage peeche sides mein". racks.dh[id] = 2..12 copies; dGrid (2x1, 2x2, 3x2, 3x3, 4x3), neeche se upar, upar wali qatar halki. khula.js dherN / dGrid / effSz / itemBox / dherHTML (app rsz + website). Chip "🧱 Dher" item ki patti mein; ON = − / + copies, ⤢ = copy ka size. Stock se taluq nahi. AI nahi. Asal phone par test nahi.
+
+=== v2.272.0 (13 Nov 2026) — 🧲 Items jure hue + ✂️ Crop + 📸 Camera (rack ka size) ===
+Malik (website ki photo): "item ke darmiyan faasla nahi · background mein shelf kam se kam, item zyada · item lagate waqt zoom / crop ka option · camera ka option bhi" — plan diya, OK mila.
+1) NAAP UNIT MEIN (dukan/khula.js): shelf ki chaurai = 100 unit, RK_RA 0.9 (rack ki shakal), RK_ROWS 5 (aam shelf), rkImgU(rows) = tasveer ki oonchai.
+   itemU(it, rows, sz, dh, ar) -> {wu, hu, n, c, r, mn} · rackLayoutU(...) -> bays[shelves[{it, wu, hu...}]]. Item ki oonchai = shelf jitni x size (racks.sz 0.4-1, 1 = poora; purane > 1 = 1),
+   chaurai = oonchai x tasveer ki shakal (racks.ar[id], na ho = 0.8), kam az kam rate ki parchi jitni (mn). Ek shelf par ginti ab fixed 7 NAHI — shakal ke hisaab se. sn (cols) ab istemal nahi.
+2) Website (dukan.js / dukan.css `.bay.tt`): --rw (rack ki chaurai = min(bay, oonchai x 0.9) — PC par patla, beech mein) + --u (px fi unit); item `--wu` / `--hu`; parchi patti ke upar.
+   fitIt (img load, capture): tasveer ki ASAL shakal se chaurai theek (ar na ho / purana ho tab bhi faasla nahi), S.arRt yaad. Rack grid `grid-template-columns:minmax(0,1fr)` (warna shelf rack se bahar).
+3) App (web-dukan.js rsz): preview wahi unit (rzGeo), racks.ar yahin se likha jata hai (setTh -> trimUrl -> imgAr -> arNote -> saveRacks, 0.03 se kam farq = nahi).
+   Item ki patti: － ＋ · ✂️ Crop (rzCrop: lagi tasveer -> purani crop screen, back 'rsz') · 📸 Tasveer (data-cam) · 🧱 Dher · ⬆ ⬇ · ↩ Poora · ✓ (chips wrap).
+   Search list: bina tasveer wale item ke saath 📸 Camera / 🖼 Gallery (data-zshot) -> crop -> Save -> rzPlace (chuni shelf). webClose: crop (back rsz) -> wapas rsz.
+Test: Chromium (playwright) mein nakli tasveeron se website bay (phone 390 + PC 683) aur app preview ki CSS dekhi — items jure, dher, parchi theek. Asal phone / asal data par test NAHI.
+AI nahi.

@@ -255,3 +255,25 @@ export const dGrid = n => n <= 1 ? [1, 1] : n === 2 ? [2, 1] : n <= 4 ? [2, 2] :
 export function effSz(sz, dh) { if (!dh) return sz || {}; const o = { ...(sz || {}) }; for (const id of Object.keys(dh)) { const n = dherN(id, dh); if (n > 1) o[id] = Math.min(8, szW(id, sz) * dGrid(n)[0]); } return o; }
 export function itemBox(id, sz, dh, cell) { const base = szW(id, sz), n = dherN(id, dh), [c, r] = dGrid(n); return { n, c, r, w: base * c, hp: Math.round(base * cell * (n > 1 ? 1.1 * r + 0.45 : 1.5)) }; }
 export const dherHTML = (one, n) => { if (n <= 1) return one; const [c, r] = dGrid(n); let h = ''; for (let i = 0; i < n; i++) h += i >= c ? one.replace('<img ', '<img class="bk" ').replace('class="wd-zp', 'class="bk wd-zp') : one; return `<span class="dhr" style="--dc:${c};--dr:${r}">${h}</span>`; };
+
+// v2.272.0: 🧲 JURE HUE ITEMS (malik 13 Nov: "item ke darmiyan faasla nahi · shelf kam nazar aaye, item zyada") — naap UNIT mein: shelf ki chaurai = 100 unit.
+//   Item ki oonchai = shelf jitni x malik ka size (0.4 - 1) · chaurai = oonchai x tasveer ki apni shakal (racks.ar) — phone / PC / app preview par har shelf par WAHI items.
+export const RK_RA = 0.9, RK_ROWS = 5, RK_K = 5;   // rack ki shakal (chaurai / oonchai) · shelf ki aam ginti · parchi + patti ki jagah (unit)
+export const rkImgU = rows => Math.max(4, 100 / RK_RA / rows - RK_K);
+export const arOf = (id, ar) => { const v = Number(ar && ar[id]); return v > 0.12 && v < 8 ? v : 0.8; };
+export const sizeOf = (id, sz) => Math.max(0.4, Math.min(1, szW(id, sz)));
+export function itemU(it, rows, sz, dh, ar) {
+  const n = dherN(it.id, dh), g = dGrid(n), hu = rkImgU(rows) * sizeOf(it.id, sz), p = Math.round(Number(it.r) || 0), mn = 2.4 + 2 * (String(p).length + (p >= 1000 ? 1 : 0));
+  return { n, c: g[0], r: g[1], hu, mn, wu: Math.min(100, Math.max(mn, hu / g[1] * arOf(it.id, ar) * g[0])) };
+}
+export function rackLayoutU(items, rows, sz, dh, ar, sh) {
+  const mk = () => Array.from({ length: rows }, () => ({ L: [], w: 0 })), bays = [mk()], auto = [];
+  for (const it of items) { const x = { it, ...itemU(it, rows, sz, dh, ar) }, s = sh ? sh[it.id] : null;
+    if (typeof s === 'number' && s >= 0 && s < rows) { const S = bays[0][s]; if (S.w + x.wu <= 100.5) { S.L.push(x); S.w += x.wu; continue; } }
+    auto.push(x); }
+  let b = 0, r = 0;
+  for (const x of auto) { for (;;) { if (r >= rows) { r = 0; b++; } if (!bays[b]) bays.push(mk()); const S = bays[b][r]; if (!S.L.length || S.w + x.wu <= 100.5) { S.L.push(x); S.w += x.wu; break; } r++; } }
+  while (bays.length > 1 && !bays[bays.length - 1].some(S => S.L.length)) bays.pop();
+  return bays.map(B => B.map(S => S.L));
+}
+export const imgAr = url => new Promise(ok => { const im = new Image(); im.onload = () => ok(im.naturalWidth && im.naturalHeight ? im.naturalWidth / im.naturalHeight : 0); im.onerror = () => ok(0); im.src = url; });

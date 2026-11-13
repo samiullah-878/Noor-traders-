@@ -8147,3 +8147,17 @@ html body #wdDlg .wd-zi.is-in{outline:2px solid #ffd84d;outline-offset:-1px;back
 #wdDlg .wd-zd .dhr{display:flex;flex-wrap:wrap-reverse;align-content:flex-start;justify-content:center;width:100%;height:100%}
 #wdDlg .wd-zd .wd-zp{flex:0 0 calc(100%/var(--dc,2));width:calc(100%/var(--dc,2));height:calc(100%/var(--dr,1));min-width:0}
 #wdDlg .wd-zd .wd-zp.bk{filter:brightness(.9)}
+
+/* v2.272.0: 🧲 rack preview — items jure hue (unit --u), parchi patti ke upar (website jaisa) · 📸 / ✂️ chips */
+#wdDlg .wd-zr{box-sizing:border-box;padding:0 8px;--tg:15px;max-width:none;grid-template-columns:minmax(0,1fr)}
+#wdDlg .wd-zs{position:relative;padding-left:0;border-bottom:0;box-shadow:none;align-items:flex-end}
+#wdDlg .wd-zs::after{content:"";position:absolute;left:-8px;right:-8px;bottom:0;height:13px;z-index:0;background:linear-gradient(180deg,#5fa0ff,#2f7be8 40%,#1f5fc4);box-shadow:0 5px 8px -5px rgba(0,0,0,.5)}
+#wdDlg .wd-zs.is-in{background:rgba(255,216,77,.22);box-shadow:inset 0 0 0 2px #ffd84d}
+html body #wdDlg .wd-zi{position:relative;z-index:1;flex:0 1 auto;min-width:0;width:calc(var(--wu,14)*var(--u,3.4px));height:min(100%,calc(var(--hu,14)*var(--u,3.4px) + var(--tg)));padding:0!important;border-radius:0!important}
+html body #wdDlg .wd-zi.is-in{z-index:5}
+#wdDlg .wd-zt{font:800 11px/1.3 system-ui;padding:0 4px;margin:0 0 1px;max-width:none;overflow:visible;flex:none}
+#wdDlg .wd-zno{left:-8px;top:2px;transform:none;width:18px;height:20px;border-radius:0 0 8px 0;font:800 12px/20px system-ui;z-index:3;opacity:.92}
+#wdDlg .wd-zp.none{background:rgba(255,255,255,.2);border-radius:3px}
+html body #wdDlg div.wd-zf.nop{opacity:1}
+#wdDlg .wd-zfc{display:flex;gap:6px;margin-top:5px;flex-wrap:wrap}
+#wdDlg .wd-zb span{flex-wrap:wrap;overflow:visible}

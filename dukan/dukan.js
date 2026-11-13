@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.271.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML } from './khula.js?v=2.271.0';
-import { smartFind } from './dhoond.js?v=2.271.0';
-import { makeKamra } from './kamra.js?v=2.271.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.272.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU } from './khula.js?v=2.272.0';
+import { smartFind } from './dhoond.js?v=2.272.0';
+import { makeKamra } from './kamra.js?v=2.272.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -138,6 +138,7 @@ function build(d) {
   const hide = R.hide || {}, ic = R.ic || {}, hc = R.hc || {}, cn = R.cn || {};
   const groups = new Map(); S.items = new Map();
   // 📸 v2.158.0: asal rack ki photos — photo par jo item hai wo usi rack ka (bane hue rack mein dohra nahi)
+  S.ar = R.ar && typeof R.ar === 'object' ? R.ar : {}; S.arRt = S.arRt || {};
   S.sn = R.sn && typeof R.sn === 'object' ? R.sn : {}; S.rn = R.rn && typeof R.rn === 'object' ? R.rn : {}; S.dh = R.dh && typeof R.dh === 'object' ? R.dh : {}; S.sh = R.sh && typeof R.sh === 'object' ? R.sh : {}; S.sz = R.sz && typeof R.sz === 'object' ? R.sz : {};
   S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {}; S.draw = !!R.draw; S.cr = R.cr && typeof R.cr === 'object' ? R.cr : {};
   S.rps = Object.entries(R.rp && typeof R.rp === 'object' ? R.rp : {}).map(([pid, x]) => { let a = []; try { a = JSON.parse((x && x.s) || '[]'); } catch {}
@@ -179,9 +180,11 @@ function dims() {
   const cols = Math.max(4, Math.min(7, Math.floor((bw - 76) / 104)));   // v2.156.0: malik — har shelf par kam az kam 4
   const rows = Math.min(8, Math.max(2, Math.min(6, Math.floor((H - 96) / 118))) + 2);   // v2.156.0: 2 shelf zyada (racks kam)
   // v2.266.0 (malik 13 Nov: "ek shelf par mobile 7 items, PC par 10 · ek rack 5-6 shelf"): bane hue (auto) rack ka apna naap — khula / photo bays ka naap wahi
-  const sc = 7, rh = Math.max(200, H - 96), sr = Math.max(5, Math.min(6, Math.floor((H - 96) / 92)));
-  return { bw, cols, rows, per: cols * rows, sc, sr, rh, sper: sc * sr };
+  const sc = 7, rh = Math.max(200, H - 96), rk = Math.max(200, H - 80), sr = Math.max(5, Math.min(6, Math.floor((H - 96) / 92)));
+  return { bw, cols, rows, per: cols * rows, sc, sr, rh, rk, sper: sc * sr };
 }
+// v2.272.0: 🧲 bane hue rack ka naap — rack ki chaurai (phone jaisi shakal RK_RA) + 1 unit kitne px (shelf = 100 unit)
+function ttGeo(D) { const rw = Math.floor(Math.min(D.bw - 16, D.rk * RK_RA)), u = (rw - 28) / 100; return { rw, u }; }
 
 // ---------- 🧴 bina tasveer: dabba / botal / pouch ----------
 const BOT = /(oil|ghee|sharbat|shampoo|syrup|vinegar|sirka|sauce|ketchup|ltr|litre|liter|\d\s?ml\b|bottle|squash|lotion|bleach|phenyl|cleaner|juice|drink|water|honey|shehad)/i;
@@ -198,17 +201,26 @@ const gth = (it, px = 120) => { const k = it.id + '|' + it.k + '|' + px; if (!GT
 const picOf = (it, px) => PHURL.get(it.id) || (it.k && it.k !== 'n' ? gth(it, px) : '');
 const imgOf = (it, big) => { const u = picOf(it, big ? 280 : 120); return u ? `<img src="${u}" alt="">` : pkHTML(it, big); };
 
-function itemHTML(it, st) {
+function itemHTML(it, st, x) {
   const q = cnt(it.id);
-  return `<button type="button" class="it${q ? ' in-crate' : ''}"${st ? ` style="${st}"` : ''} data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${st ? dherHTML(imgOf(it), dherN(it.id, S.dh)) : imgOf(it)}</span><span class="tag"><small>Rs</small>${num(it.r)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
+  return `<button type="button" class="it${q ? ' in-crate' : ''}"${st ? ` style="${st}"` : ''}${x ? ` data-hu="${x.hu.toFixed(2)}" data-wu="${x.wu.toFixed(2)}" data-dc="${x.c}" data-dr="${x.r}" data-mn="${x.mn.toFixed(1)}"` : ''} data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${x ? dherHTML(imgOf(it), x.n) : imgOf(it)}</span><span class="tag"><small>Rs</small>${num(it.r)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
 }
+// v2.272.0: 🧲 tasveer ki ASAL shakal aate hi item ki chaurai theek (racks.ar na ho / purana ho tab bhi faasla nahi) — sirf tasveer load par, scroll mein nahi
+function fitIt(img) {
+  const el = img.closest && img.closest('.shelf.fx .it'); if (!el || !img.naturalWidth || !img.naturalHeight) return;
+  const hu = Number(el.dataset.hu) || 0, c = Number(el.dataset.dc) || 1, r = Number(el.dataset.dr) || 1, mn = Number(el.dataset.mn) || 0; if (!hu) return;
+  const a = img.naturalWidth / img.naturalHeight, wu = Math.min(100, Math.max(mn, hu / r * a * c));
+  S.arRt[el.dataset.id] = Math.round(a * 100) / 100;
+  if (Math.abs(wu - (Number(el.dataset.wu) || 0)) > 0.4) { el.dataset.wu = wu.toFixed(2); el.style.setProperty('--wu', wu.toFixed(2)); }
+}
+document.addEventListener('load', e => { const t = e.target; if (t && t.tagName === 'IMG') fitIt(t); }, true);
 // v2.156.1: ⚡ malik — "aage peeche karte hain to lag aata hai": sirf qareeb ke racks mein maal (DOM chhota) — door ke rack khali dhancha (sign + shelf), paas aate hi bhar jate
 const NEAR = 2, FAR = 5;
 function shelvesHTML(b, D, fill) {
-  // v2.267.0: har rack ka apna size (S.sn) + item ka qad (S.sz: s chhota / l bara) — bara zyada jagah + ooncha, sab shelf ke farsh par
-  const rows = b.rowsN, c = b.cols, cell = (D.bw - 56) / c;   // v2.270.2: item ki oonchai = us ka apna size (doosre item se nahi) — shelf se zyada nahi
+  // v2.272.0: 🧲 jure hue items — har item {it, wu, hu} unit mein (rackLayoutU); px = unit x --u (bay par)
+  const rows = b.rowsN;
   let h = ''; for (let s = 0; s < rows; s++) { const L = b.shelves[s] || [];
-    h += `<div class="shelf fx">${fill ? L.map(it => { const X = itemBox(it.id, S.sz, S.dh, cell); return itemHTML(it, `--w:${(Math.min(c, X.w) / c).toFixed(4)};--hp:${X.hp}px`); }).join('') : ''}</div>`; }
+    h += `<div class="shelf fx">${fill ? L.map(x => itemHTML(x.it, `--wu:${x.wu.toFixed(2)};--hu:${x.hu.toFixed(2)}`, x)).join('') : ''}</div>`; }
   return { rows, h };
 }
 function fillNear(i) {
@@ -223,8 +235,8 @@ function fillNear(i) {
 }
 function bayHTML(b, i, D) {
   const { rows, h } = shelvesHTML(b, D, false), sh = [h];
-  const bg = RBG.get(b.rk.key);
-  return `<section class="bay cmp peg${D.bw / b.cols < 100 ? ' d7' : ''}${D.bw / b.cols >= 120 ? ' bg' : ''}" data-bay="${i}" style="--rows:${rows};--cols:${b.cols};--bayW:${D.bw}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
+  const bg = RBG.get(b.rk.key), G = ttGeo(D);
+  return `<section class="bay cmp peg tt${G.u < 5 ? ' d7' : ''}" data-bay="${i}" style="--rows:${rows};--bayW:${D.bw}px;--rw:${G.rw}px;--u:${G.u.toFixed(3)}px" aria-label="Rack ${b.rk.no}: ${esc(b.rk.name)}"><header class="sign"><span class="sk">Rack ${b.rk.no}</span><b>${esc(b.rk.name)}</b>${b.parts > 1 ? `<span class="sp">${b.p + 1}/${b.parts}</span>` : ''}</header><div class="rack"><div class="rk-bg${bg ? ' on' : ''}" data-rbg="${esc(b.rk.key)}"${bg ? ` style="background-image:url('${bg}')"` : ''}></div>${sh.join('')}</div></section>`;
 }
 // ---------- 📸 v2.158.0: asal rack ki photo (bay) ----------
 const RPU = new Map();   // pid -> photo (blob url)
@@ -322,8 +334,8 @@ function renderAisle(keepId) {
   S.racks.forEach(rk => { rk.bay0 = bays.length;
     rk.photos.forEach((ph, j) => bays.push({ rk, photo: ph, p: j, parts: rk.photos.length, items: [...new Set(ph.spots.map(x => x.id))].map(id => S.items.get(id)).filter(Boolean) }));   // 📸 pehle asal photo
     const K = khPack(rk.loose, D); K.forEach((kh, j) => bays.push({ rk, kh, p: j, parts: K.length, items: [...kh.g, ...kh.s] }));   // 🌾 phir khula maal (dabbe + tore)
-    { const c = rackCols(rk.key, S.sn), rowsN = rackRowsOf(rk.key, S.rn, S.sn[rk.key] ? rackRows(c, D.bw, D.rh, D.sr) : D.sr), B = rk.rest.length ? rackLayout(rk.rest, c, rowsN, effSz(S.sz, S.dh), S.sh) : [];
-      B.forEach((part, p) => bays.push({ rk, p, parts: B.length, cols: c, rowsN, shelves: part, items: part.flat() })); }
+    { const rowsN = rackRowsOf(rk.key, S.rn, RK_ROWS), B = rk.rest.length ? rackLayoutU(rk.rest, rowsN, S.sz, S.dh, { ...S.ar, ...S.arRt }, S.sh) : [];
+      B.forEach((part, p) => bays.push({ rk, p, parts: B.length, rowsN, shelves: part, items: part.flat().map(x => x.it) })); }
     if (bays.length === rk.bay0) rk.bay0 = null; });
   let no = 0; S.racks.forEach(rk => { rk.no = rk.bay0 == null ? 0 : ++no; }); S.vis = S.racks.filter(rk => rk.bay0 != null);   // sirf nazar aane wale racks ginti mein
   S.bays = bays; S.bayOf = new Map();
@@ -822,7 +834,7 @@ addEventListener('keydown', e => {
   if (e.key === 'ArrowRight') go(S.cur + 1); else if (e.key === 'ArrowLeft') go(S.cur - 1);
 });
 let rzT = 0;
-addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows || D.sc !== o.sc || D.sr !== o.sr) renderAisle(S.bays[S.cur]?.items?.[0]?.id); else if (K) K.relayout(); }, 180); });
+addEventListener('resize', () => { clearTimeout(rzT); rzT = setTimeout(() => { const D = dims(), o = S.dims; if (!o || D.bw !== o.bw || D.cols !== o.cols || D.rows !== o.rows || D.sc !== o.sc || D.sr !== o.sr) renderAisle(S.bays[S.cur]?.items?.[0]?.id); else { if (Math.abs((D.rk || 0) - (o.rk || 0)) > 6) { o.rk = D.rk; const G = ttGeo(o); bayEls.forEach(el => { if (el.classList.contains('tt')) { el.style.setProperty('--rw', G.rw + 'px'); el.style.setProperty('--u', G.u.toFixed(3) + 'px'); el.classList.toggle('d7', G.u < 5); } }); } if (K) K.relayout(); } }, 180); });
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible' && S.loadedAt && Date.now() - S.loadedAt > 15 * 60e3) load(true); });
 
 document.querySelectorAll('#helpBtn,.hp-ava').forEach(el => { el.innerHTML = AVA; });   // v2.156.0
