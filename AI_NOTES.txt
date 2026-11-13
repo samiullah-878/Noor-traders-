@@ -7946,3 +7946,9 @@ Online Dukan ki tasveer `data-th` (thumb) aur pos-stock ka document click `[data
 
 === v2.269.0 (13 Nov 2026) — Online Dukan: refresh / dobara kholne par wahin ===
 Malik: "online dukan par hon to app refresh ya nayi open hone par wapas usi jagah". localStorage sam-wd-open {t, v, k} (paint mein taza, asal band par mit-ta); app.js wdResume (login ke 0.9 s baad, 12 ghante tak) -> openWebDukan(back) -> list / Racks / rack ka size wahi.
+
+=== v2.270.0 (13 Nov 2026) — 📐 Rack ka size (⋮) + shelf chun kar lagao + item box se size ===
+Malik: "rack ka size three dots mein · sabun shampoo wale chips ek Category chip mein · ek rack par kitni shelf 3-5-8-9 · shelf chun kar search se item (tasveer ho to) lagao · tasveer ka size box se haath se".
+- webDukan/racks: rn {rack: 3..9 shelf} · sh {itemId: shelf 0 se} · sz {itemId: number (1 = aam) | purana 's' / 'l'}.
+- dukan/khula.js rackLayout / rackRowsOf (app + website ek). Pinch / Bare-Chhote / Chhota-Aam-Bara chips HATE (sn data parha jata hai, UI nahi).
+- web-dukan.js: ⋮ "📂 Category" (catsHTML) + "📐 Rack ka size" (rsizeHTML -> view rsz). AI nahi. Asal phone par test nahi.

@@ -201,11 +201,24 @@ export function pkLab(q, u) { const kg = /^(kg|kgs|kilo|kilogram)$/i.test(String
 
 // v2.267.0: 🔍 har rack ka apna size + item ka qad (malik 13 Nov) — app ka preview aur website EK qaida
 export const SZW = { s: 0.7, l: 1.5 };
-export const szW = (id, sz) => SZW[sz && sz[id]] || 1;
+export const szW = (id, sz) => { const v = sz && sz[id]; if (typeof v === 'number' && v > 0) return Math.max(0.4, Math.min(4, v)); return SZW[v] || 1; };   // v2.270.0: number = malik ka haath se chuna size
 export const rackCols = (k, sn) => { const n = Math.round(Number(sn && sn[k]) || 0); return n >= 2 && n <= 10 ? n : 7; };
 export function rackRows(cols, bw, rh, max) { return Math.max(2, Math.min(max || 6, Math.round(rh / (((bw - 40) / cols) * 1.3)))); }
 export function shelfPack(items, cols, sz) {
   const out = []; let cur = [], w = 0;
   for (const it of items) { const x = szW(it.id, sz); if (cur.length && w + x > cols + 0.01) { out.push(cur); cur = []; w = 0; } cur.push(it); w += x; }
   if (cur.length) out.push(cur); return out;
+}
+
+// v2.270.0: 📐 rack ka naqsha — rn = kitni shelf (3..9), sh[id] = malik ki chuni shelf (0 se), baqi items khud khali jagah mein; shelf bhar jaye = agla rack
+export const rackRowsOf = (k, rn, dflt) => { const n = Math.round(Number(rn && rn[k]) || 0); return n >= 3 && n <= 9 ? n : dflt; };
+export function rackLayout(items, cols, rows, sz, sh) {
+  const mk = () => Array.from({ length: rows }, () => ({ L: [], w: 0 })), bays = [mk()], auto = [];
+  const wOf = it => Math.min(cols, szW(it.id, sz));
+  for (const it of items) { const s = sh ? sh[it.id] : null; if (typeof s === 'number' && s >= 0 && s < rows) { const x = wOf(it), S = bays[0][s]; if (S.w + x <= cols + 0.01) { S.L.push(it); S.w += x; continue; } } auto.push(it); }
+  let b = 0, r = 0;
+  for (const it of auto) { const x = wOf(it);
+    for (;;) { if (r >= rows) { r = 0; b++; } if (!bays[b]) bays.push(mk()); const S = bays[b][r]; if (!S.L.length || S.w + x <= cols + 0.01) { S.L.push(it); S.w += x; break; } r++; } }
+  while (bays.length > 1 && !bays[bays.length - 1].some(S => S.L.length)) bays.pop();
+  return bays.map(B => B.map(S => S.L));
 }

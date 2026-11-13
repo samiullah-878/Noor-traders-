@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRows, shelfPack } from './dukan/khula.js?v=2.269.0';
-import { smartFind } from './dukan/dhoond.js?v=2.269.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, netQuery, szW, rackCols, rackRowsOf, rackLayout } from './dukan/khula.js?v=2.270.0';
+import { smartFind } from './dukan/dhoond.js?v=2.270.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -37,7 +37,7 @@ let un = null;  // Firestore listeners
 const TH = new Map();   // id -> {v, url} chhoti tasveer (phone ki memory)
 
 function fresh() {
-  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {}, draw: false, cr: {}, sn: {}, sz: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
+  return { cat: {}, info: {}, racks: { order: [], cn: {}, hc: {}, hide: {}, ic: {}, rp: {}, nmOn: false, lp: {}, draw: false, cr: {}, sn: {}, sz: {}, rn: {}, sh: {} }, ph: {}, got: {}, q: '', ck: pref.ck || '', f: pref.f || 'all', lim: 120, view: 'list', busy: new Set(), ok: new Set(), err: new Map(), crop: null, pq: '', pck: '', arm: '', act: '', rkSt: '', infoSt: '', sel: null, ai: null, aiOpen: '', rpe: null, rpq: '', rpNew: null, rpDelArm: 0, lastF: [], rkIds: new Set(), rkWait: new Set() };
 }
 
 // ---------- 📦 items (POS stock → website wali list) ----------
@@ -101,7 +101,7 @@ export function webOpen(ctx, back) {
     if (k === 'cat') W.cat = v || {};
     else if (k === 'info') W.info = v || {};
     else if (k === 'phIdx') W.ph = (v && v.m) || {};
-    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw, cr: v?.cr || {}, sn: v?.sn || {}, sz: v?.sz || {} };
+    else if (k === 'racks' && !W.rkDirty) W.racks = { order: Array.isArray(v?.order) ? v.order : [], cn: v?.cn || {}, hc: v?.hc || {}, hide: v?.hide || {}, ic: v?.ic || {}, rp: v?.rp || {}, nmOn: !!v?.nmOn, lp: v?.lp || {}, draw: !!v?.draw, cr: v?.cr || {}, sn: v?.sn || {}, sz: v?.sz || {}, rn: v?.rn || {}, sh: v?.sh || {} };
     paintSoon();
   });
   paint();
@@ -116,7 +116,7 @@ export function webClose() {
   if (W.sel && W.view === 'list') { W.sel = null; paint(); return true; }   // v2.156.0: back = chunne ka mode band
   if (W.view === 'rpe') { if (W.rpe?.draw || W.rpe?.sel?.size) { W.rpe.draw = false; W.rpe.sel = new Set(); } else { W.rpe = null; W.view = 'rps'; } paint(); return true; }   // v2.158.0
   if (W.view === 'multi') { if (W.multi?.rows?.length && !W.multi.saving && !confirm('Yeh tasveerein chhor dein? (save nahi hui)')) return true; W.multi = null; W.view = 'list'; paint(); return true; }
-  if (W.view === 'rsz') { W.rz = null; W.view = 'racks'; paint(); return true; }
+  if (W.view === 'rsz') { if (W.rz && W.rz.it) { W.rz.it = ''; paint(); return true; } const fr = W.rz && W.rz.from; W.rz = null; W.view = fr === 'racks' ? 'racks' : 'list'; paint(); return true; }
   if (W.view === 'pick') { W.view = 'crop'; paint(); return true; }
   if (W.view !== 'list') { if (W.ai) W.ai.run = false; W.ai = null; W.view = 'list'; W.crop = null; paint(); return true; }
   try { d.close(); } catch { d.removeAttribute('open'); }
@@ -215,7 +215,7 @@ function menuHTML() {
 <h3>☑ Kai items ek saath</h3><div class="wd-chips">${ch(!!W.sel, 'data-wd="sel"', W.sel ? '☑ Chunne ka mode ON — band karo' : '☑ Items chuno → ek saath rack mein')}</div>`;
   return `<h3>🌐 Website</h3><div class="wd-chips">${ch(0, 'data-wd="share"', '🔗 Link bhejo')}${ch(0, 'data-wd="copy"', '📋 Link copy')}</div>
 ${oldH}
-<h3>🗂 Rack</h3><div class="wd-chips">${ch(!W.ck, 'data-ck=""', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, `data-ck="${esc(r.k)}"`, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>
+<h3>📂 Category · 📐 Rack</h3><div class="wd-chips">${ch(!!W.ck, 'data-wd="cats"', `📂 Category: ${W.ck ? esc(rackName(W.ck)) : 'Sab'}`)}${ch(0, 'data-wd="rsize"', '📐 Rack ka size')}</div>
 <h3>🔎 Dikhao</h3><div class="wd-chips">${[['all', 'Sab'], ['nopic', '📷 Bina tasveer'], ['pic', '✅ Tasveer wale'], ...(MENU_OLD ? [['noph', `📸 Rack photo par nahi <small>${num(nophCount())}</small>`]] : []), ['hid', '🙈 Chhupe']].map(([k, t]) => ch(W.f === k, `data-f="${k}"`, t)).join('')}</div>
 <h3>⚙️ Tarteeb</h3><div class="wd-chips">${MENU_OLD && own && A.aiText ? ch(0, 'data-wd="airk"', '🤖 Racks khud banao (AI)') : ''}${ch(0, 'data-wd="racks"', '🗂 Racks ki tarteeb')}${own ? ch(0, 'data-wd="info"', '🏪 Dukan ki maloomat') + ch(0, 'data-wd="pub"', '🔄 Rates abhi website par bhejo') : ''}</div>
 <p class="wd-note">Website par sirf naam, retail rate aur tasveer jati hai — khareed / nafa kabhi nahi. Rates PC khud bhejta hai.</p>`;
@@ -534,36 +534,49 @@ function paintRacks() {
   $('wdBody').innerHTML = `<ol class="wd-rks">${rk.map((r, i) => `<li class="${r.off ? 'off' : ''}"><span class="wd-no">${r.off ? '🙈' : i + 1}</span><span class="wd-rkn"><input value="${esc(r.name)}" placeholder="${esc(title(r.k))}" data-rn="${esc(r.k)}" maxlength="40" aria-label="Rack ka naam"><small>POS: ${esc(r.k)} · ${r.n} items</small></span><button type="button" class="wd-chip" data-rz="${esc(r.k)}" aria-label="Size">🔍</button><button type="button" class="wd-chip" data-up="${esc(r.k)}" aria-label="Upar">↑</button><button type="button" class="wd-chip" data-dn="${esc(r.k)}" aria-label="Neeche">↓</button><button type="button" class="wd-chip" data-hc="${esc(r.k)}" aria-label="Chhupao">${r.off ? '👁' : '🙈'}</button><button type="button" class="wd-chip wd-bgc${W.ph[rkPh(r.k)] ? ' has' : ''}" data-rbg="${esc(r.k)}" aria-label="Rack ki asal tasveer">${W.busy.has(rkPh(r.k)) ? '⏳' : W.ph[rkPh(r.k)] ? '🖼' : '📷'}</button></li>`).join('')}</ol>`;
   $('wdFoot').innerHTML = `<button type="button" class="wd-main" data-wd="back">✓ Ho gaya</button>`;
 }
-// ---------- 🔍 v2.267.0: har rack ka apna size (pinch / − +) + item ka qad (Chhota · Aam · Bara) ----------
+// ---------- 📐 v2.270.0: RACK KA SIZE (malik 13 Nov: "⋮ mein · ek rack par kitni shelf 3-5-8-9 · shelf chun kar search se item lagao · item ka size box se haath se") ----------
+//   racks.rn[rack] = shelf ki ginti · racks.sh[id] = chuni shelf (0 se) · racks.sz[id] = size (number, 1 = aam). Naqsha dukan/khula.js rackLayout — website wahi.
+function catsHTML() { const rk = racksOf(items() || []); const ch = (on, k, t) => `<button type="button" class="wd-chip${on ? ' is-in' : ''}" data-ck="${esc(k)}">${t}</button>`;
+  return `<h3 class="wd-st">📂 Category</h3><div class="wd-chips">${ch(!W.ck, '', 'Sab racks')}${rk.map((r, i) => ch(W.ck === r.k, r.k, `${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small>`)).join('')}</div>`; }
+function rsizeHTML() { const rk = racksOf(items() || []).filter(r => r.k !== KHK);
+  return `<h3 class="wd-st">📐 Kis rack ka size?</h3><div class="wd-chips">${rk.map((r, i) => `<button type="button" class="wd-chip" data-rz="${esc(r.k)}" data-rzf="menu">${i + 1}. ${esc(r.name)}</button>`).join('')}</div>`; }
 function rzItems(k) { return (items() || []).filter(x => x.c === k && !x.hide && x.k === 'n' && (W.racks.draw || x.pic)).sort((a, b) => (Number(W.ph[a.id]) || 0) - (Number(W.ph[b.id]) || 0)); }
-function rzSet(n, save) {
-  const k = W.rz.k; n = Math.max(2, Math.min(10, Math.round(n))); W.racks.sn = W.racks.sn || {};
-  const old = rackCols(k, W.racks.sn); if (n === 7) delete W.racks.sn[k]; else W.racks.sn[k] = n;
-  if (save) saveRacks(); else if (n !== old) paintRsz();
+const rzRows = k => rackRowsOf(k, W.racks.rn, 6);
+function rzFindHTML() {
+  const q = String(W.rz.q || '').trim(); if (!q) return '';
+  const L = (items() || []).filter(x => !x.hide && x.k === 'n');
+  const F = (r => [...r.hits, ...r.near])(smartFind(L, q, it => it.n, it => it.id)).sort((a, b) => (b.pic - a.pic)).slice(0, 30);
+  if (!F.length) return `<p class="wd-note">"${esc(q)}" nahi mila.</p>`;
+  return F.map(it => `<button type="button" class="wd-zf${it.pic ? '' : ' nop'}" ${it.pic ? `data-zadd="${esc(it.id)}"` : 'disabled'}><span class="wd-zft${it.pic ? ' none' : ''}" ${it.pic ? `data-th="${esc(it.id)}"` : ''}>${it.pic ? '' : '📷'}</span><span class="wd-zfn">${esc(it.n)}<small>${it.pic ? (it.c === W.rz.k ? 'isi rack par hai — shelf badlegi' : esc(rackName(it.c))) : 'tasveer nahi — pehle tasveer lagayein'}</small></span></button>`).join('');
 }
 function paintRsz() {
-  const k = W.rz.k, L = rzItems(k), c = rackCols(k, W.racks.sn), sz = W.racks.sz || {};
-  const bw = Math.min($('wdBody').clientWidth || 360, 560), rh = Math.round(Math.min(innerHeight * .62, bw * 1.45));
-  const rows = W.racks.sn?.[k] ? rackRows(c, bw, rh, 6) : 6, sh = shelfPack(L, c, sz), bays = Math.max(1, Math.ceil(sh.length / rows));
-  $('wdStrip').innerHTML = `<span><b>Ek shelf par: ${c}</b> · ${num(L.length)} items · ${bays} rack</span><button type="button" class="wd-chip" data-rzn="-1" aria-label="Kam (items bare)">＋ Bare</button><button type="button" class="wd-chip" data-rzn="1" aria-label="Zyada (items chhote)">－ Chhote</button>${W.rkSt ? `<span class="wd-k">${W.rkSt === '⏳' ? '⏳ save…' : W.rkSt === '✅' ? '✅ save' : '✕ nahi hua'}</span>` : ''}`;
+  const k = W.rz.k, L = rzItems(k), c = rackCols(k, W.racks.sn), sz = W.racks.sz || {}, rows = rzRows(k);
+  if (!(W.rz.s >= 0 && W.rz.s < rows)) W.rz.s = 0;
+  const bw = Math.min($('wdBody').clientWidth || 360, 560), rh = Math.round(Math.min(innerHeight * .6, bw * 1.5));
+  const B = rackLayout(L, c, rows, sz, W.racks.sh), sh = B[0] || [];
+  $('wdStrip').innerHTML = `<span><b>Shelf:</b></span>${[3, 4, 5, 6, 7, 8, 9].map(n => `<button type="button" class="wd-chip wd-zn${n === rows ? ' is-in' : ''}" data-zrn="${n}">${n}</button>`).join('')}${W.rkSt ? `<span class="wd-k">${W.rkSt === '⏳' ? '⏳' : W.rkSt === '✅' ? '✅' : '✕'}</span>` : ''}`;
   let h = ''; for (let s = 0; s < rows; s++) { const R = sh[s] || [], mx = Math.max(1, ...R.map(it => szW(it.id, sz)));
-    h += `<div class="wd-zs">${R.map(it => { const w = szW(it.id, sz); return `<button type="button" class="wd-zi${sz[it.id] ? ' is-in' : ''}" data-zi="${esc(it.id)}" style="--w:${(w / c).toFixed(4)};--hh:${(w / mx).toFixed(3)}"><span class="wd-zp none" data-th="${esc(it.id)}">${esc(it.n)}</span><span class="wd-zt">${num(it.r)}</span></button>`; }).join('')}</div>`; }
-  $('wdBody').innerHTML = L.length ? `<p class="wd-note">Do ungliyon se chhota / bara karein, ya upar ke chips. Item par dabayein = us ka apna qad (Chhota · Aam · Bara). Customer ko website par aisa hi dikhega.</p><div class="wd-zr" id="wdZr" style="height:${rh}px;--rows:${rows}">${h}</div>${sh.length > rows ? `<p class="wd-note">Yeh pehla rack hai — baqi ${num(L.length - sh.slice(0, rows).flat().length)} items agle ${bays - 1} rack par (isi size mein).</p>` : ''}` : `<p class="wd-note">Is rack par abhi koi tasveer wala item nahi. Pehle 🗄 Kai tasveerein se items lagayein.</p>`;
-  $('wdFoot').innerHTML = `<button type="button" class="wd-main" data-wd="back">✓ Ho gaya</button>`;
-  thumbs(); rzPinch();
+    h += `<div class="wd-zs${W.rz.s === s ? ' is-in' : ''}" data-zsf="${s}"><span class="wd-zno">${s + 1}</span>${R.map(it => { const w = Math.min(c, szW(it.id, sz)); return `<button type="button" class="wd-zi${W.rz.it === it.id ? ' is-in' : ''}" data-zi="${esc(it.id)}" data-zsh="${s}" style="--w:${(w / c).toFixed(4)};--hh:${(w / mx).toFixed(3)}"><span class="wd-zp none" data-th="${esc(it.id)}">${esc(it.n)}</span><span class="wd-zt">${num(it.r)}</span>${W.rz.it === it.id ? '<i class="wd-zh" data-zh="1"></i>' : ''}</button>`; }).join('')}</div>`; }
+  const more = B.length > 1 ? `<p class="wd-note">Yeh pehla rack hai — baqi items agle ${B.length - 1} rack par khud lage hain.</p>` : '';
+  $('wdBody').innerHTML = `<div class="wd-zq"><input id="wdZQ" type="search" placeholder="🔍 Shelf ${W.rz.s + 1} par item lagao — naam likhein" value="${esc(W.rz.q || '')}" autocomplete="off"></div><div class="wd-zl" id="wdZL">${rzFindHTML()}</div><div class="wd-zr" id="wdZr" style="height:${rh}px;--rows:${rows}">${h}</div><p class="wd-note">Shelf ka number dabayein = wo shelf chuni (peeli). Item dabayein = box; kone se kheench kar chhota / bara.</p>${more}`;
+  const it = W.rz.it && L.find(x => x.id === W.rz.it);
+  $('wdFoot').innerHTML = it ? `<div class="wd-zb"><b>${esc(it.n)}</b><span><button type="button" class="wd-chip" data-zsz="-1">－</button><button type="button" class="wd-chip" data-zsz="1">＋</button><button type="button" class="wd-chip" data-zmv="-1">⬆ shelf</button><button type="button" class="wd-chip" data-zmv="1">⬇ shelf</button><button type="button" class="wd-chip" data-zsz="0">↩ Aam</button><button type="button" class="wd-chip is-in" data-zok="1">✓</button></span></div>` : `<button type="button" class="wd-main" data-wd="back">✓ Ho gaya</button>`;
+  thumbs(); rzDrag();
 }
-function rzPinch() {
-  const el = $('wdZr'); if (!el) return; let d0 = 0, n0 = 0, moved = false;
-  const dist = e => Math.hypot(e.touches[0].clientX - e.touches[1].clientX, e.touches[0].clientY - e.touches[1].clientY);
-  el.addEventListener('touchstart', e => { if (e.touches.length === 2) { d0 = dist(e); n0 = rackCols(W.rz.k, W.racks.sn); moved = false; } }, { passive: true });
-  el.addEventListener('touchmove', e => { if (e.touches.length !== 2 || !d0 || !W?.rz) return; e.preventDefault(); const n = Math.max(2, Math.min(10, Math.round(n0 * d0 / Math.max(20, dist(e)))));
-    if (n !== rackCols(W.rz.k, W.racks.sn)) { moved = true; W.rz.pin = { d0, n0 }; rzSet(n, false); } }, { passive: false });
-  el.addEventListener('touchend', () => { if (moved && W?.rz) { moved = false; d0 = 0; saveRacks(); } }, { passive: true });
+function rzSize(id, v) { W.racks.sz = W.racks.sz || {}; v = Math.round(Math.max(0.5, Math.min(4, v)) * 10) / 10; if (v === 1) delete W.racks.sz[id]; else W.racks.sz[id] = v; saveRacks(); }
+function rzDrag() {
+  const hd = document.querySelector('#wdZr [data-zh]'), el = hd && hd.closest('.wd-zi'), rk = $('wdZr'); if (!hd || !el || !rk) return;
+  const id = el.dataset.zi, c = rackCols(W.rz.k, W.racks.sn); let st = null;
+  hd.addEventListener('pointerdown', e => { e.preventDefault(); e.stopPropagation(); st = { x: e.clientX, y: e.clientY, w: Math.min(c, szW(id, W.racks.sz)), cw: (rk.getBoundingClientRect().width - 16) / c, v: 0 }; try { hd.setPointerCapture(e.pointerId); } catch {} });
+  hd.addEventListener('pointermove', e => { if (!st) return; const d = ((e.clientX - st.x) - (e.clientY - st.y)) / 2; st.v = Math.max(0.5, Math.min(c, st.w + d / st.cw)); el.style.setProperty('--w', (st.v / c).toFixed(4)); el.style.setProperty('--hh', Math.min(1, st.v).toFixed(3)); });
+  const end = () => { if (!st) return; const v = st.v; st = null; if (v) rzSize(id, v); };
+  hd.addEventListener('pointerup', end); hd.addEventListener('pointercancel', end);
+  hd.addEventListener('click', e => e.stopPropagation());
 }
-function rzSheet(id) {
-  const it = (items() || []).find(x => x.id === id); if (!it) return; const cur = (W.racks.sz || {})[id] || 'n';
-  const ch = (v, t) => `<button type="button" class="wd-chip${cur === v ? ' is-in' : ''}" data-zs="${v}" data-zid="${esc(id)}">${t}</button>`;
-  sheet(`<h3 class="wd-st">${esc(it.n)}</h3><p class="wd-note">Is item ka qad (small / medium / large ka farq customer ko nazar aaye):</p><div class="wd-chips">${ch('s', '▫️ Chhota')}${ch('n', '◻️ Aam')}${ch('l', '⬜ Bara')}</div>`);
+function rzAdd(id) {
+  const it = (items() || []).find(x => x.id === id); if (!it || !it.pic) return; const k = W.rz.k;
+  if (k === it.pc) delete W.racks.ic[id]; else W.racks.ic[id] = k;
+  W.racks.sh = W.racks.sh || {}; W.racks.sh[id] = W.rz.s; W.rz.it = id; saveRacks();
 }
 function moveRack(k, d) {
   const L = items() || [], ks = racksOf(L).map(r => r.k), i = ks.indexOf(k), j = i + d;
@@ -766,6 +779,7 @@ async function previewCrop() { try { const b = await cropBytes(), el = $('wdPv')
 // ---------- 👆 ----------
 function onInput(e) {
   if (!W) return;
+  if (e.target.id === 'wdZQ' && W.rz) { W.rz.q = e.target.value; clearTimeout(onInput.z); onInput.z = setTimeout(() => { const l = $('wdZL'); if (l && W && W.rz) { l.innerHTML = rzFindHTML(); thumbs(); } }, 140); return; }
   if (e.target.id === 'wdQ') { W.q = e.target.value; W.lim = 120; W.qFocus = 1; clearTimeout(onInput.t); onInput.t = setTimeout(() => { paint(); W && (W.qFocus = 0); }, 140); }
   else if (e.target.id === 'wdMQ') { W.muq = e.target.value; clearTimeout(onInput.m); onInput.m = setTimeout(() => { const l = document.querySelector('#wdDlg .wd-mxl'); if (l && W && W.multi) l.innerHTML = muListHTML(); }, 120); }
   else if (e.target.id === 'wdRQ') { W.rpq = e.target.value; clearTimeout(onInput.r); onInput.r = setTimeout(() => { const l = document.querySelector('#wdDlg .wd-bxl'); if (l && W) l.innerHTML = pickListHTML(); }, 120); }
@@ -820,6 +834,8 @@ function onClick(e) {
   const t = e.target, a = t.closest('[data-wd]'), k = a && a.dataset.wd;
   if (k === 'back') { webClose(); return; }
   if (k === 'menu') { sheet(menuHTML()); return; }
+  if (k === 'cats') { sheet(catsHTML()); return; }
+  if (k === 'rsize') { sheet(rsizeHTML()); return; }
   if (k === 'sclose') { sheetClose(); return; }
   if (k === 'site') {
     let w = null; try { w = window.open(WEB_URL(), '_blank'); } catch {}
@@ -893,10 +909,16 @@ function onClick(e) {
   const lpb = t.closest('[data-lp]'); if (lpb) { const id = W.act; if (id) lpMany([id], lpb.dataset.lp); return; }
   const slp = t.closest('[data-slp]'); if (slp) { if (W.sel && W.sel.size) lpMany([...W.sel], slp.dataset.slp); return; }
   const mv = t.closest('[data-mv]'); if (mv) { const id = W.act, it = (items() || []).find(x => x.id === id); if (it) { if (mv.dataset.mv === it.pc) delete W.racks.ic[id]; else W.racks.ic[id] = mv.dataset.mv; } sheetClose(); saveRacks(); return; }
-  const rz = t.closest('[data-rz]'); if (rz) { W.rz = { k: rz.dataset.rz }; W.view = 'rsz'; paint(); return; }
-  const rzn = t.closest('[data-rzn]'); if (rzn && W.rz) { rzSet(rackCols(W.rz.k, W.racks.sn) + Number(rzn.dataset.rzn), true); return; }
-  const zs = t.closest('[data-zs]'); if (zs) { W.racks.sz = W.racks.sz || {}; if (zs.dataset.zs === 'n') delete W.racks.sz[zs.dataset.zid]; else W.racks.sz[zs.dataset.zid] = zs.dataset.zs; sheetClose(); saveRacks(); return; }
-  const zi = t.closest('[data-zi]'); if (zi && W.view === 'rsz') { rzSheet(zi.dataset.zi); return; }
+  const rz = t.closest('[data-rz]'); if (rz) { W.rz = { k: rz.dataset.rz, s: 0, q: '', it: '', from: rz.dataset.rzf === 'menu' ? 'menu' : 'racks' }; W.view = 'rsz'; sheetClose(); paint(); return; }
+  if (W.view === 'rsz' && W.rz) {
+    const zrn = t.closest('[data-zrn]'); if (zrn) { const n = Number(zrn.dataset.zrn); W.racks.rn = W.racks.rn || {}; if (n === 6) delete W.racks.rn[W.rz.k]; else W.racks.rn[W.rz.k] = n; saveRacks(); return; }
+    const zadd = t.closest('[data-zadd]'); if (zadd) { rzAdd(zadd.dataset.zadd); return; }
+    const zsz = t.closest('[data-zsz]'); if (zsz && W.rz.it) { const d = Number(zsz.dataset.zsz); rzSize(W.rz.it, d ? szW(W.rz.it, W.racks.sz) + d * 0.2 : 1); return; }
+    const zmv = t.closest('[data-zmv]'); if (zmv && W.rz.it) { const cur = Number(document.querySelector(`#wdZr [data-zi="${CSS.escape(W.rz.it)}"]`)?.dataset.zsh) || 0, n = Math.max(0, Math.min(rzRows(W.rz.k) - 1, cur + Number(zmv.dataset.zmv))); W.racks.sh = W.racks.sh || {}; W.racks.sh[W.rz.it] = n; W.rz.s = n; saveRacks(); return; }
+    if (t.closest('[data-zok]')) { W.rz.it = ''; paint(); return; }
+    const zi = t.closest('[data-zi]'); if (zi) { W.rz.it = W.rz.it === zi.dataset.zi ? '' : zi.dataset.zi; W.rz.s = Number(zi.dataset.zsh) || 0; paint(); return; }
+    const zsf = t.closest('[data-zsf]'); if (zsf) { W.rz.s = Number(zsf.dataset.zsf) || 0; W.rz.it = ''; paint(); return; }
+  }
   const up = t.closest('[data-up]'); if (up) { moveRack(up.dataset.up, -1); return; }
   const dn = t.closest('[data-dn]'); if (dn) { moveRack(dn.dataset.dn, 1); return; }
   const hc = t.closest('[data-hc]'); if (hc) { const kk = hc.dataset.hc; if (W.racks.hc[kk]) delete W.racks.hc[kk]; else W.racks.hc[kk] = 1; saveRacks(); return; }
