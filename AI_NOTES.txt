@@ -7905,3 +7905,7 @@ PC wa-out v1.18: gatePass (aaj ka din) listener sirf jab ON + number ho; ps 2 + 
 
 === v2.265.1 (13 Nov 2026) — 🌐 Online Dukan: website ka button saamne ===
 Malik: 'Online dukan ka chip three dots ke andar hai — website open honi chahiye'. '🌐 Website kholo' sirf ⋮ sheet mein tha -> ab Online Dukan khirki ke header mein ⋮ ke saath 🌐 gol button (wahi data-wd site). Kholna: window.open -> na khule to a target=_blank click -> phir bhi na ho to paigham mein link. ⋮ wala chip bhi wahi hai. Malik ka matlab pakka nahi (button bahar chahiye / dabane par khulti nahi) — jawab mein poochha. AI nahi.
+
+
+=== v2.265.2 (13 Nov 2026) — 🤖 Agent ka gola HATA ===
+Malik: 'is agent ko khatam kar do, is ki zaroorat nahi'. app.js AGENT_FAB_ON=false -> paintAgentFab hamesha band (har screen ka 🤖 gola nahi). agent.js / purane actions / reminder ka code waisa hi (kuch delete nahi) — wapas chahiye to AGENT_FAB_ON=true. Upar wala agent card pehle se band tha. AI: agent AI use karta tha — ab saamne se hata.
