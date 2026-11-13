@@ -8047,3 +8047,22 @@ MALIK (13 Nov 23:17, website ki screenshot): "neeche wala baba khatam kar do, za
 - Kamra (?kamra=1): khula bay na ho = dono deewar par racks (pehle se sambhala hua).
 TEST: browser harness (393x851 + 1280x800): avatar nahi, khula rack nahi, Daal Chana / Cheeni tasveer ke saath shelf par "380/kg", tap = wazan chips 5, JS error nahi. ASAL phone par test NAHI.
 AI: NAHI.
+
+
+=== v2.278.0 (13 Nov 2026) — 🏬 Website: DOOR SE DUKAN (kamra) ab default + chhat / lights / cameras / poora counter / dukan wala ===
+MALIK (13 Nov 23:42): "kya hum website mein door se customer ko rack dikha sakte hain — click kare to rack paas aa jaye, use lage rack door hai aur baqi rack bhi nazar aayein".
+  Plan diya (purana Kamra v2.166.0 chalu + naya look) -> (23:44) "ye theek hai · upar ceiling kar ke lights bhi laga do aur cameras bhi · counter bhi poora counter jaisa aur koi banda bhi bitha dena wahan par".
+- dukan/kamra.js:
+  · inner(): bana hua rack (b.shelves) = ASAL items — `.k-r2` (--u = panel ka 0.9 / 100) > `.k-s2` shelf > `.k-it` (--wu / --hu wohi unit jo paas wale rack ka; dher = background-size). Panel ki chaurai RH x 0.717 (rack ki pakki shakal).
+    Tasveer: fillDr (C.phUrl = PHURL, baqi C.phWant -> dukan.js loadPhotos) + K.photo(id, url) (setPhoto se, sirf chhota blob link). Sirf qareeb ke ~7 rack (zc > -2400 s) — mobile data; aage chalo to agle. Tasveer na ho = rangeen dabba (hue).
+  · chhat: `.k-ceil` jaali (farsh jaisa plane, rotateX(-90), t % tile) + LED lights do qatar (`.k-lt`) + 📹 gol camera (`.k-cam`, CAM svg, laal batti `.k-led` — LITE / reduced-motion par chamak nahi).
+  · gali ka aakhir: `.k-end` EK plane = endSVG (neeli patti, dukan ke naam ka board — C.shop(), peeche ki shelf sirf sajawat, ghari kholte waqt ka waqt, deewar wala camera) + `.k-man` (MAN svg — bani hui shakal, asal banda nahi;
+    counter ke paas aate hi ek dafa salaam `hi`) + `.k-ctr` button (ctrSVG: sheeshe ka dabba, tarazu, screen, printer jagah ho to, neeli tokri, neela jism + sunehri patti + takhti) -> wohi C.openCounter().
+    ⚠️ SABAQ: deewar / banda / counter ALAG plane the to Chrome ki 3D tarteeb (BSP) mein bande ka ek tukda counter ke UPAR aa gaya — preserve-3d scene mein jo cheezein ek doosre ke bilkul aage peeche hon unhein EK element (plane) mein rakho, andar DOM ki tarteeb.
+  · farsh slate-neela (kgF + .k-floor grout), neeche ki patti surmai; board chhote (188 s) + oonche; pehla rack z0 -330 s (door se nazar aaye); phone (lamba) par s = H / 640 (12% bara), nazar ka markaz 44% (CSS .k-stage / .k-floor / .k-ceil / .k-scene top bhi 44%).
+- dukan/dukan.js: ROOM_DEFAULT '1' (website khulte hi kamra) — LITE phone par '0' (seedha rack; ?kamra=1 se wahan bhi) · ?kamra=0 = purana. K.build try/catch (na bane = in-room hata, seedha rack).
+  roomWhere = wk / wn (patli patti). applyFresh: `OV.some(n => n !== 'near')` (pehle kamre / paas wale rack mein rate kabhi taza na hota — kamra default hote hi v2.275.0 ka auto rate ruk jata).
+- CSS: filter (drop-shadow / blur) NAHI (purana qaida) — counter ka saya nahi.
+TEST (browser harness, 8 racks x 13 items + 2 racks): shuru ka nazara, beech tak chalna, counter tak, rack par tap -> paas wala rack -> 🏬 wapas, counter tap = parchi khirki, darwaza (shutter) -> kamra + hint, rate-only + maal badla (kamre mein), PC 1280, LITE (seedha rack), JS error nahi.
+  ASAL phone par test NAHI (3D scene + tasveerein — dheera lage to ROOM_DEFAULT '0' ek line).
+AI: NAHI.

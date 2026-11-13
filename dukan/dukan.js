@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.277.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, KH_ON, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.277.0';
-import { smartFind } from './dhoond.js?v=2.277.0';
-import { makeKamra } from './kamra.js?v=2.277.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.278.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, KH_ON, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.278.0';
+import { smartFind } from './dhoond.js?v=2.278.0';
+import { makeKamra } from './kamra.js?v=2.278.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -85,9 +85,9 @@ const ss = { get(k) { try { return sessionStorage.getItem(k); } catch { return n
 
 SND = ls.get('nt-dk-snd', false) === true; sndPaint();
 // 🏬 v2.166.0: kamra (door se nazara) — ?kamra=1 / ?kamra=0 is session ke liye yaad
-const ROOM_DEFAULT = '0';
+const ROOM_DEFAULT = '1';   // v2.278.0 (malik 13 Nov: 'ye theek hai'): website khulte hi door se nazara — ?kamra=0 = purana seedha rack
 { const q = new URLSearchParams(location.search).get('kamra'); if (q === '1' || q === '0') ss.set('nt-dk-kamra', q); }
-const ROOM = (ss.get('nt-dk-kamra') || ROOM_DEFAULT) === '1';
+const ROOM = (ss.get('nt-dk-kamra') || (LITE ? '0' : ROOM_DEFAULT)) === '1';   // kamzor phone (LITE) = seedha rack (atke nahi) — ?kamra=1 se wahan bhi
 document.body.classList.toggle('room-on', ROOM); document.body.classList.toggle('in-room', ROOM);
 
 // ---------- ☁️ Firestore REST (sirf parhna) ----------
@@ -356,13 +356,13 @@ function renderAisle(keepId) {
   observe();
   if (keepId && S.bayOf.has(keepId)) go(S.bayOf.get(keepId), true);
   onScroll();
-  if (K) { K.build(); if (inRoom()) roomWhere(); }   // 🏬 v2.166.0
+  if (K) { try { K.build(); if (inRoom()) roomWhere(); } catch (e) { console.warn('kamra', e); document.body.classList.remove('in-room'); } }   // 🏬 kamra na bane = seedha rack (dukan kabhi khali nahi)
 }
 // ---------- 🏬 v2.166.0: kamra (door se) ↔ rack ke paas ----------
 const inRoom = () => ROOM && document.body.classList.contains('in-room');
-const roomWhere = () => { $('where').textContent = `🏬 Dukan · ${S.vis.length} racks — rack ke paas jao`; };
+const roomWhere = () => { $('where').innerHTML = `<i class="wk">🏬 Dukan</i><span class="wn">${S.vis.length} racks</span>`; };
 async function rpGet(p) { if (!RPU.has(p.pid)) { await loadRp(p); for (let k = 0; k < 60 && !RPU.has(p.pid) && rpLoading.has(p.pid); k++) await new Promise(r => setTimeout(r, 100)); } return RPU.get(p.pid) || ''; }
-const K = ROOM ? makeKamra({ S, LITE, RM, esc, gth, hueOf, rpGet, sfx, buzz, openCounter: () => openCounter(), where: t => { $('where').textContent = t; },
+const K = ROOM ? makeKamra({ S, LITE, RM, esc, gth, hueOf, rpGet, sfx, buzz, shop: () => document.querySelector('.bt b')?.textContent || 'Noor Traders', phUrl: id => PHURL.get(id) || '', phWant: ids => { let n = 0; ids.forEach(id => { if (phV(id) && !PHURL.has(id)) { want.add(id); n++; } }); if (n) loadPhotos(); }, openCounter: () => openCounter(), where: t => { $('where').textContent = t; },
   onNear: rk => { if (!inRoom()) return; curRk = rk; markRk(); },
   onEnter: i => { document.body.classList.remove('in-room'); $('roomBtn').hidden = false; closeHelper(); go(i, true); filledAt = -99; onScroll(); openOv('near'); requestAnimationFrame(depth); } }) : null;
 function toRoom() { document.body.classList.add('in-room'); $('roomBtn').hidden = true; roomWhere(); K && K.back(S.cur); }
@@ -425,8 +425,8 @@ async function soften(url) {
 async function loadShop() { try { const url = await bigPhoto('shop'); const el = $('shopPh'); if (url && el) { el.style.backgroundImage = `url('${url}')`; el.classList.add('has'); } } catch {} }
 const asBlob = async url => { if (!/^data:/.test(url)) return url; try { return URL.createObjectURL(await (await fetch(url)).blob()); } catch { return url; } };   // v2.273.0
 function setPhoto(id, url, done) {
-  if (!done) trimUrl(url).catch(() => url).then(u => asBlob(u || url)).then(u => { if (u && u !== url && PHURL.get(id) === url) setPhoto(id, u, true); }).catch(() => {});
-  PHURL.set(id, url);
+  if (!done) trimUrl(url).catch(() => url).then(u => asBlob(u || url)).then(u => { if (u && u !== url && PHURL.get(id) === url) setPhoto(id, u, true); else if (K) K.photo(id, PHURL.get(id)); }).catch(() => { if (K) K.photo(id, PHURL.get(id)); });
+  PHURL.set(id, url); if (done && K) K.photo(id, url);   // 🏬 door wale rack par bhi wohi tasveer (chhota blob link aate hi — lamba data: link DOM mein nahi)
   document.querySelectorAll(`[data-kh="${CSS.escape(id)}"] canvas`).forEach(c => { c._ok = false; KQ.push(c); }); if (KQ.length && !kqRaf) kqRaf = requestAnimationFrame(khPump);   // 🌾 malik ki tasveer dabbe / tore mein
   document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .it-box`).forEach(b => { const one = `<img src="${url}" alt="">`; b.innerHTML = b.closest('.shelf.fx') ? (done ? DEEP : x => x)(dherHTML(one, dherN(id, S.dh))) : one; });   // peeche ki qatarein sirf chhote (blob) link par — lamba data: link 3 dafa DOM mein nahi
   if (S.open === id) $('shImg').innerHTML = imgOf(S.items.get(id), true);
@@ -787,7 +787,7 @@ function ratesOnly(d) {   // wohi maal, sirf rate: apni jagah badlo
   return true;
 }
 function applyFresh() {
-  const d = freshD; if (!d || OV.length || inRoom()) return;   // khirki khuli ho (item / counter / dhoondo) to baad mein
+  const d = freshD; if (!d || OV.some(n => n !== 'near')) return;   // khirki khuli ho (item / counter / dhoondo) to baad mein · v2.278.0: kamra / paas wala rack khirki nahi (warna rate kabhi taza na hota)
   freshD = null;
   if (structOf(d) === S.struct && ratesOnly(d)) { S.sig = sigOf(d); return; }
   const keep = S.bays[S.cur]?.items?.[0]?.id;
