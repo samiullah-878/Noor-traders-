@@ -23,7 +23,9 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.7';
+const VER = '1.8';
+// v1.8 (14 Nov, malik ki screenshot: 'reports' -> 2 -> 'ban rahi hai' ke 12 min baad bhi kuch nahi aaya): report banne mein ghalti / atak (chowkidar ne band kiya)
+//   = malik ko WhatsApp par wajah (waErr / st.run nishan) — khamosh nahi. Report ka hisaab nahi badla.
 // v1.7 (14 Nov, malik: 'hazri app ko is app se jor do, larkon ki report WhatsApp par — subah 10, shaam 6, jab maangein'): hazriIn (Hazri app ka server
 //   chaabi ke saath likhta hai) -> hzPull (naya rakho, sab mitao, hazri-day.json) -> hzText -> subah cfg.hzTime (10:00) + shaam ki reports ke saath (waH)
 //   + reportNow waOnly 'h' (app / WhatsApp 'hazri'). Haal blueAccess/hazriWa {at, d, n, sent}. Hazri app mein kuch nahi likhta. AI nahi.
@@ -314,6 +316,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     return L.join('\n');
   }
   async function waTo() { let to = ''; try { const w = await access.doc('waParchi').get(), pf = w.exists ? (w.data() || {}).prFrom : null; to = String((Array.isArray(pf) && pf[0]) || ''); } catch {} return String(to || '03450412515').replace(/\D/g, ''); }
+  async function waErr(txt) { try { const id = `rp-err-${Date.now().toString(36)}`; await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to: await waTo(), nm: 'Malik', kind: 'rem', eid: id, txt: String(txt).slice(0, 600) }); } catch (e) { log('waErr: ' + e.message); } }
   async function hzSend(why, full) {
     try { await hzPull(); } catch {}
     const t = now(), id = `rp-${dayOf(t)}-h-${Date.now().toString(36)}`, to = await waTo();
@@ -363,8 +366,9 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       const due = (time, key, win = 3) => { const [h, m] = String(time || '').split(':').map(Number); if (!Number.isFinite(h)) return false; const d = new Date(t); d.setHours(h, m || 0, 0, 0); return hm >= `${pad2(h)}:${pad2(m || 0)}` && t.getTime() - d.getTime() < win * 3600e3 && st[key] !== day; };   // alert: 3 ghante; report (v1.1): usi din jab bhi chale (PC band / atka tha)
       // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
       try { await hzPull(); } catch (e) { log('hazri: ' + e.message); }
-      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else await runReport(String(cfg.reportDay || day), c2, o ? 'WhatsApp se' : 'app se abhi'); } }
-      else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; saveSt(st); await runReport(day, cfg, 'raat'); }
+      if (st.run && st.run.at) { const r0 = st.run; delete st.run; saveSt(st); await waErr(`⚠️ Report (${r0.why || ''}) poori nahi hui — shop PC par ${Math.round((Date.now() - Number(r0.at)) / 60000)} min pehle shuru hui thi aur atak gayi (PC dheera / POS ka sawal lamba). Dobara "reports" likh kar dekhein; phir bhi na aaye to Settings → 🖥️ PC scripts ki screenshot bhejein.`); }
+      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); try { await runReport(String(cfg.reportDay || day), c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } } }
+      else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; st.run = { at: Date.now(), why: 'roz wali' }; saveSt(st); try { await runReport(day, cfg, 'raat'); } catch (e) { log('report masla: ' + e.message); await waErr('✕ Roz wali report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); }
       if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waH !== false && hzRead() && due(cfg.hzTime || '10:00', 'hzDay', 3)) { st.hzDay = day; saveSt(st); await hzSend('subah', false); }
       if (Date.now() - lastAlive > 5 * 60000) { lastAlive = Date.now(); try { await access.doc('reportConfig').set({ alive: Date.now(), ver: VER }, { merge: true }); } catch {} }   // app: "PC zinda"
       onBeat?.();   // v1.1: dhadkan SIRF tab jab chakkar poora hua

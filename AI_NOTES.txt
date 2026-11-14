@@ -8119,3 +8119,10 @@ FILES: wa-report.js, cloud.js, firestore.rules (2.104), pc/raat-report.js v1.7, 
 === v2.279.1 (14 Nov 2026) — ☰ slider: upar ke '📌 Is screen ke' chips HATAYE ===
 Malik (☰ ki screenshot — upar Payment transfer / PDF / WhatsApp parchi / Dasti payment / Reminder / Apni tareekh): "in ki upar zaroorat nahi hai ab".
 style.css aakhir: #chipDrawer .dr-pins{display:none!important} — ☰ mein ab seedha Screens. Chips mite nahi (DOM wahi, shell.js drawerMove nahi chhera), wohi kaam har screen ke ⋮ mein. AI nahi. PC file nahi badli.
+
+
+=== PC raat-report v1.8 (14 Nov 2026) — report na bane to khamosh nahi ===
+Malik ki screenshot (13:04 "Reports" -> menu -> 2 -> "Report ban rahi hai 1-2 minute" -> 13:16 tak kuch nahi). Menu mein "5 Hazri" tha = kh-wa v1.7 PC par lag chuka.
+Yahan sandbox mein wohi raasta (tick -> reportNow waOnly 'l' -> runReport -> waSend) theek chala (1 paigham bana) — code ki ghalti nahi mili. Asal wajah PC par hai (maloom nahi: raat-report band / POS ka sawal lamba / 6 min chowkidar).
+Theek: reportNow / roz wali run try-catch -> ghalti = malik ko WhatsApp "✕ Report nahi bani: <wajah>"; chalne se pehle st.run nishan, script beech mein band ho (chowkidar) to agle chakkar par "⚠️ Report poori nahi hui — atak gayi". Hisaab nahi badla.
+Malik se manga: Settings -> PC scripts ki screenshot + Reports khirki ki screenshot. Hazri ka WhatsApp request wala kaam (code 1 Abdurehman...) is ke baad — abhi kuch nahi bana.

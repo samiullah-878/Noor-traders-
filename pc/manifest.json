@@ -1,6 +1,6 @@
 {
- "version": "2026-11-14.2",
- "note": "👥 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: 👤 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (⚠️ Print auto / ✅ Parchi Mubeen ko gayi / ⏰ / ▶️ — waOut pp) + \"Print auto 0344…\" reply bhi; Business phone se KHUD likha reply (fromMe, chhota, number wala, kisi paigham par reply) = malik ka paigham (ownNum -> waIn). Bot ke apne paigham nahi. AI nahi.",
+ "version": "2026-11-14.3",
+ "note": "raat-report v1.8: report na bane / atak jaye to malik ko WhatsApp par wajah. Pichhla: 👥 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: 👤 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (⚠️ Print auto / ✅ Parchi Mubeen ko gayi / ⏰ / ▶️ — waOut pp) + \"Print auto 0344…\" reply bhi; Business phone se KHUD likha reply (fromMe, chhota, number wala, kisi paigham par reply) = malik ka paigham (ownNum -> waIn). Bot ke apne paigham nahi. AI nahi.",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
@@ -48,7 +48,7 @@
   "urdu-shape.js": "ebe13a89fa07b6cc827dcc8b30d527ffb4db214e8fd06bc7934e8535deaa7441",
   "nt-posui.js": "94f40492fa613a1264efcc35b4239e36d0ac44f55866da2bff5c101e1ec173ac",
   "purchase-parchi.js": "2d4027987c2e96ce6cbbdec5afc8dd14dfd9afbb5d0f49727c713b41447270aa",
-  "raat-report.js": "9b97c357416977ffda5ceb750b7f10986999b36b86c4b4cb07c3dab53affbe06",
+  "raat-report.js": "68238c573c4d25e2a5f46ba385d1e923c0e8d48a93d2a3218476ac6b84221544",
   "report-auto.bat": "867f58bc2fee20409d1682975ebaa305d5cf287a3dad6e1cd3e4f08708130af8",
   "kh-wa.js": "347829cd76b8961d7830b2600170987581db24ed4d1da8c4031e87d82fb39770",
   "zinda.js": "de1e04f6906b66493dc3da2606ea0cf2ee200053841516e3e1fcf84a32a950a3",
