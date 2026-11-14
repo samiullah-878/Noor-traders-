@@ -1,4 +1,5 @@
 // =========================================================
+// v1.23 (14 Nov): kh-wa v1.8 — 📝 tafseel lazmi: tafseel ka jawab (aam likhai) kh-wa tak pohanchane ka darwaza (KHW.waits).
 // v1.22 (14 Nov, malik: 'larka Business number par apna code likhe -> wajah -> roz ki pehli 2 khud manzoor, baqi hum WhatsApp par OK karein · kisi bhi phone se'):
 //        hz-wa.js (🚶 bahar jane ki request) — yahan sirf bulana: hzIn (aane wala chhota number / request par reply 1-2) · hzOwn (Business phone se malik ka reply) · HZ.tick (30 s).
 //        Aane wale paigham mein ab chauthi cheez: SIRF 1-3 hindse ka code (jo kisi larke ka ho) ya hamare request-paigham par reply 1 / 2 — baqi kuch nahi parha jata.
@@ -35,7 +36,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.22';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.23';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -392,6 +393,10 @@ async function main() {
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
         if (ktx && ktx.length <= 3 && await gpReply(m, c, ktx, s)) continue;   // v1.18: 🚪 gate pass ka jawab (1 / 2) — sirf gate numbers, sirf gate paigham par reply
         if (ktx && ktx.length <= 30 && await hzIn(m, c, ktx, s, false)) continue;
+        // v1.23: 📝 kh-wa ne is number se TAFSEEL maangi ho (khPend stg 'f') to us ka agla likha paigham kh-wa ko — sirf ijazat wale number, baqi sab pehle jaisa
+        if (KHW && KHW.waits && ktx && ktx.length <= 300 && !KHW.looks(ktx)) { const kn0 = await fromNum(m, s);
+          if (kn0 && KHW.who(kn0) && await KHW.waits(kn0)) { const kt0 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
+            if (await KHW.apply({ text: ktx, from: kn0, wid: m.key.id || '', ts: kt0, quoted: '', quiet: true, biz: true })) continue; } }
         if (KHW && ktx && ktx.length <= 300 && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looks(ktx)) { const kn = await fromNum(m, s), kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, kt = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
           if (kn) await KHW.apply({ text: ktx, from: kn, wid: m.key.id || '', ts: kt, quoted: String((kc && kc.stanzaId) || ''), quiet: false }); continue; }
         if (KHW && KHW.looksName && ktx && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looksName(ktx)) { const kn3 = await fromNum(m, s), kt3 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;

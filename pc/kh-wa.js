@@ -17,7 +17,8 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.7';   // v1.7 (14 Nov): 👥 'hazri' (sirf malik) -> reportConfig {reportNow, waOnly 'h'} -> raat-report v1.7; 'reports' menu mein 5 Hazri   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
+const VER = '1.8';   // v1.8 (14 Nov, malik: 'tafseel ke baghair entry nahi banni chahiye — WhatsApp wali par tafseel nahi aa rahi'): kharcha / payment li / di mein tafseel na ho to entry se PEHLE sawal (khPend stg 'f', 10 min) — jawab = tafseel, phir entry. Transfer par nahi.
+// v1.7:   // v1.7 (14 Nov): 👥 'hazri' (sirf malik) -> reportConfig {reportNow, waOnly 'h'} -> raat-report v1.7; 'reports' menu mein 5 Hazri   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
 // v1.5:   // v1.5 (13 Nov): 🔔 WhatsApp reminder — 'reminder <likhai> / kal se' · 'all reminder show' · '3 off' · 'reminder off'; roz 11 baje, jab tak off na ho; har number ka apna (malik, Mubeen)
 // v1.4:   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
 const pad3 = n => String(n).padStart(3, '0');
@@ -189,6 +190,41 @@ function make({ biz, log = () => {} }) {
     } catch (e) { log('🔔 reminder tick: ' + e.message); }
   }
   let remTimer = null; const startRem = () => { if (remTimer) return; remTimer = setInterval(remTick, 60000); if (remTimer.unref) remTimer.unref(); setTimeout(remTick, 20000); };
+  // ---- v1.8: 📝 TAFSEEL LAZMI — tafseel ke baghair kharcha / payment ki entry nahi banti ----
+  const okNote = n => /[a-z\u0600-\u06ff]{2}/i.test(String(n || ''));
+  async function mkKh(code, pid, party, amt, note0, ow, w, ph, name) {
+    const id = 'wk' + ow, t = Date.now(), amount = Math.round(amt * 100), note = (String(party.name || '') + ' - ' + (note0 ? note0 + ' - ' : '') + '📲 WhatsApp ' + name).slice(0, 300);
+    try { await KH.doc(id).create({ id, type: 'entry', kind: 'payment', partyId: pid, amount, date: today(), note, dailyIncluded: true, posPending: false, wa: ow, waFrom: ph, by: 'pc-wa', byName: name, updatedBy: 'pc-wa', createdAt: t, updatedAt: t, rev: 1 }); }
+    catch (e) { if (/already exists/i.test(String(e.message || e))) return true; throw e; }
+    log(`🔢 kharcha WhatsApp: ${code} ${party.name} ${rsT(amt)} — ${name}`);
+    await say(ph, 'kw-' + w, `✅ ${code} ${party.name} · ${rsT(amt)} Akhrajat mein lag gaya${note0 ? '\n' + note0 : ''}\n↩ Ghalat ho to is paigham par reply mein "cancel" likhein.`, id);
+    return true;
+  }
+  async function askTf(ph, name, w, d, head) {
+    await pendSet(ph, { stg: 'f', ...d, w, by: name });
+    await say(ph, 'kq-' + w, `📝 ${head}\n\nTAFSEEL likhein (kis cheez ka paisa) — tafseel ke baghair entry nahi banti.\n0 = chhoro`);
+    const tm = setTimeout(async () => { try { const x = await PEND.get(), c = (x.exists && (x.data() || {})[ph]) || null; if (c && c.stg === 'f' && c.w === w) { await pendDrop(ph); await say(ph, 'kx-' + w + 'z', `⌛ ${head}\nTafseel nahi aayi — entry NAHI bani. Dobara likhein (raqam ke saath tafseel bhi).`); } } catch (e) { log('kh-wa tafseel waqt: ' + e.message); } }, 10 * 60000 + 5000);
+    if (tm.unref) tm.unref(); return true;
+  }
+  // true = sambhal liya · null = yeh tafseel nahi (aage aam raasta)
+  async function tafseel(ph, name, w, text, d) {
+    const t = String(text || '').replace(/\s+/g, ' ').trim();
+    if (/^0$/.test(t)) { await pendDrop(ph); await say(ph, 'kx-' + w, '↩ Theek hai — entry nahi bani.'); return true; }
+    if (/print|^start\b|^a\.?i\.?$|^codes?$/i.test(t)) return null;
+    if (/^\d/.test(t)) { const a = parse(t), b = parse2(t); if ((a && a.amt) || (b && b.amt)) { await pendDrop(ph); await say(ph, 'kx-' + w + 'p', `⚠️ Pichhli entry (${rsT(d.amt)}) NAHI bani — us ki tafseel nahi aayi thi.`); return null; } }
+    if (!okNote(t) || /^[\d\s.,]+$/.test(t)) { await say(ph, 'kx-' + w, '✕ Tafseel LAFZON mein likhein, jaise: larkon ka khana\n0 = chhoro'); return true; }
+    const note = t.slice(0, 200), ow = clean(d.ow || d.w); await pendDrop(ph);
+    if (d.kd === 'c') {
+      const ps = await KH.doc(String(d.pid)).get(), party = ps.exists ? ps.data() || {} : null;
+      if (!party || party.deleted || party.type !== 'party' || !party.kharcha || party.active === false) { await say(ph, 'kx-' + w, `✕ ${d.code}: yeh kharcha khata ab nahi mila / band hai — entry nahi bani.`); return true; }
+      return await mkKh(d.code, String(d.pid), party, Number(d.amt), note, ow, w, ph, name);
+    }
+    await parties(); const A = PT.get(d.pid); if (!okParty(A)) { await say(ph, 'kx-' + w, '✕ Yeh khata ab nahi mila — entry nahi bani.'); return true; }
+    try { const r = await mkPay(Number(d.k), A, Number(d.amt), d.daily !== false, note, ow, ph, name); await say(ph, 'kw-' + w, r.txt, r.id); }
+    catch (e) { if (/already exists/i.test(String(e.message || e))) return true; throw e; }
+    return true;
+  }
+  const waits = async ph => { const d = await pendGet(normPh(ph)); return !!(d && d.stg === 'f'); };
   async function stage(ph, name, w, text, d) {
     const pk = PICK_RE.exec(text), sm = STG_RE.exec(text);
     if (pk && Number(pk[1]) === 0 && pk[2] == null) { await pendDrop(ph); await say(ph, 'kx-' + w, '↩ Theek hai — chhor diya.'); return true; }
@@ -232,6 +268,7 @@ function make({ biz, log = () => {} }) {
         await pendSet(ph, { stg: 't', pid: p.id, amt, b: B.map(x => x.id), w, by: name });
         await say(ph, 'kq-' + w, `Transfer ${rsT(amt)} · ${p.name} →\n\n${listTxt(B)}\n\nKis ko? Number bhejein (0 = chhoro)`); return true;
       }
+      if (!okNote(tail)) return await askTf(ph, name, w, { kd: 'p', k, pid: p.id, amt, daily, ow: w }, `${KN[k]} · ${p.name} · ${rsT(amt)}`);
       await pendDrop(ph); const r = await mkPay(k, p, amt, daily, tail.slice(0, 200), w, ph, name); await say(ph, 'kw-' + w, r.txt, r.id); return true;
     }
     return false;
@@ -257,7 +294,9 @@ function make({ biz, log = () => {} }) {
     if (d.k === 3 && !n2) { await say(ph, 'kx-' + w, '✕ Transfer ke liye DO number bhejein, jaise: 1 2'); return true; }
     if (!okParty(A) || (d.k === 3 && !okParty(B))) { await say(ph, 'kx-' + w, '✕ Yeh number list mein nahi. List wala number bhejein.'); return true; }
     if (d.k === 3 && A.id === B.id) { await say(ph, 'kx-' + w, '✕ Dono khate ek hi hain — do alag number bhejein.'); return true; }
-    const ow = clean(d.w); await drop();
+    const ow = clean(d.w);
+    if (d.k !== 3 && !okNote(d.note)) return await askTf(ph, name, w, { kd: 'p', k: d.k, pid: A.id, amt: d.amt, daily: d.daily !== false, ow }, `${KN[d.k]} · ${A.name} · ${rsT(d.amt)}`);
+    await drop();
     try { const r = d.k === 3 ? await mkTransfer(A, B, d.amt, ow, ph, name) : await mkPay(d.k, A, d.amt, d.daily, String(d.note || ''), ow, ph, name); await say(ph, 'kw-' + w, r.txt, r.id); }
     catch (e) { if (/already exists/i.test(String(e.message || e))) return true; throw e; }
     return true;
@@ -286,8 +325,9 @@ function make({ biz, log = () => {} }) {
       await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: 'h' }, { merge: true }); await say(ph, 'kw-' + w, '⏳ Hazri ki report aa rahi hai (1 minute).'); return true; }
     if (REP_RE.test(text)) { if (!fresh) return true; if (!isMalik(ph)) { await say(ph, 'kx-' + w, '✕ Reports sirf malik maang sakta hai.'); return true; }
       await pendSet(ph, { stg: 'r', w, by: name }); await say(ph, 'kq-' + w, '📊 Kaun si report?\n\n1 Daily Sale ka hisaab\n2 Larka-wise\n3 Dukan ka profit\n4 Teeno\n5 Hazri (larke)\n\nNumber bhejein (0 = chhoro)'); return true; }
-    let pd = null;
-    if (fresh && (PICK_RE.test(text) || STG_RE.test(text))) { pd = await pendGet(ph); if (pd && pd.stg && await stage(ph, name, w, text, pd)) return true; }
+    let pd = fresh ? await pendGet(ph) : null;
+    if (pd && pd.stg === 'f') { const r = await tafseel(ph, name, w, text, pd); if (r !== null) return r; pd = await pendGet(ph); }
+    if (fresh && (PICK_RE.test(text) || STG_RE.test(text))) { if (pd && pd.stg && pd.stg !== 'f' && await stage(ph, name, w, text, pd)) return true; }
     if (PICK_RE.test(text)) return await pick(ph, name, w, text, pd);
     if (inBiz && looksName(text)) return fresh ? await nameAsk(ph, name, w, text) : false;
     const p2 = parse2(text);
@@ -306,13 +346,9 @@ function make({ biz, log = () => {} }) {
     const ps = await KH.doc(pid).get(), party = ps.exists ? ps.data() || {} : null;
     if (!party || party.deleted || party.type !== 'party' || !party.kharcha) { await say(ph, 'kx-' + w, `✕ ${p.code}: yeh kharcha khata nahi mila (hata diya gaya?).`); return true; }
     if (party.active === false) { await say(ph, 'kx-' + w, `✕ ${p.code} ${party.name}: yeh khata BAND hai.`); return true; }
-    const id = 'wk' + w, t = Date.now(), amount = Math.round(p.amt * 100), note = (String(party.name || '') + ' - ' + (p.note ? p.note + ' - ' : '') + '📲 WhatsApp ' + name).slice(0, 300);
-    try { await KH.doc(id).create({ id, type: 'entry', kind: 'payment', partyId: pid, amount, date: today(), note, dailyIncluded: true, posPending: false, wa: w, waFrom: ph, by: 'pc-wa', byName: name, updatedBy: 'pc-wa', createdAt: t, updatedAt: t, rev: 1 }); }
-    catch (e) { if (/already exists/i.test(String(e.message || e))) return true; throw e; }
-    log(`🔢 kharcha WhatsApp: ${p.code} ${party.name} ${rsT(p.amt)} — ${name}`);
-    await say(ph, 'kw-' + w, `✅ ${p.code} ${party.name} · ${rsT(p.amt)} Akhrajat mein lag gaya${p.note ? '\n' + p.note : ''}\n↩ Ghalat ho to is paigham par reply mein "cancel" likhein.`, id);
-    return true;
+    if (!okNote(p.note)) return await askTf(ph, name, w, { kd: 'c', code: p.code, pid, amt: p.amt, ow: w }, `${p.code} ${party.name} · ${rsT(p.amt)}`);
+    return await mkKh(p.code, pid, party, p.amt, p.note, w, w, ph, name);
   }
-  return { apply, looks, looksName, startRem, remTick, who: ph => who(normPh(ph)), ver: VER };
+  return { apply, looks, looksName, waits, startRem, remTick, who: ph => who(normPh(ph)), ver: VER };
 }
 module.exports = make; module.exports.parse = parse; module.exports.parse2 = parse2; module.exports.looksName = looksName; module.exports.pdfMake = pdfMake; module.exports.looks = looks; module.exports.normPh = normPh;

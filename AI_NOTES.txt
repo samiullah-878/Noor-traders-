@@ -8200,3 +8200,15 @@ Shaam 7:07: POS ki Sale report "Total Sale 2,131,405.64", app ka "POS report" Rs
 Farq 946,271. App cancel (DocStatus 3) aur stock fraq bills nahi ginti; stock fraq aaj 0 tha. ANDAZA (pakka nahi): POS ki Sale report cancel bills bhi jorti hai
 (wholesale purana: POS 408,720 / 25+ qatarein, app 22 bill 272,965). Tasdeeq ke liye PC ab sum.cxRs (cancel bills ka jor) likhta hai aur app "26 cancel bill (Rs X) nahi" dikhati hai.
 Sale / galle ka hisaab NAHI badla — sirf dikhana. Agar X ~ 9.46 lakh na nikle to wajah kuch aur hai (report ki tareekh / branch) — report ke filter ki tasveer maango.
+
+
+=== PC kh-wa v1.8 + wa-out v1.23 + wa-parchi v2.34 (14 Nov 2026 raat) — 📝 WHATSAPP ENTRY MEIN TAFSEEL LAZMI ===
+Screenshot: Daily Sale ki entry "Tahwah - WhatsApp Mubeen" (Rs 8,500) — "tafseel ka bhi system banao, WhatsApp wala wahan tafseel nahi aa rahi" · "tafseel ke baghair nahi banni chahiye".
+Pehle: tafseel sirf tab aati thi jab usi paigham mein likhi ho ("001 chai 4900"); "001 8500" = bina tafseel entry.
+AB: kharcha (001…), payment li (1) aur payment di (2) — teeno raaston (code · "2 Imran 5000" + number · naam -> menu -> "2 5000") mein tafseel na ho to entry se PEHLE bot poochta hai
+"TAFSEEL likhein … 0 = chhoro" (blueAccess/khPend stg 'f', 10 min). Jawab = tafseel -> entry (parchi / Daily / POS voucher sab mein). 0 = entry nahi. Sirf hindse = dobara poocho.
+"Print auto" / start / ai = tafseel nahi (apne raaste). Naya poora hukum aa jaye ("001 bijli 700") = purani chhor kar bata do, naya lagao. 10 min jawab nahi = "entry NAHI bani" (jis process ne poocha us ka timer).
+Transfer (3) par tafseel NAHI maangi (malik ne nahi kaha).
+wa-out: tafseel aam likhai hoti hai (looks() nahi pakarta) — KHW.waits(number) (khPend parh kar) sach ho aur number ijazat wala ho to paigham kh-wa ko; kh-wa na le to pehle jaisa aage. wa-parchi: sirf version.
+Sawal Business number se aata hai, is liye jawab bhi Business chat mein likha jaye (apni "Message yourself" chat mein likha jawab nahi pakra jata — maloom kami).
+TEST: /tmp/kt2/t.js 14 surtein theek (naqli Firestore). Asal WhatsApp par nahi. AI nahi. App ki koi file nahi badli.
