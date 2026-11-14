@@ -9,7 +9,7 @@
 // v2.278.0 (13 Nov 2026): malik — "door se customer ko rack dikhe, click kare to paas aaye, baqi rack bhi nazar aayein" · "upar ceiling, lights, cameras · poora counter · wahan banda baitha ho":
 //   door ke bane racks par ASAL items ki tasveerein (wohi unit naap — rackLayoutU) · chhat ki jaali + LED lights + 📹 camera · aakhri deewar (board, shelf, ghari) + 🧑‍💼 dukan wala + poora counter (EK plane) ·
 //   farsh slate-neela · website khulte hi yehi nazara (dukan.js ROOM_DEFAULT '1'; kamzor phone / ?kamra=0 = seedha rack).
-import { RK_K, RK_PK, rkImgU } from './khula.js?v=2.279.2';
+import { RK_K, RK_PK, rkImgU } from './khula.js?v=2.279.3';
 const P0 = 620;
 const rad = d => d * Math.PI / 180;
 export function makeKamra(C) {

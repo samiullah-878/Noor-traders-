@@ -1,5 +1,6 @@
 // =========================================================
-//  pos-sales-dekho.js  v2.11 (2026-11-13: ↩ MINUS ITEMS — malik: "minus wali items ka hisaab dikhao, kahan kaun se bill mein" — sum.rtd mein har wapsi ki items (it) + sum.mn = sale bill ke andar minus tadad wali lines; SIRF dikhana, auto sale ka hisaab WAHI) · v2.10 (2026-11-11: 🖥 POS REPORT ka kul — sum.g (kul bikri) / gc (cash bills) / gu (udhaar bills) / un (udhaar jo cash nahi mila); sirf dikhane ke liye, Daily ki auto sale WAHI) · v2.9 (2026-11-10: 🖥 posLive/_want — dekhe ja rahe counter ko batao, NT-PRINT POS screen ki tasveer bheje) · v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
+//  pos-sales-dekho.js  v2.12 (2026-11-14: cancel bills ki RAQAM bhi — sum.cxRs; malik: 'POS report 21 lakh, app 11 lakh — farq kyun' · sirf dikhane ke liye, sale ka hisaab wahi)
+//  v2.11 (2026-11-13: ↩ MINUS ITEMS — malik: "minus wali items ka hisaab dikhao, kahan kaun se bill mein" — sum.rtd mein har wapsi ki items (it) + sum.mn = sale bill ke andar minus tadad wali lines; SIRF dikhana, auto sale ka hisaab WAHI) · v2.10 (2026-11-11: 🖥 POS REPORT ka kul — sum.g (kul bikri) / gc (cash bills) / gu (udhaar bills) / un (udhaar jo cash nahi mila); sirf dikhane ke liye, Daily ki auto sale WAHI) · v2.9 (2026-11-10: 🖥 posLive/_want — dekhe ja rahe counter ko batao, NT-PRINT POS screen ki tasveer bheje) · v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
 //  v2.7 (2026-11-10: 🎥 AAKHRI item ka waqt `lt` (bill-clip video pehli se aakhri item tak — malik: "6 items ke baad video phir se shuru") + 🔴 live patti par BANTA HUA bill (counter ke POS login CreatedBy se — "at PC:" print par aata hai) · v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
 //                     SaleDetail ka jor (Qty×Rate) → sum.rtd (app milane ke liye) + note mein "bill se juri N · alag N"; MINUS abhi pehle jaisa (qaida data dekh kar)) · v2.2 (2026-11-04: ↩ malik: "Daily Sale mein sale return add hai ke nahi" → POS ki SALE RETURN (dbo.SaleReturn, us din ki) ab auto sale se MINUS —
 //                     cancel (DocStatusID 3) / stock fraq bahar; udhaar party ki wapsi (IsCreditRturn, wholesale nahi) = cash wapas nahi diya = minus NAHI (note mein ginti);
@@ -170,9 +171,9 @@ const isFarqName = n => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(n || ''));
 // wale voucher hi laata hai — yeh CRV app mein wasooli nahi bante, do dafa nahi gine jate.
 const isWsName = n => /whole\s*sale/i.test(String(n || ''));
 function saleSum(rows, crv = new Map(), rets = null) {
-  let cash = 0, n = 0, fq = 0, fqRs = 0, cx = 0, ws = 0, wsRs = 0, wsCash = 0, rt = 0, rtRs = 0, rtU = 0, gc = 0, gu = 0, un = 0;
+  let cash = 0, n = 0, fq = 0, fqRs = 0, cx = 0, cxRs = 0, ws = 0, wsRs = 0, wsCash = 0, rt = 0, rtRs = 0, rtU = 0, gc = 0, gu = 0, un = 0;
   for (const r of rows) {
-    if (Number(r.DocStatusID) === 3) { cx++; continue; }
+    if (Number(r.DocStatusID) === 3) { cx++; cxRs += Number(r.TotalSale) || 0; continue; }
     if (isFarqName(r.PartyName)) { fq++; fqRs += Number(r.TotalSale) || 0; continue; }
     const t = Number(r.TotalSale) || 0, c = Number(r.CashReceived) || 0, v = Number(crv.get(Number(r.SaleID))) || 0;
     const paid = r.IsCreditSale ? Math.max(0, Math.min(Math.max(c, v), t)) : t, wsB = isWsName(r.PartyName);
@@ -195,7 +196,7 @@ function saleSum(rows, crv = new Map(), rets = null) {
     rt++; rtRs += t;
   }
   cash -= rtRs;
-  return { amt: Math.round(cash * 100), n, fq, fqRs: Math.round(fqRs), cx, ws, wsRs: Math.round(wsRs), wsCash: Math.round(wsCash), rt, rtRs: Math.round(rtRs), rtU, rtL, rtA, rtd: rtd.slice(0, 40), rok: rets != null, g: Math.round(gc + gu), gc: Math.round(gc), gu: Math.round(gu), un: Math.round(un) };
+  return { amt: Math.round(cash * 100), n, fq, fqRs: Math.round(fqRs), cx, cxRs: Math.round(cxRs), ws, wsRs: Math.round(wsRs), wsCash: Math.round(wsCash), rt, rtRs: Math.round(rtRs), rtU, rtL, rtA, rtd: rtd.slice(0, 40), rok: rets != null, g: Math.round(gc + gu), gc: Math.round(gc), gu: Math.round(gu), un: Math.round(un) };
 }
 async function retFor(p, d0, d1) {   // v2.2: ↩ us din ki POS Sale Return (r.* — IsCreditRturn POS ke version par na ho to bhi chale) · ghalti = null (minus nahi)
   try {
@@ -393,7 +394,7 @@ async function slow() {
   slowRun = true; slowDirty = false;
   try {
     const p = await getPool(), rows = [...cache.values()], sm = saleSum(rows, await crvFor(p, d0, d1), await retFor(p, d0, d1));
-    const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, rt: sm.rt, rtRs: sm.rtRs, rtU: sm.rtU, rtL: sm.rtL, rtA: sm.rtA, rtd: JSON.stringify(sm.rtd || []), auto: AUTO, g: sm.g, gc: sm.gc, gu: sm.gu, un: sm.un };
+    const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, cxRs: sm.cxRs || 0, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, rt: sm.rt, rtRs: sm.rtRs, rtU: sm.rtU, rtL: sm.rtL, rtA: sm.rtA, rtd: JSON.stringify(sm.rtd || []), auto: AUTO, g: sm.g, gc: sm.gc, gu: sm.gu, un: sm.un };
     const mn = await minusFor(p, d0, d1); if (mn) sum.mn = JSON.stringify(mn);   // v2.11: bill ke andar minus lines (JSON text)   // v2.3: rtd JSON text (list ke andar list nahi)   // v2.2: ↩ wapsi   // v1.8: app milane ke liye (ginti nahi)
     const sh = day + JSON.stringify(sum);
     if (sh !== lastSumHash) { await col.doc(day).set({ sum }, { merge: true }); lastSumHash = sh; }

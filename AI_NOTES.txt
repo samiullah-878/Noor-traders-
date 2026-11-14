@@ -8193,3 +8193,10 @@ FILES: pc/hz-wa.js (nayi, manifest mein), pc/wa-out.js v1.22. App ki koi file na
 === md pkg v40 (14 Nov 2026) — ⏰ Ghari auto se BACK HATA ===
 Malik: "mobile baar baar back ho jata hai, koi droid laga hua hai" (pehli dafa 12:06, usi din v37 Ghari auto laga). Andaza: Date & time safhe wala PressBack TriggerThatInvokedConstraint ke saath har 1 min ke trigger par bhi chal raha tha.
 Ab macro mein sirf: setting badle / har 1 min -> auto time + zone wapas ON, kisi ne band kiya ho to Home. Back + activity / screen-text triggers hata diye. Phone par tasdeeq nahi — malik batayega.
+
+
+=== v2.279.3 + PC pos-sales-dekho v2.12 (14 Nov 2026) — POS report: cancel bills ki RAQAM ===
+Shaam 7:07: POS ki Sale report "Total Sale 2,131,405.64", app ka "POS report" Rs 1,185,134 (213 bill, 26 cancel) — "farq bohat zyada".
+Farq 946,271. App cancel (DocStatus 3) aur stock fraq bills nahi ginti; stock fraq aaj 0 tha. ANDAZA (pakka nahi): POS ki Sale report cancel bills bhi jorti hai
+(wholesale purana: POS 408,720 / 25+ qatarein, app 22 bill 272,965). Tasdeeq ke liye PC ab sum.cxRs (cancel bills ka jor) likhta hai aur app "26 cancel bill (Rs X) nahi" dikhati hai.
+Sale / galle ka hisaab NAHI badla — sirf dikhana. Agar X ~ 9.46 lakh na nikle to wajah kuch aur hai (report ki tareekh / branch) — report ke filter ki tasveer maango.

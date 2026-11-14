@@ -1,5 +1,5 @@
 {
- "version": "2026-11-14.6",
+ "version": "2026-11-14.7",
  "note": "hz-wa v1.0 (nayi file) + wa-out v1.22: larkon ki bahar jane ki request WhatsApp se. Pichhla: 14 Nov: raat-report v1.9 (POS Sale.COGS khana nahi = andaza, aaj ki report, app ko haal) + item-report v1.9 (nafa COGS ke baghair). Pichhla: wa-parchi v2.33: gahak ka number alag paigham mein bhi + 0371\u2026 jaise naye number. Pichhla: raat-report v1.8: report na bane / atak jaye to malik ko WhatsApp par wajah. Pichhla: \ud83d\udc65 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: \ud83d\udc64 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (\u26a0\ufe0f Print auto / \u2705 Parchi Mubeen ko gayi / \u23f0 / \u25b6\ufe0f \u2014 waOut pp) + \"Print auto 0344\u2026\" reply bhi; Bu",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -36,7 +36,7 @@
   "sales-stats-auto.bat": "d3c9c311652bbc1ecc79264c4ca6fee2b88698dd59003306717926c5cf59d111",
   "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
-  "pos-sales-dekho.js": "7da59f524ef06b908a1579f073d71e459a532fb88c2cd8624972c92de462d534",
+  "pos-sales-dekho.js": "dfcd434d06d8c5a69edcf3f8ce55a6f1506bd01e1c0f5f5b4c84655abbe85c41",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
   "nt-print.js": "2265bb1f2109528292ea9ffa5301d906bda84f3771f316285cefb0bbff86ef4c",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
