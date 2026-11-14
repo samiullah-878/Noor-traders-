@@ -8188,3 +8188,8 @@ KAISE:
 TEST: /tmp/hzw.js 20 surtein + hazri blueAct 12 surtein theek (naqli Firestore / fetch). ASAL WhatsApp / asal function par nahi — malik se screenshot. `bluein` ka URL yahan se nahi khula (sandbox ka proxy), deploy log mein "Successful create".
 KHATRA / MALOOM KAMI: koi bhi number larke ka code likh sakta hai (malik ka faisla "kisi bhi phone se"); hazri data 20 s – 15 min purana ho sakta hai (server har surat khud jaanchta hai); PC band (9 baje ke baad) = WhatsApp wala raasta band, hazri app chalti hai.
 FILES: pc/hz-wa.js (nayi, manifest mein), pc/wa-out.js v1.22. App ki koi file nahi badli.
+
+
+=== md pkg v40 (14 Nov 2026) — ⏰ Ghari auto se BACK HATA ===
+Malik: "mobile baar baar back ho jata hai, koi droid laga hua hai" (pehli dafa 12:06, usi din v37 Ghari auto laga). Andaza: Date & time safhe wala PressBack TriggerThatInvokedConstraint ke saath har 1 min ke trigger par bhi chal raha tha.
+Ab macro mein sirf: setting badle / har 1 min -> auto time + zone wapas ON, kisi ne band kiya ho to Home. Back + activity / screen-text triggers hata diye. Phone par tasdeeq nahi — malik batayega.

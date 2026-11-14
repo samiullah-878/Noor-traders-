@@ -40,10 +40,7 @@ acts = [
     # 1) auto time + auto time zone wapas ON (har trigger par — sasta, sirf 2 setting parhna)
     setv("fx", 2, m_newStringValue="0"), java(FIX, "fx"),
     setv("n", 1, m_newIntValue=0), setv("n", 1, m_intExpression=True, m_expression="{lv=fx}"),
-    # 2) Date & time ka safha = wapas (Settings baqi khuli)
-    iff([anyof(trig(T_ACT, "Date & time safha"), trig(T_S1, "24-hour"), trig(T_S2, "time automatically"), trig(T_S3, "zone automatically"))]),
-      {"m_classType": "PressBackAction", "m_SIGUID": 0},
-    END,
+    # v40 (14 Nov, malik: "mobile baar baar back ho jata hai"): Date & time safhe par Back HATA — trigger-wali shart phone par har 1 min sach nikalti lagti thi.
     # kisi ne abhi auto band kiya tha (setting badli + humein theek karna para) = us safhe se bahar
     iff([trig(T_SET, "auto time badla"), gt("n", 0)]),
       {"m_classType": "LaunchHomeScreenAction", "m_SIGUID": 0, "useAccessibilityService": True},
@@ -51,16 +48,13 @@ acts = [
 ]
 GH = {"macroExportVersion": 1, "macro": {
     "m_name": "⏰ Ghari auto",
-    "m_description": "Phone ki ghari hamesha AUTO (time + time zone). Koi band kare to foran wapas ON. Settings ka Date & time safha khulte hi wapas. Koi paigham nahi. AI nahi.",
+    "m_description": "Phone ki ghari hamesha AUTO (time + time zone). Koi band kare to foran wapas ON. Koi paigham nahi. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1,
     "localVariables": [{"m_name": "fx", "m_type": 2, "m_stringValue": "0", "isLocalVar": True}, {"m_name": "n", "m_type": 1, "m_intValue": 0, "isLocalVar": True}],
     "m_triggerList": [
         {"m_classType": "SystemSettingTrigger", "m_SIGUID": T_SET, "systemEnabled": False, "globalEnabled": True, "secureEnabled": False,
          "regexEnabled": True, "settingPattern": "auto_time.*"},
-        {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T_MIN, "m_seconds": 60, "m_useAlarm": False},
-        {"m_classType": "AppActivityLaunchedTrigger", "m_SIGUID": T_ACT, "launched": True, "activityNameToMatch": "DateTimeSettings",
-         "enableRegex": False, "matchOption": 1, "ignoreCase": True},
-        scr(T_S1, "24-hour"), scr(T_S2, "time automatically"), scr(T_S3, "zone automatically")],
+        {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T_MIN, "m_seconds": 60, "m_useAlarm": False}],
     "m_actionList": acts, "m_constraintList": []},
     "globalVariables": [], "userIcons": None}
 if __name__ == '__main__':
