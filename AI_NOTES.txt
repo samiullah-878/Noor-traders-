@@ -8082,3 +8082,19 @@ WAJAH: ⛔ Subah 11 tak / ⏸ Claude break / TikTok hadein phone ki ghari par ch
 - NAHI rokta: MacroDroid ko band / force stop karna (malik ko bataya — alag kaam, kehne par).
 - Sirf malik ka phone. Ami ka phone (Settings khuli) = poochha tha, jawab nahi aaya -> nahi chhera. Bachon ke phone par Settings pehle se band.
 AI: NAHI.
+
+
+=== wa-parchi v2.31 + wa-out v1.20 (14 Nov 2026) — 👤 gahak ka number REPLY se: har parchi wale paigham par + Business phone se khud likha ===
+MALIK (14 Nov 11:05, do screenshot, likha kuch nahi): (1) 10:18 ki 'Print auto' parchi par "⚠️ Print auto: gahak ka number nahi mila" aaya — us par reply mein 0344… likha (apne number se 10:19,
+  phir Business phone se "Print auto 0344…" 10:20) — phir bhi 10:30 "gahak?" / 10:41 "gahak? (number nahi)". (2) Mubeen ne 11:00 bill ki photo di -> "✕ gahak ka number nahi mila (is paigham par reply mein
+  number likhein)" -> malik ne USI Business phone se reply mein number likha (11:04) -> kuch nahi hua.
+WAJAH: (a) v2.27 ka reply-number sirf parchi / '✕ number nahi mila' / bill photo par tha — ⚠️ / ✅ / ⏰ / ▶️ wale waOut par `pp` nahi tha (reply ka asal parchi nahi milta), aur "Print …" lafz wala reply chhor diya jata tha.
+  (b) wa-out apne (fromMe) paigham mein sirf 'bill' dekhta tha — Business phone se khud likha number kabhi wa-parchi tak nahi pohancha.
+- wa-parchi v2.31: bizDo '-a' (⚠️ / ✅ Print auto) bizSay pp = parchi; waOut nk- / sk- / rk- / rm- par `pp: t.id`; ⚠️ ki likhai "IS paigham par reply mein gahak ka number likh dein";
+  bizMsg number wali shaakh: `parseCaption(stripPrint(tx))`, `!printReq(tx)` ki shart hata di (parchi pehle se TR.par mein ho to hi — warna purana Print raasta).
+- wa-out v1.20: `ownNum(m, s)` (onMsgs ki fromMe shaakh, billTry ke saath): id '3EB0…' (Baileys / bot) ya `ownSent` (apne bheje) = nahi · group / status nahi · sirf extendedText REPLY · 60 harf tak ·
+  mobile number (03… / +92… / + ya 00 wala bahar ka) zaroor · ek id ek dafa (`ownSeen`) -> `inboxPut(…, gpMalik)` (waIn, malik ke naam se) -> wa-parchi wohi bizMsg -> gahakSet. Jawab malik ke number par.
+  Number na ho = paigham chhua bhi nahi jata (gahakon se apni aam baat cheet nahi parhi jati).
+- TEST: /tmp numtest.js — wa-parchi ke ASAL bizMsg + gahakSet (file se kaat kar, jhoota Firestore) 7 haalatein + ownNum 10 haalatein = SAB THEEK. ASAL WhatsApp par test NAHI.
+- BAQI KAMZORI: BILL_HOLD (ruki hui bill photo) sirf yaad-dasht mein hai — PC update / restart par chali jati hai; phir number lagne par jawab "bill ki photo dobara reply kar dein". Is update se 11:00 wali photo bhi gayi.
+AI: NAHI.

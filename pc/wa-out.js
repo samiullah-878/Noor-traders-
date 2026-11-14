@@ -5,6 +5,8 @@
 //  Dukan ka ALAG WhatsApp Business number (0329-… · malik ne chuna) PC par linked device (Baileys — wahi package wa-mods\ se jo
 //  wa-parchi.js lagati hai; yeh script khud install NAHI karti). Asal dukan number (parchi parhne wala) is se alag rehta hai — ban ka
 //  khatra asal number par nahi.
+//  v1.20 (14 Nov, malik ki screenshot: Business phone se hi "✕ gahak ka number nahi mila" par reply mein number likha — kuch nahi hua): 👤 `ownNum` — is number se KHUD likha (fromMe)
+//        chhota REPLY jis mein mobile number ho = malik ka paigham (waIn, from = malik) -> wa-parchi gahakSet. Bot ke apne bheje paigham (3EB0… id / ownSent) KABHI nahi; number na ho = chhua bhi nahi.
 //  v1.19 (13 Nov, malik: "website ka order WhatsApp par aaye with item code — hum reply mein bill likhein to bill ban jaye"): 🧾 ONLINE ORDER -> POS BILL (billTry).
 //        Is number se (fromMe) kisi order par REPLY "bill" + us order mein "#NT <item>x<tadad> … =<kul>" -> appSales/wb<order id> {status new, role staff}
 //        -> sale-post ka WAHI raasta: UN-POSTED counter bill, POS ke rate, thermal print. Gahak ka paigham khud KABHI nahi parha jata (sirf apne reply ke andar quoted order).
@@ -29,7 +31,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.19';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.20';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -337,10 +339,27 @@ async function main() {
     } catch (e) { await tell('wbe' + Date.now().toString(36).slice(-5), '✕ *Online order ka bill NAHI bana* — ' + String((e && e.message) || e).slice(0, 200)); }
     finally { billBusy.delete(id); }
   }
+  // ---------- 👤 v1.20: Business phone se KHUD likha reply mein gahak ka number ----------
+  //   Malik aksar isi Business phone se jawab deta hai ("is paigham par reply mein number likhein" usi phone par dikhta hai). Pehle sirf doosre number (malik / Mubeen) ka reply chalta tha.
+  //   Hifazat: sirf fromMe · sirf REPLY · 60 harf tak · mobile number zaroor · group / status nahi · bot ke apne paigham nahi (Baileys id '3EB0…' ya ownSent) · ek paigham ek dafa.
+  const ownSent = new Set(), ownSeen = new Set();
+  async function ownNum(m, s) {
+    const id = String((m.key && m.key.id) || ''); if (!id || /^3EB0/i.test(id) || ownSent.has(id) || ownSeen.has(id)) return;
+    if (/@g\.us$|@broadcast$|@newsletter$/.test(String(m.key.remoteJid || ''))) return;
+    let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || c;
+    const x = c.extendedTextMessage, tx = String((x && x.text) || '').trim(); if (!x || !tx || tx.length > 60) return;
+    if (!x.contextInfo || !x.contextInfo.stanzaId) return;
+    const dg = tx.replace(/[\s\-().]/g, '');
+    if (!/(?:\+?92|0092|0)?3\d{9}(?!\d)/.test(dg) && !/(?:\+|00)[1-9]\d{9,12}(?!\d)/.test(dg)) return;   // number nahi = hamara kaam nahi
+    if (!isMob(gpMalik)) return;
+    ownSeen.add(id); if (ownSeen.size > 300) ownSeen.delete(ownSeen.values().next().value);
+    log('👤 Business phone se reply mein number — wa-parchi ko (malik ke naam se)');
+    await inboxPut(m, c, null, tx, gpMalik, s);
+  }
   async function onMsgs(ms, s, typ) {
     for (const m of ms || []) {
       try {
-        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" (intezar nahi — baqi paigham na rukein)
+        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); ownNum(m, s).catch(e => log('⚠️ apna reply: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" · v1.20: 👤 apna reply mein number (intezar nahi — baqi paigham na rukein)
         if (typ && typ !== 'notify') continue;
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
@@ -457,7 +476,7 @@ async function main() {
           const r = await within(sock.sendMessage(jid, lc || (dc && dc.length ? { document: dc, mimetype: 'application/pdf', fileName: String(d.fn || 'Khata.pdf').slice(0, 60), caption: txt } : im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {}), 60000, 'bhejna');
           if (fast) { lastFast = Date.now(); jidOk.set(to, jid); } else lastSent = Date.now();
           L.n++;
-          if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); }
+          if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); if (r.key.id) { ownSent.add(String(r.key.id)); if (ownSent.size > 400) ownSent.delete(ownSent.values().next().value); } }
           if (d.kind === 'bill') { CU[to] = { at: Date.now(), nm, bn: String(d.bn || ''), eid: id }; custSave(); }   // v1.5: is gahak ki location 24 ghante tak
           await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
           await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });

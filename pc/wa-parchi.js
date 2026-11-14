@@ -1,5 +1,8 @@
 // =========================================================
 //  wa-parchi.js  v2.16 (2026-11-09) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
+//  v2.31 (14 Nov, malik ki screenshot — number reply kiya, phir bhi "gahak? (number nahi)"): 👤 gahak ka number ab HAR parchi wale paigham ke reply se lagta hai —
+//        '⚠️ Print auto: gahak ka number nahi mila' · '✅ Parchi Mubeen ko gayi' · '⏰ … shuru nahi ki' · '▶️ … start kar diya' (in sab waOut par `pp` = parchi) aur reply mein
+//        'Print auto 0344…' likha ho tab bhi (pehle print ka lafz dekh kar chhor deta tha). Business phone se khud likha reply = wa-out v1.20 (ownNum).
 //  v2.16: 🚚 malik: "saath likha ho — delivery chahiye to current location bhej dein" → bill ke caption mein delivery ki line (sirf jab app mein delivery ON +
 //        dukan ki jagah set, blueAccess/deliveryCfg) + bill job mein `bn` (wa-out gahak ki location usi bill se jorta hai). Baqi kaam wa-out v1.5.
 //  v2.15: 🧾 malik (Bill #00135211: "kul 31,000 thi, likha 14,859 · items full nahi"): pehle sirf pehle 40 items ka jor + "… aur 31 items". Ab Mubeen ki photo
@@ -87,7 +90,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.30';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.31';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1753,7 +1756,7 @@ async function start(ZINDA) {
       if (t.from && grpFirst) await waOutPut('rc-' + t.grp, { to: t.from, nm: t.nm || '', kind: 'recv', eid: 'rc-' + t.grp, txt: '*NOOR TRADERS*\nAap ki parchi hamare larke ne receive kar li hai, shukria 🙏\nAap ka saman thori der mein nikal aata hai.' });   // gahak — group ki pehli parchi par ek dafa
       let fim = null; if (m._buf) { try { fim = await smallJpg(m._buf); } catch {} }   // v2.20: Business number se aayi parchi — tasveer Mubeen ko bhi (wohi is par reply karega)
       if (t.to) await waOutPut('nw-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'nw-' + t.id, pp: t.id, ...(fim ? { im: fim } : {}), txt: `📋 Nayi parchi: ${who.trim() || 'gahak?'} (${tstr(t.fwdAt)}) — tayyar karke ${m._buf ? 'ISI paigham par reply mein' : 'usi parchi par'} *start* likhein.` });
-      if (mk) await waOutPut('nk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'nk-' + t.id, txt: `✅ Parchi Mubeen ko gayi: ${who.trim() || 'gahak? (number nahi)'} (${tstr(t.fwdAt)})` });
+      if (mk) await waOutPut('nk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'nk-' + t.id, pp: t.id, txt: `✅ Parchi Mubeen ko gayi: ${who.trim() || 'gahak? (number nahi)'} (${tstr(t.fwdAt)})` });
     } catch (e) { log('⚠️ nayi parchi paigham: ' + (e && e.message)); }
     trDbg(`✅ Printauto parchi (${t.k === 'txt' ? 'likhi' : 'tasveer'}) list mein · gahak ${t.from ? phPretty(t.from) : '? (caption mein number likhein)'}${o ? ' (' + (im ? 'tasveer' : 'likhai') + ' se)' : cap.ph ? ' (caption se)' : ''}${t.grp !== wid ? ' · group' : ''}`);
   }
@@ -1796,7 +1799,7 @@ async function start(ZINDA) {
       if (n) { trSave(); trPush(); log(`▶️ parchi ${qid.slice(-6)} shuru (${who}${n > 1 ? ', ' + n + ' parchiyan' : ''}) — ${Math.round((now - t.fwdAt) / 60000)} min`);
         const who2 = ((t.nm ? t.nm + ' ' : '') + (t.from ? phPretty(t.from) : '')).trim() || 'gahak? (number nahi)', mk2 = S.prFrom[0] || normPh(L.me || '');
         if (t.from && !t.cs && await waOutPut('cs-' + t.grp, { to: t.from, nm: t.nm || '', kind: 'start', eid: 'cs-' + t.grp, txt: '*NOOR TRADERS*\nAap ka saman start ho gaya hai 🛒\nBohat shukria Noor Traders par aane ke liye 🙏' })) { for (const o of Object.values(TR.par)) if (o.grp === t.grp) o.cs = Date.now(); trSave(); trPush(); }   // malik: "start likhte hi gahak ko — 'aap ka saman start ho gaya hai'" (v2.14)
-        if (mk2 && !t.sk) { t.sk = Date.now(); trSave(); await waOutPut('sk-' + qid, { to: mk2, nm: 'Malik', kind: 'rem', eid: 'sk-' + qid, txt: `▶️ Mubeen ne saman start kar diya hai: ${who2} (${tstr(t.fwdAt)} ki parchi, ${Math.round((now - t.fwdAt) / 60000)} min mein)` }); } }   // v2.14 malik: "mujhe bhi SMS — Mubeen ne saman start kar diya"
+        if (mk2 && !t.sk) { t.sk = Date.now(); trSave(); await waOutPut('sk-' + qid, { to: mk2, nm: 'Malik', kind: 'rem', eid: 'sk-' + qid, pp: t.id, txt: `▶️ Mubeen ne saman start kar diya hai: ${who2} (${tstr(t.fwdAt)} ki parchi, ${Math.round((now - t.fwdAt) / 60000)} min mein)` }); } }   // v2.14 malik: "mujhe bhi SMS — Mubeen ne saman start kar diya"
       return true;
     }
     if (!im) return false;
@@ -1893,13 +1896,13 @@ async function start(ZINDA) {
         if (t.st !== 'sent' || now - t.fwdAt > 3 * 3600000) continue;
         const min = (now - t.fwdAt) / 60000;
         if (t.grp && Object.values(TR.par).some(o => o.grp === t.grp && o.id !== t.id && (o.st !== 'sent' || o.fwdAt < t.fwdAt || (o.fwdAt === t.fwdAt && o.id < t.id)))) continue;   // group ki sab se PEHLI parchi hi stages chalaye; koi shuru = koi yaad nahi
-        if (!t.rem && min >= stMin) { t.rem = now; ch = true; if (t.to) await waOutPut('rm-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'rm-' + t.id, txt: trText(t, 'rem') }); log(`⏰ parchi ${t.id.slice(-6)} ${stMin} min se shuru nahi — likha paigham`); }
+        if (!t.rem && min >= stMin) { t.rem = now; ch = true; if (t.to) await waOutPut('rm-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'rem', eid: 'rm-' + t.id, pp: t.id, txt: trText(t, 'rem') }); log(`⏰ parchi ${t.id.slice(-6)} ${stMin} min se shuru nahi — likha paigham`); }
         if (!t.voc && min >= CF.vMin && t.to) { t.voc = now; ch = true;   // 🤖 awaz
           try { const who = (t.nm ? t.nm : '') + (t.from ? ' ' + phPretty(t.from).replace(/-/g, ' ') : ''); const au = await ttsMp3(`Mubeen bhai, ${who.trim() || 'gahak'} ki parchi ${Math.round(min)} minute se shuru nahi hui. Please parchi nikalwa dein, aur WhatsApp par start likh dein. Shukriya.`);
             await waOutPut('rv-' + t.id, { to: t.to, nm: 'Mubeen', kind: 'voice', eid: 'rv-' + t.id, txt: '', au }); log(`🔊 awaz wala paigham Mubeen ko — parchi ${t.id.slice(-6)} (${Math.round(au.length / 1024)} KB)`); }
           catch (e) { t.err = 'awaz: ' + String(e.message || e).slice(0, 60); log('✕ awaz: ' + (e.message || e)); } }
         if (min >= CF.cMin && (!t.calls || (t.cal2 && now >= t.cal2 && t.calls < 2))) { t.cal2 = 0; ch = true; await callMubeen(t, t.calls ? 2 : 1); }   // 📞
-        if (!t.mal && min >= CF.mMin) { t.mal = now; ch = true; if (mk) await waOutPut('rk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'rk-' + t.id, txt: trText(t, 'malik') }); log(`⏰ parchi ${t.id.slice(-6)} ${CF.mMin} min — malik ko`); }
+        if (!t.mal && min >= CF.mMin) { t.mal = now; ch = true; if (mk) await waOutPut('rk-' + t.id, { to: mk, nm: 'Malik', kind: 'rem', eid: 'rk-' + t.id, pp: t.id, txt: trText(t, 'malik') }); log(`⏰ parchi ${t.id.slice(-6)} ${CF.mMin} min — malik ko`); }
       }
       if (ch) { trSave(); trPush(); }
     } catch (e) { log('⚠️ yaad-dihani: ' + e.message); }
@@ -2115,7 +2118,7 @@ async function start(ZINDA) {
     if (auto) { try { await trTrack(m, c, S.prTo[0] || '', who); } catch (e) { note('✕ Print auto list mein nahi gaya: ' + String(e.message || e).slice(0, 80)); } }
     const cap = String(im.caption || ''), pc = parseCaption(stripPrint(cap));
     await printOne(m, im, 0, pc.ph || '', m.key.remoteJid, cap, 'biz', null, note);
-    if (auto) { const t = TR.par[wid]; if (t) await bizSay(from, 'bz-' + wid + '-a', t.from ? `✅ Print auto chalu — gahak ${phPretty(t.from)} ko "parchi mil gayi" · Mubeen ko parchi bhej di.` : '⚠️ Print auto: gahak ka number nahi mila (Mubeen ko parchi chali gayi). Gahak ko paigham / bill ke liye caption mein likhein: Print auto Ahmed 0300-1234567'); }
+    if (auto) { const t = TR.par[wid]; if (t) await bizSay(from, 'bz-' + wid + '-a', t.from ? `✅ Print auto chalu — gahak ${phPretty(t.from)} ko "parchi mil gayi" · Mubeen ko parchi bhej di.` : '⚠️ Print auto: gahak ka number nahi mila (Mubeen ko parchi chali gayi).\nIS paigham par reply mein gahak ka number likh dein (jaise 0300-1234567) — paigham / bill usi ko jayega.', t.id || wid); }
   }
   // v2.28 (13 Nov, malik: 'business number par picture ke saath "ai" likhein to seedhi purchase ki AI wali screen par — larka baad mein app se kaam kare'): PC sirf tasveer rakhta hai (purAi + purAiImg), AI app mein pehle jaisa
   const AI_RE = /^\s*a\.?i\.?\s*$/i, PAI = biz.collection('purAi'), PAIM = biz.collection('purAiImg'); let aiHot = { at: 0, from: '' };
@@ -2159,8 +2162,8 @@ async function start(ZINDA) {
       for (const k of pk0) { const p = bzPend.get(k); bzPend.delete(k); await purAiPut(p.m, p.from, k); }
       return;
     }
-    if (!im && ctx && ctx.stanzaId && tx.length <= 60 && !printReq(tx)) {   // v2.27: parchi / 'number nahi mila' / bill ki photo par reply mein gahak ka number
-      const pc0 = parseCaption(tx), t0 = TR.par[ctx.stanzaId] || Object.values(TR.par).find(o => (o.bills || []).includes(String(ctx.stanzaId)));
+    if (!im && ctx && ctx.stanzaId && tx.length <= 60) {   // v2.27: parchi / 'number nahi mila' / bill ki photo par reply mein gahak ka number · v2.31: 'Print auto 0344…' likha ho tab bhi (parchi pehle se list mein ho to)
+      const pc0 = parseCaption(stripPrint(tx)), t0 = TR.par[ctx.stanzaId] || Object.values(TR.par).find(o => (o.bills || []).includes(String(ctx.stanzaId)));
       if (pc0.ph && okPh(pc0.ph) && t0) return gahakSet(t0, pc0, from, wid);
     }
     const isPr = im ? printReq(cap) : (tx.length <= 70 && printReq(tx)), tq = ctx && ctx.stanzaId ? TR.par[ctx.stanzaId] : null;
