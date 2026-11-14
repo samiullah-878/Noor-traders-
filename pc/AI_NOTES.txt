@@ -4702,3 +4702,12 @@ Malik ki screenshot (13:04 "Reports" -> menu -> 2 -> "Report ban rahi hai 1-2 mi
 Yahan sandbox mein wohi raasta (tick -> reportNow waOnly 'l' -> runReport -> waSend) theek chala (1 paigham bana) — code ki ghalti nahi mili. Asal wajah PC par hai (maloom nahi: raat-report band / POS ka sawal lamba / 6 min chowkidar).
 Theek: reportNow / roz wali run try-catch -> ghalti = malik ko WhatsApp "✕ Report nahi bani: <wajah>"; chalne se pehle st.run nishan, script beech mein band ho (chowkidar) to agle chakkar par "⚠️ Report poori nahi hui — atak gayi". Hisaab nahi badla.
 Malik se manga: Settings -> PC scripts ki screenshot + Reports khirki ki screenshot. Hazri ka WhatsApp request wala kaam (code 1 Abdurehman...) is ke baad — abhi kuch nahi bana.
+
+
+=== PC wa-parchi v2.33 (14 Nov 2026) — number alag paigham mein + 0371… ===
+Malik ki screenshot (13:54, Business number par): parchi ki tasveer -> alag paigham "03711439200" -> "Print auto" -> jawab "gahak? (number nahi)".
+DO wajah: (1) PH_RE sirf 3[0-5] (030–035) ko mobile maanta tha — 0371… number hi nahi samjha jata (caption mein likha hota tab bhi nahi). Ab 036–039 bhi, magar sirf 0 / 92 / +92 ke saath
+   (bina 0 ke 36… = bill number ho sakta hai). (2) number ALAG paigham mein tha (na caption, na reply) — bizMsg use chhor deta tha. Ab bzNum: usi bhejne wale ka number-wala chhota paigham
+   (<= 60 harf, reply nahi, print nahi) 10 min yaad -> agla Print / tasveer us ke saath (bizDo capX); Print auto ho chuka ho aur parchi bina number ho (10 min, wohi banda) = gahakSet seedha.
+TEST: /tmp/dk/numtest2.js — 5 tarteebein (tasveer/number/Print aage peeche) + bina number + doosre banday ka number = sab theek; purana numtest bhi. ASAL WhatsApp par nahi.
+SABAQ: number 'nahi mila' ki shikayat = pehle wohi number parseCaption se guzaro (regex ne maana ya nahi), phir raasta dekho.

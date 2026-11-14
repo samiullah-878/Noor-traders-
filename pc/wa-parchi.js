@@ -1,4 +1,6 @@
 // =========================================================
+// v2.33 (14 Nov, malik ki screenshot: tasveer -> '03711439200' alag paigham -> 'Print auto' = 'gahak? (number nahi)'): (1) PH_RE sirf 030–035 maanta tha — 0371… (naya series) number hi nahi samjha;
+//        ab 036–039 bhi (0 / 92 ke saath). (2) number ALAG chhote paigham mein ho (tasveer / Print se pehle ya baad, 10 min) = bzNum / gahakSet.
 // v2.32 (14 Nov): kh-wa v1.7 (👥 'hazri' likhne par hazri ki report) — is file mein sirf version (doctor dobara chalaye).
 //  wa-parchi.js  v2.16 (2026-11-09) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
 //  v2.31 (14 Nov, malik ki screenshot — number reply kiya, phir bhi "gahak? (number nahi)"): 👤 gahak ka number ab HAR parchi wale paigham ke reply se lagta hai —
@@ -91,7 +93,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.32';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.33';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -136,7 +138,7 @@ const okPh = p => isMob(p) || isIntl(p);
 const phPretty = p => isMob(p) ? p.slice(0, 4) + '-' + p.slice(4) : isIntl(p) ? '+' + p : String(p || '');
 const INTL_RE = /(?:\+|(?<!\d)00)(?:[\s.\-()]{0,2}\d){10,13}(?!\d)/;   // bahar ka number SIRF + ya 00 ke saath (Rs 35000 / bill number na pakre)
 // caption: "Ahmed bhai 0300-1234567" → { ph: '03001234567', nm: 'Ahmed bhai' } · mobile 030x–035x hi (Rs 35000 jaisa number nahi)
-const PH_RE = /(?<!\d)(?:(?:\+|00)?92[\s.\-()]{0,2}|0)?3[0-5](?:[\s.\-()]{0,2}\d){8}(?!\d)/;
+const PH_RE = /(?<!\d)(?:(?:(?:\+|00)?92[\s.\-()]{0,2}|0)?3[0-5]|(?:(?:\+|00)?92[\s.\-()]{0,2}|0)3[6-9])(?:[\s.\-()]{0,2}\d){8}(?!\d)/;   // v2.33: 036–039 (naye number, jaise Zong 0371…) bhi — magar sirf 0 / 92 ke saath (bina 0 ke 36… = bill number ho sakta hai)
 const NM_DROP = /(^|\s)(?:ph(?:one)?|mob(?:ile)?|cell|contact|whats ?app|wa|no|num(?:ber)?|nmbr|naam|name|cust(?:omer)?|گاہک|نام|نمبر|فون|موبائل)\s*(?:[:.#-]+|(?=\s|$))/gi;
 function parseCaption(cap) {
   let t = UDIG(cap).replace(/[\u200b-\u200f\u202a-\u202e\u2066-\u2069\ufeff]/g, '').replace(/\s+/g, ' ').trim(), ph = '';
@@ -2108,7 +2110,7 @@ async function start(ZINDA) {
   async function smallJpg(buf) { if (isJpeg(buf) && buf.length <= 850000) return buf; const S2 = sharp(); if (!S2) return null;
     for (const [w, q] of [[1600, 78], [1280, 72], [1000, 65]]) { try { const b = await S2(buf).rotate().resize({ width: w, height: w, fit: 'inside', withoutEnlargement: true }).jpeg({ quality: q }).toBuffer(); if (b.length <= 850000) return b; } catch {} }
     return null; }
-  const IN = biz.collection('waIn'), inBusy = new Set(), bzPend = new Map(); let bzQ = Promise.resolve(), bzHot = { at: 0, from: '', auto: false };
+  const IN = biz.collection('waIn'), inBusy = new Set(), bzPend = new Map(); let bzQ = Promise.resolve(), bzHot = { at: 0, from: '', auto: false }, bzNum = { at: 0, from: '', tx: '' };
   const bzWho = ph => (KHW && KHW.who && KHW.who(ph)) || phPretty(ph);
   const bizSay = (to, id, txt, pp) => waOutPut(id, { to, nm: bzWho(to), kind: 'rem', eid: id, txt, ...(pp ? { pp } : {}) }).catch(() => false);
   async function bizDo(m, c, im, from, auto, capX) {
@@ -2171,16 +2173,29 @@ async function start(ZINDA) {
     if (!isPr && (S.prTo.includes(from) || tq)) {   // start / bill — Mubeen (ya jis ne parchi par reply kiya)
       if (await trReply(m, c, null, who)) { const t2 = tq || (im && TR.lastBill && TR.par[TR.lastBill.qid]) || null; await bizSay(from, 'bz-' + wid + '-r', im ? (t2 && t2.err ? '✕ ' + t2.err : '🧾 Bill darj — gahak ko ja raha hai.') : '▶️ Start darj ho gaya.', t2 ? t2.id : ''); return; }
     }
+    // v2.33 (14 Nov, malik ki screenshot: tasveer -> alag paigham '03711439200' -> 'Print auto' = phir bhi 'gahak? (number nahi)'): gahak ka number ALAG chhote paigham mein
+    //   (tasveer se pehle / baad, Print se pehle / baad — 10 min) bhi pakro: bzNum yaad, ya abhi bani bina-number parchi par gahakSet.
+    const numTake = () => { const x = bzNum.at && bzNum.from === from && now - bzNum.at < 10 * 60000 ? bzNum.tx : ''; if (x) bzNum = { at: 0, from: '', tx: '' }; return x; };
+    if (!im && !isPr && !(ctx && ctx.stanzaId) && tx.length <= 60) {
+      const pn = parseCaption(tx);
+      if (pn.ph && okPh(pn.ph)) {
+        if ([...bzPend.keys()].some(k => bzPend.get(k).from === from && now - bzPend.get(k).at < 10 * 60000)) { bzNum = { at: now, from, tx }; return; }
+        const t1 = Object.values(TR.par).filter(o => !o.from && o.by === who && now - Number(o.fwdAt || 0) < 10 * 60000).sort((x, y) => Number(y.fwdAt || 0) - Number(x.fwdAt || 0))[0];
+        if (t1) return gahakSet(t1, pn, from, wid);
+        bzNum = { at: now, from, tx }; return;
+      }
+    }
     if (im) {
-      if (isPr) return bizDo(m, c, im, from, autoReq(cap));
-      if (bzHot.at && now - bzHot.at < 2 * 60000 && bzHot.from === from) { const a = bzHot.auto, hx = bzHot.tx || ''; bzHot = { at: 0, from: '', auto: false }; return bizDo(m, c, im, from, a, hx); }
+      if (isPr) return bizDo(m, c, im, from, autoReq(cap), numTake());
+      if (bzHot.at && now - bzHot.at < 2 * 60000 && bzHot.from === from) { const a = bzHot.auto, hx = ((bzHot.tx || '') + ' ' + numTake()).trim(); bzHot = { at: 0, from: '', auto: false }; return bizDo(m, c, im, from, a, hx); }
       bzPend.set(wid, { m, c, im, from, at: now }); while (bzPend.size > 6) bzPend.delete(bzPend.keys().next().value);   // "Print" 10 min ke andar alag likha aaye to
       return;
     }
     if (isPr) {
       const q = ctx && String(ctx.stanzaId || ''), pick = q && bzPend.has(q) ? [q] : [...bzPend.keys()].filter(k => bzPend.get(k).from === from && now - bzPend.get(k).at < 10 * 60000);
       if (!pick.length) { bzHot = { at: now, from, auto: autoReq(tx), tx }; return; }   // lafz pehle, tasveer baad mein (2 min)
-      for (const k of pick) { const p = bzPend.get(k); bzPend.delete(k); await bizDo(p.m, p.c, p.im, p.from, autoReq(tx), tx); }
+      const nx = numTake(), tx2 = nx ? tx + ' ' + nx : tx;
+      for (const k of pick) { const p = bzPend.get(k); bzPend.delete(k); await bizDo(p.m, p.c, p.im, p.from, autoReq(tx), tx2); }
       return;
     }
     if (tx.length > 25 && autoReq(tx)) { await trTrack(m, c, S.prTo[0] || '', who); await bizSay(from, 'bz-' + wid + '-a', '✅ Likhi parchi Print auto list mein — Mubeen ko khabar gayi.'); }
