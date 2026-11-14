@@ -8244,3 +8244,8 @@ Malik: "recording wala abhi chahiye jo har time recording kare" -> (sone ka masl
 - DRIVE: MacroDroid mein Drive par upload ka action NAHI (catalog dekha) — raasta wohi 4 Nov wala: FolderSync phone "NT Awaz" -> Drive. Malik ko bataya; setup us ke phone par ek dafa.
 - useAllFilesAccess = MacroDroid ko "All files access" + Microphone ki ijazat chahiye — na ho to file nahi banegi (malik se folder dekhne ko kaha).
 Phone par test nahi. Doosron ki awaz bina bataye record karne ke qanooni pehlu ka malik ko bataya (faisla us ka). AI nahi. Koi macro off / del nahi.
+
+
+=== md pkg v44 (14 Nov 2026 raat) — Falsafa popup: "Sona hai?" (recording ka lafz nahi) ===
+Malik: "recording ki jagah kuch aur likha aaye jaise 'Sona hai ya nahi' — Sona dabaun to band ho jaye, Nahi par chalti rahe".
+Popup par ab lafz "recording" NAHI: chal rahi ho = "😴 Sona hai?" [😴 Sona hai = band] [Nahi = chalti rahe] · band ho = "☀️ Jaag gaye?" [☀️ Jaag gaya = shuru] [Nahi = band rahe]. Kaam wohi (recOff + STOP / restart).

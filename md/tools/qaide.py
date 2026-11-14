@@ -28,6 +28,7 @@ acts = [
     iff([lgt("pLeft", 120), llt("pShow", 1), llt("kShow", 1), gbool("kpPend", False)]),
       JAVA,
 ]
+# v44: lafz "recording" popup par NAHI (malik: "recording ki jagah kuch aur likha aaye jaise Sona hai ya nahi") — chal rahi ho = "Sona hai?" (Sona hai = band) · band ho = "Jaag gaye?" (Jaag gaya = shuru)
 # v43 (14 Nov, malik: "isi popup ke andar falsafa aaye aur neeche recording ka sawal — jab dil kare band, jab dil kare on"): popup ka daayan button = recording band / shuru
 import rec as REC
 from cb import lt as glt, sint
@@ -37,12 +38,12 @@ def dlg(state, pos, neg): return {"m_classType": "ElseIfConfirmedThenAction", "m
 acts += [
     iff([glt("recOff", 1)]),
       iff([lbool("never", True)]),
-      dlg("🎙 <b>Recording CHAL rahi hai</b>", "⏹ Recording band", "✕ Chalne do"),
+      dlg("😴 <b>Sona hai?</b>", "😴 Sona hai", "Nahi"),
         sint("recOff", 1), REC.STOP,
       END,
     ELSE,
       iff([lbool("never", True)]),
-      dlg("⏹ <b>Recording BAND hai</b>", "🎙 Recording shuru", "✕ Band rahe"),
+      dlg("☀️ <b>Jaag gaye?</b>", "☀️ Jaag gaya", "Nahi"),
         sint("recOff", 0), *REC.restart(),
       END,
     END,
