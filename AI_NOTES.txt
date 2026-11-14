@@ -8168,3 +8168,23 @@ Malik: "system ki animation sahi nahi, un ko tez karna hai" -> 0.5x chuna (0x na
 md/tools/anim.py (naya macro): Java — Global window_animation_scale / transition_animation_scale / animator_duration_scale 0.5 na ho to 0.5.
    Triggers: SystemSettingTrigger (global, '.*(animation|duration)_scale') + har 5 min + MacroEnabled + Boot (Bank mode Developer options band kare = 1x wapas ho sakta hai).
    Koi paigham nahi. MCP validator VALID. Phone par test nahi (BeanShell yahan nahi chalti) — malik batayega. AI nahi. Raftar = SCALE.
+
+
+=== PC hz-wa v1.0 + wa-out v1.22 (14 Nov 2026) — 🚶 LARKON KI BAHAR JANE KI REQUEST WHATSAPP SE ===
+Malik: "sab larkon ka code (1 Abdurehman…) Business number par · larka code likhe -> reply mein wajoohat -> number chune · roz ki pehli 2 request khud manzoor, hamein sirf khabar ·
+teesri se mujhe aur Mubeen ko request, hum OK karein · kisi bhi phone se · jitni bhi request hain WhatsApp par aayein · code list mere aur Mubeen ke number par". Wajoohat: Khana · Namaz · Bank · Ghar · Dukan ka kaam · Aur.
+Hazri app ka layout Blue Khata jaisa = BAAD MEIN (malik: "abhi change na karo").
+KAISE:
+- pc/hz-wa.js (nayi file, wa-out ke andar chalti hai): aaj ka khulasa pc/hazri-day.json (raat-report hzPull) -> rows p (phone) / b (bahar) / q (intezar) / rq (doosri requests).
+- Code: blueAccess/hzCodes {m: {phone: n}, nm, next} — pehli dafa naam ki tarteeb se, phir naya larka = agla number; number kabhi nahi badalta. Naya code bane = poori list malik + Mubeen ko. "codes" likhne par (malik / Mubeen) list.
+- Larka (kisi bhi phone se) sirf code likhe -> wajoohat ki list -> number -> hazri app ka Cloud Function `bluein` (hazri repo functions v252, chaabi blueAccess/hazriKey):
+    aaj ki pehli 2 = khud manzoor (larke ko "ijazat hai", malik + Mubeen ko "🚶 … bahar gaya") · teesri se = intezar: malik + Mubeen ko "❓ … reply 1 = haan, 2 = nahi" (waOut doc hq / hj / hc / hn / hr).
+    Bahar hote hue wohi code dobara = WAPAS (kitni der bahar raha — dono ko khabar).
+- Jawab: request wale paigham par REPLY 1 / haan / ok ya 2 / nahi — malik / Mubeen ke number se, ya Business phone se hi (fromMe, hzOwn = malik). Pehla jawab chalta hai; larke ko usi chat mein jawab (jid), doosre ko khabar.
+- Hazri APP se aayi requests: bahar ki (q, wa nahi) = wohi ❓ paigham (reply se OK ho sakti) · chutti / jaldi / bahar se check-out (rq) = sirf khabar "jawab hazri app mein dein". Ek request ek dafa (pc/hz-seen.json).
+- wa-out: hzIn gpReply ke baad, kh-wa se PEHLE (akela number kh-wa ke PICK mein chala jata tha). Kharcha / payment ka menu chal raha ho (khPend 10 min) = number us ka. 24 ghante mein bill wale gahak ka akela number = chhoro.
+- Aane wale paigham mein ab yeh bhi parha jata hai: SIRF 1–3 hindse ka code jo kisi larke ka ho, ya hamare request-paigham par reply 1 / 2. Baqi kuch nahi (save bhi nahi).
+- Record hazri app ka apna staffOuts — salary / report / push pehle jaisa. PC hazri ke Firebase ko seedha nahi chhoota. AI nahi.
+TEST: /tmp/hzw.js 20 surtein + hazri blueAct 12 surtein theek (naqli Firestore / fetch). ASAL WhatsApp / asal function par nahi — malik se screenshot. `bluein` ka URL yahan se nahi khula (sandbox ka proxy), deploy log mein "Successful create".
+KHATRA / MALOOM KAMI: koi bhi number larke ka code likh sakta hai (malik ka faisla "kisi bhi phone se"); hazri data 20 s – 15 min purana ho sakta hai (server har surat khud jaanchta hai); PC band (9 baje ke baad) = WhatsApp wala raasta band, hazri app chalti hai.
+FILES: pc/hz-wa.js (nayi, manifest mein), pc/wa-out.js v1.22. App ki koi file nahi badli.

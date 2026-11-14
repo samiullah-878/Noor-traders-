@@ -1,4 +1,7 @@
 // =========================================================
+// v1.22 (14 Nov, malik: 'larka Business number par apna code likhe -> wajah -> roz ki pehli 2 khud manzoor, baqi hum WhatsApp par OK karein · kisi bhi phone se'):
+//        hz-wa.js (🚶 bahar jane ki request) — yahan sirf bulana: hzIn (aane wala chhota number / request par reply 1-2) · hzOwn (Business phone se malik ka reply) · HZ.tick (30 s).
+//        Aane wale paigham mein ab chauthi cheez: SIRF 1-3 hindse ka code (jo kisi larke ka ho) ya hamare request-paigham par reply 1 / 2 — baqi kuch nahi parha jata.
 // v1.21 (14 Nov): kh-wa v1.7 (👥 'hazri' likhne par hazri ki report + reports menu mein 5) — is file mein sirf version (doctor dobara chalaye).
 //  wa-out.js  v1.0 (2026-11-07) — 📲 GAHAK KO WHATSAPP PARCHI (naya number, background se)
 //  Malik (7 Nov 2026): "WhatsApp wala karna hai — wo ek NAYA number hai, Noor Traders ka business account; itne zyada client bhi nahi aate".
@@ -32,7 +35,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.21';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.22';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -357,15 +360,38 @@ async function main() {
     log('👤 Business phone se reply mein number — wa-parchi ko (malik ke naam se)');
     await inboxPut(m, c, null, tx, gpMalik, s);
   }
+  // v1.22: 🚶 larkon ki bahar jane ki request (hz-wa.js). true = yeh paigham usi ka tha
+  let HZ = null; try { HZ = require('./hz-wa.js')({ biz, log, dir: DIR, norm: normPh, who: p => (KHW && KHW.who ? KHW.who(p) || '' : ''), put: (id, x) => qPut(id, x) }); } catch (e) { log('⚠️ hz-wa.js nahi chala: ' + e.message); }
+  const hzSeen = new Set(), HZ_NEW = /^\s*(\d{1,3}|codes?|code\s*list|larko+n?\s*ke\s*code)\s*$/i, HZ_ANS = /^\s*(1|2|ha+n|han|ok|yes|ji|nahi|nai|no)\s*$/i;
+  async function hzIn(m, c, tx, s, fromMe) {
+    if (!HZ) return false;
+    const jid = String((m.key && m.key.remoteJid) || ''); if (!jid || /@g\.us$|@broadcast$|@newsletter$/.test(jid)) return false;
+    const kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, quoted = String((kc && kc.stanzaId) || '');
+    if (quoted ? !HZ_ANS.test(tx) : (fromMe || !HZ_NEW.test(tx))) return false;
+    const from = fromMe ? '' : await fromNum(m, s);
+    if (!fromMe && !quoted && from && CU[from] && Date.now() - Number(CU[from].at) < 24 * 3600000 && !(KHW && KHW.who && KHW.who(from))) return false;   // jis gahak ko 24 ghante mein bill gaya us ka akela number = larke ka code nahi
+    let khBusy = false;
+    if (!fromMe && !quoted && from && KHW && KHW.who && KHW.who(from)) { try { const sn = await BA.doc('khPend').get(), d = (sn.exists && (sn.data() || {})[from]) || null; khBusy = !!(d && Date.now() - Number(d.at) <= 10 * 60000); } catch {} }
+    const send = async (j, t) => { const r = await s.sendMessage(j, { text: String(t) }), id = r && r.key && r.key.id; if (id) ownSent.add(id); };
+    return HZ.handle({ text: tx, jid, from, quoted, wid: String(m.key.id || ''), fromMe: !!fromMe, khBusy, reply: t => send(jid, t), sendJid: send });
+  }
+  async function hzOwn(m, s) {   // malik Business phone se hi request wale paigham par reply 1 / 2 likhe
+    const id = String((m.key && m.key.id) || ''); if (!HZ || !id || /^3EB0/i.test(id) || ownSent.has(id) || hzSeen.has(id)) return;
+    let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || c;
+    const x = c.extendedTextMessage, tx = String((x && x.text) || '').trim(); if (!x || !tx || tx.length > 12 || !HZ_ANS.test(tx)) return;
+    hzSeen.add(id); if (hzSeen.size > 300) hzSeen.delete(hzSeen.values().next().value);
+    await hzIn(m, c, tx, s, true);
+  }
   async function onMsgs(ms, s, typ) {
     for (const m of ms || []) {
       try {
-        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); ownNum(m, s).catch(e => log('⚠️ apna reply: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" · v1.20: 👤 apna reply mein number (intezar nahi — baqi paigham na rukein)
+        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); ownNum(m, s).catch(e => log('⚠️ apna reply: ' + ((e && e.message) || e))); hzOwn(m, s).catch(e => log('⚠️ hazri jawab: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" · v1.20: 👤 apna reply mein number (intezar nahi — baqi paigham na rukein)
         if (typ && typ !== 'notify') continue;
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
         if (ktx && ktx.length <= 3 && await gpReply(m, c, ktx, s)) continue;   // v1.18: 🚪 gate pass ka jawab (1 / 2) — sirf gate numbers, sirf gate paigham par reply
+        if (ktx && ktx.length <= 30 && await hzIn(m, c, ktx, s, false)) continue;
         if (KHW && ktx && ktx.length <= 300 && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looks(ktx)) { const kn = await fromNum(m, s), kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, kt = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
           if (kn) await KHW.apply({ text: ktx, from: kn, wid: m.key.id || '', ts: kt, quoted: String((kc && kc.stanzaId) || ''), quiet: false }); continue; }
         if (KHW && KHW.looksName && ktx && !/^\s*a\.?i\.?\s*$/i.test(ktx) && KHW.looksName(ktx)) { const kn3 = await fromNum(m, s), kt3 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;
@@ -495,6 +521,7 @@ async function main() {
 
   setInterval(() => { if (Date.now() - lastW > 5 * 60000) setLink({}); }, 60000);   // app ko pata rahe PC zinda — v1.1: juda na ho tab bhi (warna app mein '54 min pehle' aur pata nahi chal raha / band)
   setInterval(kick, 30000);
+  let hzBusy = false; setInterval(() => { if (!HZ || hzBusy) return; hzBusy = true; HZ.tick().catch(e => log('⚠️ hazri tick: ' + ((e && e.message) || e))).finally(() => { hzBusy = false; }); }, 30000);
   // v1.3 (8 Nov — 10:57 ke baad kuch nahi gaya, heartbeat theek, app mein "juda"): (1) 📡 har 30 s Firestore se 'new' jobs khud bhi parho (onSnapshot chup ho jaye to bhi
   //   queue bhare) · (2) ⏱ bhejne wala 4 min se atka (busy) = dobara shuru (bat loop / doctor) — khamosh atakna kabhi nahi.
   setInterval(async () => {
