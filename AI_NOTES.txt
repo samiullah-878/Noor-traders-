@@ -8153,3 +8153,11 @@ SAATH (malik ka OK, pichhli screenshot ⏳ "report bana raha hai"):
 TEST: /tmp/rrtest — mock pool: khana nahi = query mein NULL, report bani (nafa 1000 − 2×400 = 200); khana 'Cogs' = s.[Cogs]; item-report dono haal. ASAL POS par nahi.
 SABAQ: POS ka koi bhi "shayad ho" khana (COGS jaisa) SELECT karne se pehle sys.columns / COL_LENGTH se jaancho — ek ghayab khana poori report gira deta hai, aur
    try/catch mein chhupi ghalti hafton nazar nahi aati. Report / data wali har PC ghalti malik tak pohanche (v1.8 ki tarah) — tabhi asal wajah mili.
+
+
+=== md pkg v38 (14 Nov 2026) — 📶 Hotspot = saver band ===
+Malik: battery saver wala macro ('NT Battery Saver (WhatsApp, Chrome, Bank, Call, Claude)') apps khulne par saver lagata hai -> phone "hotspot band karein, battery extend" poochta hai.
+   Malik ne macro haath se band kiya = theek; phir: "is ko auto kar do — hotspot on ho to battery saver wala macro off" (OK diya).
+md/tools/hsbs.py (naya macro): HotspotTrigger on/off + MacroEnabled + Boot -> 2 s -> IF WifiHotSpotConstraint on: DisableMacro (naam se) + BatterySaverAction off; ELSE: macro wapas chalu.
+   Koi paigham nahi. Hotspot ko nahi chhota. MCP validator VALID. Phone par test nahi (malik batayega). AI nahi.
+SABAQ: hotspot ke dauran battery saver lagane wala koi naya kaam mat banao (popup wapas aata hai).
