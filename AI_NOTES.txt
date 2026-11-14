@@ -8261,3 +8261,10 @@ Malik: "jab report mujhe send ho koi bhi, us ka print reply mein likhoon to prin
 - ⚡ Raftar: apne number (malik / Mubeen / jure) ke jawab pehle se tez line (isFast, 0.6 s) par hain; gahak ka faasla (cfg.gap) KABHI kam nahi (ban). Naya WhatsApp jawab = isi tez line se, beech mein AI / lamba kaam nahi.
 - Test: txtSlip namoone par chala (output dekha), node --check dono. ASAL WhatsApp / printer par nahi.
 - Hazri app (ALAG repo nt-traders-) v253: Staff list "☑ Kai chunein" -> 🚫 Band / 🗑 Delete ek saath (data.bulkStaff, ek batch). Tafseel us repo ke AI_NOTES mein.
+
+
+==================== md pkg v45 (14 Nov 2026) — 📵 PATTI SIRF REELS PAR + 📍 RECORDING MEIN LOCATION ====================
+Malik (YouTube ki screenshot, upar "▶ YouTube · 117:53 baqi" patti): "YouTube aur TikTok par yeh notification na aaye — sirf TikTok reels par aaye" + "recording par jagah ki location ka tag bhi aaye".
+- limits.py: YouTube ki baqi-waqt patti (ntyt) HATI — ginti / lock wahi. TikTok ki patti (nttk) sirf reels (For You) par: clock(…, cond) + GUARD ab har 2 s screen hamesha dekhta hai (rok sirf lock par); likhai "📵 reels MM:SS baqi" (Saved ka waqt patti par nahi). Facebook ki patti nahi chheri (malik ne nahi kaha).
+- rec.py: har tukde se pehle ForceLocationUpdateAction (15 s hadd) + file ka naam "NT_<tareekh>_<waqt>_<lat>_<long>". Jagah ka NAAM phone par nahi banta (sirf lat / long) — naam chahiye to Drive wali script (awaz-gas) mein.
+- Test: if / loop barabar, Recording macro MCP validator VALID. ASAL phone par nahi — malik se screenshot.

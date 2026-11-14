@@ -39,12 +39,12 @@ LOOP = lambda n: {"m_classType": "LoopAction", "m_SIGUID": 0, "m_option": 0, "m_
 ENDLOOP = {"m_classType": "EndLoopAction", "m_SIGUID": 0}
 BREAK = {"m_classType": "BreakFromLoopAction", "m_SIGUID": 0}
 # ⏱ ghari jaisa countdown (malik 7 Nov: "TikTok ka time ghari ki tarah kam hona chahie"): har 1 s — timers = [(prefix, leftVar)], text = patti ka likha ({lv=<p>M}:{lv=<p>S})
-def clock(ident, pk, nm, lockVar, timers, text, trigs, extra=None):
+def clock(ident, pk, nm, lockVar, timers, text, trigs, extra=None, cond=None):
     a = [iff(trigs + [fg(pk, nm), lt(lockVar, 1)]), LOOP(56), pause(1), iff([nfg(pk, nm)]), fthide(ident), BREAK, END] + (extra or [])
     for p, left in timers:
         a += [expr(p + "X", "{v=%s}*60-{loop_iteration}" % left, True), expr(p + "M", "{lv=%sX}/60" % p, True), expr(p + "N", "{lv=%sX}%%60" % p, True),
               iff([lt(p + "N", 10, True)]), sstr(p + "S", "0{lv=%sN}" % p, True), ELSE, sstr(p + "S", "{lv=%sN}" % p, True), END]
-    a += [ft(ident, text), ENDLOOP, END]
+    a += ([iff(cond), ft(ident, text), ELSE, fthide(ident), END] if cond else [ft(ident, text)]) + [ENDLOOP, END]   # v45: cond = patti sirf is haal mein
     return a
 def cvars(ps):
     o = []
@@ -74,12 +74,11 @@ fy += count("fb", FB, FBN, T1) + count("yt", YT, YTN, T1)
 fy += lock("fb", 25) + lock("yt", 120)
 fy += [expr("fbLeft", "25-{v=fbMin}"), expr("ytLeft", "120-{v=ytMin}")]
 fy += [iff([fg(FB, FBN), lt("fbLock", 1)]), ft("ntfb", "📘 Facebook · {v=fbLeft} min baqi"), ELSE, fthide("ntfb"), END]
-fy += [iff([fg(YT, YTN), lt("ytLock", 1)]), ft("ntyt", "▶️ YouTube · {v=ytLeft} min baqi"), ELSE, fthide("ntyt"), END]
+fy += [fthide("ntyt")]   # v45 (malik 14 Nov: "YouTube par yeh patti na aaye"): YouTube par baqi-waqt ki patti NAHI (ginti / lock wahi)
 fy += [iff([gt("fbLock", 0), fg(FB, FBN)]), hrs("fb"), HOME, toast("📘 Facebook ke 25 min ho gaye — {v=fbHrs} ghante baad (kal isi waqt)"), END]
 fy += [iff([gt("ytLock", 0), fg(YT, YTN)]), hrs("yt"), HOME, toast("▶️ YouTube ke 2 ghante ho gaye — {v=ytHrs} ghante baad (kal isi waqt)"), END]
 FYT = [anytrig((T1, "Har 1 minute"), (T2, "App khuli"))]
 fy += clock("ntfb", FB, FBN, "fbLock", [("f", "fbLeft")], "📘 Facebook · {lv=fM}:{lv=fS} baqi", FYT)
-fy += clock("ntyt", YT, YTN, "ytLock", [("y", "ytLeft")], "▶️ YouTube · {lv=yM}:{lv=yS} baqi", FYT)
 fbyt = {"macroExportVersion": 1, "macro": {
     "m_name": "📘▶️ Facebook · YouTube",
     "m_description": "Facebook 25 min / YouTube 2 ghante (screen on + app saamne, har 1 min). Poore hone par Home + paigham; agle din USI waqt dobara (24 ghante ka lock). Raat 12 reset nahi.",
@@ -104,7 +103,7 @@ tk += [iff([trig(T_TICK, "Har 1 minute"), SCR, fg(TK, TKN)]),
        END]
 tk += lock("tk", 25) + lock("ta", 120)
 tk += [setv("tkLeft", 1, m_intExpression=True, m_expression="25-{v=tkMin}"), expr("taLeft", "120-{v=taMin}")]
-tk += [iff([fg(TK, TKN), lt("taLock", 1)]), ft("nttk", "📵 reels {v=tkLeft} min · Saved {v=taLeft} min baqi"), ELSE, fthide("nttk"), END]
+tk += [iff([fg(TK, TKN), lt("tkLock", 1), boolc("feed", True, True)]), ft("nttk", "📵 reels {v=tkLeft} min baqi"), ELSE, fthide("nttk"), END]   # v45: patti SIRF reels (For You) par
 tk += [iff([trig(T_FEED, "For You dikha"), boolc("feed", True, True)], orc=True),
          iff([gt("tkLock", 0)]),
            sint("tkOver", 1), hrs("tk"),
@@ -119,15 +118,15 @@ tk += [iff([trig(T_FEED, "For You dikha"), boolc("feed", True, True)], orc=True)
 # v42 (14 Nov, malik: "reels 25 minute ke baad bhi baar baar khul rahi hain — bilkul na khulein, sirf Saved"): pehle rok sirf 'For You dikha' trigger / har 1 minute par thi
 #   (trigger na chale = ek ek minute reels). Ab lock ke dauran har 2 second screen dekho: reels (For You) = Profile par; Profile ka button na chale to Home.
 GUARD = [expr("gk", "{loop_iteration}%2", True),
-         iff([gt("tkLock", 0), lt("gk", 1, True)]),
+         iff([lt("gk", 1, True)]),
            CHECK,
-           iff([boolc("feed", True, True)]),
+           iff([gt("tkLock", 0), boolc("feed", True, True)]),
              click("Profile"), pause(1), CHECK,
              iff([boolc("feed", True, True)]), HOME, END,
            END,
-         END]
-tk += clock("nttk", TK, TKN, "taLock", [("r", "tkLeft"), ("t", "taLeft")], "📵 reels {lv=rM}:{lv=rS} · Saved {lv=tM}:{lv=tS} baqi",
-            [anytrig((T_TICK, "Har 1 minute"), (112233445566773, "App khuli"))], GUARD)
+         END]   # v45: har 2 s screen dekhna hamesha (patti sirf reels par dikhane ke liye) — rok sirf lock par
+tk += clock("nttk", TK, TKN, "taLock", [("r", "tkLeft"), ("t", "taLeft")], "📵 reels {lv=rM}:{lv=rS} baqi",
+            [anytrig((T_TICK, "Har 1 minute"), (112233445566773, "App khuli"))], GUARD, [lt("tkLock", 1), boolc("feed", True, True)])
 tiktok = {"macroExportVersion": 1, "macro": {
     "m_name": "📵 TikTok reels",
     "m_description": "Reels (For You screen) 25 min → reels par aate hi Profile par. Profile / Saved / Inbox ka apna 2 ghante (reels dekhte waqt nahi katta) → Home. Dono ka lock 24 ghante (agle din usi waqt). Following feed bhi reels mein ginti hai (upar For You likha hota hai).",

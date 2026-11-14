@@ -90,7 +90,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🎙 Recording (har 10 min ka tukda) + Falsafa popup mein band / shuru + TikTok reels lock pakka.",
+       "note": "YouTube par baqi-waqt ki patti nahi · TikTok ki patti sirf reels par · recording ke naam mein location.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mbr, mrc],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)

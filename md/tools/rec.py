@@ -15,11 +15,13 @@ MKDIR = {"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": 'try { new ja
          "blockNextAction": True, "responseVariableName": "mk", "runInBackgroundThread": True}
 def rec(secs): return {"m_classType": "RecordMicrophoneAction", "m_SIGUID": 0, "m_secondsToRecordFor": secs, "m_recordingFormat": 2, "source": 0,
                        "audioBitRate": 32000, "audioSamplingRate": 44100, "useAllFilesAccess": True, "allFilesPath": DIR,
-                       "customFilename": "NT_{year}-{month_digit}-{dayofmonth}_{hour}-{minute}"}
+                       "customFilename": "NT_{year}-{month_digit}-{dayofmonth}_{hour}-{minute}_{last_loc_lat}_{last_loc_long}"}
+# v45 (malik: "recording par jagah ki location ka tag bhi aaye"): har tukde se pehle taza location (15 s hadd), file ke naam ke aakhir mein lat_long
+FLOC = {"m_classType": "ForceLocationUpdateAction", "m_SIGUID": 0, "timeoutSeconds": 15, "blockNextAction": True}
 START, STOP = rec(-1), rec(-2)
 # pehle band (file save), phir naya — do recording kabhi ek saath nahi
-def restart(): return [MKDIR, STOP, pause(2), iff([NO_CALL]), START, END]
-a = [STOP, pause(2), iff([lt("recOff", 1), NO_CALL]), MKDIR, START, END]
+def restart(): return [MKDIR, STOP, pause(2), iff([NO_CALL]), FLOC, START, END]
+a = [STOP, pause(2), iff([lt("recOff", 1), NO_CALL]), MKDIR, FLOC, START, END]
 RC = {"macroExportVersion": 1, "macro": {
     "m_name": "🎙 Recording",
     "m_description": "Har 10 minute naya tukda (folder NT Awaz) jab tak recording CHALU ho. Band / shuru = Falsafa ke popup ka button. Call ke dauran nahi. AI nahi.",
