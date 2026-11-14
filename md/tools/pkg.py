@@ -72,6 +72,8 @@ import ghari as GHM
 mgh, vgh = fix(json.loads(json.dumps(GHM.GH)), h64('claude|ghariauto'), '⏰ Ghari auto')   # v37 (14 Nov): ghari hamesha auto — time badal kar hadein na khulein
 import hsbs as HBM
 mhb, vhb = fix(json.loads(json.dumps(HBM.HSBS)), h64('claude|hotspotsaver'), '📶 Hotspot = saver band')   # v38 (14 Nov): hotspot ON = NT Battery Saver macro band, OFF = wapas
+import anim as ANM
+man, van = fix(json.loads(json.dumps(ANM.AN)), h64('claude|animtez'), '⚡ Animation tez')   # v39 (14 Nov): animations 0.5x
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
@@ -81,8 +83,8 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📶 Hotspot ON = NT Battery Saver macro band (saver bhi hata), hotspot OFF = wapas chalu.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "⚡ Animation tez: phone ki animations 0.5x.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,

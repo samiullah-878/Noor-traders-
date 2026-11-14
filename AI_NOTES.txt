@@ -8161,3 +8161,10 @@ Malik: battery saver wala macro ('NT Battery Saver (WhatsApp, Chrome, Bank, Call
 md/tools/hsbs.py (naya macro): HotspotTrigger on/off + MacroEnabled + Boot -> 2 s -> IF WifiHotSpotConstraint on: DisableMacro (naam se) + BatterySaverAction off; ELSE: macro wapas chalu.
    Koi paigham nahi. Hotspot ko nahi chhota. MCP validator VALID. Phone par test nahi (malik batayega). AI nahi.
 SABAQ: hotspot ke dauran battery saver lagane wala koi naya kaam mat banao (popup wapas aata hai).
+
+
+=== md pkg v39 (14 Nov 2026) — ⚡ Animation tez ===
+Malik: "system ki animation sahi nahi, un ko tez karna hai" -> 0.5x chuna (0x nahi).
+md/tools/anim.py (naya macro): Java — Global window_animation_scale / transition_animation_scale / animator_duration_scale 0.5 na ho to 0.5.
+   Triggers: SystemSettingTrigger (global, '.*(animation|duration)_scale') + har 5 min + MacroEnabled + Boot (Bank mode Developer options band kare = 1x wapas ho sakta hai).
+   Koi paigham nahi. MCP validator VALID. Phone par test nahi (BeanShell yahan nahi chalti) — malik batayega. AI nahi. Raftar = SCALE.
