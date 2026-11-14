@@ -45,6 +45,10 @@ hp = json.load(open(os.path.join(D, 'haptic.json')))   # v23: ⌨️ haptics (ch
 import remote as RM
 rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
+import brk as BRM
+# v41 (14 Nov): paani ke popup ke foran baad "10 minute ka break?" — dialog ke EndIf ke baad jorna
+_pa = paani['macro']['m_actionList']; _i = next(i for i, x in enumerate(_pa) if x.get('m_classType') == 'ToastAction' and '10 minute baad dobara yaad' in str(x.get('m_messageText')))
+assert _pa[_i + 1]['m_classType'] == 'EndIfAction'; _pa[_i + 2:_i + 2] = BRM.ask()
 mp, vp = fix(paani, OLD_PAANI_BREAK, '💧 Paani')
 mk, vk = fix(khana, h64('claude|khana'), '🍽 Khana-peena')
 ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
@@ -74,17 +78,18 @@ import hsbs as HBM
 mhb, vhb = fix(json.loads(json.dumps(HBM.HSBS)), h64('claude|hotspotsaver'), '📶 Hotspot = saver band')   # v38 (14 Nov): hotspot ON = NT Battery Saver macro band, OFF = wapas
 import anim as ANM
 man, van = fix(json.loads(json.dumps(ANM.AN)), h64('claude|animtez'), '⚡ Animation tez')   # v39 (14 Nov): animations 0.5x
+mbr, vbr = fix(json.loads(json.dumps(BRM.BR)), h64('claude|break10'), '🧘 10 min break')   # v41 (14 Nov): paani popup par Haan = 10 min sab apps band (subah wali list)
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vf + vb + vcb + vsb:
+for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "⏰ Ghari auto: Back hata (phone baar baar back ho raha tha).",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "🧘 10 min break (paani popup par Haan) + 🌙 Raat ke sawal unlock par bhi.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mbr],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,

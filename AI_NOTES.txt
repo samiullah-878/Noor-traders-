@@ -8212,3 +8212,14 @@ Transfer (3) par tafseel NAHI maangi (malik ne nahi kaha).
 wa-out: tafseel aam likhai hoti hai (looks() nahi pakarta) — KHW.waits(number) (khPend parh kar) sach ho aur number ijazat wala ho to paigham kh-wa ko; kh-wa na le to pehle jaisa aage. wa-parchi: sirf version.
 Sawal Business number se aata hai, is liye jawab bhi Business chat mein likha jaye (apni "Message yourself" chat mein likha jawab nahi pakra jata — maloom kami).
 TEST: /tmp/kt2/t.js 14 surtein theek (naqli Firestore). Asal WhatsApp par nahi. AI nahi. App ki koi file nahi badli.
+
+
+=== md pkg v41 (14 Nov 2026 raat) — 🧘 10 MIN BREAK + 🌙 RAAT KE SAWAL unlock par ===
+Malik: "mujhe 10 minute ka break chahiye — paani wale popup par 'kya 10 minute break lena chahte ho' · yes kahun to start · phone / WhatsApp ke ilawa sab band, jaise pehle band hota hai" · list = "subah wali list ki tarah".
+- md/tools/brk.py (naya macro '🧘 10 min break'): global brEnd tak har app band (Home + 3 s patti "N min baqi") siwae subah.py ki ALLOW / PARTS (BLOCKED wahin se import — list EK jagah). Poora = "Break khatam" patti.
+- Sawal: MacroDroid ke popup mein sirf 2 button hote hain, is liye paani ke popup ke FORAN BAAD doosra chhota popup "10 minute ka break?" (Haan / Nahi, 30 s = Nahi) — pkg.py paani ki list mein BRM.ask() jorta hai.
+- Beech mein khatam karne ka raasta nahi (10 min pakke); har paani popup par sawal — malik ne in do par jawab nahi diya, default bataya tha. Purana "screen band" break wapas NAHI.
+Malik: "raat ka sawal wala chal nahi raha — shayad us waqt mobile lock ho".
+- raat.py: popup 2 min mein khud band hota tha — phone lock / screen band ho to kabhi nazar nahi aata. Ab teesra trigger DeviceUnlocked + globals rqA / rqB (aaj dikha ya nahi): 20:30–23:59 ke beech screen ON ho aur aaj ka sawal nahi dikha = dikhao (pehle Raat ke 3 sawal, 21:15 ke baad Kal subah ka kaam bhi). Purani list mein ek faltu EndIf tha — hata.
+Phone par test nahi (yahan MacroDroid nahi chalta) — malik se screenshot. Koi macro off / del nahi. AI nahi.
+BAQI: "recording wala jo har waqt recording kare" — NT Awaz ke macro repo mein nahi (4 Nov ko chat mein files gayi thin) — malik se sawal pooche (jagah / calls / storage), OK par banega.
