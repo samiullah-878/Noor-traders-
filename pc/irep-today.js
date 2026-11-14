@@ -1,4 +1,5 @@
 // =========================================================
+//  (14 Nov 2026: item-report.js v1.9 — nafa ab POS ke Sale.COGS ke baghair bhi; yeh file sirf dobara shuru ke liye chhui)
 //  irep-today.js  v1.1 (2026-10-19: 📅 kal ka data bhi — posStats/irep-kal) · v1.0 (2026-10-17) — ⚡ ITEM REPORT ka AAJ ka data har 10 minute (irep-today-auto.bat)
 //  Malik: "aaj ka data nahi aa raha". Poori 3 mahine ki report (sales-stats.js -> item-report.run) har ghante hi banti hai;
 //  yeh sirf AAJ ki bikri posStats/irep-today mein likhta hai (item-report.runToday). App dono ko jor kar dikhati hai.

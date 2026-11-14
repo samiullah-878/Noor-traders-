@@ -1,4 +1,5 @@
 // =========================================================
+//  (14 Nov 2026: item-report.js v1.9 — nafa ab POS ke Sale.COGS ke baghair bhi; yeh file sirf dobara shuru ke liye chhui)
 //  sales-stats.js  v1.6 (2026-10-20: ph → phj text (nested array galti, 4 din ruka) + item report alag chale) · v1.5 (2026-10-19: 🧾 stock fraq party + ginti farq bill bikri / khareed mein nahi) · v1.4 (2026-10-17: useUTC false — sham ki sale) · v1.3 (2026-10-14: + 📊 item-report.js — 3 mahine har item har din ginti / Rs / nafa) · v1.2 (2026-10-11: purchase history + mahina-war + mahine ke 4 hisse) · v1.1 (2026-09-28: Noor Traders ke apne bill bahar) · v1 (2026-09-28) — POS ki 6 MAHINE ki BIKRI + PURCHASE, har item ka khulasa -> Firestore posStats
 //  App ka "🛒 Purchase order" isi se andaza lagata hai (roz kitna bikta hai, kitne din ka stock baqi, pichhli dafa kis se liya).
 //  SQL mein KUCH NAHI likhti — sirf SELECT. Chalana: node sales-stats.js  (SALE-DATA.bat har ghante chalata hai)

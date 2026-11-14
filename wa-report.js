@@ -5,7 +5,9 @@
 // 👥 HAZRI (v2.279.0, malik 14 Nov: "NT hazri wali app ko is app ke saath connect karo, larkon ki report WhatsApp par — subah 10, shaam 6, aur jab maangein"):
 //   Hazri app ALAG Firebase hai -> "🔗 Hazri app jorein" chaabi (blueAccess/hazriKey) bana kar hazri app ka link (#bk=) kholta hai -> hazri ka server
 //   aaj ka khulasa hazriIn mein bhejta hai -> PC raat-report v1.7 WhatsApp par (waH · hzTime · hzNow). Haal blueAccess/hazriWa. AI nahi.
-let C = null, cfg = null, wa = null, hz = null, hk = '', stops = [], askAt = 0, hzAsk = 0, tmr = null;
+// v2.279.2 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS' + screen par ⏳): haal ab PC se — reportWa.run = PC ne kaam utha liya
+//   (⏳ bana raha hai, 10 min tak intezar, jhoota '90 s = PC band' nahi) · err / errAt = report nahi bani (wajah yahin bhi) · 90 s mein run na aaye = PC ne uthaya hi nahi.
+let C = null, cfg = null, wa = null, hz = null, hk = '', stops = [], askAt = 0, hzAsk = 0, tmr = null, tmr2 = null;
 const HZ_URL = 'https://samiullah-878.github.io/nt-traders-/', HZ_TIMES = ['09:30', '10:00', '10:30', '11:00'];
 const newKey = () => { const a = new Uint8Array(24); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -13,7 +15,8 @@ const ago = t => { const s = Math.max(0, Math.round((Date.now() - t) / 1000)); r
 const t12 = v => { const [h, m] = String(v || '18:00').split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
 const root = () => document.querySelector('#dialogBody [data-rw-root]');
 const TIMES = ['17:00', '18:00', '19:00', '20:00', '20:45'];
-function unlisten() { for (const f of stops) { try { f?.(); } catch {} } stops = []; clearTimeout(tmr); }
+function unlisten() { for (const f of stops) { try { f?.(); } catch {} } stops = []; clearTimeout(tmr); clearInterval(tmr2); }
+function waitTick() { clearInterval(tmr2); tmr2 = setInterval(() => { if (!root()) { clearInterval(tmr2); return; } paint(); const w = wa || {}; if (!askAt || Number(w.at) > askAt || Number(w.errAt) > askAt || Date.now() - askAt > 15 * 60000) clearInterval(tmr2); }, 15000); }
 function html() {
   if (cfg === null) return '<p class="gr-empty">⏳ Setting aa rahi hai…</p>';
   const c = cfg || {}, tm = c.reportTime || '18:00', on = c.reportOn !== false && c.waOn !== false;
@@ -23,8 +26,13 @@ function html() {
   const hzSt = hz === null ? '' : hzOn ? `<p class="rw-st ${hzFresh ? 'ok' : 'wait'}">${hzFresh ? '🟢' : '🟡'} Hazri app ka data: ${esc(ago(hzAt))} · ${Number(hz.n) || 0} larke${hzFresh ? '' : ' — purana hai (PC band tha ya hazri app ka server chup)'}</p>` : '<p class="rw-st wait">⚪ Hazri app abhi juri nahi — neeche "🔗 Hazri app jorein" dabayein (ek dafa).</p>';
   const hzSt2 = hzAsk ? (hz && Number(hz.sent) > hzAsk ? '<p class="rw-st ok">✅ Hazri ki report WhatsApp par bhej di</p>' : Date.now() - hzAsk > 90000 ? '<p class="rw-st bad">✕ Shop PC ka jawab nahi aaya — PC band hai ya internet nahi.</p>' : '<p class="rw-st wait">⏳ Shop PC hazri bhej raha hai… (1 min tak)</p>') : '';
   let st = '';
-  if (askAt && !(wa && Number(wa.at) > askAt)) st = Date.now() - askAt > 90000 ? '<p class="rw-st bad">✕ Shop PC ka jawab nahi aaya — PC band hai ya internet nahi. PC on ho to dobara dabayein.</p>' : '<p class="rw-st wait">⏳ Shop PC report bana raha hai… (1 min tak)</p>';
-  else if (wa && wa.at) st = `<p class="rw-st ok">✅ Aakhri dafa: ${Number(wa.n) || 0} report WhatsApp par bheji — ${esc(ago(Number(wa.at)))}${wa.n ? '' : ' (koi report ON nahi thi / WhatsApp OFF)'}</p>`;
+  const wAt = Number(wa && wa.at) || 0, wRun = Number(wa && wa.run) || 0, wErr = Number(wa && wa.errAt) || 0;
+  if (askAt && !(wAt > askAt)) {
+    if (wErr > askAt) st = `<p class="rw-st bad">✕ Report nahi bani: ${esc(String((wa && wa.err) || '').slice(0, 180))}</p>`;
+    else if (wRun > askAt) st = Date.now() - wRun > 10 * 60000 ? '<p class="rw-st bad">⚠️ Report bahut der se ban rahi hai — wajah WhatsApp par aayegi. Thori der baad dobara dabayein.</p>' : `<p class="rw-st wait">⏳ Shop PC report bana raha hai… (${Math.max(0, Math.round((Date.now() - wRun) / 1000))} sec) — 1-3 min lagte hain</p>`;
+    else st = Date.now() - askAt > 90000 ? '<p class="rw-st bad">✕ Shop PC ne kaam nahi uthaya — PC band hai ya internet nahi. PC on ho to dobara dabayein.</p>' : '<p class="rw-st wait">⏳ Shop PC ko bhej diya… (1 min mein shuru)</p>';
+  }
+  else if (wAt) st = `<p class="rw-st ok">✅ Aakhri dafa: ${Number(wa.n) || 0} report WhatsApp par bheji — ${esc(ago(Number(wa.at)))}${wa.n ? '' : ' (koi report ON nahi thi / WhatsApp OFF)'}</p>`;
   return `<p class="rw-pc ${pcOk ? 'ok' : 'bad'}">${pcOk ? '🟢 Shop PC zinda' : '🔴 Shop PC chup' + (pcAl ? ' — ' + esc(ago(pcAl)) : '')} · bhejne wala: dukan ka WhatsApp Business number</p>
     <button type="button" class="rw-tg rw-main${on ? ' is-in' : ''}" data-rw-on="1"><b>${on ? '🟢 Roz khud bhejo: ON' : '⚪ Roz khud bhejo: BAND'}</b><small>${on ? 'har roz ' + esc(t12(tm)) + ' par' : 'sirf "Abhi bhejo" se'}</small></button>
     <p class="rw-h">Kaun si reports</p>
@@ -56,7 +64,7 @@ export function rwSetup(c) {
       if (fresh) C.cloud.setHazriKey(k).catch(er => { hk = ''; C.notice('Chaabi save nahi hui: ' + (er?.message || er)); });
       C.notice('Hazri app khul rahi hai — malik login ho to "✅ Blue Khata se jur gaya" aayega. 1-2 minute baad yahan 🟢 dikhega.'); return;
     }
-    if (t.dataset.rwGo) { askAt = Date.now(); paint(); clearTimeout(tmr); tmr = setTimeout(paint, 92000); C.cloud.setReportConfig({ reportNow: 1, waOn: true }).catch(er => { askAt = 0; paint(); C.notice('Nahi gaya: ' + (er?.message || er)); }); return; }
+    if (t.dataset.rwGo) { askAt = Date.now(); paint(); waitTick(); C.cloud.setReportConfig({ reportNow: 1, waOn: true }).catch(er => { askAt = 0; paint(); C.notice('Nahi gaya: ' + (er?.message || er)); }); return; }
   });
   document.addEventListener('change', e => { if (e.target?.id === 'rwTime' && /^\d\d:\d\d$/.test(e.target.value)) { const v = e.target.value; e.target.blur(); save({ reportTime: v }); } });
   document.addEventListener('change', e => { if (e.target?.id === 'rwHz' && /^\d\d:\d\d$/.test(e.target.value)) { const v = e.target.value; e.target.blur(); save({ hzTime: v }); } });

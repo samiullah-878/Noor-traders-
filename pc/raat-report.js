@@ -23,7 +23,11 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.8';
+const VER = '1.9';
+// v1.9 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS'): POS ke dbo.Sale mein COGS ka khana HAI HI NAHI — har report isi par girti thi.
+//   Ab colOf() pehle sys.columns dekhta hai (asal naam, bari / chhoti likhai); na ho = NULL -> nafa line ke khareed rate se (pehle se bana hisaab).
+//   reportDay sirf usi dafa jab usi hukum (rdAt == reportNow) ke saath aaya ho — warna AAJ (Report screen ki purani tareekh atki rehti thi).
+//   App ko haal: reportWa.run (PC ne kaam utha liya) / err + errAt (report nahi bani) — app ka '90 s = PC band' jhoota paigham khatam.
 // v1.8 (14 Nov, malik ki screenshot: 'reports' -> 2 -> 'ban rahi hai' ke 12 min baad bhi kuch nahi aaya): report banne mein ghalti / atak (chowkidar ne band kiya)
 //   = malik ko WhatsApp par wajah (waErr / st.run nishan) — khamosh nahi. Report ka hisaab nahi badla.
 // v1.7 (14 Nov, malik: 'hazri app ko is app se jor do, larkon ki report WhatsApp par — subah 10, shaam 6, jab maangein'): hazriIn (Hazri app ka server
@@ -83,6 +87,14 @@ function dailyOf(day, rows) {
 
 function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DEFAULT, send = null, now = () => new Date(), onBeat = null }) {
   const access = biz.collection('blueAccess');
+  const colCache = new Map();
+  async function colOf(p, table, col) {
+    const k = table + '.' + col, c = colCache.get(k);
+    if (c && Date.now() - c.at < 6 * 3600e3) return c.n;
+    let n = '';
+    try { const r = (await p.request().input('t', sql.NVarChar(200), table).input('c', sql.NVarChar(200), col).query('SELECT TOP 1 name FROM sys.columns WHERE object_id = OBJECT_ID(@t) AND UPPER(name) = UPPER(@c)')).recordset; n = r && r[0] ? String(r[0].name || '') : ''; colCache.set(k, { n, at: Date.now() }); } catch (e) { log('khana jaanch (' + k + '): ' + e.message); }
+    return n;
+  }
   async function cfgGet() { try { const d = await access.doc('reportConfig').get(); return { ...DEF, ...(d.exists ? d.data() || {} : {}) }; } catch { return { ...DEF }; } }
   async function branchNames(p) { try { const r = (await p.request().query('SELECT BranchID, BranchName FROM dbo.Branch')).recordset; const m = {}; r.forEach(x => { m[x.BranchID] = String(x.BranchName || '').trim(); }); return m; } catch { return {}; } }
   async function pushOwner(title, body, tag, link) {
@@ -138,7 +150,8 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     const wsNames = Array.isArray(cfg.wsNames) && cfg.wsNames.length ? cfg.wsNames : DEF.wsNames, small = Math.max(1, Number(cfg.wsSmall) || 3);
     const pcN = pcNames();
     // --- sale ---
-    const bills = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, s.COGS, s.Description, s.SystemNotes, pt.PartyName
+    const cg = await colOf(p, 'dbo.Sale', 'COGS'), cogsSel = cg ? 's.[' + cg.replace(/]/g, ']]') + '] AS COGS' : 'CAST(NULL AS FLOAT) AS COGS';   // v1.9: POS mein COGS nahi = andaza (line x khareed)
+    const bills = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`SELECT s.SaleID, s.SaleNo, s.SaleDate, s.TotalSale, s.CashReceived, s.IsCreditSale, s.DocStatusID, ${cogsSel}, s.Description, s.SystemNotes, pt.PartyName
       FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID WHERE s.SaleDate >= @a AND s.SaleDate < @b`)).recordset;
     const lines = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`SELECT d.SaleID, d.ItemID, d.Qty, d.Rate, i.ItemName, ISNULL(i.PackQty,0) AS Pack,
       ISNULL(NULLIF(r.SaleRate,0), i.SaleRate) AS SR, ISNULL(NULLIF(r.SaleRate2,0), i.SaleRate2) AS SR2, ISNULL(NULLIF(r.SaleRate3,0), i.SaleRate3) AS SR3, ISNULL(NULLIF(r.SaleRateSize,0), i.SaleRateSize) AS SRS,
@@ -366,8 +379,8 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       const due = (time, key, win = 3) => { const [h, m] = String(time || '').split(':').map(Number); if (!Number.isFinite(h)) return false; const d = new Date(t); d.setHours(h, m || 0, 0, 0); return hm >= `${pad2(h)}:${pad2(m || 0)}` && t.getTime() - d.getTime() < win * 3600e3 && st[key] !== day; };   // alert: 3 ghante; report (v1.1): usi din jab bhi chale (PC band / atka tha)
       // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
       try { await hzPull(); } catch (e) { log('hazri: ' + e.message); }
-      if (st.run && st.run.at) { const r0 = st.run; delete st.run; saveSt(st); await waErr(`⚠️ Report (${r0.why || ''}) poori nahi hui — shop PC par ${Math.round((Date.now() - Number(r0.at)) / 60000)} min pehle shuru hui thi aur atak gayi (PC dheera / POS ka sawal lamba). Dobara "reports" likh kar dekhein; phir bhi na aaye to Settings → 🖥️ PC scripts ki screenshot bhejein.`); }
-      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); try { await runReport(String(cfg.reportDay || day), c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } } }
+      if (st.run && st.run.at) { const r0 = st.run; delete st.run; saveSt(st); try { await access.doc('reportWa').set({ err: 'Report atak gayi (PC dheera / POS ka sawal lamba) — dobara dabayein', errAt: Date.now() }, { merge: true }); } catch {} await waErr(`⚠️ Report (${r0.why || ''}) poori nahi hui — shop PC par ${Math.round((Date.now() - Number(r0.at)) / 60000)} min pehle shuru hui thi aur atak gayi (PC dheera / POS ka sawal lamba). Dobara "reports" likh kar dekhein; phir bhi na aaye to Settings → 🖥️ PC scripts ki screenshot bhejein.`); }
+      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); const rd = /^\d{4}-\d{2}-\d{2}$/.test(String(cfg.reportDay || '')) && Number(cfg.rdAt) === Number(cfg.reportNow) ? String(cfg.reportDay) : day; try { await access.doc('reportWa').set({ run: Date.now(), runDay: rd }, { merge: true }); } catch {} try { await runReport(rd, c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); try { await access.doc('reportWa').set({ err: String((e && e.message) || e).slice(0, 300), errAt: Date.now() }, { merge: true }); } catch {} await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } } }
       else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; st.run = { at: Date.now(), why: 'roz wali' }; saveSt(st); try { await runReport(day, cfg, 'raat'); } catch (e) { log('report masla: ' + e.message); await waErr('✕ Roz wali report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); }
       if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waH !== false && hzRead() && due(cfg.hzTime || '10:00', 'hzDay', 3)) { st.hzDay = day; saveSt(st); await hzSend('subah', false); }
       if (Date.now() - lastAlive > 5 * 60000) { lastAlive = Date.now(); try { await access.doc('reportConfig').set({ alive: Date.now(), ver: VER }, { merge: true }); } catch {} }   // app: "PC zinda"

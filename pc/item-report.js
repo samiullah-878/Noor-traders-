@@ -1,5 +1,5 @@
 // =====================================================================================================
-//  item-report.js  v1.8 (2026-10-28: 🏭 supplier-wise — posStats/irep-sup: har supplier ke items + aakhri khareed rate, 365 din) · v1.7 (2026-10-20: koi array nahi, har doc alag, poori galti irep-err mein) · v1.5 (2026-10-19: 🧾 stock fraq / ginti farq bill nafa + bikri se BAHAR — party naam saaf karke + Description "Stock ginti farq") · v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
+//  item-report.js  v1.9 (2026-11-14: 💰 nafa — POS mein Sale.COGS nahi to andaza; pehle 'Invalid column name' se chup-chaap nahi banta tha) · v1.8 (2026-10-28: 🏭 supplier-wise — posStats/irep-sup: har supplier ke items + aakhri khareed rate, 365 din) · v1.7 (2026-10-20: koi array nahi, har doc alag, poori galti irep-err mein) · v1.5 (2026-10-19: 🧾 stock fraq / ginti farq bill nafa + bikri se BAHAR — party naam saaf karke + Description "Stock ginti farq") · v1.4 (2026-10-17: 💰 asal nafa — har sale bill TotalSale − COGS -> posStats/nafa-<mahina>-<k>, aaj ka irep-today.nb) · v1.3 (2026-10-17: ⚡ runToday — sirf AAJ ka data har 10 min posStats/irep-today (irep-today.js) · collect() alag) · v1.2 (2026-10-14: 💰 COMMISSION items (blueAccess/commission) — har din har Supply Man kitne packet -> posStats/irep-comm) · v1.1 (2026-10-14: Firestore list-ke-andar-list nahi leta — items ab JSON string 'j' mein, hissa ~600 KB tak) · v1.0 (2026-10-14) — 📊 ITEM SALE REPORT ka data (app: "📊 Item report", sirf malik)
 //  Malik: "poore month ka actual data — 1–10, 10–20, 20–30, poora mahina, week wise; har item kaun si bik rahi, kin dino / hafton
 //         mein zyada, un par nafa kitna — chart, click par aage data".
 //  sales-stats.js (har ghante) ke aakhir mein chalta hai: run({ pool, sql, db }). SQL mein KUCH NAHI likhta — sirf SELECT.
@@ -94,16 +94,27 @@ async function collect({ pool, sql, db, log, from, to }) {
 // v1.4: 💰 ASAL NAFA — sale bills se (malik: "sale bills ke data ke hisaab se profit"). Har bill: Sale.TotalSale − Sale.COGS (POS ne bill ke
 //   waqt ki laagat khud likhi). COGS 0 = lines × item ka abhi ka fi pcs khareed (andaza, est 1). Wapsi (total < 0) = laagat bhi minus.
 //   Mahine ke hisab: { p: [party naam], b: [[din (1-31), 'HH:MM', billNo, pIdx, total, cost, ws, est]] } -> posStats/nafa-<YYYY-MM>-<k>
+// v1.9 (2026-11-14): POS ke dbo.Sale mein COGS ka khana NAHI (raat-report: 'Invalid column name COGS') — nafa chup-chaap nahi banta tha.
+//   Ab pehle sys.columns (asal naam); na ho = har bill ka andaza (lines x khareed) — pehle se bana raasta.
+const COLS = new Map();
+async function colOf(pool, sql, table, col) {
+  const k = table + '.' + col, c = COLS.get(k);
+  if (c && Date.now() - c.at < 6 * 3600e3) return c.n;
+  let n = '';
+  try { const r = (await pool.request().input('t', sql.NVarChar(200), table).input('c', sql.NVarChar(200), col).query('SELECT TOP 1 name FROM sys.columns WHERE object_id = OBJECT_ID(@t) AND UPPER(name) = UPPER(@c)')).recordset; n = r && r[0] ? String(r[0].name || '') : ''; COLS.set(k, { n, at: Date.now() }); } catch {}
+  return n;
+}
 async function nafaCollect({ pool, sql, from, to, skipIds, wsIds, info, inList }) {
+  const cg = await colOf(pool, sql, 'dbo.Sale', 'COGS'), cq = cg ? 's.[' + cg.replace(/]/g, ']]') + ']' : '';
   const bills = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
-    SELECT s.SaleID, s.SaleNo, CONVERT(char(16), s.SaleDate, 120) AS W, CAST(s.TotalSale AS FLOAT) AS T, CAST(ISNULL(s.COGS, 0) AS FLOAT) AS C, s.PartyID, pt.PartyName
+    SELECT s.SaleID, s.SaleNo, CONVERT(char(16), s.SaleDate, 120) AS W, CAST(s.TotalSale AS FLOAT) AS T, CAST(${cq ? 'ISNULL(' + cq + ', 0)' : '0'} AS FLOAT) AS C, s.PartyID, pt.PartyName
     FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
     WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) ${NOFARQ}`)).recordset;
   const est = new Map();   // COGS nahi = lines se andaza
   if (bills.some(b => !(Math.abs(Number(b.C)) > 0))) {
     const L = (await pool.request().input('a', sql.DateTime, from).input('b', sql.DateTime, to).query(`
       SELECT d.SaleID, d.ItemID, SUM(d.Qty) AS q FROM dbo.SaleDetail d JOIN dbo.Sale s ON s.SaleID = d.SaleID
-      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(s.COGS, 0) = 0 AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) ${NOFARQ}
+      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 ${cq ? 'AND ISNULL(' + cq + ', 0) = 0' : ''} AND ISNULL(s.PartyID, -2) NOT IN (${inList(skipIds)}) ${NOFARQ}
       GROUP BY d.SaleID, d.ItemID`)).recordset;
     for (const r of L) { const k = Number(r.SaleID); est.set(k, (est.get(k) || 0) + (Number(r.q) || 0) * (info.get(Number(r.ItemID))?.c || 0)); }
   }

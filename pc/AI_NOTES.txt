@@ -4711,3 +4711,21 @@ DO wajah: (1) PH_RE sirf 3[0-5] (030–035) ko mobile maanta tha — 0371… num
    (<= 60 harf, reply nahi, print nahi) 10 min yaad -> agla Print / tasveer us ke saath (bizDo capX); Print auto ho chuka ho aur parchi bina number ho (10 min, wohi banda) = gahakSet seedha.
 TEST: /tmp/dk/numtest2.js — 5 tarteebein (tasveer/number/Print aage peeche) + bina number + doosre banday ka number = sab theek; purana numtest bhi. ASAL WhatsApp par nahi.
 SABAQ: number 'nahi mila' ki shikayat = pehle wohi number parseCaption se guzaro (regex ne maana ya nahi), phir raasta dekho.
+
+
+=== v2.279.2 + PC raat-report v1.9 + item-report v1.9 (14 Nov 2026) — "Invalid column name 'COGS'": report kabhi banti hi nahi thi ===
+Malik ki screenshot (14:12, Business number): "✕ Report nahi bani: Invalid column name 'COGS'." (v1.8 ka naya paigham — pehli dafa asal wajah dikhi).
+WAJAH: buildReport ki pehli SQL (dbo.Sale bills) mein `s.COGS` — malik ke POS ke dbo.Sale mein COGS ka khana HAI HI NAHI (sirf procs ka @COGS param hai).
+   Is liye har report (roz wali, "Abhi bhejo", WhatsApp "reports") pehle hi sawal par girti thi. item-report nafaCollect bhi `s.COGS` — Item report ka 💰 nafa
+   chup-chaap nahi banta tha ('💰 bills ka nafa nahi bana' sirf log mein).
+THEEK: colOf(p, 'dbo.Sale', 'COGS') — sys.columns se asal naam (UPPER milan, bari / chhoti likhai); mile = s.[naam], na mile = CAST(NULL) -> nafa line x khareed
+   (perPiece / pieceCost — pehle se bana andaza). Kamyab jawab hi 6 ghante yaad (sawal fail = agli dafa dobara). item-report: na ho = C 0 + doosri query ki
+   COGS shart hata (sab bill andaza). irep-today.js + sales-stats.js sirf chhue (shared module qaida).
+SAATH (malik ka OK, pichhli screenshot ⏳ "report bana raha hai"):
+ - reportDay atakta tha: Report screen (report.js rpNow) reportDay likhti, kabhi mitti nahi -> baad ka har "Abhi bhejo" / WhatsApp "reports" usi purane din ki report.
+   Ab cloud.setReportConfig reportDay ke saath rdAt = reportNow; PC reportDay sirf tab jab rdAt == reportNow, warna AAJ.
+ - App ka haal: PC kaam uthate hi reportWa {run, runDay}, na bane = {err, errAt} (merge), bane = purana set (run/err khud mite). wa-report.js: run aaya = "⏳ PC bana raha
+   hai (N sec) — 1-3 min" (10 min tak, phir "⚠️ bahut der"), err = "✕ Report nahi bani: <wajah>", 90 s mein run na aaye = "PC ne kaam nahi uthaya". 15 s ka waitTick (tmr2).
+TEST: /tmp/rrtest — mock pool: khana nahi = query mein NULL, report bani (nafa 1000 − 2×400 = 200); khana 'Cogs' = s.[Cogs]; item-report dono haal. ASAL POS par nahi.
+SABAQ: POS ka koi bhi "shayad ho" khana (COGS jaisa) SELECT karne se pehle sys.columns / COL_LENGTH se jaancho — ek ghayab khana poori report gira deta hai, aur
+   try/catch mein chhupi ghalti hafton nazar nahi aati. Report / data wali har PC ghalti malik tak pohanche (v1.8 ki tarah) — tabhi asal wajah mili.
