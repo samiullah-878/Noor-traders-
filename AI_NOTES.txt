@@ -8066,3 +8066,19 @@ MALIK (13 Nov 23:42): "kya hum website mein door se customer ko rack dikha sakte
 TEST (browser harness, 8 racks x 13 items + 2 racks): shuru ka nazara, beech tak chalna, counter tak, rack par tap -> paas wala rack -> 🏬 wapas, counter tap = parchi khirki, darwaza (shutter) -> kamra + hint, rate-only + maal badla (kamre mein), PC 1280, LITE (seedha rack), JS error nahi.
   ASAL phone par test NAHI (3D scene + tasveerein — dheera lage to ROOM_DEFAULT '0' ek line).
 AI: NAHI.
+
+
+=== md pkg v37 (14 Nov 2026) — ⏰ Ghari auto (malik ka phone) ===
+MALIK (14 Nov 10:42): "mera mobile par time auto hona chahiye taake koi bhi time change kar ke apps na khol sake". Plan diya -> "Ok".
+WAJAH: ⛔ Subah 11 tak / ⏸ Claude break / TikTok hadein phone ki ghari par chalti hain; subah.py ke ALLOW mein com.android.settings hai -> Settings se ghari aage kar ke sab khul jata tha.
+- md/tools/ghari.py -> naya macro '⏰ Ghari auto' (pkg.py mgh, GUID h64('claude|ghariauto')):
+  · triggers: SystemSettingTrigger (globalEnabled, regex 'auto_time.*') + RegularIntervalTrigger 60 s + AppActivityLaunchedTrigger 'DateTimeSettings' (contains) + 3 ScreenContentTrigger ('24-hour' / 'time automatically' / 'zone automatically', sirf com.android.settings).
+  · har trigger par Java (BeanShell): Settings.Global auto_time / auto_time_zone != "1" -> putString "1" (🏦 Bank mode jaisi ijazat — WRITE_SECURE_SETTINGS pehle se), jawab "1" = theek karna para.
+  · Date & time safha (activity / lafz) = PressBack (Settings baqi khuli). Setting abhi badli + theek karna para = LaunchHomeScreen.
+  · koi paigham / toast nahi. Purana koi macro nahi badla / hata (pkg diff: sirf naya macro; off / del / patch wahi).
+- JAANCH: MCP validator VALID · Java ka mantiq javac stub se (5 haalatein) · ASAL phone par test NAHI:
+  (a) OnePlus ke Date & time safhe ke lafz / activity ka naam pakka maloom nahi — na milein to safha khulega magar toggle band karte hi wapas ON + Home (asal hifazat yehi).
+  (b) Offline (airplane) mein auto ON ho kar bhi ghari network ke baghair theek nahi hoti — lekin auto ON rehte haath se ghari set hi nahi hoti.
+- NAHI rokta: MacroDroid ko band / force stop karna (malik ko bataya — alag kaam, kehne par).
+- Sirf malik ka phone. Ami ka phone (Settings khuli) = poochha tha, jawab nahi aaya -> nahi chhera. Bachon ke phone par Settings pehle se band.
+AI: NAHI.
