@@ -4679,3 +4679,19 @@ WAJAH: (a) v2.27 ka reply-number sirf parchi / '✕ number nahi mila' / bill pho
 - TEST: /tmp numtest.js — wa-parchi ke ASAL bizMsg + gahakSet (file se kaat kar, jhoota Firestore) 7 haalatein + ownNum 10 haalatein = SAB THEEK. ASAL WhatsApp par test NAHI.
 - BAQI KAMZORI: BILL_HOLD (ruki hui bill photo) sirf yaad-dasht mein hai — PC update / restart par chali jati hai; phir number lagne par jawab "bill ki photo dobara reply kar dein". Is update se 11:00 wali photo bhi gayi.
 AI: NAHI.
+
+
+=== v2.279.0 (14 Nov 2026) — 👥 HAZRI APP JORI: larkon ki hazri ki report WhatsApp par ===
+Malik: "jo hamari NT hazri wali app hai us ko is app ke saath connect karo, wahan ke larkon ki report WhatsApp par aa jaye" · waqt: "subah 10 baje, shaam 6 baje, aur din mein jab maangein". OK diya.
+HAQEEQAT: Hazri app ALAG repo (samiullah-878/nt-traders-) + ALAG Firebase (nt-traders); Blue Khata = note-traders-khata-7ccc1. (Blue Khata repo ki purani firebase-config.js mein nt-traders likha hai — wo istemal nahi hoti, asal config.js.)
+RAASTA: Blue Khata app (Reports khirki) "🔗 Hazri app jorein" -> chaabi blueAccess/hazriKey {k} (sirf malik parhe) + hazri app ka link #bk=<chaabi> khulta -> hazri app v251 (malik login) chaabi cameraPC/vault.blue.k mein
+  -> hazri ka Cloud Function (functions/index.js blueSync: har hazri / bahar / ticket / chutti ki likhai par + har 15 min) aaj ka khulasa Blue Khata ke hazriIn {k, p JSON} mein REST se (rules 2.104 chaabi jaanchte)
+  -> PC raat-report v1.7 hzPull (har 30 s: sab se naya rakho, sab mitao, pc/hazri-day.json local) -> hzText -> waOut (Business number -> malik).
+KAB: subah cfg.hzTime (default 10:00, 3 ghante ki khirki — PC der se on ho to bhi) chhoti report (aaye / late / nahi aaye / abhi bahar) · shaam cfg.reportTime par baqi reports ke saath POORI (bahar gaye, ticket, check-out, duty par)
+  · maang par: app "📤 Hazri abhi bhejo" (setReportConfig hzNow -> reportNow + waOnly 'h') ya WhatsApp par "hazri" (kh-wa v1.7 HZ_RE, sirf malik) ya "reports" -> 5.
+APP: wa-report.js — tick "👥 Hazri (larke)" (waH), subah ke waqt ke chips (hzTime), haal blueAccess/hazriWa {at data aaya, d, n, sent}. cloud.js: listenHazriWa / getHazriKey / setHazriKey; setReportConfig waH / hzTime / hzNow.
+"Nahi aaye" = duty shuru + 30 min guzre aur check-in nahi (chutti / weekly off alag). Late = hazri app ka apna hisaab (lateOnCheckIn). Hazri data 40 min se purana = report mein warning.
+Hazri kabhi juri hi na ho = subah / shaam ki khud wali report mein hazri ka hissa nahi (spam nahi); maangne par "abhi juri nahi" ka paigham.
+AI: NAHI. Hazri app mein kuch nahi likha jata (sirf chaabi), us ka purana kaam nahi badla.
+TEST: hzPull / hzText / hzSend sandbox (fake Firestore) mein; hazri functions/logic blueSummary namoone par. ASAL par nahi: Cloud Function ka deploy, REST likhai, WhatsApp — malik se screenshot.
+FILES: wa-report.js, cloud.js, firestore.rules (2.104), pc/raat-report.js v1.7, pc/kh-wa.js v1.7, pc/wa-out.js v1.21 + pc/wa-parchi.js v2.32 (sirf version — kh-wa badla).

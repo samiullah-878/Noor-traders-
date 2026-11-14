@@ -23,7 +23,11 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.6';   // v1.6 (12 Nov): WhatsApp par 'reports' -> reportConfig.waOnly d | l | p | all (kh-wa v1.3) — sirf wohi report, phir waOnly khali
+const VER = '1.7';
+// v1.7 (14 Nov, malik: 'hazri app ko is app se jor do, larkon ki report WhatsApp par — subah 10, shaam 6, jab maangein'): hazriIn (Hazri app ka server
+//   chaabi ke saath likhta hai) -> hzPull (naya rakho, sab mitao, hazri-day.json) -> hzText -> subah cfg.hzTime (10:00) + shaam ki reports ke saath (waH)
+//   + reportNow waOnly 'h' (app / WhatsApp 'hazri'). Haal blueAccess/hazriWa {at, d, n, sent}. Hazri app mein kuch nahi likhta. AI nahi.
+const VER_OLD = '1.6';   // v1.6 (12 Nov): WhatsApp par 'reports' -> reportConfig.waOnly d | l | p | all (kh-wa v1.3) — sirf wohi report, phir waOnly khali
 // v1.5:   // v1.5 (2026-11-11): 📲 malik ke WhatsApp par 3 reports (Daily Sale · Larka-wise · Profit) waOut se — reportConfig waOn / waD / waL / waP, default waqt 18:00; larka + topNafa report mein.
 // pichhla:   // v1.4 (2026-10-25): ⚖️ "sirf hisaab" / cancel transfer note "check nahi hue" mein nahi.
 // v1.1 (2026-10-11): sachi dhadkan + chowkidar (11-Oct 3 ghante khamosh, report nahi bani) · report waqt guzre to usi din baad mein bhi · default 18:30
@@ -34,7 +38,7 @@ const LINK = 'https://samiullah-878.github.io/Noor-traders-/';
 const KEEP_DAYS = 62;
 const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;   // andar ka lena-dena (bikri / khareed nahi)
-const DEF = { waOn: true, waD: true, waL: true, waP: true, reportOn: true, reportTime: '18:00', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
+const DEF = { waOn: true, waD: true, waL: true, waP: true, waH: true, hzTime: '10:00', reportOn: true, reportTime: '18:00', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
 
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
@@ -261,6 +265,63 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       try { const r = await pushOwner(`⏰ ${a.redN} item jald khatam`, t + (a.redN > 4 ? ` +${a.redN - 4}` : '') + ' · tap = order', 'stock-alert', LINK + '?alert=1'); log(`push: ${r?.successCount ?? 0} phone`); } catch (e) { log('push masla: ' + e.message); } }
     return a;
   }
+  // v1.7: 👥 HAZRI — Hazri app ke server ka bheja khulasa (hazriIn). rows: n naam, s duty shuru, i aaya, o gaya, l late min, lv chutti, off, b bahar, t ticket.
+  const hzFile = path.join(DIR, 'hazri-day.json'); let HZ = null, hzLoaded = false, hzWaAt = 0;
+  const hzRead = () => { if (!hzLoaded) { hzLoaded = true; try { HZ = JSON.parse(fs.readFileSync(hzFile, 'utf8')) || null; } catch { HZ = null; } } return HZ; };
+  async function hzPull() {
+    let snap; try { snap = await biz.collection('hazriIn').limit(40).get(); } catch (e) { log('hazriIn: ' + e.message); return 0; }
+    if (snap.empty) return 0;
+    let best = null;
+    for (const d of snap.docs) { try { const o = JSON.parse(String((d.data() || {}).p || '')); if (o && o.v === 1 && /^\d{4}-\d\d-\d\d$/.test(String(o.d || '')) && Array.isArray(o.rows) && o.rows.length <= 300 && (!best || Number(o.at) > Number(best.at))) best = o; } catch {} }
+    for (const d of snap.docs) { try { await d.ref.delete(); } catch {} }
+    if (!best) return 0;
+    const old = hzRead();
+    if (old && Number(old.at) > Number(best.at)) return 0;
+    HZ = { ...best, got: Date.now() }; try { fs.writeFileSync(hzFile, JSON.stringify(HZ)); } catch {}
+    if (Date.now() - hzWaAt > 5 * 60000) { hzWaAt = Date.now(); try { await access.doc('hazriWa').set({ at: HZ.got, d: HZ.d, n: HZ.rows.length, ver: VER }, { merge: true }); } catch (e) { log('hazriWa: ' + e.message); } }
+    return 1;
+  }
+  const hzMin = v => { const m = String(v ?? '').trim().match(/(\d{1,2})[:.](\d{2})\s*([AaPp])?/); if (!m) return null; let h = Number(m[1]); const ap = (m[3] || '').toUpperCase(); if (ap === 'P' && h < 12) h += 12; if (ap === 'A' && h === 12) h = 0; return h > 23 ? null : h * 60 + Number(m[2]); };
+  const hz12 = v => { const n = typeof v === 'number' ? v : hzMin(v); return n == null ? String(v || '') : `${((Math.floor(n / 60) + 11) % 12) + 1}:${pad2(n % 60)} ${n < 720 ? 'am' : 'pm'}`; };
+  const hzDur = m => m >= 60 ? `${Math.floor(m / 60)} gh ${m % 60} min` : `${m} min`;
+  function hzText(h, t, full) {
+    const day = dayOf(t), nowMin = t.getHours() * 60 + t.getMinutes(), dt = t.toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), hd = `👥 *Hazri — ${dt}* (${hz12(nowMin)} tak)`;
+    if (!h) return `${hd}\n⚠️ Hazri app abhi juri nahi.\nBlue Khata → WhatsApp Parchi ⋮ → Reports → "🔗 Hazri app jorein" dabayein.`;
+    if (h.d !== day) return `${hd}\n⚠️ Aaj ka hazri data nahi aaya (aakhri: ${h.d}).\nHazri app ka server chup hai — Blue Khata → Reports → "🔗 Hazri app dobara jorein".`;
+    if (h.closed) return `${hd}\n🔒 Aaj hazri app mein dukan BAND (chutti) likhi hai.`;
+    const R = h.rows || [], came = R.filter(r => r.i), late = came.filter(r => Number(r.l) > 0), onT = came.filter(r => !(Number(r.l) > 0));
+    const lv = R.filter(r => !r.i && (r.lv === 'f' || r.off)), rest = R.filter(r => !r.i && !(r.lv === 'f' || r.off));
+    const abs = rest.filter(r => { const st = hzMin(r.s); return st == null || nowMin >= st + 30; }), wait = rest.filter(r => !abs.includes(r));
+    const L = [hd, `Aaye ${came.length} / ${R.length - lv.length} · Late ${late.length} · Nahi aaye ${abs.length}`];
+    if (onT.length) L.push('', `✅ *Waqt par (${onT.length})*`, ...onT.map(r => `• ${r.n} — ${hz12(r.i)}`));
+    if (late.length) L.push('', `⏰ *Late (${late.length})*`, ...late.map(r => `• ${r.n} — ${hz12(r.i)} (${hzDur(Number(r.l))} late)`));
+    if (abs.length) L.push('', `❌ *Nahi aaye (${abs.length})*`, ...abs.map(r => `• ${r.n}` + (r.lv === 'h' ? ' (aadhi chutti)' : '')));
+    if (wait.length) L.push('', `⏳ *Duty abhi shuru nahi (${wait.length})*`, wait.map(r => r.n).join(', '));
+    if (lv.length) L.push('', `🌴 *Chutti / off (${lv.length})*`, lv.map(r => r.n + (r.off && r.lv !== 'f' ? ' (off)' : '')).join(', '));
+    const outNow = R.filter(r => (r.b || []).some(b => Number(b[2]) < 0));
+    if (!full && outNow.length) L.push('', `🚶 *Abhi bahar (${outNow.length})*`, ...outNow.map(r => { const b = r.b.find(x => Number(x[2]) < 0); return `• ${r.n} — ${b[3] || 'bahar'} ${hz12(b[1])} se`; }));
+    if (full) {
+      const outs = R.filter(r => (r.b || []).length);
+      if (outs.length) L.push('', `🚶 *Bahar gaye (${outs.length})*`, ...outs.map(r => `• ${r.n}: ` + r.b.map(b => `${b[3] || (b[0] === 'k' ? 'Khana' : 'bahar')} ${hz12(b[1])} (${Number(b[2]) < 0 ? 'ABHI BAHAR' : hzDur(Number(b[2]))})`).join(' · ')));
+      const tk = R.filter(r => Number(r.t) > 0);
+      if (tk.length) L.push('', `🎫 *Bina bataye gaye (ticket)*`, ...tk.map(r => `• ${r.n} × ${r.t}`));
+      const done = came.filter(r => r.o), on = came.filter(r => !r.o);
+      if (done.length) L.push('', `🏁 *Check-out (${done.length})*`, ...done.map(r => `• ${r.n} — ${hz12(r.o)}`));
+      if (on.length) L.push('', `🟢 *Abhi duty par / check-out baqi (${on.length})*`, on.map(r => r.n).join(', '));
+    }
+    const age = Math.round((Date.now() - Number(h.at || 0)) / 60000);
+    if (age > 40) L.push('', `⚠️ Yeh data ${hzDur(age)} purana hai (hazri app ka server chup).`);
+    return L.join('\n');
+  }
+  async function waTo() { let to = ''; try { const w = await access.doc('waParchi').get(), pf = w.exists ? (w.data() || {}).prFrom : null; to = String((Array.isArray(pf) && pf[0]) || ''); } catch {} return String(to || '03450412515').replace(/\D/g, ''); }
+  async function hzSend(why, full) {
+    try { await hzPull(); } catch {}
+    const t = now(), id = `rp-${dayOf(t)}-h-${Date.now().toString(36)}`, to = await waTo();
+    try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to, nm: 'Malik', kind: 'rem', eid: id, txt: hzText(hzRead(), t, full) }); } catch (e) { log('waOut hazri: ' + e.message); return 0; }
+    try { await access.doc('hazriWa').set({ sent: Date.now(), why: String(why || ''), ver: VER }, { merge: true }); } catch {}
+    log(`👥 hazri WhatsApp par (${why})`);
+    return 1;
+  }
   // v1.5: 📲 malik ke WhatsApp par (waOut → wa-out, dukan ka Business number). Raqam khata = paisa (÷100), POS = rupay.
   function waTexts(r, cfg) {
     const dt = new Date(r.day + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), t = new Date(r.at), tm = `${pad2(t.getHours())}:${pad2(t.getMinutes())}`, P = v => rs((Number(v) || 0) / 100), out = [];
@@ -271,13 +332,13 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     if (cfg.waL !== false) out.push(['l', [`👦 *Larka-wise — ${dt}* (${tm} tak)`, ...((r.larka || []).length ? r.larka.map((x, i) => `${i + 1}. ${x.n} — ${rs(x.t)} · ${x.c} bill`) : ['Aaj kisi larke ke naam bill nahi'])].join('\n')]);
     if (cfg.waP !== false) out.push(['p', [`💰 *Profit — ${dt}* (${tm} tak)`, `Sale: ${rs(r.sale.total)} · ${r.sale.n} bill`, `Nafa (andaza): ~${rs(r.sale.profit)} (${r.sale.profitPct}%)`, r.lossN ? `⚠️ Ghaate wale bill: ${r.lossN} (${rs(r.lossRs)})` : '',
       (r.topNafa || []).length ? '\nSab se zyada nafa:' : '', ...(r.topNafa || []).map((x, i) => `${i + 1}. ${x.n} — ${rs(x.rs)}`)].filter(Boolean).join('\n')]);
+    if (cfg.waH !== false && hzRead()) out.push(['h', hzText(hzRead(), now(), true)]);
     return out;
   }
   async function waSend(r, cfg, why) {
     let n = 0;
     if (cfg.waOn !== false) {
-      let to = ''; try { const w = await access.doc('waParchi').get(), pf = w.exists ? (w.data() || {}).prFrom : null; to = String((Array.isArray(pf) && pf[0]) || ''); } catch {}
-      to = String(to || '03450412515').replace(/\D/g, ''); const stamp = Date.now().toString(36);
+      const to = await waTo(), stamp = Date.now().toString(36);
       for (const [k, txt] of waTexts(r, cfg)) { const id = `rp-${r.day}-${k}-${stamp}`; try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to, nm: 'Malik', kind: 'rem', eid: id, txt }); n++; } catch (e) { log('waOut: ' + e.message); } }
     }
     try { await access.doc('reportWa').set({ at: Date.now(), day: r.day, n, why: String(why || ''), ver: VER }); } catch (e) { log('reportWa: ' + e.message); }
@@ -301,14 +362,16 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       const cfg = await cfgGet(), st = readSt(), t = now(), hm = `${pad2(t.getHours())}:${pad2(t.getMinutes())}`, day = dayOf(t);
       const due = (time, key, win = 3) => { const [h, m] = String(time || '').split(':').map(Number); if (!Number.isFinite(h)) return false; const d = new Date(t); d.setHours(h, m || 0, 0, 0); return hm >= `${pad2(h)}:${pad2(m || 0)}` && t.getTime() - d.getTime() < win * 3600e3 && st[key] !== day; };   // alert: 3 ghante; report (v1.1): usi din jab bhi chale (PC band / atka tha)
       // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
-      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p' } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } await runReport(String(cfg.reportDay || day), c2, o ? 'WhatsApp se' : 'app se abhi'); } }
+      try { await hzPull(); } catch (e) { log('hazri: ' + e.message); }
+      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else await runReport(String(cfg.reportDay || day), c2, o ? 'WhatsApp se' : 'app se abhi'); } }
       else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; saveSt(st); await runReport(day, cfg, 'raat'); }
+      if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waH !== false && hzRead() && due(cfg.hzTime || '10:00', 'hzDay', 3)) { st.hzDay = day; saveSt(st); await hzSend('subah', false); }
       if (Date.now() - lastAlive > 5 * 60000) { lastAlive = Date.now(); try { await access.doc('reportConfig').set({ alive: Date.now(), ver: VER }, { merge: true }); } catch {} }   // app: "PC zinda"
       onBeat?.();   // v1.1: dhadkan SIRF tab jab chakkar poora hua
     } catch (e) { log('masla: ' + e.message); if (e?.code === 16 || /UNAUTHENTICATED/.test(String(e?.message))) process.exit(1); }
     finally { clearTimeout(dog); busy = false; }
   }
-  return { buildAlert, buildReport, runAlert, runReport, tick, cfgGet };
+  return { buildAlert, buildReport, runAlert, runReport, tick, cfgGet, hzText, hzPull, hzSend };
 }
 
 module.exports = { makeReporter, dailyOf, perPiece, pieceCost, isWs, phone92, DEF };

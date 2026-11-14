@@ -1,4 +1,5 @@
 // =========================================================
+// v2.32 (14 Nov): kh-wa v1.7 (👥 'hazri' likhne par hazri ki report) — is file mein sirf version (doctor dobara chalaye).
 //  wa-parchi.js  v2.16 (2026-11-09) — 📲 WHATSAPP PARCHI → PACKING LIST (BILL BAAQI)
 //  v2.31 (14 Nov, malik ki screenshot — number reply kiya, phir bhi "gahak? (number nahi)"): 👤 gahak ka number ab HAR parchi wale paigham ke reply se lagta hai —
 //        '⚠️ Print auto: gahak ka number nahi mila' · '✅ Parchi Mubeen ko gayi' · '⏰ … shuru nahi ki' · '▶️ … start kar diya' (in sab waOut par `pp` = parchi) aur reply mein
@@ -90,7 +91,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.31';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.32';
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');

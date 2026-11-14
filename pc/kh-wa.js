@@ -17,7 +17,7 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.6';   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
+const VER = '1.7';   // v1.7 (14 Nov): 👥 'hazri' (sirf malik) -> reportConfig {reportNow, waOnly 'h'} -> raat-report v1.7; 'reports' menu mein 5 Hazri   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
 // v1.5:   // v1.5 (13 Nov): 🔔 WhatsApp reminder — 'reminder <likhai> / kal se' · 'all reminder show' · '3 off' · 'reminder off'; roz 11 baje, jab tak off na ho; har number ka apna (malik, Mubeen)
 // v1.4:   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
 const pad3 = n => String(n).padStart(3, '0');
@@ -30,6 +30,7 @@ function normPh(x) {
 }
 const CANCEL_RE = /^\s*(cancel|wapas|hatao|hata do)\s*[.!]*\s*$/i;
 const PICK_RE = /^\s*(\d{1,2})(?:[\s,\-]+(\d{1,2}))?\s*$/, P2_RE = /^\s*([123])(?!\d)[\s:.\-]+(\S.*)$/;
+const HZ_RE = /^\s*ha[zj]i?r[iy]\s*(report)?\s*$/i;
 const REP_RE = /^\s*reports?\s*$/i, STG_RE = /^\s*([1-5])(?!\d)(?:[\s:.\-]+(.*))?$/;
 const STOP = new Set('start,started,shuru,print,printauto,autoprint,auto,cancel,wapas,hatao,ok,okay,okey,yes,no,nahi,ji,jee,han,haan,hello,hi,hey,salam,slam,aoa,theek,thek,thik,thanks,thank,shukria,shukriya,done,test,acha,achha,bill,parchi,report,reports,kal,aaj,abhi,bhej,bhejo,kya,kia,hai,ha,g'.split(','));
 // sirf naam jaisa chhota paigham (Business number ki chat): 1-4 lafz, hindsa nahi, aam lafz nahi
@@ -208,7 +209,7 @@ function make({ biz, log = () => {} }) {
       await remSave(ph, R); await pendDrop(ph); await say(ph, 'kw-' + w, `✅ ${n} reminder band ho gaye.`); return true;
     }
     if (d.stg === 'r') {
-      if (!pk || pk[2] != null) return false; const k = { 1: 'd', 2: 'l', 3: 'p', 4: 'all' }[Number(pk[1])]; if (!k) { await say(ph, 'kx-' + w, '✕ 1, 2, 3 ya 4 bhejein.'); return true; }
+      if (!pk || pk[2] != null) return false; const k = { 1: 'd', 2: 'l', 3: 'p', 4: 'all', 5: 'h' }[Number(pk[1])]; if (!k) { await say(ph, 'kx-' + w, '✕ 1 se 5 tak number bhejein.'); return true; }
       await pendDrop(ph); await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: k }, { merge: true });
       await say(ph, 'kw-' + w, '⏳ Report ban rahi hai — 1-2 minute mein malik ke WhatsApp par aayegi.'); return true;
     }
@@ -281,8 +282,10 @@ function make({ biz, log = () => {} }) {
       await say(ph, 'kc-' + w, `↩ Wapas ho gaya: ${rsT(e.amount / 100)}${e.note ? ' — ' + String(e.note).slice(0, 80) : ''}`); return true;
     }
     const fresh = !ts || Date.now() - ts <= 10 * 60000;
+    if (HZ_RE.test(text)) { if (!fresh) return true; if (!isMalik(ph)) { await say(ph, 'kx-' + w, '✕ Hazri ki report sirf malik maang sakta hai.'); return true; }
+      await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: 'h' }, { merge: true }); await say(ph, 'kw-' + w, '⏳ Hazri ki report aa rahi hai (1 minute).'); return true; }
     if (REP_RE.test(text)) { if (!fresh) return true; if (!isMalik(ph)) { await say(ph, 'kx-' + w, '✕ Reports sirf malik maang sakta hai.'); return true; }
-      await pendSet(ph, { stg: 'r', w, by: name }); await say(ph, 'kq-' + w, '📊 Kaun si report?\n\n1 Daily Sale ka hisaab\n2 Larka-wise\n3 Dukan ka profit\n4 Teeno\n\nNumber bhejein (0 = chhoro)'); return true; }
+      await pendSet(ph, { stg: 'r', w, by: name }); await say(ph, 'kq-' + w, '📊 Kaun si report?\n\n1 Daily Sale ka hisaab\n2 Larka-wise\n3 Dukan ka profit\n4 Teeno\n5 Hazri (larke)\n\nNumber bhejein (0 = chhoro)'); return true; }
     let pd = null;
     if (fresh && (PICK_RE.test(text) || STG_RE.test(text))) { pd = await pendGet(ph); if (pd && pd.stg && await stage(ph, name, w, text, pd)) return true; }
     if (PICK_RE.test(text)) return await pick(ph, name, w, text, pd);
