@@ -28,11 +28,23 @@ acts = [
     iff([lgt("pLeft", 120), llt("pShow", 1), llt("kShow", 1), gbool("kpPend", False)]),
       JAVA,
 ]
+# v43 (14 Nov, malik: "isi popup ke andar falsafa aaye aur neeche recording ka sawal — jab dil kare band, jab dil kare on"): popup ka daayan button = recording band / shuru
+import rec as REC
+from cb import lt as glt, sint
+def dlg(state, pos, neg): return {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "🧠 Soch",
+     "text": "{lv=qs}<br><br>" + state, "positiveText": pos, "negativeText": neg,
+     "cancelAfterTimeout": True, "timeoutSeconds": 15, "htmlFormat": True, "useCustomColors": True, "textColor": -15658735, "bgColor": -1}
 acts += [
-    iff([lbool("never", True)]),
-    {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "🧠 Soch",
-     "text": "{lv=qs}", "positiveText": "✅ OK", "negativeText": "✕",
-     "cancelAfterTimeout": True, "timeoutSeconds": 10, "htmlFormat": True, "useCustomColors": True, "textColor": -15658735, "bgColor": -1},
+    iff([glt("recOff", 1)]),
+      iff([lbool("never", True)]),
+      dlg("🎙 <b>Recording CHAL rahi hai</b>", "⏹ Recording band", "✕ Chalne do"),
+        sint("recOff", 1), REC.STOP,
+      END,
+    ELSE,
+      iff([lbool("never", True)]),
+      dlg("⏹ <b>Recording BAND hai</b>", "🎙 Recording shuru", "✕ Band rahe"),
+        sint("recOff", 0), *REC.restart(),
+      END,
     END,
     END,
 ]
@@ -41,10 +53,10 @@ out = {"macroExportVersion": 1, "macro": {
     "m_description": "Unlock par falasifa ka ek qoul (random, Urdu, 12 s baad khud band) — Paani popup jaisa dabba. Paani 2 min mein aane wala ho / Paani ya Khana popup screen par ho to nahi. 🔕 Aaj nahi = aaj phir nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lint("pLeft"), lint("pShow"), lint("kShow"), lint("qi"), {"m_name": "qs", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
-                       {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}],
+                       {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}],
     "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}],
     "m_actionList": acts, "m_constraintList": []},
-    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2)],
+    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1)],
     "userIcons": None, "aiFeedback": "Display over other apps ijazat."}
 json.dump(out, open(os.path.join(D, "qaide.json"), "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(acts))

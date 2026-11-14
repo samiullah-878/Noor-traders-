@@ -8230,3 +8230,17 @@ Malik: "reels baar baar 25 minute ke baad bhi open ho rahi hain — bilkul 25 mi
 Pehle: 25 min poore = tkLock; rok sirf (a) ScreenContentTrigger 'For You dikha' (b) har 1 minute ke tick par thi -> trigger na chale to har dafa ek minute tak reels chalti rehti thin.
 Ab (limits.py GUARD, ghari wale 1-second loop ke andar): lock ke dauran har 2 second CheckTextOnScreen 'For You' -> reels = click Profile -> 1 s baad phir reels = Home (Profile ka button na chale to bhi rok pakki).
 Profile / Saved / Inbox pehle jaise khule (un ka apna 2 ghante). Phone par test nahi — malik batayega. AI nahi. Koi macro off / del nahi.
+
+
+=== md pkg v43 (14 Nov 2026 raat) — 🎙 RECORDING (har waqt) + Falsafa popup mein band / shuru ===
+Malik: "recording wala abhi chahiye jo har time recording kare" -> (sone ka masla) -> "jo lock ke upar popup aata hai usi ke andar falsafa aaye aur neeche sawal · jaise dukan par hoon zaroorat nahi to bhi ye kaam kare ·
+24 ghante — jab mera dil kare band karun, jab dil kare on" · "Drive direct — meri Drive mein upload hon".
+- md/tools/rec.py (naya macro '🎙 Recording'): har 10 min -> pichhla tukda STOP (-2, file save) -> 2 s -> naya START (-1, 'until cancelled') jab tak global recOff = 0 aur call na ho.
+  Har start se pehle stop — do recording kabhi ek saath nahi. Folder /storage/emulated/0/NT Awaz (Java mkdirs), naam NT_<saal>-<mahina>-<din>_<ghanta>-<minute>, AAC 32 kbps (~2.4 MB / 10 min, ~350 MB / 24 ghante).
+  recOff naya global = 0 = update aate hi recording CHALU (malik: 'abhi chahiye').
+- qaide.py (🧠 Falsafa, unlock ka popup): qoul ke neeche haal + daayan button — chal rahi ho: "⏹ Recording band" (recOff 1 + STOP) · band ho: "🎙 Recording shuru" (recOff 0 + restart). Baayan ✕ / 15 s = koi tabdeeli nahi.
+  Pehle daayan button "✅ OK" tha — ab wohi button recording badalta hai (malik ko bataya).
+- Files khud kabhi nahi mit-tin (malik ne din nahi bataye). Awaaz par khud shuru / band (ReadSoundLevel) wala plan malik ne chhor diya.
+- DRIVE: MacroDroid mein Drive par upload ka action NAHI (catalog dekha) — raasta wohi 4 Nov wala: FolderSync phone "NT Awaz" -> Drive. Malik ko bataya; setup us ke phone par ek dafa.
+- useAllFilesAccess = MacroDroid ko "All files access" + Microphone ki ijazat chahiye — na ho to file nahi banegi (malik se folder dekhne ko kaha).
+Phone par test nahi. Doosron ki awaz bina bataye record karne ke qanooni pehlu ka malik ko bataya (faisla us ka). AI nahi. Koi macro off / del nahi.

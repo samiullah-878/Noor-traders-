@@ -79,17 +79,19 @@ mhb, vhb = fix(json.loads(json.dumps(HBM.HSBS)), h64('claude|hotspotsaver'), '�
 import anim as ANM
 man, van = fix(json.loads(json.dumps(ANM.AN)), h64('claude|animtez'), '⚡ Animation tez')   # v39 (14 Nov): animations 0.5x
 mbr, vbr = fix(json.loads(json.dumps(BRM.BR)), h64('claude|break10'), '🧘 10 min break')   # v41 (14 Nov): paani popup par Haan = 10 min sab apps band (subah wali list)
+import rec as RCM
+mrc, vrc = fix(json.loads(json.dumps(RCM.RC)), h64('claude|recording'), '🎙 Recording')   # v43 (14 Nov): har 10 min ka tukda jab tak recOff = 0; band / shuru Falsafa ke popup se
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt:
+for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🧘 10 min break (paani popup par Haan) + 🌙 Raat ke sawal unlock par bhi.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mbr],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "🎙 Recording (har 10 min ka tukda) + Falsafa popup mein band / shuru + TikTok reels lock pakka.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mbr, mrc],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
