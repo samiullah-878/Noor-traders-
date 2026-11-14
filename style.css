@@ -8196,3 +8196,6 @@ html.dk body #dialogBody .fx-story .fx-s2,html[data-theme="dark"] body #dialogBo
 html.dk body #dialogBody .fx-st,html[data-theme="dark"] body #dialogBody .fx-st{background:#172036;border-color:#2c3a63;color:#e5edff}
 html.dk body #dialogBody .fx-st small,html[data-theme="dark"] body #dialogBody .fx-st small{color:#a9b8d8}
 html.dk body #dialogBody .fx-st.is-in,html[data-theme="dark"] body #dialogBody .fx-st.is-in{background:#3a2412;border-color:#fb923c}
+
+/* v2.279.1 (malik 14 Nov, ☰ ki screenshot: 'in ki upar zaroorat nahi ab'): ☰ slider ke upar '📌 Is screen ke' chips ka hissa chhupa — wohi kaam har screen ke ⋮ mein hain. Wapas mat lao jab tak malik na kahe. */
+#chipDrawer .dr-pins{display:none!important}
