@@ -1,4 +1,6 @@
 // =========================================================
+// v1.24 (14 Nov, malik: 'koi bhi report mujhe aaye, us ke reply mein print likhoon to print aa jaye — thermal par'): 🖨 `repPrint` — malik (apne phone ya Business phone se) kisi REPORT paigham (waOut id 'rp-…') par reply `print`
+//        -> khataPrints/wr-<id> {j: {k:'txt'}} -> pos-khata-sync (v) thermal par chhapta hai aur nateeja malik ko. Sirf malik, sirf report wale paigham; baqi 'print' pehle jaisa (wa-parchi).
 // v1.23 (14 Nov): kh-wa v1.8 — 📝 tafseel lazmi: tafseel ka jawab (aam likhai) kh-wa tak pohanchane ka darwaza (KHW.waits).
 // v1.22 (14 Nov, malik: 'larka Business number par apna code likhe -> wajah -> roz ki pehli 2 khud manzoor, baqi hum WhatsApp par OK karein · kisi bhi phone se'):
 //        hz-wa.js (🚶 bahar jane ki request) — yahan sirf bulana: hzIn (aane wala chhota number / request par reply 1-2) · hzOwn (Business phone se malik ka reply) · HZ.tick (30 s).
@@ -36,7 +38,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.23';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.24';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -376,6 +378,29 @@ async function main() {
     const send = async (j, t) => { const r = await s.sendMessage(j, { text: String(t) }), id = r && r.key && r.key.id; if (id) ownSent.add(id); };
     return HZ.handle({ text: tx, jid, from, quoted, wid: String(m.key.id || ''), fromMe: !!fromMe, khBusy, reply: t => send(jid, t), sendJid: send });
   }
+  // v1.24: 🖨 report par reply "print" -> thermal (sirf malik · sirf 'rp-' report paigham). true = yeh report ka print tha.
+  const RP_RE = /^\s*print\s*$/i, rpSeen = new Set();
+  async function repPrint(m, c, tx, s, fromMe) {
+    if (!RP_RE.test(tx)) return false;
+    const jid = String((m.key && m.key.remoteJid) || ''); if (!jid || /@g\.us$|@broadcast$|@newsletter$/.test(jid)) return false;
+    const kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, st = String((kc && kc.stanzaId) || ''); if (!st) return false;
+    const from = fromMe ? gpMalik : await fromNum(m, s); if (!from || from !== gpMalik) return false;
+    let id = '', job = null; try { const q = await Q.where('wid', '==', st).limit(1).get(); if (!q.empty) { id = q.docs[0].id; job = q.docs[0].data() || {}; } } catch (e) { log('⚠️ report print: ' + e.message); }
+    if (!job || !/^rp-/.test(id) || /^rp-err-/.test(id) || !String(job.txt || '').trim()) return false;
+    const mid = String(m.key.id || Date.now()).replace(/[^a-zA-Z0-9]/g, '').slice(0, 40); if (rpSeen.has(mid)) return true; rpSeen.add(mid); if (rpSeen.size > 200) rpSeen.delete(rpSeen.values().next().value);
+    const txt = String(job.txt), ttl = (txt.split('\n').find(x => x.trim()) || 'Report').replace(/[*_~`]/g, '').replace(/[^\x20-\x7e]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 40) || 'Report';
+    try {
+      await biz.collection('khataPrints').doc('wr-' + mid).create({ status: 'new', at: Date.now(), name: ttl, byName: 'Malik (WhatsApp)', wa: gpMalik, j: JSON.stringify({ k: 'txt', t: ttl, x: txt.slice(0, 6000) }) });
+      log('🖨 report print ka hukum: ' + ttl);
+    } catch (e) { if (!/already exists|ALREADY_EXISTS/i.test(String(e.message || e))) { log('⚠️ report print: ' + e.message); await gpPut('rpx-' + mid, { to: gpMalik, nm: 'Malik', kind: 'rem', txt: '✕ Report print ka hukum nahi gaya: ' + String(e.message || e).slice(0, 80) }); } }
+    return true;
+  }
+  async function repOwn(m, s) {   // malik Business phone se hi report par reply "print" likhe
+    const id = String((m.key && m.key.id) || ''); if (!id || /^3EB0/i.test(id) || ownSent.has(id)) return;
+    let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || c;
+    const x = c.extendedTextMessage, tx = String((x && x.text) || '').trim(); if (!x || !RP_RE.test(tx)) return;
+    await repPrint(m, c, tx, s, true);
+  }
   async function hzOwn(m, s) {   // malik Business phone se hi request wale paigham par reply 1 / 2 likhe
     const id = String((m.key && m.key.id) || ''); if (!HZ || !id || /^3EB0/i.test(id) || ownSent.has(id) || hzSeen.has(id)) return;
     let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || c;
@@ -386,12 +411,13 @@ async function main() {
   async function onMsgs(ms, s, typ) {
     for (const m of ms || []) {
       try {
-        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); ownNum(m, s).catch(e => log('⚠️ apna reply: ' + ((e && e.message) || e))); hzOwn(m, s).catch(e => log('⚠️ hazri jawab: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" · v1.20: 👤 apna reply mein number (intezar nahi — baqi paigham na rukein)
+        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); ownNum(m, s).catch(e => log('⚠️ apna reply: ' + ((e && e.message) || e))); hzOwn(m, s).catch(e => log('⚠️ hazri jawab: ' + ((e && e.message) || e))); repOwn(m, s).catch(e => log('⚠️ report print: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" · v1.20: 👤 apna reply mein number (intezar nahi — baqi paigham na rukein)
         if (typ && typ !== 'notify') continue;
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
         if (ktx && ktx.length <= 3 && await gpReply(m, c, ktx, s)) continue;   // v1.18: 🚪 gate pass ka jawab (1 / 2) — sirf gate numbers, sirf gate paigham par reply
+        if (ktx && ktx.length <= 8 && await repPrint(m, c, ktx, s, false)) continue;   // v1.24: 🖨 report par reply print -> thermal (sirf malik)
         if (ktx && ktx.length <= 30 && await hzIn(m, c, ktx, s, false)) continue;
         // v1.23: 📝 kh-wa ne is number se TAFSEEL maangi ho (khPend stg 'f') to us ka agla likha paigham kh-wa ko — sirf ijazat wale number, baqi sab pehle jaisa
         if (KHW && KHW.waits && ktx && ktx.length <= 300 && !KHW.looks(ktx)) { const kn0 = await fromNum(m, s);

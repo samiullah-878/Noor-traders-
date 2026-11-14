@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-14 (v): 🖨 WHATSAPP REPORT KA PRINT — khataPrints j.k 'txt' (wa-out v1.24: malik report par reply 'print') -> txtSlip thermal; nateeja malik ko waOut (doc mein `wa`). Voucher / baqi print nahi chhede.
 //  2026-11-13 (u): 🏷 PARTY KA NAAM PARCHI KE UPAR (English mota + Urdu) — malik: "party name upar aaye Urdu English mein, sab wasooli / kharcha / payment di / li / transfer par". Beech wala naam hata. Bank (HBL / Alfalah) parchi wahi.
 //  2026-11-04 (q): ⚡ VOUCHER + PARCHI FORAN (malik: "waiting time nahi — parchi usi time, voucher bhi foran, har entry") — nayi entry ka voucher ALAG line
 //    (vRun — kisi print / khata print / Daily print ke peeche nahi), parchi printer mein SAB SE AAGE (prHi) + Urdu Tafseel bina AI intezar (roman2ur foran,
@@ -1858,6 +1859,27 @@ function daySlip(J) {
   out.push(GS + 'V\x42\x00');   // kaghaz kaato
   return out.join('\r\n');
 }
+// 2026-11-14 (v): 🖨 WhatsApp report jaisi ki waisi thermal par — J {k:'txt', t: sar-khi, x: poora paigham}. Printer Urdu / emoji nahi chhapta -> sirf ASCII; *mota* = mota.
+function txtSlip(J) {
+  const W = 42, ESC = '\x1b', GS = '\x1d', C = ESC + 'a\x01', L = ESC + 'a\x00';
+  const sm = t => ESC + '!\x01' + t + ESC + '!\x00', bold = t => ESC + 'E\x01' + t + ESC + 'E\x00', big2 = t => ESC + '!\x38' + t + ESC + '!\x00';
+  const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE)];
+  if (UR.isOn() && UR.dateLine) { try { const d = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10), dl = UR.dateLine(d, 56); if (dl) out.push(dl); } catch {} }
+  for (const x of wrap(ascii(J.t || 'REPORT').toUpperCase() || 'REPORT', Math.floor(W / 2)).slice(0, 2)) out.push(C + big2(x.trim()));
+  out.push(L + sm(printStamp(new Date())), L + '-'.repeat(W));
+  const lines = String(J.x || '').split(/\r?\n/).slice(0, 400); let first = true, blank = false;
+  for (const raw of lines) {
+    const mota = /^\s*\*[^*]+\*\s*$/.test(raw) || /^\s*\*[^*]+\*/.test(raw);
+    const t = String(raw).replace(/[*_~`]/g, '').replace(/[^\x20-\x7e]/g, ' ').replace(/\s+/g, ' ').trim();
+    if (!t) { if (!blank && !first) out.push(L + '-'.repeat(W)); blank = true; continue; }
+    if (first) { first = false; if (t.toUpperCase().slice(0, 30) === ascii(J.t || '').toUpperCase().slice(0, 30)) { blank = true; continue; } }   // sar-khi dobara nahi
+    blank = false;
+    for (const x of wrap(t, W)) out.push(L + (mota ? bold(x) : x));
+  }
+  out.push(L + '-'.repeat(W), '');
+  out.push(GS + 'V\x42\x00');
+  return out.join('\r\n');
+}
 const kpJobs = new Map();
 function listenKhataPrints() {
   biz.collection('khataPrints').where('status', '==', 'new').onSnapshot(s => {
@@ -1875,13 +1897,15 @@ async function runKhataPrints() {
         age = s.readTime && s.updateTime ? s.readTime.toMillis() - s.updateTime.toMillis() : Date.now() - (Number(j.at) || 0);
         tx.update(ref, { status: 'printing', startedAt: Date.now() }); return true; });
       if (!mine) continue;
-      if (age > 10 * 60000) { await ref.update({ status: 'failed', err: 'Purana hukum (10 min+) — dobara dabayein' }); continue; }
+      if (age > 10 * 60000) { await ref.update({ status: 'failed', err: 'Purana hukum (10 min+) — dobara dabayein' }); if (j.wa) { try { await biz.collection('waOut').doc('prd-' + id).create({ st: 'new', at: Date.now(), to: String(j.wa), nm: 'Malik', kind: 'rem', eid: 'prd-' + id, txt: '🖨 ✕ Print ka hukum purana ho gaya (PC band tha?) — report par dobara print likhein.' }); } catch {} } continue; }
       let J; try { J = JSON.parse(String(j.j || '')); } catch { throw new Error('Khata ka data samajh nahi aaya'); }
       const day = J && J.k === 'day';   // (n) Daily khane ka print
-      log(day ? `🖨 Daily print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length}` : `🖨 Khata print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length} | ${(J.R || []).length}`);
-      const ok = await printReceipt(day ? daySlip(J) : khataSlip(J));
+      const rep = J && J.k === 'txt';   // (v) WhatsApp report ka print
+      log(rep ? `🖨 Report print: ${ascii(j.name)}` : day ? `🖨 Daily print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length}` : `🖨 Khata print: ${ascii(j.name)} (${j.byName || ''}) — ${(J.L || []).length} | ${(J.R || []).length}`);
+      const ok = await printReceipt(rep ? txtSlip(J) : day ? daySlip(J) : khataSlip(J));
       await ref.update(ok ? { status: 'done', doneAt: Date.now() } : { status: 'failed', err: String(lastPrintErr || 'print nahi hua').slice(0, 120) });
-      await logPrint({ code: day ? 'Daily' : 'Khata', name: ascii(j.name).slice(0, 40), amt: 0, ok });
+      if (j.wa) { try { await biz.collection('waOut').doc('prd-' + id).create({ st: 'new', at: Date.now(), to: String(j.wa), nm: 'Malik', kind: 'rem', eid: 'prd-' + id, txt: ok ? '🖨 ✅ Print ho gaya: ' + ascii(j.name).slice(0, 40) : '🖨 ✕ Print nahi hua: ' + String(lastPrintErr || 'printer ne jawab nahi diya').slice(0, 100) }); } catch {} }
+      await logPrint({ code: rep ? 'Report' : day ? 'Daily' : 'Khata', name: ascii(j.name).slice(0, 40), amt: 0, ok });
     } catch (e) { log('Khata print masla: ' + e.message); try { await ref.update({ status: 'failed', err: String(e.message || e).slice(0, 120) }); } catch {} }
   }
 }

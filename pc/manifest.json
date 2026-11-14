@@ -1,5 +1,5 @@
 {
- "version": "2026-11-14.8",
+ "version": "2026-11-14.9",
  "note": "hz-wa v1.0 (nayi file) + wa-out v1.22: larkon ki bahar jane ki request WhatsApp se. Pichhla: 14 Nov: raat-report v1.9 (POS Sale.COGS khana nahi = andaza, aaj ki report, app ko haal) + item-report v1.9 (nafa COGS ke baghair). Pichhla: wa-parchi v2.33: gahak ka number alag paigham mein bhi + 0371\u2026 jaise naye number. Pichhla: raat-report v1.8: report na bane / atak jaye to malik ko WhatsApp par wajah. Pichhla: \ud83d\udc65 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: \ud83d\udc64 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (\u26a0\ufe0f Print auto / \u2705 Parchi Mubeen ko gayi / \u23f0 / \u25b6\ufe0f \u2014 waOut pp) + \"Print auto 0344\u2026\" reply bhi; Bu",
  "files": {
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -12,7 +12,7 @@
   "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
   "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
   "label-print.js": "926f0010c856696258bbdfbe87fb0db4f4a421c542cddf26856ce45c66850061",
-  "pos-khata-sync.js": "6e141ddfca0485b054d0884cef1069556778d08fd63eace13868f9458ed27a26",
+  "pos-khata-sync.js": "a89dbbbcbaced8da50afa7b2aac533ca1e8467268c11cdf13528782323332f21",
   "post-farq.js": "a69c347204d2a7e319ff30403ef53dfe2f775d19c775b760547a1e60595510bc",
   "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
   "purchase-post.js": "284c63b22719ba6d4ec4c551985b9edc762597f20fcb3a4c5f04100a2d3a6aee",
@@ -95,7 +95,7 @@
   "pos-jaanch.js": "e616b61a7e82a05452423c625b38dbf08a7bfa08edca189d6dd3728575ce6021",
   "rate-change.js": "fa9d5e34ac12eee1f2a5f6f343355d8dc4b43efa00b3912fc45791fd71270849",
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
-  "wa-out.js": "1a9bacf6d8d45cbb3558066f083bbc99ac6607e5c0de7e7c0eec5b19fb1cd1ee",
+  "wa-out.js": "32f8f16ecfc98c812f61a1e76c22f94a79294e9e1d367940ddc51097d7d72b0e",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
   "bill-clip.js": "d062ed700b111b3508b7c523e81e1c1efb2c31f2e2dd862ac0f010ee05d3ec99",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",

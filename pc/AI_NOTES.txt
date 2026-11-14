@@ -4768,3 +4768,15 @@ Transfer (3) par tafseel NAHI maangi (malik ne nahi kaha).
 wa-out: tafseel aam likhai hoti hai (looks() nahi pakarta) — KHW.waits(number) (khPend parh kar) sach ho aur number ijazat wala ho to paigham kh-wa ko; kh-wa na le to pehle jaisa aage. wa-parchi: sirf version.
 Sawal Business number se aata hai, is liye jawab bhi Business chat mein likha jaye (apni "Message yourself" chat mein likha jawab nahi pakra jata — maloom kami).
 TEST: /tmp/kt2/t.js 14 surtein theek (naqli Firestore). Asal WhatsApp par nahi. AI nahi. App ki koi file nahi badli.
+
+
+==================== PC wa-out v1.24 + pos-khata-sync (v) (14 Nov 2026, manifest 2026-11-14.9) — 🖨 REPORT PAR REPLY "PRINT" = THERMAL ====================
+Malik: "jab report mujhe send ho koi bhi, us ka print reply mein likhoon to print aa jaye" -> "Thermal par" -> OK. Saath: "WhatsApp ka har kaam, jo ho gaya aur jo hona hai, sab ki service tez treen".
+- wa-out `repPrint`: malik (apne phone se, ya Business phone se — repOwn) kisi REPORT paigham par reply `print` -> quoted wid se waOut doc -> id 'rp-…' (raat-report: daily / larka / profit / hazri; rp-err nahi)
+  -> khataPrints/wr-<msg id> {status new, name, wa: malik, j: {k:'txt', t, x}}. Sirf malik (gpMalik = waParchi.prFrom[0]); report na ho = false -> 'print' pehle jaisa (wa-parchi A4 raasta).
+- pos-khata-sync `txtSlip`: NOOR TRADERS + Urdu tareekh + sar-khi bari + paigham ki lines (ASCII; *mota* line moti; khali line = lakeer) -> printReceipt (aam line, nayi entry ki parchi se aage nahi).
+  Doc mein `wa` ho to nateeja waOut 'prd-<id>' ("🖨 ✅ Print ho gaya" / "✕ wajah" / purana hukum).
+- PC band (raat 9 ke baad) = WhatsApp ka paigham PC tak pohanchta hi nahi -> subah report par dobara print likhna (malik ko bataya).
+- ⚡ Raftar: apne number (malik / Mubeen / jure) ke jawab pehle se tez line (isFast, 0.6 s) par hain; gahak ka faasla (cfg.gap) KABHI kam nahi (ban). Naya WhatsApp jawab = isi tez line se, beech mein AI / lamba kaam nahi.
+- Test: txtSlip namoone par chala (output dekha), node --check dono. ASAL WhatsApp / printer par nahi.
+- Hazri app (ALAG repo nt-traders-) v253: Staff list "☑ Kai chunein" -> 🚫 Band / 🗑 Delete ek saath (data.bulkStaff, ek batch). Tafseel us repo ke AI_NOTES mein.

@@ -8249,3 +8249,15 @@ Phone par test nahi. Doosron ki awaz bina bataye record karne ke qanooni pehlu k
 === md pkg v44 (14 Nov 2026 raat) — Falsafa popup: "Sona hai?" (recording ka lafz nahi) ===
 Malik: "recording ki jagah kuch aur likha aaye jaise 'Sona hai ya nahi' — Sona dabaun to band ho jaye, Nahi par chalti rahe".
 Popup par ab lafz "recording" NAHI: chal rahi ho = "😴 Sona hai?" [😴 Sona hai = band] [Nahi = chalti rahe] · band ho = "☀️ Jaag gaye?" [☀️ Jaag gaya = shuru] [Nahi = band rahe]. Kaam wohi (recOff + STOP / restart).
+
+
+==================== PC wa-out v1.24 + pos-khata-sync (v) (14 Nov 2026, manifest 2026-11-14.9) — 🖨 REPORT PAR REPLY "PRINT" = THERMAL ====================
+Malik: "jab report mujhe send ho koi bhi, us ka print reply mein likhoon to print aa jaye" -> "Thermal par" -> OK. Saath: "WhatsApp ka har kaam, jo ho gaya aur jo hona hai, sab ki service tez treen".
+- wa-out `repPrint`: malik (apne phone se, ya Business phone se — repOwn) kisi REPORT paigham par reply `print` -> quoted wid se waOut doc -> id 'rp-…' (raat-report: daily / larka / profit / hazri; rp-err nahi)
+  -> khataPrints/wr-<msg id> {status new, name, wa: malik, j: {k:'txt', t, x}}. Sirf malik (gpMalik = waParchi.prFrom[0]); report na ho = false -> 'print' pehle jaisa (wa-parchi A4 raasta).
+- pos-khata-sync `txtSlip`: NOOR TRADERS + Urdu tareekh + sar-khi bari + paigham ki lines (ASCII; *mota* line moti; khali line = lakeer) -> printReceipt (aam line, nayi entry ki parchi se aage nahi).
+  Doc mein `wa` ho to nateeja waOut 'prd-<id>' ("🖨 ✅ Print ho gaya" / "✕ wajah" / purana hukum).
+- PC band (raat 9 ke baad) = WhatsApp ka paigham PC tak pohanchta hi nahi -> subah report par dobara print likhna (malik ko bataya).
+- ⚡ Raftar: apne number (malik / Mubeen / jure) ke jawab pehle se tez line (isFast, 0.6 s) par hain; gahak ka faasla (cfg.gap) KABHI kam nahi (ban). Naya WhatsApp jawab = isi tez line se, beech mein AI / lamba kaam nahi.
+- Test: txtSlip namoone par chala (output dekha), node --check dono. ASAL WhatsApp / printer par nahi.
+- Hazri app (ALAG repo nt-traders-) v253: Staff list "☑ Kai chunein" -> 🚫 Band / 🗑 Delete ek saath (data.bulkStaff, ek batch). Tafseel us repo ke AI_NOTES mein.
