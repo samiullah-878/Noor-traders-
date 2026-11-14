@@ -8223,3 +8223,10 @@ Malik: "raat ka sawal wala chal nahi raha — shayad us waqt mobile lock ho".
 - raat.py: popup 2 min mein khud band hota tha — phone lock / screen band ho to kabhi nazar nahi aata. Ab teesra trigger DeviceUnlocked + globals rqA / rqB (aaj dikha ya nahi): 20:30–23:59 ke beech screen ON ho aur aaj ka sawal nahi dikha = dikhao (pehle Raat ke 3 sawal, 21:15 ke baad Kal subah ka kaam bhi). Purani list mein ek faltu EndIf tha — hata.
 Phone par test nahi (yahan MacroDroid nahi chalta) — malik se screenshot. Koi macro off / del nahi. AI nahi.
 BAQI: "recording wala jo har waqt recording kare" — NT Awaz ke macro repo mein nahi (4 Nov ko chat mein files gayi thin) — malik se sawal pooche (jagah / calls / storage), OK par banega.
+
+
+=== md pkg v42 (14 Nov 2026 raat) — 📵 TikTok reels: lock ke baad BILKUL nahi ===
+Malik: "reels baar baar 25 minute ke baad bhi open ho rahi hain — bilkul 25 minute ke baad open na ho, only Saved wala".
+Pehle: 25 min poore = tkLock; rok sirf (a) ScreenContentTrigger 'For You dikha' (b) har 1 minute ke tick par thi -> trigger na chale to har dafa ek minute tak reels chalti rehti thin.
+Ab (limits.py GUARD, ghari wale 1-second loop ke andar): lock ke dauran har 2 second CheckTextOnScreen 'For You' -> reels = click Profile -> 1 s baad phir reels = Home (Profile ka button na chale to bhi rok pakki).
+Profile / Saved / Inbox pehle jaise khule (un ka apna 2 ghante). Phone par test nahi — malik batayega. AI nahi. Koi macro off / del nahi.

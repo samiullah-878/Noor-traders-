@@ -39,8 +39,8 @@ LOOP = lambda n: {"m_classType": "LoopAction", "m_SIGUID": 0, "m_option": 0, "m_
 ENDLOOP = {"m_classType": "EndLoopAction", "m_SIGUID": 0}
 BREAK = {"m_classType": "BreakFromLoopAction", "m_SIGUID": 0}
 # ⏱ ghari jaisa countdown (malik 7 Nov: "TikTok ka time ghari ki tarah kam hona chahie"): har 1 s — timers = [(prefix, leftVar)], text = patti ka likha ({lv=<p>M}:{lv=<p>S})
-def clock(ident, pk, nm, lockVar, timers, text, trigs):
-    a = [iff(trigs + [fg(pk, nm), lt(lockVar, 1)]), LOOP(56), pause(1), iff([nfg(pk, nm)]), fthide(ident), BREAK, END]
+def clock(ident, pk, nm, lockVar, timers, text, trigs, extra=None):
+    a = [iff(trigs + [fg(pk, nm), lt(lockVar, 1)]), LOOP(56), pause(1), iff([nfg(pk, nm)]), fthide(ident), BREAK, END] + (extra or [])
     for p, left in timers:
         a += [expr(p + "X", "{v=%s}*60-{loop_iteration}" % left, True), expr(p + "M", "{lv=%sX}/60" % p, True), expr(p + "N", "{lv=%sX}%%60" % p, True),
               iff([lt(p + "N", 10, True)]), sstr(p + "S", "0{lv=%sN}" % p, True), ELSE, sstr(p + "S", "{lv=%sN}" % p, True), END]
@@ -116,13 +116,23 @@ tk += [iff([trig(T_FEED, "For You dikha"), boolc("feed", True, True)], orc=True)
            hrs("ta"), HOME, toast("📵 Saved / Profile ke 2 ghante ho gaye — {v=taHrs} ghante baad (kal isi waqt)"),
          END,
        END]
+# v42 (14 Nov, malik: "reels 25 minute ke baad bhi baar baar khul rahi hain — bilkul na khulein, sirf Saved"): pehle rok sirf 'For You dikha' trigger / har 1 minute par thi
+#   (trigger na chale = ek ek minute reels). Ab lock ke dauran har 2 second screen dekho: reels (For You) = Profile par; Profile ka button na chale to Home.
+GUARD = [expr("gk", "{loop_iteration}%2", True),
+         iff([gt("tkLock", 0), lt("gk", 1, True)]),
+           CHECK,
+           iff([boolc("feed", True, True)]),
+             click("Profile"), pause(1), CHECK,
+             iff([boolc("feed", True, True)]), HOME, END,
+           END,
+         END]
 tk += clock("nttk", TK, TKN, "taLock", [("r", "tkLeft"), ("t", "taLeft")], "📵 reels {lv=rM}:{lv=rS} · Saved {lv=tM}:{lv=tS} baqi",
-            [anytrig((T_TICK, "Har 1 minute"), (112233445566773, "App khuli"))])
+            [anytrig((T_TICK, "Har 1 minute"), (112233445566773, "App khuli"))], GUARD)
 tiktok = {"macroExportVersion": 1, "macro": {
     "m_name": "📵 TikTok reels",
     "m_description": "Reels (For You screen) 25 min → reels par aate hi Profile par. Profile / Saved / Inbox ka apna 2 ghante (reels dekhte waqt nahi katta) → Home. Dono ka lock 24 ghante (agle din usi waqt). Following feed bhi reels mein ginti hai (upar For You likha hota hai).",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [{"m_name": "feed", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, lvar("tkRem"), lvar("taRem")] + cvars(["r", "t"]),
+    "localVariables": [{"m_name": "feed", "m_type": 0, "m_booleanValue": False, "isLocalVar": True}, lvar("tkRem"), lvar("taRem"), lvar("gk")] + cvars(["r", "t"]),
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T_TICK, "m_seconds": 60, "m_useAlarm": False},
         {"m_classType": "ScreenContentTrigger", "m_SIGUID": T_FEED, "textToMatch": "For You", "ignoreCase": True, "enableRegex": False, "packageNameList": TK, "appNameList": TKN, "matchOption": 0},
