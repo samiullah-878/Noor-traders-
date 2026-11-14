@@ -8268,3 +8268,8 @@ Malik (YouTube ki screenshot, upar "▶ YouTube · 117:53 baqi" patti): "YouTube
 - limits.py: YouTube ki baqi-waqt patti (ntyt) HATI — ginti / lock wahi. TikTok ki patti (nttk) sirf reels (For You) par: clock(…, cond) + GUARD ab har 2 s screen hamesha dekhta hai (rok sirf lock par); likhai "📵 reels MM:SS baqi" (Saved ka waqt patti par nahi). Facebook ki patti nahi chheri (malik ne nahi kaha).
 - rec.py: har tukde se pehle ForceLocationUpdateAction (15 s hadd) + file ka naam "NT_<tareekh>_<waqt>_<lat>_<long>". Jagah ka NAAM phone par nahi banta (sirf lat / long) — naam chahiye to Drive wali script (awaz-gas) mein.
 - Test: if / loop barabar, Recording macro MCP validator VALID. ASAL phone par nahi — malik se screenshot.
+
+
+==================== Hazri app v254 (ALAG repo nt-traders-, 15 Nov 2026) — malik ka panel chhota ====================
+Malik: "ek screen par 8 larkon ke naam, upar / neeche small, 🔔 mein sab requests / notifications, baqi ⋮ mein, Urdu sirf mulazim ke hazri page par". Hazri repo mein bana (owner.js / urdu.js / styles.css) —
+tafseel us repo ke AI_NOTES.txt (v254). Blue Khata ka koi code nahi badla; yahan sirf CLAUDE.md mein qaida.
