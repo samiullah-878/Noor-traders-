@@ -8414,3 +8414,10 @@ Malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, 
 - 🤖 lagi hui tasveer se AI: chipki bill tasveer (`pinned`) par '🤖 Is se items' -> `picAi` (billPics -> File) -> `aiRead(files, {ai: true})` — phone + PC (PC par tasveer chun-ne se ab bhi sirf tasveer lagti hai; AI sirf is chip se — malik ka naya hukum 'sab par').
 - 'Naam change nahi ho raha': chip par ✏️ nahi tha aur naam par tap kuch nahi karta tha (code mein chip ka raasta theek tha; asal phone par wajah pakki nahi) -> ab naam + chip dono se. Malik se dobara poochho chala ya nahi.
 - TEST: node --check + headless Chrome mein line ka banawati HTML (shakal dekhi). Asal app / phone par nahi chalaya. AI: wohi Gemini.
+
+## v2.288.0 (2026-11-15) — 🧾 Purchase: raqam + rate = tadad khud · ％ W chip ke neeche chips (alag khirki nahi)
+- Malik (v2.287.0 ki screenshot: panda phyenyle, Ctn / Pcs khali, Kh/Pcs 300, Raqam 10800, Rs 0): 'raqam likhein aur rate likha ho to pcs khud aana chahiye' + 'wholesale mein alag tab nahi open karna — chips neeche ki taraf khulein, wahan percentage likha ho'.
+- purchase.js `qFromAmt(l, i, amt)`: tadad = raqam ÷ khareed fi piece (carton wala = CTN + bache PCS; poore hindse ke 0.02 qareeb = gol). Sirf jab tadad KHALI ho ya pehle bhi isi tarah bani ho (`l.qAuto`) —
+  larke ki likhi tadad par raqam se RATE banta hai (pehle jaisa). Dono tarteeb: raqam -> rate (`l.amtIn` yaad) ya rate -> raqam. Ctn / Pcs haath se likhte hi `qAuto` band. Phone lines + table + card teeno (ek hi input handler).
+- ％ chip: `wAllForm` (dlg) hata -> `wOpen` + `wDropHTML` (summary mein chip ke neeche `.pp-wdrop`: 1 · 1.25 · 1.5 · 2 · 2.5 · 3 · 4 · 5 · Band + apna % ✓ Lagao) -> wohi `wAllSet`.
+- TEST: node --check + qFromAmt ka hisaab node mein (10800 / 300, pack 6 = 6 ctn; 10500 = 5 ctn + 5 pcs; rate 0 = kuch nahi). Asal phone par nahi. AI nahi.

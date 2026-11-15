@@ -8250,3 +8250,13 @@ html body #list .pp-cr .pp-cg{gap:4px;margin-top:3px}
 html body #list .pp-cr .pp-cg .pp-k input,html body #list .pp-cr .pp-cg .pp-k select{height:30px;min-height:30px}
 html body #list .pp-billacts .pp-picai{border-color:#9bd8ad!important;background:linear-gradient(#f3fbf5,#e0f3e6)!important;color:#14532d!important;font-weight:800!important;white-space:nowrap}
 html body #list .pp-cr .pp-cg .pp-k input,html body #list .pp-cr .pp-cg .pp-k select{height:28px;min-height:28px}html body #list .pp-cr{margin:0 0 4px}html body #list .pp-tl{gap:4px}html body #list .pp-tl .pp-lbl{margin:0!important;width:30px;height:28px}
+
+/* v2.288.0: ％ W chip ke neeche khulne wali patti (alag khirki nahi) */
+html body #summary .pp-wdrop{margin:0 0 6px;padding:8px 10px;border-radius:14px;background:#fff;border:1px solid #dde3ef;box-shadow:0 4px 14px rgba(20,30,60,.10)}
+html body #summary .pp-wdrop .pp-wset{display:flex;flex-wrap:wrap;gap:6px}
+html body #summary .pp-wdrop .pp-wset button{min-height:36px;padding:0 13px;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2f9)!important;color:#1a2d53!important;font-weight:800!important;font-size:14px;white-space:nowrap}
+html body #summary .pp-wdrop .pp-wset button.is-in{background:#14532d!important;color:#fff!important;border-color:#14532d!important}
+html body #summary .pp-wdrop .pp-wown{display:flex;align-items:center;gap:6px;margin-top:7px;min-width:0}
+html body #summary .pp-wdrop .pp-wown input{flex:none;width:92px;height:36px;min-height:36px;padding:0 8px;border:1px solid #d9e0ec;border-radius:11px;font-weight:700;font-size:14px;text-align:right}
+html body #summary .pp-wdrop .pp-wown button{flex:none;min-height:36px;padding:0 12px;border-radius:999px!important;background:#14532d!important;color:#fff!important;border:0!important;font-weight:800!important;font-size:13.5px;white-space:nowrap}
+html body #summary .pp-wdrop .pp-wown small{flex:1;min-width:0;font-size:12.5px;color:#5d6b88;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}

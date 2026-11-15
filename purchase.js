@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.287.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.287.0';
-import { blurScore, blurText } from './pic-check.js?v=2.287.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.288.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.288.0';
+import { blurScore, blurText } from './pic-check.js?v=2.288.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -274,18 +274,15 @@ const isGrid = () => viewNow() === 'grid';
 const isRows = () => viewNow() === 'rows';   // v2.96.4: CHHOTI PATTI — sirf ek item khula (openKey), 'all' = sab khule; filter all | warn | chg
 let posX = false;
 let wAll = (() => { try { return Number(localStorage.getItem('sam-pp-wall')) || 0; } catch { return 0; } })();
-function wAllForm() {   // v2.287.0: upar daayein ％ chip -> Wholesale % (CTN + PCS) SAB items par
-  dlg('％ Wholesale — sab items par', `<p class="stat-note">Har item ka Wholesale rate (CTN + PCS) = khareed + itna %. Naye item par bhi khud lagega.</p>
-    <div class="mchips pp-wset">${[1, 1.25, 1.5, 2, 2.5, 3, 4, 5].map(v => `<button type="button" class="${wAll === v ? 'is-in' : ''}" data-pp-wset="${v}">${v}%</button>`).join('')}<button type="button" class="${wAll > 0 ? '' : 'is-in'}" data-pp-wset="0">Band</button></div>
-    <label>Apna %<input id="ppWown" type="number" min="0" step="any" inputmode="decimal" placeholder="jaise 1.75" value="${wAll > 0 && ![1, 1.25, 1.5, 2, 2.5, 3, 4, 5].includes(wAll) ? wAll : ''}"></label>
-    <p><button type="button" class="got" data-pp-wset="own">✓ Lagao</button></p>`);
-}
+let wOpen = false;   // v2.288.0 (malik: 'alag tab nahi — chips neeche ki taraf khulein'): ％ chip ke neeche patti
+const W_PCTS = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
+const wDropHTML = () => `<div class="pp-wdrop"><div class="pp-wset">${W_PCTS.map(v => `<button type="button" class="${wAll === v ? 'is-in' : ''}" data-pp-wset="${v}">${v}%</button>`).join('')}<button type="button" class="${wAll > 0 ? '' : 'is-in'}" data-pp-wset="0">Band</button></div>
+    <div class="pp-wown"><input id="ppWown" type="number" min="0" step="any" inputmode="decimal" placeholder="apna %" value="${wAll > 0 && !W_PCTS.includes(wAll) ? wAll : ''}"><button type="button" data-pp-wset="own">✓ Lagao</button><small>Wholesale CTN + PCS · sab items par</small></div></div>`;
 document.addEventListener('click', e => {
-  if (e.target.closest?.('[data-pp-wchip]')) { wAllForm(); return; }
+  if (e.target.closest?.('[data-pp-wchip]')) { wOpen = !wOpen; rerender(); return; }
   const w = e.target.closest?.('[data-pp-wset]'); if (!w) return;
   const v = w.dataset.ppWset === 'own' ? Number($('ppWown')?.value) || 0 : Number(w.dataset.ppWset) || 0;
-  try { $('dialog')?.close(); } catch {}
-  wAllSet(v);
+  wOpen = false; wAllSet(v);
 });
 function wAllSet(p) {
   wAll = p > 0 ? p : 0; try { localStorage.setItem('sam-pp-wall', String(wAll)); } catch {}
@@ -746,7 +743,7 @@ export function renderPP() {
   if (pos) wai.watch();
   const bcBar = (edit && Number(edit.purchaseId) && typeof window.ntBcTick === 'function' ? `<div class="pp-bc" data-mn-keep="1">${window.ntBcTick('pos-' + Number(edit.purchaseId), 'big')}${typeof window.ntBcGo === 'function' ? `<button type="button" class="got pp-bcgo" data-pp-bcgo="1"${bcBusy ? ' disabled' : ''}>${bcBusy ? '⏳' : '✓ Check + 📌 Post' + (editNav?.list?.[editNav.i + 1] ? ' · agla ›' : editNav?.bc ? ' · list ›' : '')}</button>` : ''}</div>` : '');   // v2.128.0: ✓ Check + 📌 Post patti form band hone par bhi dikhe
   $('summary').innerHTML = `<div class="stock-head sale-head pp-head${pos ? ' pp-posr' : ''}" data-pp-root="1">
-    ${pos ? posHd : hdBar ? `<div class="pp-hrow">${hdBar}<button type="button" class="pp-wchip${wAll > 0 ? ' is-in' : ''}" data-pp-wchip="1" title="Wholesale % — sab items par">％ W ${wAll > 0 ? num(wAll) + '%' : '—'}</button></div>` : ''}${bcBar}${fromBarHTML()}<div class="pp-hd${hdShow ? '' : ' pp-hd-off'}">
+    ${pos ? posHd : hdBar ? `<div class="pp-hrow">${hdBar}<button type="button" class="pp-wchip${wAll > 0 ? ' is-in' : ''}" data-pp-wchip="1" title="Wholesale % — sab items par">％ W ${wAll > 0 ? num(wAll) + '%' : '—'} ${wOpen ? '▴' : '▾'}</button></div>${wOpen ? wDropHTML() : ''}` : ''}${bcBar}${fromBarHTML()}<div class="pp-hd${hdShow ? '' : ' pp-hd-off'}">
     <div class="pp-modes"><button type="button" class="on">🧾 Items wali bill</button>${photoFormOf ? '<button type="button" data-pp-photo="1" data-mn="pp.photo" data-mn-i="📷" data-mn-t="Sirf photo" data-mn-s="photo + raqam (bina items)" data-mn-g="🧾 Purchase — kaam">📷 Sirf photo + raqam</button>' : ''}</div>
     ${billStripHTML()}
     ${edit ? `<div class="pp-edit"><b>✏️ EDIT — POS bill ${esc(edit.billNo || '')}</b><small>Save par yahi bill POS mein UPDATE hoga (naya nahi banega)</small><button type="button" data-pp-edit-off="1">✕ Edit chhodo</button></div>` : ''}
@@ -1046,6 +1043,19 @@ function paintRates(i) {
     chg('wctn', wcO, l.wctn); chg('wpcs', l.oldW, l.wpcs); chg('rctn', rcO, l.rctn); chg('rpcs', oR, l.rpcs); chg('costp', l.oldCost, l.costP); if (pk) chg('costc', r2(l.oldCost * pk), l.costP ? r2(l.costP * pk) : 0); }
 }
 
+// v2.288.0 (malik 15 Nov: 'raqam likhein aur rate likha ho to pcs khud aana chahiye'): tadad = raqam ÷ khareed (carton wala = CTN + bache PCS).
+//   Sirf jab tadad khali ho ya pehle bhi isi tarah bani ho (qAuto) — larke ki likhi tadad kabhi nahi badalti (us soorat mein raqam se RATE banta hai, pehle jaisa).
+function qFromAmt(l, i, amt) {
+  const c = Number(l.costP) || 0, pk = packOf(l);
+  if (!(amt > 0) || !(c > 0)) { if (l.qAuto) { l.pcs = 0; if (pk) l.ctn = 0; } else return false; }
+  else {
+    let q = amt / c; q = Math.abs(q - Math.round(q)) < 0.02 ? Math.round(q) : r3(q);
+    if (pk) { l.ctn = Math.floor(q / pk + 1e-9); l.pcs = r3(q - l.ctn * pk); } else l.pcs = q;
+    l.qAuto = true;
+  }
+  for (const [k, v] of pk ? [['ctn', l.ctn], ['pcs', l.pcs]] : [['pcs', l.pcs]]) for (const el of document.querySelectorAll(`[data-pp-${k}="${i}"]`)) if (document.activeElement !== el) el.value = v || '';
+  return true;
+}
 // ---------- events ----------
 const inPP = t => !!t?.closest?.('#list,#summary,#actions') && !!document.querySelector('[data-pp-root]');   // v2.121.0: footer ki chips patti (godam) bhi
 document.addEventListener('input', e => {
@@ -1054,13 +1064,14 @@ document.addEventListener('input', e => {
     if (box) box.innerHTML = supList(); return; }
   if (!inPP(t)) return;
   const d = t.dataset; let i;
-  if ((i = d.ppCtn) != null) cart[i].ctn = Math.max(0, Math.floor(Number(t.value) || 0));
-  else if ((i = d.ppPcs) != null) cart[i].pcs = Math.max(0, Number(t.value) || 0);
-  else if ((i = d.ppCostc) != null) { const l = cart[i]; l.costP = packOf(l) ? r4((Number(t.value) || 0) / packOf(l)) : Number(t.value) || 0; recalc(l); paintRates(i); }
-  else if ((i = d.ppCostp) != null) { const l = cart[i]; l.costP = r4(Number(t.value) || 0); recalc(l); paintRates(i); }
+  if ((i = d.ppCtn) != null) { cart[i].ctn = Math.max(0, Math.floor(Number(t.value) || 0)); cart[i].qAuto = false; cart[i].amtIn = 0; }
+  else if ((i = d.ppPcs) != null) { cart[i].pcs = Math.max(0, Number(t.value) || 0); cart[i].qAuto = false; cart[i].amtIn = 0; }
+  else if ((i = d.ppCostc) != null) { const l = cart[i]; l.costP = packOf(l) ? r4((Number(t.value) || 0) / packOf(l)) : Number(t.value) || 0; if ((linePcs(l) <= 0 || l.qAuto) && l.amtIn > 0) qFromAmt(l, i, l.amtIn); recalc(l); paintRates(i); }
+  else if ((i = d.ppCostp) != null) { const l = cart[i]; l.costP = r4(Number(t.value) || 0); if ((linePcs(l) <= 0 || l.qAuto) && l.amtIn > 0) qFromAmt(l, i, l.amtIn); recalc(l); paintRates(i); }
   else if ((i = d.ppAmt) != null) {   // v2.1.0: bill ki raqam likho -> khareed = raqam ÷ ginti
     const l = cart[i], q = linePcs(l), amt = Number(t.value) || 0;
-    if (q > 0 && amt > 0) { l.costP = r4(amt / q); recalc(l); paintRates(i); }
+    if (q <= 0 || l.qAuto) { l.amtIn = amt; qFromAmt(l, i, amt); }   // v2.288.0 (malik): tadad khali + raqam + rate = tadad khud (raqam ÷ rate)
+    else if (amt > 0) { l.costP = r4(amt / q); recalc(l); paintRates(i); }
   }
   // v2.98.3: PCS aur CTN rate BILKUL ALAG — ek badlo to doosra nahi badalta (v2.96.4 ka link hata diya)
   else if ((i = d.ppWctn) != null) { const l = cart[i], pk = packOf(l); l.wctn = Number(t.value) || 0; setMode(l, 'wc', 'manual'); paintRates(i); }   // v2.98.2: CTN badle to PCS NAHI badalta (sirf PCS -> CTN)
