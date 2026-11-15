@@ -8331,3 +8331,14 @@ Malik (rack ka size screen ki photo): "yahan camera, picture lagana, item select
 - Data naya NAHI (racks.ic / sh / order / cn). Saamne sirf search + ＋ + rack (keyboard qaida); baqi patti mein. Online Dukan ki main list / ⋮ nahi badle.
 - AI: sirf 📸 ki ek tasveer ka dabba (Gemini aiImage, pehle jaisa) — save hamesha malik ke chunne par. Baqi kahin nahi.
 - Jaanch: node --check + asal style.css ke saath pattiyon ki tasveer (Chromium). Asal app / phone par chala kar test NAHI — malik se screenshot.
+
+
+==================== v2.282.0 (15 Nov 2026) — 👯 QATAR (ek item ke kai piece saath saath) + ↔ CHAURAI + 🔄 GHUMAO ====================
+Malik (rack screen, patla Sparkle 200gm): "ek hi item ke 4-5 piece lagane hon to wo bhi chips bana do · ye bohat small lag raha hai, is ka hal · is ki chaurai bhi barhane wale chips hone chahiye".
+- 👯 Qatar: `racks.dq[id] = 1` + `racks.dh[id]` (ginti 2-12) = wohi tasveer EK QATAR mein (n x 1), har piece poora qad (🧱 Dher = 2x2 grid, piece chhote). khula.js `itemU(..., ex)` / `rackLayoutU(..., ex)` ex = {dq, wx}; `dherHTML(one, n, row)`. － ＋ = ginti (purana dher wala raasta). 🧱 Dher aur 👯 Qatar ek doosre ko band karte hain.
+- ↔ － / ↔ ＋: `racks.wx[id]` 0.5-3 (x1.15 qadam) = chaurai ka guna — dabba chaura, tasveer khinchti hai (website `.it[data-wx]` object-fit fill + fitIt `data-wx`; app `.wd-zi[data-wx]` background 100% 100%). ↩ Poora = wx bhi hata.
+- 🔄 Ghumao: `rzRotate` tasveer 90° ghuma kar dobara save (khari cheez leti hui = shelf par bari). wx hata deta hai.
+- cloud.saveWebRacks + web-dukan load + dukan.js load mein `dq`, `wx` (rules: webDukan/racks par field ki rok nahi — rules nahi badle).
+- Chhoti durusti: neeche ke chips wrap (side scroll nahi), shelf ka number footer ke upar nahi aata (`.wd-f` z-index).
+- Door se dukan (kamra.js) ka nazara in dono ko abhi nahi dikhata (sirf paas wala rack + app). AI nahi.
+- Jaanch: node --check + khula.js ka hisaab node se (qatar 4 = chaurai x4, wx 2 = x2). Asal phone / website par test NAHI.

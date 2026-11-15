@@ -24,10 +24,10 @@
 //   v2.166.0 (malik: "site chhoti screen jaisi — dukan jaise racks door se nazar aayein · daalein ek deewar, baqi racks doosri · jis rack ke paas jaye wo dikhe"):
 //     🏬 KAMRA (kamra.js) — 3D gali, ungli upar = aage · rack par tap = mud kar paas → yahi purana rack view ('near' khirki, phone back / 🏬 = wapas kamra).
 //     Abhi sirf ?kamra=1 link par (malik dekhe) — OK ke baad sab ke liye (ROOM_DEFAULT).
-import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.281.0';
-import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, KH_ON, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.281.0';
-import { smartFind } from './dhoond.js?v=2.281.0';
-import { makeKamra } from './kamra.js?v=2.281.0';
+import { firebaseConfig, BUSINESS_ID } from '../config.js?v=2.282.0';
+import { kindOf, drawBin, drawSack, thumbOf, pkLab, isKg, KHK, KH_NAME, KH_ON, grainRank, szW, rackCols, rackRows, rackRowsOf, rackLayout, trimUrl, dherN, effSz, itemBox, dherHTML, RK_RA, RK_ROWS, rackLayoutU, rkDeep, depthHTML } from './khula.js?v=2.282.0';
+import { smartFind } from './dhoond.js?v=2.282.0';
+import { makeKamra } from './kamra.js?v=2.282.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -139,7 +139,7 @@ function build(d) {
   const groups = new Map(); S.items = new Map();
   // 📸 v2.158.0: asal rack ki photos — photo par jo item hai wo usi rack ka (bane hue rack mein dohra nahi)
   S.ar = R.ar && typeof R.ar === 'object' ? R.ar : {}; S.arRt = S.arRt || {};
-  S.sn = R.sn && typeof R.sn === 'object' ? R.sn : {}; S.rn = R.rn && typeof R.rn === 'object' ? R.rn : {}; S.dh = R.dh && typeof R.dh === 'object' ? R.dh : {}; S.sh = R.sh && typeof R.sh === 'object' ? R.sh : {}; S.sz = R.sz && typeof R.sz === 'object' ? R.sz : {};
+  S.sn = R.sn && typeof R.sn === 'object' ? R.sn : {}; S.rn = R.rn && typeof R.rn === 'object' ? R.rn : {}; S.dh = R.dh && typeof R.dh === 'object' ? R.dh : {}; S.sh = R.sh && typeof R.sh === 'object' ? R.sh : {}; S.sz = R.sz && typeof R.sz === 'object' ? R.sz : {}; S.dq = R.dq && typeof R.dq === 'object' ? R.dq : {}; S.wx = R.wx && typeof R.wx === 'object' ? R.wx : {};
   S.nmOn = !!R.nmOn; S.lp = R.lp && typeof R.lp === 'object' ? R.lp : {}; S.draw = !!R.draw; S.cr = R.cr && typeof R.cr === 'object' ? R.cr : {};
   S.rps = Object.entries(R.rp && typeof R.rp === 'object' ? R.rp : {}).map(([pid, x]) => { let a = []; try { a = JSON.parse((x && x.s) || '[]'); } catch {}
     return { pid, k: String(x?.k || '').trim(), o: Number(x?.o) || 0, w: Number(x?.w) || 3, h: Number(x?.h) || 4, spots: (Array.isArray(a) ? a : []).filter(t => Array.isArray(t) && t[4]).map(t => ({ x: +t[0] || 0, y: +t[1] || 0, w: +t[2] || 0, h: +t[3] || 0, id: String(t[4]) })) }; })
@@ -210,13 +210,13 @@ const imgOf = (it, big) => { const u = picOf(it, big ? 280 : 120); return u ? `<
 
 function itemHTML(it, st, x) {
   const q = cnt(it.id);
-  return `<button type="button" class="it${q ? ' in-crate' : ''}"${st ? ` style="${st}"` : ''}${x ? ` data-hu="${x.hu.toFixed(2)}" data-wu="${x.wu.toFixed(2)}" data-dc="${x.c}" data-dr="${x.r}" data-mn="${x.mn.toFixed(1)}"` : ''} data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${x ? DEEP(dherHTML(imgOf(it), x.n)) : imgOf(it)}</span><span class="tag">${tagIn(it)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
+  return `<button type="button" class="it${q ? ' in-crate' : ''}"${st ? ` style="${st}"` : ''}${x ? ` data-hu="${x.hu.toFixed(2)}" data-wu="${x.wu.toFixed(2)}" data-dc="${x.c}" data-dr="${x.r}"${x.wx !== 1 ? ` data-wx="${x.wx}"` : ''} data-mn="${x.mn.toFixed(1)}"` : ''} data-id="${esc(it.id)}" aria-label="${esc(it.n)}, ${rs(it.r)}"><span class="it-box">${x ? DEEP(dherHTML(imgOf(it), x.n, x.n > 1 && x.r === 1)) : imgOf(it)}</span><span class="tag">${tagIn(it)}</span><span class="plus" data-plus="1" aria-label="Tokri mein dalo">${q ? num(q) : '+'}</span></button>`;
 }
 // v2.272.0: 🧲 tasveer ki ASAL shakal aate hi item ki chaurai theek (racks.ar na ho / purana ho tab bhi faasla nahi) — sirf tasveer load par, scroll mein nahi
 function fitIt(img) {
   const el = img.closest && img.closest('.shelf.fx .it'); if (!el || !img.naturalWidth || !img.naturalHeight) return;
   const hu = Number(el.dataset.hu) || 0, c = Number(el.dataset.dc) || 1, r = Number(el.dataset.dr) || 1, mn = Number(el.dataset.mn) || 0; if (!hu) return;
-  const a = img.naturalWidth / img.naturalHeight, wu = Math.min(100, Math.max(mn, hu / r * a * c));
+  const a = img.naturalWidth / img.naturalHeight, wu = Math.min(100, Math.max(mn, hu / r * a * c * (Number(el.dataset.wx) || 1)));
   S.arRt[el.dataset.id] = Math.round(a * 100) / 100;
   if (Math.abs(wu - (Number(el.dataset.wu) || 0)) > 0.4) { el.dataset.wu = wu.toFixed(2); el.style.setProperty('--wu', wu.toFixed(2)); }
 }
@@ -342,7 +342,7 @@ function renderAisle(keepId) {
   S.racks.forEach(rk => { rk.bay0 = bays.length;
     rk.photos.forEach((ph, j) => bays.push({ rk, photo: ph, p: j, parts: rk.photos.length, items: [...new Set(ph.spots.map(x => x.id))].map(id => S.items.get(id)).filter(Boolean) }));   // 📸 pehle asal photo
     const K = khPack(rk.loose, D); K.forEach((kh, j) => bays.push({ rk, kh, p: j, parts: K.length, items: [...kh.g, ...kh.s] }));   // 🌾 phir khula maal (dabbe + tore)
-    { const rowsN = rackRowsOf(rk.key, S.rn, RK_ROWS), B = rk.rest.length ? rackLayoutU(rk.rest, rowsN, S.sz, S.dh, { ...S.ar, ...S.arRt }, S.sh) : [];
+    { const rowsN = rackRowsOf(rk.key, S.rn, RK_ROWS), B = rk.rest.length ? rackLayoutU(rk.rest, rowsN, S.sz, S.dh, { ...S.ar, ...S.arRt }, S.sh, { dq: S.dq, wx: S.wx }) : [];
       B.forEach((part, p) => bays.push({ rk, p, parts: B.length, rowsN, shelves: part, items: part.flat().map(x => x.it) })); }
     if (bays.length === rk.bay0) rk.bay0 = null; });
   let no = 0; S.racks.forEach(rk => { rk.no = rk.bay0 == null ? 0 : ++no; }); S.vis = S.racks.filter(rk => rk.bay0 != null);   // sirf nazar aane wale racks ginti mein
@@ -428,7 +428,7 @@ function setPhoto(id, url, done) {
   if (!done) trimUrl(url).catch(() => url).then(u => asBlob(u || url)).then(u => { if (u && u !== url && PHURL.get(id) === url) setPhoto(id, u, true); else if (K) K.photo(id, PHURL.get(id)); }).catch(() => { if (K) K.photo(id, PHURL.get(id)); });
   PHURL.set(id, url); if (done && K) K.photo(id, url);   // 🏬 door wale rack par bhi wohi tasveer (chhota blob link aate hi — lamba data: link DOM mein nahi)
   document.querySelectorAll(`[data-kh="${CSS.escape(id)}"] canvas`).forEach(c => { c._ok = false; KQ.push(c); }); if (KQ.length && !kqRaf) kqRaf = requestAnimationFrame(khPump);   // 🌾 malik ki tasveer dabbe / tore mein
-  document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .it-box`).forEach(b => { const one = `<img src="${url}" alt="">`; b.innerHTML = b.closest('.shelf.fx') ? (done ? DEEP : x => x)(dherHTML(one, dherN(id, S.dh))) : one; });   // peeche ki qatarein sirf chhote (blob) link par — lamba data: link 3 dafa DOM mein nahi
+  document.querySelectorAll(`.it[data-id="${CSS.escape(id)}"] .it-box`).forEach(b => { const one = `<img src="${url}" alt="">`; b.innerHTML = b.closest('.shelf.fx') ? (done ? DEEP : x => x)(dherHTML(one, dherN(id, S.dh), !!(S.dq && S.dq[id]))) : one; });   // peeche ki qatarein sirf chhote (blob) link par — lamba data: link 3 dafa DOM mein nahi
   if (S.open === id) $('shImg').innerHTML = imgOf(S.items.get(id), true);
   paintCrate();
 }

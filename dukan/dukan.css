@@ -626,6 +626,9 @@ html.lite .k-hint{animation:none}
 .dhr{display:flex;flex-wrap:wrap-reverse;align-content:flex-start;justify-content:center;width:100%;height:100%;min-height:0}
 .bay.peg .it-box .dhr img,.dhr img{flex:0 0 calc(100%/var(--dc,2));width:calc(100%/var(--dc,2));max-width:none;height:calc(100%/var(--dr,1));max-height:none;min-width:0;object-fit:contain;object-position:50% 100%;animation:none}
 .dhr img.bk{filter:brightness(.9)}
+/* v2.282.0: ↔ chaurai ka guna (racks.wx) = tasveer dabbe jitni khinchti hai */
+.shelf.fx .it[data-wx] .it-box img,.bay.peg .it[data-wx] .it-box img{width:100%;height:100%;max-width:100%;max-height:100%;object-fit:fill}
+.shelf.fx .it[data-wx] .it-box .dhr img{width:calc(100%/var(--dc,2));height:calc(100%/var(--dr,1));object-fit:fill}
 
 /* v2.272.0: 🧲 jure hue items — naap unit (--u px) mein, shelf = 100 unit; item ki chaurai = tasveer ki apni shakal, oonchai = shelf jitni x size */
 .bay.tt{padding-left:max(8px,var(--sal));padding-right:max(8px,var(--sar));--tf:clamp(10.5px,calc(var(--u,3.4px)*3.1),15px);--tg:calc(var(--tf)*1.4)}

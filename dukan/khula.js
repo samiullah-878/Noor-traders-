@@ -256,7 +256,7 @@ export const dherN = (id, dh) => { const n = Math.round(Number(dh && dh[id]) || 
 export const dGrid = n => n <= 1 ? [1, 1] : n === 2 ? [2, 1] : n <= 4 ? [2, 2] : n <= 6 ? [3, 2] : n <= 9 ? [3, 3] : [4, 3];
 export function effSz(sz, dh) { if (!dh) return sz || {}; const o = { ...(sz || {}) }; for (const id of Object.keys(dh)) { const n = dherN(id, dh); if (n > 1) o[id] = Math.min(8, szW(id, sz) * dGrid(n)[0]); } return o; }
 export function itemBox(id, sz, dh, cell) { const base = szW(id, sz), n = dherN(id, dh), [c, r] = dGrid(n); return { n, c, r, w: base * c, hp: Math.round(base * cell * (n > 1 ? 1.1 * r + 0.45 : 1.5)) }; }
-export const dherHTML = (one, n) => { if (n <= 1) return one; const [c, r] = dGrid(n); let h = ''; for (let i = 0; i < n; i++) h += i >= c ? one.replace('<img ', '<img class="bk" ').replace('class="wd-zp', 'class="bk wd-zp') : one; return `<span class="dhr" style="--dc:${c};--dr:${r}">${h}</span>`; };
+export const dherHTML = (one, n, row) => { if (n <= 1) return one; const [c, r] = row ? [n, 1] : dGrid(n); let h = ''; for (let i = 0; i < n; i++) h += i >= c ? one.replace('<img ', '<img class="bk" ').replace('class="wd-zp', 'class="bk wd-zp') : one; return `<span class="dhr" style="--dc:${c};--dr:${r}">${h}</span>`; };
 
 // v2.272.0: 🧲 JURE HUE ITEMS (malik 13 Nov: "item ke darmiyan faasla nahi · shelf kam nazar aaye, item zyada") — naap UNIT mein: shelf ki chaurai = 100 unit.
 //   Item ki oonchai = shelf jitni x malik ka size (0.4 - 1) · chaurai = oonchai x tasveer ki apni shakal (racks.ar) — phone / PC / app preview par har shelf par WAHI items.
@@ -272,13 +272,15 @@ export const rkDeep = (rows, availU) => { const iu = rkImgU(rows), pk = Math.max
 export const depthHTML = one => one + RK_D.map((s, i) => `<span class="bh b${i + 1}" aria-hidden="true">${one}</span>`).join('');   // wohi tasveer peeche 2 dafa (CSS chhota + upar + andar)
 export const arOf = (id, ar) => { const v = Number(ar && ar[id]); return v > 0.12 && v < 8 ? v : 0.8; };
 export const sizeOf = (id, sz) => Math.max(0.4, Math.min(1, szW(id, sz)));
-export function itemU(it, rows, sz, dh, ar) {
-  const n = dherN(it.id, dh), g = dGrid(n), hu = rkImgU(rows) * sizeOf(it.id, sz), p = Math.round(Number(it.r) || 0), mn = 2.4 + 2 * (String(p).length + (p >= 1000 ? 1 : 0));
-  return { n, c: g[0], r: g[1], hu, mn, wu: Math.min(100, Math.max(mn, hu / g[1] * arOf(it.id, ar) * g[0])) };
+// v2.282.0 (malik 15 Nov: 'ek hi item ke 4-5 piece saath saath · chaurai barhane wale chips'): ex = { dq: {id: 1} = dher ek QATAR mein (n x 1, har piece poora qad) · wx: {id: 0.5-3} = chaurai ka guna (tasveer khinchti hai) }
+export const wxOf = (id, wx) => { const v = Number(wx && wx[id]); return v >= 0.5 && v <= 3 ? v : 1; };
+export function itemU(it, rows, sz, dh, ar, ex) {
+  const n = dherN(it.id, dh), g = n > 1 && ex && ex.dq && ex.dq[it.id] ? [n, 1] : dGrid(n), wxv = wxOf(it.id, ex && ex.wx), hu = rkImgU(rows) * sizeOf(it.id, sz), p = Math.round(Number(it.r) || 0), mn = 2.4 + 2 * (String(p).length + (p >= 1000 ? 1 : 0));
+  return { n, c: g[0], r: g[1], hu, mn, wx: wxv, wu: Math.min(100, Math.max(mn, hu / g[1] * arOf(it.id, ar) * g[0] * wxv)) };
 }
-export function rackLayoutU(items, rows, sz, dh, ar, sh) {
+export function rackLayoutU(items, rows, sz, dh, ar, sh, ex) {
   const mk = () => Array.from({ length: rows }, () => ({ L: [], w: 0 })), bays = [mk()], auto = [];
-  for (const it of items) { const x = { it, ...itemU(it, rows, sz, dh, ar) }, s = sh ? sh[it.id] : null;
+  for (const it of items) { const x = { it, ...itemU(it, rows, sz, dh, ar, ex) }, s = sh ? sh[it.id] : null;
     if (typeof s === 'number' && s >= 0 && s < rows) { const S = bays[0][s]; if (S.w + x.wu <= 100.5) { S.L.push(x); S.w += x.wu; continue; } }
     auto.push(x); }
   let b = 0, r = 0;

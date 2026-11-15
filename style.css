@@ -8142,6 +8142,10 @@ html body #wdDlg .wd-zi.is-in{outline:2px solid #ffd84d;outline-offset:-1px;back
 #wdDlg .wd-zs.is-in{background:rgba(255,216,77,.22);box-shadow:inset 0 0 0 2px #ffd84d}
 html body #wdDlg .wd-zi{position:relative;z-index:1;flex:0 1 auto;min-width:0;width:calc(var(--wu,14)*var(--u,3.4px));height:min(100%,calc(var(--hu,14)*var(--u,3.4px) + var(--tg)));padding:0!important;border-radius:0!important}
 html body #wdDlg .wd-zi.is-in{z-index:5}
+/* v2.282.0: ↔ chaurai (tasveer khinchti hai) · neeche ke chips 2 line mein wrap · shelf ka number footer ke upar na aaye */
+#wdDlg .wd-zi[data-wx] .wd-zp{background-size:100% 100%}
+#wdDlg .wd-zb span{flex-wrap:wrap;overflow:visible}
+#wdDlg .wd-f{position:relative;z-index:6}
 /* 🖼 v2.280.3: har item ka 3D kinara (website jaisa — dukan.css .it::after), faasla nahi barhta */
 html body #wdDlg .wd-zi::after{content:"";position:absolute;left:0;right:0;top:0;bottom:var(--tg,15px);pointer-events:none;border-radius:3px;box-shadow:inset 2px 2px 0 rgba(255,255,255,.9),inset -2px -2px 0 rgba(8,16,40,.62),inset 0 0 0 3px rgba(255,255,255,.14),2px 3px 4px rgba(0,0,0,.32)}
 #wdDlg .wd-zt{font:800 11px/1.3 system-ui;padding:0 4px;margin:0 0 1px;max-width:none;overflow:visible;flex:none}
