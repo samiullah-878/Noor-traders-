@@ -8402,3 +8402,15 @@ Malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, 
 - Card / Khulasa / '✓ hari pakki' wale purane dialog ab nahi khulte (code pari hai — `JZ_PAGE = true` se wapas). PC (posMode) pehle jaisa (AI band, sirf tasveer).
 - style.css naye rules + `tools/pcm.py` dobara. AI: wohi Gemini (koi naya AI nahi). TEST: sirf node --check — asal phone par nahi dekha; malik se screenshot maango.
 - Ghalti (meri): screenshot dekh kar keh diya 'ghalat naam yaad ho gaye' (pasban book -> mouse glue board) — malik: 'naam sahi hai'. Supplier ka apna naam alag hota hai; andaze se ghalat mat kaho, poochho.
+
+## v2.287.0 (2026-11-15) — 🧾 Phone Purchase: neeche ki patti khatam · upar ％ chip · godam item ke andar · items tang · lagi tasveer se 🤖
+- Malik (v2.286.0 ki screenshot par): 'neeche ki patti hata kar ek button chip upar right side jis mein percentage ho · godam select item ke chips ke andar ·
+  ek time par 10 items' -> plan -> malik: 'items pehle se khule (2) · percentage sab items par, only wholesale carton + piece · jo picture lagi hai wo bhi AI mein use ho — sab par (PC bhi)' + 'item ka naam change nahi ho pa raha'.
+- purchase.js: `CBAR_ON = false` (footer ki `cbarHTML` patti + `pp-foot` band; code para hai). Summary mein `.pp-hrow` = hbar + `.pp-wchip` ('％ W 1%') -> `wAllForm` (1 · 1.25 · 1.5 · 2 · 2.5 · 3 · 4 · 5 · Band · apna %)
+  -> WAHI `wAllSet` (PC wala: W CTN + W PCS sab items, naye item par bhi — `addItem` mein ab phone par bhi). R (parchoon) ke % chips phone par ab nahi (malik: sirf wholesale).
+- `rowsHTML`: line 1 = no · naam (AI line par naam dabao = `aiPickForm`) · '1 Ctn = N · pehle' · Rs; line 2 `.pp-jl` = tag chip ('📌 Yaad hai ✏️' / '❓ Yaad nahi ✏️' / '📌 Milta julta ✏️') + bill ka naam + `.pp-tl`
+  (🏬 godam `<select data-pp-lg>` · 🏷 · ↺ · ✕); bina-AI item par sirf `.pp-tl`. Bina-carton item ke khanon se Godam ka khana hata (ab line 2 mein). Khane 28px, card tang — taqreeban 4-5 items fi screen (10 khule items mumkin nahi, malik ko bataya).
+- 'Is supplier se aksar aane wale' chips sirf khali bill par (`!cart.length`).
+- 🤖 lagi hui tasveer se AI: chipki bill tasveer (`pinned`) par '🤖 Is se items' -> `picAi` (billPics -> File) -> `aiRead(files, {ai: true})` — phone + PC (PC par tasveer chun-ne se ab bhi sirf tasveer lagti hai; AI sirf is chip se — malik ka naya hukum 'sab par').
+- 'Naam change nahi ho raha': chip par ✏️ nahi tha aur naam par tap kuch nahi karta tha (code mein chip ka raasta theek tha; asal phone par wajah pakki nahi) -> ab naam + chip dono se. Malik se dobara poochho chala ya nahi.
+- TEST: node --check + headless Chrome mein line ka banawati HTML (shakal dekhi). Asal app / phone par nahi chalaya. AI: wohi Gemini.

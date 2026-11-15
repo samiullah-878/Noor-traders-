@@ -8226,3 +8226,27 @@ html body #list .pp-jnr .pp-jnb{flex:1;min-width:0;min-height:38px;padding:0 10p
 html body #list .pp-jnr small{flex:none;font-size:13px;color:#8f1d12;font-weight:700}
 html body #list .pp-jnr .pp-jnx{flex:none;min-width:34px;min-height:34px;border-radius:999px!important;border:1px solid #f0b8b0!important;background:#fff!important;color:#8f1d12!important;font-weight:800!important}
 html body #list .pp-tbl tr.jn td{background:#ffe4e0;color:#7a1c12;font-weight:700}html body #list .pp-tbl tr.jy td{background:#fff8e1}html body #list .pp-tbl tr.jr td{background:#ffeceb}
+
+/* v2.287.0 (malik 15 Nov): neeche ki patti khatam · upar daayein ％ chip · godam / barcode / ↺ / ✕ item ke andar · items tang (5 fi screen) · lagi tasveer se 🤖 */
+html body #summary .pp-hrow{display:flex;align-items:stretch;gap:6px;margin:4px 0 6px;min-width:0}
+html body #summary .pp-hrow .pp-hbar{flex:1 1 auto;width:auto;min-width:0;margin:0}
+html body #summary .pp-wchip{flex:none;align-self:center;min-height:38px;padding:0 13px;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2f9)!important;color:#1a2d53!important;font-weight:800!important;font-size:13.5px;white-space:nowrap}
+html body #summary .pp-wchip.is-in{border-color:#9bd8ad!important;background:linear-gradient(#f3fbf5,#e0f3e6)!important;color:#14532d!important}
+html body #dialogBody .pp-wset button{min-height:38px;padding:0 14px;border-radius:999px!important;font-weight:800!important;font-size:14px;white-space:nowrap}
+html body #dialogBody .pp-wset button.is-in{background:#14532d!important;color:#fff!important;border-color:#14532d!important}
+html body #list .pp-cr{padding:5px 8px 6px;margin:0 0 5px}
+html body #list .pp-cr1 b[data-pp-pick]{cursor:pointer}
+html body #list .pp-cr1 small{flex:1 1 0;min-width:0;overflow:hidden;text-overflow:ellipsis;font-size:11.5px;color:#7a889e}
+html body #list .pp-jl{margin:2px 0 3px;gap:6px}
+html body #list .pp-jl>small{font-size:13px}
+html body #list .pp-jt{min-height:28px;padding:0 9px;font-size:12.5px}
+html body #list .pp-tl{flex:none;display:flex;align-items:center;gap:5px;margin-left:auto}
+html body #list .pp-tl .pp-gsel{box-sizing:border-box;height:28px;min-height:28px;max-width:74px;padding:0 4px;border-radius:999px;border:1px solid #c9d3e6;background:linear-gradient(#fff,#eef2f9);color:#1a2d53;font-weight:700;font-size:12px}
+html body #list .pp-tl .pp-gsel.need{border-color:#d64535;color:#8f1d12}
+html body #list .pp-tl button{flex:none;width:30px;min-width:30px;height:28px;min-height:28px!important;padding:0!important;margin:0!important;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2f9)!important;color:#1a2d53!important;font-size:14px;line-height:1;font-weight:800!important}
+html body #list .pp-tl button.rc-old.on{background:#223b6d!important;color:#fff!important;border-color:#223b6d!important}
+html body #list .pp-tl button.pp-tx{border-color:#f0b8b0!important;color:#b32936!important}
+html body #list .pp-cr .pp-cg{gap:4px;margin-top:3px}
+html body #list .pp-cr .pp-cg .pp-k input,html body #list .pp-cr .pp-cg .pp-k select{height:30px;min-height:30px}
+html body #list .pp-billacts .pp-picai{border-color:#9bd8ad!important;background:linear-gradient(#f3fbf5,#e0f3e6)!important;color:#14532d!important;font-weight:800!important;white-space:nowrap}
+html body #list .pp-cr .pp-cg .pp-k input,html body #list .pp-cr .pp-cg .pp-k select{height:28px;min-height:28px}html body #list .pp-cr{margin:0 0 4px}html body #list .pp-tl{gap:4px}html body #list .pp-tl .pp-lbl{margin:0!important;width:30px;height:28px}
