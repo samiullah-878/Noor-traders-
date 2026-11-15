@@ -8294,3 +8294,10 @@ Malik: "mujhe notes bhi do likhne ke liye — jab wo sawal poochta hai raat ko, 
 Malik (website ki photo, counter par topi wala aadmi): "yahan par khubsoorat si larki bitha do jo bohat khubsoorat ho".
 - dukan/kamra.js `MAN` SVG badla: lambe baal, dupatta, bari aankhein, salaam wala haath (class .k-man / .k-arm wahi — lehrana wahi). Bani hui shakal, asal insaan nahi. Aur kuch nahi badla. AI nahi.
 - Wapas aadmi / doosri shakal = malik ke kehne par.
+
+
+==================== v2.280.2 (15 Nov 2026) — 🙋‍♀️ WEBSITE: DARWAZE PAR KHARI LARKI JHUK KAR SALAAM ====================
+Malik: "jab bhi website par koi aaye to larki jhuk kar hello kare — idhar khari kar do ek larki".
+- dukan/kamra.js: `GIRL` (bani hui poori qad ki larki, counter wali jaisi shakal) + `#kGreet` (.k-greet) = 3D scene ke BAHAR 2D parat, baayein neeche. Shutter khulte hi (`showHint` -> `greetGo`, HAR dafa — sessionStorage ki shart se pehle) 0.5 s baad `bow()`: `.kg-top` (kamar se upar) do dafa jhukta hai + bubble "Assalam o Alaikum 👋 Khush aamdeed!" 5 s. Larki par tap = dobara salaam.
+- Aage chale (scroll > 160 unit) = `.away` (baayein nikal jati), wapas darwaze par = phir nazar. LITE / kam-harkat phone par jhukna nahi, sirf bubble. Blur / filter / scroll-time CSS var nahi. Counter wali larki wahi.
+- Jagah (baayein neeche) andaze se — malik ne 'idhar' ki tasveer nahi bheji; doosri jagah = `.k-greet` left / bottom. Asal phone par test nahi. AI nahi.
