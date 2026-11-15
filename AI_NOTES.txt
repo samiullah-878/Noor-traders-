@@ -8383,3 +8383,11 @@ Malik: 'number select kar ke hazri lag jaye (1) · paigham sab mujhe, hazri wala
    (SaleDetail.GBranchID, na ho = bill ki branch) naam mein 'godam'; sab lines godam ki = bill ginti mein nahi. POS user wala hissa pehle jaisa. SQL na chale = purana hisaab (sum.gd 0). App: chhoti line '🏬 Godam … shamil nahi' (sum.gd).
 - Test: hz-wa naqli Firestore + fetch (node) · larka-stats naqli DB (SQL ka matn dekha) · udhaar wala test dobara. Asal POS / WhatsApp / hazri Firebase par test NAHI. AI nahi.
 - Mubeen ka number malik ne chat mein diya (0346-…1193) — repo mein nahi likha (PUBLIC); system WhatsApp Parchi ki setting (prTo) wala number leta hai.
+
+
+=== PC raat-report v2.2 + kh-wa v1.10 (15 Nov 2026 raat) — 📦 MAAL KHATAM HONE WALA, SIRF MAANGNE PAR ===
+Malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, item wise aur stock wise'.
+- 'reports' -> 8 (waOnly 'k') -> raat-report khSend: purana buildAlert (kul stock ÷ 30 din ki ausat bikri) — 5 din se kam = list (2 din se kam 🔴), top 25, maangne wale ko. Rate / nafa nahi.
+- Roz khud KOI naya paigham nahi (malik ko zyada reports pasand nahi). 'Dukan mein khatam / godam mein hai' wala alag nishan abhi nahi (stock = sab jagah ka jor).
+- wa-out / wa-parchi sirf dobara shuru hone ke liye chhue (VER +1). App nahi badli. Asal POS par test nahi. AI nahi.
+- GHALTI (isi kaam mein): pehla python (kh-wa edit) fail hua magar agla hukum alag line par tha -> raat-report.js manifest ke baghair push ho gayi (commit 25c1ae7); foran is commit se theek. Sabaq neeche CLAUDE.md mein.
