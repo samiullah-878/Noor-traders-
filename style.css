@@ -8102,7 +8102,12 @@ html body #wdDlg .wd-zi.is-in{outline:2px dashed #ffd84d;outline-offset:-2px}
 /* v2.270.0: 📐 Rack ka size — shelf ginti, shelf chuno + search se lagao, item ka box se size */
 #wdDlg .wd-zn{min-width:36px;justify-content:center;padding:0 6px}
 #wdDlg .wd-zq{position:sticky;top:0;z-index:5;padding:2px 0 6px;background:inherit}
-#wdDlg .wd-zq input{width:100%;height:42px;border-radius:999px;border:1.5px solid #c9d3e6;padding:0 14px;font:700 16px/1 system-ui;background:#fff;color:#14244a}
+/* v2.281.0: search ke saath ＋ (camera / gallery / item / naya rack) · upar rack ka naam dabane wala */
+#wdDlg .wd-zq{display:flex;gap:7px;align-items:center}
+html body #wdDlg .wd-zplus{flex:none;width:42px;height:42px;border-radius:999px;border:1.5px solid #d4a017!important;background:linear-gradient(180deg,#fff7d6,#ffe08a)!important;color:#5a3d00!important;font:800 24px/1 system-ui;box-shadow:0 2px 6px rgba(180,130,0,.28);padding:0}
+html body #wdDlg .wd-mxl .wd-r.is-in{background:#fff6d6!important;border-color:#d4a017!important}
+#wdDlg .wd-zpf{display:flex;margin-top:10px;position:sticky;bottom:0}
+#wdDlg .wd-zq input{flex:1;min-width:0;width:100%;height:42px;border-radius:999px;border:1.5px solid #c9d3e6;padding:0 14px;font:700 16px/1 system-ui;background:#fff;color:#14244a}
 #wdDlg .wd-zl{display:grid;gap:5px;max-height:38vh;overflow:auto;margin-bottom:6px}
 #wdDlg .wd-zl:empty{display:none}
 html body #wdDlg .wd-zf{display:grid;grid-template-columns:44px minmax(0,1fr);gap:8px;align-items:center;min-height:50px;padding:4px 8px!important;border-radius:12px!important;border:1.5px solid #dbe3f1!important;background:#fff!important;color:#14244a!important;text-align:left}

@@ -14,8 +14,8 @@
 //     photo → ph_rp_<pid> (≤1600px) · racks.rp[pid] = {k: rack, o, w, h, s: JSON [[x,y,w,h,itemId] | [x,y,w,h,'',aiLabel]]} (0–1000) ·
 //     🤖 AI (Gemini, box_2d) har cheez ka dabba + label → malik tap / ☑ kai dabbe → item (POS list, AI label se mashwara) — same label wale khud.
 //     racks.nmOn = customer ko photo par naam. Website: photo bay + tap wali jagah + rate ki parchi (rate POS se).
-import { kindOf, KHK, KH_NAME, KH_ON, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.280.5';
-import { smartFind } from './dukan/dhoond.js?v=2.280.5';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
+import { kindOf, KHK, KH_NAME, KH_ON, netQuery, szW, rackCols, rackRowsOf, trimUrl, dherN, dherHTML, RK_RA, RK_ROWS, RK_K, rkImgU, sizeOf, itemU, rackLayoutU, imgAr } from './dukan/khula.js?v=2.281.0';
+import { smartFind } from './dukan/dhoond.js?v=2.281.0';   // v2.160.0: 🔍 smart dhoondo (website ke saath EK qaida)
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => (Math.round((Number(n) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -131,7 +131,7 @@ export function webClose() {
   if (!$('wdSheet').hidden) { sheetClose(); return true; }
   if (W.sel && W.view === 'list') { W.sel = null; paint(); return true; }   // v2.156.0: back = chunne ka mode band
   if (W.view === 'rpe') { if (W.rpe?.draw || W.rpe?.sel?.size) { W.rpe.draw = false; W.rpe.sel = new Set(); } else { W.rpe = null; W.view = 'rps'; } paint(); return true; }   // v2.158.0
-  if (W.view === 'multi') { if (W.multi?.rows?.length && !W.multi.saving && !confirm('Yeh tasveerein chhor dein? (save nahi hui)')) return true; W.multi = null; W.view = 'list'; paint(); return true; }
+  if (W.view === 'multi') { if (W.multi?.rows?.length && !W.multi.saving && !confirm('Yeh tasveerein chhor dein? (save nahi hui)')) return true; { const bk = W.multi && W.multi.rz && W.rz; W.multi = null; W.view = bk ? 'rsz' : 'list'; } paint(); return true; }
   if (W.view === 'crop' && W.crop && W.crop.back === 'rsz' && W.rz) { W.crop = null; W.rz.pend = ''; W.view = 'rsz'; paint(); return true; }   // v2.272.0: rack ke size se aayi crop = wapas wahin
   if (W.view === 'rsz') { if (W.rz && W.rz.it) { W.rz.it = ''; paint(); return true; } const fr = W.rz && W.rz.from; W.rz = null; W.view = fr === 'racks' ? 'racks' : 'list'; paint(); return true; }
   if (W.view === 'pick') { W.view = 'crop'; paint(); return true; }
@@ -160,7 +160,7 @@ function paint() {
   if (v === 'multi') { $('wdT').textContent = '🗄 Tasveerein → shelf'; return paintMulti(); }
   if (v === 'crop') return paintCrop();
   if (v === 'pick') return paintPick();
-  if (v === 'rsz') { $('wdT').textContent = '🔍 ' + rackName(W.rz?.k || ''); return paintRsz(); }
+  if (v === 'rsz') { $('wdT').textContent = '🗂 ' + rackName(W.rz?.k || '') + ' ▾'; return paintRsz(); }
   if (v === 'racks') return paintRacks();
   if (v === 'info') return paintInfo();
   paintList();
@@ -589,7 +589,7 @@ function paintRsz() {
   let h = ''; for (let s = 0; s < rows; s++) { const R = sh[s] || [];
     h += `<div class="wd-zs${W.rz.s === s ? ' is-in' : ''}" data-zsf="${s}"><span class="wd-zno">${s + 1}</span>${R.map(x => { const it = x.it, on = W.rz.it === it.id, one = `<span class="wd-zp none" data-th="${esc(it.id)}"></span>`; return `<button type="button" class="wd-zi${on ? ' is-in' : ''}" data-zi="${esc(it.id)}" data-zsh="${s}" style="--wu:${x.wu.toFixed(2)};--hu:${x.hu.toFixed(2)}">${x.n > 1 ? `<span class="wd-zd">${dherHTML(one, x.n)}</span>` : one}<span class="wd-zt">${num(it.r)}</span>${on ? '<i class="wd-zh" data-zh="1"></i>' : ''}</button>`; }).join('')}</div>`; }
   const more = B.length > 1 ? `<p class="wd-note">Yeh pehla rack hai — baqi items agle ${B.length - 1} rack par khud lage hain.</p>` : '';
-  $('wdBody').innerHTML = `<div class="wd-zq"><input id="wdZQ" type="search" placeholder="🔍 Shelf ${W.rz.s + 1} par item lagao — naam likhein" value="${esc(W.rz.q || '')}" autocomplete="off"></div><div class="wd-zl" id="wdZL">${rzFindHTML()}</div><div class="wd-zr" id="wdZr" style="width:${G.Wp}px;height:${G.Hp}px;--rows:${rows};--u:${G.u.toFixed(3)}px">${h}</div><p class="wd-note">Shelf ka number dabayein = wo shelf chuni (peeli). Item dabayein = neeche us ke chips (－ ＋ · ✂️ Crop · 📸 · 🧱 Dher). Items ek doosre se jure rehte hain — jitni shelf kam, utne bare. Website par har item ke peeche usi ki 2 qatarein bhi dikhti hain.</p>${more}`;
+  $('wdBody').innerHTML = `<div class="wd-zq"><input id="wdZQ" type="search" placeholder="🔍 Shelf ${W.rz.s + 1} par item — naam likhein" value="${esc(W.rz.q || '')}" autocomplete="off"><button type="button" class="wd-zplus" data-zplus="1" aria-label="Lagao: camera, gallery, item, naya rack">＋</button></div><div class="wd-zl" id="wdZL">${rzFindHTML()}</div><div class="wd-zr" id="wdZr" style="width:${G.Wp}px;height:${G.Hp}px;--rows:${rows};--u:${G.u.toFixed(3)}px">${h}</div><p class="wd-note">＋ = 📸 Camera · 🖼 Gallery · 🔍 Item chuno · ➕ Naya rack. Upar rack ka naam dabayein = doosra rack / naam badlo. Shelf ka number dabayein = wo shelf chuni (peeli). Item dabayein = neeche us ke chips (－ ＋ · ✂️ Crop · 📸 · 🧱 Dher). Items ek doosre se jure rehte hain — jitni shelf kam, utne bare. Website par har item ke peeche usi ki 2 qatarein bhi dikhti hain.</p>${more}`;
   const it = W.rz.it && L.find(x => x.id === W.rz.it), dn = it ? dherN(it.id, dh) : 1;
   $('wdFoot').innerHTML = it ? `<div class="wd-zb"><b>${esc(it.n)}</b><span><button type="button" class="wd-chip" data-zsz="-1">－</button><button type="button" class="wd-chip" data-zsz="1">＋</button><button type="button" class="wd-chip" data-zcrop="1">✂️ Crop</button><button type="button" class="wd-chip" data-cam="${esc(it.id)}">📸 Tasveer</button><button type="button" class="wd-chip${dn > 1 ? ' is-in' : ''}" data-zdh="1">🧱 Dher${dn > 1 ? ': ' + dn : ''}</button><button type="button" class="wd-chip" data-zmv="-1">⬆ shelf</button><button type="button" class="wd-chip" data-zmv="1">⬇ shelf</button><button type="button" class="wd-chip" data-zsz="0">↩ Poora</button><button type="button" class="wd-chip is-in" data-zok="1">✓</button></span></div>` : `<button type="button" class="wd-main" data-wd="back">✓ Ho gaya</button>`;
   $('wdBody').scrollTop = keepY;
@@ -606,6 +606,46 @@ function rzDrag() {
   const end = () => { if (!st) return; const v = st.v; st = null; if (v) rzSize(id, v); };
   hd.addEventListener('pointerup', end); hd.addEventListener('pointercancel', end);
   hd.addEventListener('click', e => e.stopPropagation());
+}
+// ---------- ＋ v2.281.0: RACK WALI SCREEN = EK HI JAGAH SAB KAAM (malik 15 Nov: "camera · gallery · item select · naya rack — ek poori screen") ----------
+//   ＋ chip -> patti (📸 Camera: tasveer -> crop (AI dabba) -> item chuno -> chuni shelf · 🖼 Gallery: kai tasveerein -> purani 'multi' screen, isi rack / shelf par · 🔍 Item chuno: ☑ kai + "N jorein" · ➕ Naya rack)
+//   Upar rack ka naam (wdT) = racks ki list + naya rack + naam badlo. Data wahi (racks.ic / sh / order / cn) — naya data nahi.
+function rzPlusSheet() {
+  sheet(`<h3 class="wd-st">＋ ${esc(rackName(W.rz.k))} · shelf ${W.rz.s + 1}</h3><div class="wd-chips"><button type="button" class="wd-chip" data-zp="cam">📸 Camera</button><button type="button" class="wd-chip" data-zp="gal">🖼 Gallery</button><button type="button" class="wd-chip" data-zp="pick">🔍 Item chuno</button><button type="button" class="wd-chip" data-zp="rack">➕ Naya rack</button></div>
+<p class="wd-note">📸 ek tasveer = ek item (AI khud dabba lagata hai, phir naam chunein) · 🖼 ek ya kai tasveerein ek saath · 🔍 jin ki tasveer pehle se lagi hai. Sab shelf ${W.rz.s + 1} par lagenge.</p>`);
+}
+function rzRackSheet() {
+  const rk = racksOf(items() || []).filter(r => r.k !== KHK), k = W.rz.k;
+  sheet(`<h3 class="wd-st">🗂 Racks</h3><div class="wd-chips">${rk.map((r, i) => `<button type="button" class="wd-chip${r.k === k ? ' is-in' : ''}" data-rz="${esc(r.k)}" data-rzf="keep">${r.off ? '🙈 ' : (i + 1) + '. '}${esc(r.name)} <small>${r.n}</small></button>`).join('')}</div>
+<form class="wd-newrk" data-form="rznewrk"><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Naya rack</button></form>
+<form class="wd-newrk" data-form="rzren"><input name="n" value="${esc(rackName(k))}" maxlength="40" aria-label="Is rack ka naam"><button type="submit" class="wd-chip">✏️ Naam badlo</button></form>`);
+}
+function rzNewSheet() {
+  sheet(`<h3 class="wd-st">➕ Naya rack</h3><form class="wd-newrk" data-form="rznewrk"><input name="k" placeholder="Naya rack ka naam" maxlength="40"><button type="submit" class="wd-chip">＋ Banao</button></form><p class="wd-note">Banate hi yehi screen naye rack par khul jayegi — phir ＋ se items lagayein.</p>`);
+  setTimeout(() => { try { document.querySelector('#wdDlg [data-form="rznewrk"] input')?.focus(); } catch {} }, 60);
+}
+function rzNewRack(name) {
+  const rk = racksOf(items() || []), low = name.toLowerCase(), old = rk.find(r => r.k.toLowerCase() === low || r.name.toLowerCase() === low), k = old ? old.k : name;
+  if (!old && !W.racks.order.includes(k)) W.racks.order = [...rk.map(r => r.k).filter(x => x !== k), k];
+  W.rz = { k, s: 0, q: '', it: '', from: (W.rz && W.rz.from) || 'menu' }; W.view = 'rsz'; sheetClose();
+  A.notice(old ? '🗂 "' + rackName(k) + '" pehle se hai — wohi khol diya' : '➕ Naya rack "' + name + '" ban gaya');
+  saveRacks();
+}
+function rzPickList() {
+  const k = W.rz.k, q = String(W.rz.pq || '').trim(), S = W.rz.ps || (W.rz.ps = new Set());
+  const L = (items() || []).filter(x => !x.hide && x.k === 'n' && x.pic && x.c !== k);   // dohra roko: jo is rack par hain wo list mein nahi
+  const F = (q ? (r => [...r.hits, ...r.near])(smartFind(L, q, it => it.n, it => it.id)) : L.sort((a, b) => a.n.localeCompare(b.n))).slice(0, 80);
+  return F.map(it => `<button type="button" class="wd-r wd-pr${S.has(it.id) ? ' is-in' : ''}" data-zps="${esc(it.id)}"><span class="wd-n"><b>${S.has(it.id) ? '☑' : '☐'} ${esc(it.n)}</b><small>Rs ${num(it.r)} · ${esc(rackName(it.c))}</small></span></button>`).join('') || `<p class="wd-empty">${q ? 'Is naam ka tasveer wala item nahi mila.' : 'Tasveer wala koi aur item nahi.'}<br>Bina tasveer wala item = 📸 Camera / 🖼 Gallery se lagayein.</p>`;
+}
+function rzPickSheet() {
+  W.rz.ps = new Set(); W.rz.pq = '';
+  sheet(`<h3 class="wd-st">🔍 Item chuno → shelf ${W.rz.s + 1}</h3><label class="wd-q wd-q2"><span>🔍</span><input id="wdZPQ" type="search" placeholder="Naam likhein…" autocomplete="off"></label><div class="wd-list wd-mxl" id="wdZPL">${rzPickList()}</div><div class="wd-zpf"><button type="button" class="wd-main" id="wdZPGo" data-zpgo="1" disabled>✓ 0 jorein</button></div>`);
+}
+function rzPickGo() {
+  const S = W.rz.ps, by = new Map((items() || []).map(i => [i.id, i])), k = W.rz.k; if (!S || !S.size) return;
+  W.racks.sh = W.racks.sh || {}; let last = '';
+  for (const id of S) { const it = by.get(id); if (!it) continue; if (k === it.pc) delete W.racks.ic[id]; else W.racks.ic[id] = k; W.racks.sh[id] = W.rz.s; last = id; }
+  const n = S.size; W.rz.ps = new Set(); W.rz.it = ''; sheetClose(); A.notice('✓ ' + n + ' item shelf ' + (W.rz.s + 1) + ' par lag gaye'); saveRacks();
 }
 function rzPlace(id) {
   const it = (items() || []).find(x => x.id === id); if (!it || !W.rz) return; const k = W.rz.k;
@@ -694,7 +734,7 @@ async function muSave() {
   const R = M.rows.filter(r => r.id && r.st !== '✅'); if (!R.length) return;
   const by = new Map((items() || []).map(i => [i.id, i]));
   M.saving = true;
-  for (const r of R) { const it = by.get(r.id); if (!it) continue; if (M.k === it.pc) delete w.racks.ic[r.id]; else w.racks.ic[r.id] = M.k; w.rkIds.add(r.id); r.st = '⏳'; }
+  for (const r of R) { const it = by.get(r.id); if (!it) continue; if (M.k === it.pc) delete w.racks.ic[r.id]; else w.racks.ic[r.id] = M.k; if (M.rz) { w.racks.sh = w.racks.sh || {}; w.racks.sh[r.id] = M.rz.s; } w.rkIds.add(r.id); r.st = '⏳'; }
   if (!w.racks.order.includes(M.k)) w.racks.order = [...racksOf(items() || []).map(x => x.k).filter(x => x !== M.k), M.k];
   saveRacks();
   let n = 0;
@@ -706,7 +746,7 @@ async function muSave() {
   if (W !== w) return;
   const bad = M.rows.filter(r => r.st === '✕').length, left = M.rows.filter(r => !r.id).length;
   A.notice(`🗄 ${n} items "${rackName(M.k)}" ki shelf par lag gaye${bad ? ` · ✕ ${bad} nahi hue` : ''}`);
-  if (!bad && !left) { w.multi = null; w.view = 'list'; } else M.rows = M.rows.filter(r => r.st !== '✅');
+  if (!bad && !left) { w.view = M.rz && w.rz ? 'rsz' : 'list'; w.multi = null; } else M.rows = M.rows.filter(r => r.st !== '✅');
   paint();
 }
 async function gotFile(f) {
@@ -717,10 +757,11 @@ async function gotFile(f) {
   if (shotFor === '@rp') { shotFor = ''; W.rpNew = bm; rpRackSheet(''); return; }   // v2.158.0: asal rack photo
   if (shotFor.startsWith('@bg:')) { const k = shotFor.slice(4); shotFor = ''; if (k === '@shop') bgSave('shop', bm, 'Dukan ki tasveer'); else bgSave(rkPh(k), bm, 'Rack ' + rackName(k)); paint(); return; }   // v2.156.0
   if (W.crop?.url) { try { URL.revokeObjectURL(W.crop.url); } catch {} }
+  const rz = shotFor === '@rz'; if (rz) shotFor = '';
   const one = shotFor;
-  W.crop = { bm, w, h, url: URL.createObjectURL(f), box: one ? { x: w * 0.06, y: h * 0.06, w: w * 0.88, h: h * 0.88 } : { x: w * 0.3, y: h * 0.3, w: w * 0.4, h: h * 0.4 }, one, done: [], back: shotBack }; shotBack = '';
+  W.crop = { rz, bm, w, h, url: URL.createObjectURL(f), box: one || rz ? { x: w * 0.06, y: h * 0.06, w: w * 0.88, h: h * 0.88 } : { x: w * 0.3, y: h * 0.3, w: w * 0.4, h: h * 0.4 }, one, done: [], back: shotBack }; shotBack = '';
   W.view = 'crop'; paint();
-  if (one) acRun();
+  if (one || rz) acRun();
 }
 // ---------- 🤖 v2.274.0: AI AUTO CROP (malik 13 Nov: "1 bana do — background hatne ka koi issue nahi") ----------
 //   Ek item ki tasveer (camera / gallery / ✂️ Crop) aate hi Gemini se us cheez ka dabba (box_2d 0-1000) -> ✂️ dabba khud lag jata hai; malik dekh kar Save (kone khench kar theek bhi kar sakta).
@@ -748,7 +789,7 @@ function acPaint() {   // sirf chip + dabba (poori screen dobara nahi — ungli 
   boxPaint();
 }
 async function acRun(manual) {
-  const w = W, C = w && w.crop; if (!C || !C.one || !A.aiImage || C.ai?.run) return;
+  const w = W, C = w && w.crop; if (!C || !(C.one || C.rz) || !A.aiImage || C.ai?.run) return;
   if (manual && C.ai?.box) { C.box = { ...C.ai.box }; C.ai = { run: false, st: 'ok', box: C.ai.box }; C.touch = 0; acPaint(); return; }   // AI wala dabba wapas (naya sawal nahi)
   C.ai = { run: true }; if (manual) C.touch = 0; acPaint();
   const mine = () => W === w && w.crop === C;
@@ -765,10 +806,11 @@ async function acRun(manual) {
 function paintCrop() {
   const C = W.crop; if (!C) { W.view = 'list'; return paint(); }
   const it = C.one ? (items() || []).find(x => x.id === C.one) : null;
-  $('wdStrip').innerHTML = `<span>${C.ai || (C.one && A.aiImage) ? '✂️ Dabba: kone khench kar chhota / bara' : '✂️ Ungli se item ke gird dabba banayein · kone khench kar chhota / bara'}</span>${acChip(C)}${C.done.length ? `<span class="wd-k ok">✅ Is photo se ${C.done.length}</span>` : ''}`;
+  $('wdStrip').innerHTML = `<span>${C.ai || ((C.one || C.rz) && A.aiImage) ? '✂️ Dabba: kone khench kar chhota / bara' : '✂️ Ungli se item ke gird dabba banayein · kone khench kar chhota / bara'}</span>${acChip(C)}${C.done.length ? `<span class="wd-k ok">✅ Is photo se ${C.done.length}</span>` : ''}`;
   $('wdBody').innerHTML = `<div class="wd-cw" id="wdCw"><div class="wd-cimg"><img id="wdCi" src="${C.url}" alt="" draggable="false"><div class="wd-box" id="wdBox"><i data-h="tl"></i><i data-h="tr"></i><i data-h="bl"></i><i data-h="br"></i></div></div></div>${C.done.length ? `<p class="wd-done">${C.done.map(d => `✅ ${esc(d)}`).join(' · ')}</p>` : ''}`;
   $('wdFoot').innerHTML = C.one
     ? `<button type="button" class="wd-chip" data-wd="back">✕ Rehne do</button>${A.aiImage ? `<button type="button" class="wd-chip" data-wd="acrun"${C.ai?.run ? ' disabled' : ''} title="AI se dabba lagao">🤖 AI</button>` : ''}<button type="button" class="wd-main" data-wd="cropsave">✅ Save — ${esc(it ? it.n : 'item')}</button>`
+    : C.rz ? `<button type="button" class="wd-chip" data-wd="back">✕ Rehne do</button>${A.aiImage ? `<button type="button" class="wd-chip" data-wd="acrun"${C.ai?.run ? ' disabled' : ''} title="AI se dabba lagao">🤖 AI</button>` : ''}<button type="button" class="wd-main" data-wd="pick">✂️ Ye kaun sa item? ›</button>`
     : `<button type="button" class="wd-chip" data-wd="rackpic">🖼 Nayi photo</button><button type="button" class="wd-chip" data-wd="cropbg" title="Ye poori photo website par rack ke peeche">🗂 Rack ke peeche</button><button type="button" class="wd-main" data-wd="pick">✂️ Ye kaun sa item? ›</button>`;
   const img = $('wdCi');
   img.style.maxHeight = Math.max(220, ($('wdBody').clientHeight || 400) - 50) + 'px';   // 100dvh nahi (html zoom)
@@ -839,6 +881,7 @@ async function cropSave(id) {
   if (W.crop.one) { const bk = W.crop.back || 'list'; W.view = bk === 'rsz' && !W.rz ? 'list' : bk; W.crop = null;
     if (W.view === 'rsz' && W.rz.pend === id) { W.rz.pend = ''; rzPlace(id); return; }   // v2.272.0: 📸 lagate waqt li gayi tasveer = chuni hui shelf par
     paint(); return; }   // 🌐 net screen se aaye to wapas wahin
+  if (W.crop.rz && W.rz) { W.crop = null; W.view = 'rsz'; W.pq = ''; W.arm = ''; rzPlace(id); return; }   // v2.281.0: ＋ 📸 = ek tasveer ek item, chuni shelf par, wapas rack
   W.crop.done.push(it ? it.n : id);
   const C = W.crop, B = C.box;
   C.box = { x: Math.min(C.w - B.w, B.x + B.w), y: B.y, w: B.w, h: B.h };   // agla item aksar daayein
@@ -865,6 +908,7 @@ async function previewCrop() { try { const b = await cropBytes(), el = $('wdPv')
 function onInput(e) {
   if (!W) return;
   if (e.target.id === 'wdZQ' && W.rz) { W.rz.q = e.target.value; clearTimeout(onInput.z); onInput.z = setTimeout(() => { const l = $('wdZL'); if (l && W && W.rz) { l.innerHTML = rzFindHTML(); thumbs(); } }, 140); return; }
+  if (e.target.id === 'wdZPQ' && W.rz) { W.rz.pq = e.target.value; clearTimeout(onInput.zp); onInput.zp = setTimeout(() => { const l = $('wdZPL'); if (l && W && W.rz) l.innerHTML = rzPickList(); }, 120); return; }
   if (e.target.id === 'wdQ') { W.q = e.target.value; W.lim = 120; W.qFocus = 1; clearTimeout(onInput.t); onInput.t = setTimeout(() => { paint(); W && (W.qFocus = 0); }, 140); }
   else if (e.target.id === 'wdMQ') { W.muq = e.target.value; clearTimeout(onInput.m); onInput.m = setTimeout(() => { const l = document.querySelector('#wdDlg .wd-mxl'); if (l && W && W.multi) l.innerHTML = muListHTML(); }, 120); }
   else if (e.target.id === 'wdRQ') { W.rpq = e.target.value; clearTimeout(onInput.r); onInput.r = setTimeout(() => { const l = document.querySelector('#wdDlg .wd-bxl'); if (l && W) l.innerHTML = pickListHTML(); }, 120); }
@@ -882,6 +926,11 @@ async function onSubmit(e) {
     const o = { name: g('name') || 'Noor Traders', line: g('line'), wa: g('wa'), addr: g('addr'), time: g('time'), open: g('open'), close: g('close'), on: !!f.elements.on.checked, ...(W.info && W.info.waAuto ? { waAuto: W.info.waAuto } : {}) };   // waAuto = Business number ek dafa lag chuka (dobara khud na badle)
     W.infoSt = '⏳ save…'; W.info = { ...W.info, ...o }; paint();
     try { await A.cloud.saveWebInfo(o); if (W) { W.infoSt = '✅ save ho gaya'; paint(); } A.notice('✅ Dukan ki maloomat website par'); } catch (er) { if (W) { W.infoSt = '✕ nahi hua'; paint(); } A.notice('❌ ' + (er.message || er)); }
+  } else if (f.dataset.form === 'rznewrk') {
+    e.preventDefault(); const k = String(f.elements.k.value || '').trim().slice(0, 40); if (k && W.rz) rzNewRack(k);
+  } else if (f.dataset.form === 'rzren') {
+    e.preventDefault(); if (!W.rz) return; const k = W.rz.k, v = String(f.elements.n.value || '').trim().slice(0, 40);
+    if (v && v !== title(k)) W.racks.cn[k] = v; else delete W.racks.cn[k]; sheetClose(); saveRacks();
   } else if (f.dataset.form === 'munewrk') {
     e.preventDefault(); const k = String(f.elements.k.value || '').trim().slice(0, 40); if (k) muSetRack(k);
   } else if (f.dataset.form === 'rpnewrk') {   // v2.158.0
@@ -917,6 +966,7 @@ async function share() {
 function onClick(e) {
   if (!W) return;
   const t = e.target, a = t.closest('[data-wd]'), k = a && a.dataset.wd;
+  if (t.closest('#wdT') && W.view === 'rsz' && W.rz) { rzRackSheet(); return; }
   if (k === 'back') { webClose(); return; }
   if (k === 'menu') { sheet(menuHTML()); return; }
   if (k === 'cats') { sheet(catsHTML()); return; }
@@ -995,8 +1045,17 @@ function onClick(e) {
   const lpb = t.closest('[data-lp]'); if (lpb) { const id = W.act; if (id) lpMany([id], lpb.dataset.lp); return; }
   const slp = t.closest('[data-slp]'); if (slp) { if (W.sel && W.sel.size) lpMany([...W.sel], slp.dataset.slp); return; }
   const mv = t.closest('[data-mv]'); if (mv) { const id = W.act, it = (items() || []).find(x => x.id === id); if (it) { if (mv.dataset.mv === it.pc) delete W.racks.ic[id]; else W.racks.ic[id] = mv.dataset.mv; } sheetClose(); saveRacks(); return; }
-  const rz = t.closest('[data-rz]'); if (rz) { W.rz = { k: rz.dataset.rz, s: 0, q: '', it: '', from: rz.dataset.rzf === 'menu' ? 'menu' : 'racks' }; W.view = 'rsz'; sheetClose(); paint(); return; }
+  const rz = t.closest('[data-rz]'); if (rz) { W.rz = { k: rz.dataset.rz, s: 0, q: '', it: '', from: rz.dataset.rzf === 'menu' ? 'menu' : rz.dataset.rzf === 'keep' ? ((W.rz && W.rz.from) || 'menu') : 'racks' }; W.view = 'rsz'; sheetClose(); paint(); return; }
   if (W.view === 'rsz' && W.rz) {
+    if (t.closest('[data-zplus]')) { rzPlusSheet(); return; }
+    const zp = t.closest('[data-zp]'); if (zp) { const m = zp.dataset.zp;
+      if (m === 'cam') { W.rz.pend = ''; shotBack = 'rsz'; shoot('cam', '@rz'); return; }
+      if (m === 'gal') { sheetClose(); W.multi = { k: W.rz.k, rows: [], n: 0, rz: { k: W.rz.k, s: W.rz.s } }; W.view = 'multi'; paint(); $('wdMulti').click(); return; }
+      if (m === 'pick') { rzPickSheet(); return; }
+      if (m === 'rack') { rzNewSheet(); return; }
+      return; }
+    const zps = t.closest('[data-zps]'); if (zps) { const S = W.rz.ps || (W.rz.ps = new Set()), id = zps.dataset.zps; if (S.has(id)) S.delete(id); else S.add(id); const l = $('wdZPL'), y = l ? l.scrollTop : 0; if (l) { l.innerHTML = rzPickList(); l.scrollTop = y; } const g = $('wdZPGo'); if (g) { g.disabled = !S.size; g.textContent = '✓ ' + S.size + ' jorein'; } return; }
+    if (t.closest('[data-zpgo]')) { rzPickGo(); return; }
     const zrn = t.closest('[data-zrn]'); if (zrn) { const n = Number(zrn.dataset.zrn); W.racks.rn = W.racks.rn || {}; if (n === RK_ROWS) delete W.racks.rn[W.rz.k]; else W.racks.rn[W.rz.k] = n; saveRacks(); return; }
     const zshot = t.closest('[data-zshot]'); if (zshot) { W.rz.pend = zshot.dataset.zid; shotBack = 'rsz'; shoot(zshot.dataset.zshot, zshot.dataset.zid); return; }
     const zadd = t.closest('[data-zadd]'); if (zadd) { rzAdd(zadd.dataset.zadd); return; }
