@@ -7,7 +7,9 @@
 //   aaj ka khulasa hazriIn mein bhejta hai -> PC raat-report v1.7 WhatsApp par (waH · hzTime · hzNow). Haal blueAccess/hazriWa. AI nahi.
 // v2.279.2 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS' + screen par ⏳): haal ab PC se — reportWa.run = PC ne kaam utha liya
 //   (⏳ bana raha hai, 10 min tak intezar, jhoota '90 s = PC band' nahi) · err / errAt = report nahi bani (wajah yahin bhi) · 90 s mein run na aaye = PC ne uthaya hi nahi.
-let C = null, cfg = null, wa = null, hz = null, hk = '', stops = [], askAt = 0, hzAsk = 0, tmr = null, tmr2 = null;
+// 🧾 UDHAAR (v2.284.0, malik 15 Nov: 'un ka paigham hamein WhatsApp par rozana subah · 1 month se koi wasooli nahi aati'): PC raat-report v2.0 `udSend` — waU · udDays · udNow, haal reportWa.uAt / uN. Sirf malik ko. AI nahi.
+let C = null, cfg = null, wa = null, hz = null, hk = '', stops = [], askAt = 0, hzAsk = 0, udAsk = 0, tmr = null, tmr2 = null, tmr3 = null;
+const UD_DAYS = [15, 30, 45, 60, 90];
 const HZ_URL = 'https://samiullah-878.github.io/nt-traders-/', HZ_TIMES = ['09:30', '10:00', '10:30', '11:00'];
 const newKey = () => { const a = new Uint8Array(24); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -25,6 +27,8 @@ function html() {
   const hzT = c.hzTime || '10:00', hzAt = Number(hz && hz.at) || 0, hzOn = !!hzAt, hzFresh = hzOn && Date.now() - hzAt < 45 * 60000;
   const hzSt = hz === null ? '' : hzOn ? `<p class="rw-st ${hzFresh ? 'ok' : 'wait'}">${hzFresh ? '🟢' : '🟡'} Hazri app ka data: ${esc(ago(hzAt))} · ${Number(hz.n) || 0} larke${hzFresh ? '' : ' — purana hai (PC band tha ya hazri app ka server chup)'}</p>` : '<p class="rw-st wait">⚪ Hazri app abhi juri nahi — neeche "🔗 Hazri app jorein" dabayein (ek dafa).</p>';
   const hzSt2 = hzAsk ? (hz && Number(hz.sent) > hzAsk ? '<p class="rw-st ok">✅ Hazri ki report WhatsApp par bhej di</p>' : Date.now() - hzAsk > 90000 ? '<p class="rw-st bad">✕ Shop PC ka jawab nahi aaya — PC band hai ya internet nahi.</p>' : '<p class="rw-st wait">⏳ Shop PC hazri bhej raha hai… (1 min tak)</p>') : '';
+  const udN = Number(c.udDays) || 30, uAt = Number(wa && wa.uAt) || 0;
+  const udSt = udAsk ? (uAt > udAsk ? `<p class="rw-st ok">✅ Udhaar report bhej di — ${Number(wa.uN) || 0} khate</p>` : Date.now() - udAsk > 90000 ? '<p class="rw-st bad">✕ Shop PC ka jawab nahi aaya — PC band hai ya internet nahi.</p>' : '<p class="rw-st wait">⏳ Shop PC udhaar ki list bana raha hai… (1 min tak)</p>') : uAt ? `<p class="rw-st ok">✅ Aakhri dafa: ${Number(wa.uN) || 0} khate — ${esc(ago(uAt))}</p>` : '';
   let st = '';
   const wAt = Number(wa && wa.at) || 0, wRun = Number(wa && wa.run) || 0, wErr = Number(wa && wa.errAt) || 0;
   if (askAt && !(wAt > askAt)) {
@@ -45,7 +49,12 @@ function html() {
     <div class="rw-tm">${HZ_TIMES.map(t => `<button type="button" data-rw-hzt="${t}" class="${t === hzT ? 'is-in' : ''}">${t12(t)}</button>`).join('')}<input type="time" id="rwHz" value="${esc(hzT)}" aria-label="Hazri ka waqt"></div>
     <small class="rw-note">Subah: kaun aaya / late / nahi aaya. Shaam ki poori hazri upar wale waqt par baqi reports ke saath. WhatsApp par "hazri" likhein to usi waqt.</small>
     ${hzSt}
-    <div class="rw-tm"><button type="button" class="is-in" data-rw-hz="1">📤 Hazri abhi bhejo</button><button type="button" data-rw-join="1">🔗 Hazri app ${hzOn ? 'dobara jorein' : 'jorein'}</button></div>${hzSt2}`;
+    <div class="rw-tm"><button type="button" class="is-in" data-rw-hz="1">📤 Hazri abhi bhejo</button><button type="button" data-rw-join="1">🔗 Hazri app ${hzOn ? 'dobara jorein' : 'jorein'}</button></div>${hzSt2}
+    <p class="rw-h">🧾 Udhaar — subah ki report</p>
+    ${tg('waU', '🧾', 'Udhaar report roz subah 10 baje', 'jin se lena hai aur ' + udN + ' din se wasooli nahi aayi')}
+    <div class="rw-tm">${UD_DAYS.map(n => `<button type="button" data-rw-udd="${n}" class="${n === udN ? 'is-in' : ''}">${n} din</button>`).join('')}</div>
+    <small class="rw-note">Sirf aap ke number par — gahak ko kuch nahi jata. Bari raqam upar, top 20. Us paigham par reply mein "print" = thermal par list.</small>
+    <div class="rw-tm"><button type="button" class="is-in" data-rw-ud="1">📤 Udhaar abhi bhejo</button></div>${udSt}`;
 }
 function paint() { const r = root(); if (!r) return; const a = document.activeElement; if (a && (a.id === 'rwTime' || a.id === 'rwHz')) return; r.innerHTML = html(); }
 async function save(patch) { try { cfg = { ...(cfg || {}), ...patch }; paint(); await C.cloud.setReportConfig(patch); } catch (e) { C.notice('Save nahi hua: ' + (e?.message || e)); } }
@@ -56,6 +65,8 @@ export function rwSetup(c) {
     if (t.dataset.rwTg) { save({ [t.dataset.rwTg]: (cfg || {})[t.dataset.rwTg] === false }); return; }
     if (t.dataset.rwOn) { const on = (cfg || {}).reportOn !== false && (cfg || {}).waOn !== false; save({ reportOn: !on, waOn: true }); return; }
     if (t.dataset.rwTm) { save({ reportTime: t.dataset.rwTm }); return; }
+    if (t.dataset.rwUdd) { save({ udDays: Number(t.dataset.rwUdd) }); return; }
+    if (t.dataset.rwUd) { udAsk = Date.now(); paint(); clearTimeout(tmr3); tmr3 = setTimeout(paint, 92000); C.cloud.setReportConfig({ udNow: 1, waOn: true }).catch(er => { udAsk = 0; paint(); C.notice('Nahi gaya: ' + (er?.message || er)); }); return; }
     if (t.dataset.rwHzt) { save({ hzTime: t.dataset.rwHzt }); return; }
     if (t.dataset.rwHz) { hzAsk = Date.now(); paint(); clearTimeout(tmr); tmr = setTimeout(paint, 92000); C.cloud.setReportConfig({ hzNow: 1, waOn: true }).catch(er => { hzAsk = 0; paint(); C.notice('Nahi gaya: ' + (er?.message || er)); }); return; }
     if (t.dataset.rwJoin) {
@@ -71,7 +82,7 @@ export function rwSetup(c) {
 }
 export function rwOpen() {
   if (!C?.owner()) { C?.notice('Sirf malik'); return; }
-  unlisten(); cfg = null; wa = null; hz = null; hk = ''; askAt = 0; hzAsk = 0;
+  unlisten(); cfg = null; wa = null; hz = null; hk = ''; askAt = 0; hzAsk = 0; udAsk = 0;
   C.modal('📊 Reports mere number par', `<div class="rw" data-rw-root="1">${html()}</div>`, true);
   const cl = C.cloud;
   try { stops.push(cl.listenReportConfig(d => { if (!root()) return; cfg = d || {}; paint(); })); } catch {}

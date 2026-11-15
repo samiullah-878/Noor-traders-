@@ -8355,3 +8355,17 @@ Malik: "ek system banao jis mein PC ka naam ho, wohi SQL wala server uthaye — 
   Na mile = blockedCycle: sab services ke process band (NT-PRINT nahi; ffmpeg image se; /T kabhi nahi), blueAccess/pcBlocked {at, host, want, n}; pcStatus / pcCpu nahi likhta. Naam wapas mile = khud chalu.
 - App Settings > PC scripts: 🔒 Server PC chip + ✏️ Badlo (sirf malik, confirm), doosre PC ki ⛔ warning (10 min taza). cloud.getServerPc / saveServerPc. Rules nahi badle (blueAccess malik).
 - Test: stub Firestore + process list (node) — default, match, ghair-match, offline cache, band karna. Asal PC par test nahi hua. AI nahi.
+
+
+=== v2.284.0 + raat-report v2.0 + md pkg v47 (15 Nov 2026 raat) ===
+1) 🧾 UDHAAR KI SUBAH WALI REPORT (malik: 'un ka paigham hamein WhatsApp par rozana subah · 1 month se koi wasooli nahi aati')
+- pc/raat-report.js v2.0: udCalc / udText / udSend — blueKhata (select) se har khate ka baqaya (kh-wa balOf ki copy) + aakhri wasooli; lena > Rs 100 aur udDays (30) din se wasooli nahi
+  (bank / kharcha / band / andar ke khate nahi) -> malik ko waOut `rp-<din>-u-…` (reply 'print' = thermal). Roz udTime 10:00 (PC der se on = usi din 10 ghante tak) · waOnly 'u' = abhi.
+- App wa-report.js: 🧾 Udhaar hissa (waU on/off · 15/30/45/60/90 din · 📤 abhi bhejo · haal reportWa.uAt/uN). cloud.setReportConfig: waU, udDays, udNow. Rules nahi badle.
+- Sirf malik ko; gahak ko KABHI kuch nahi. Test: naqli khata data (node). Asal data par test nahi. AI nahi.
+2) 📍 JAGAH-WAR RECORDING (malik: 'location nahi hai (sirf number) · har location ki alehda recording, andar folder')
+- md/tools/jagah.py (naya): JNAME (har tukde se pehle; 250 m ke andar yaad jagah -> globals jgNm / jgXY) + macro '📍 Jagah ka naam' (anjaan jagah par 20 min -> unlock par ek sawal,
+  din mein 1 dafa, '0' = kabhi na poochho). rec.py: folder NT Awaz/<jagah>/ , file '<jagah>_din-mahina-saal_ghanta-minute' (anjaan = 'Doosri jagah' + _lat_lon).
+- Jagah ki list (jgList) SIRF phone ke global mein — md/ PUBLIC, coordinates / pata repo mein KABHI nahi. Popup par 'recording' ka lafz nahi.
+- variableSetter (Java se global) pehli dafa istemal — phone par test nahi; javac + stubs se logic jaancha. Na chale = file root mein '_din…' naam se (recording nahi rukti).
+3) FolderSync: malik ne phone par lagaya (NT Awaz -> Drive, To right folder); 'Permission to access files not found' = All files access ijazat deni thi.

@@ -23,7 +23,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '1.9';
+const VER = '2.0';
 // v1.9 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS'): POS ke dbo.Sale mein COGS ka khana HAI HI NAHI — har report isi par girti thi.
 //   Ab colOf() pehle sys.columns dekhta hai (asal naam, bari / chhoti likhai); na ho = NULL -> nafa line ke khareed rate se (pehle se bana hisaab).
 //   reportDay sirf usi dafa jab usi hukum (rdAt == reportNow) ke saath aaya ho — warna AAJ (Report screen ki purani tareekh atki rehti thi).
@@ -44,7 +44,7 @@ const LINK = 'https://samiullah-878.github.io/Noor-traders-/';
 const KEEP_DAYS = 62;
 const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;   // andar ka lena-dena (bikri / khareed nahi)
-const DEF = { waOn: true, waD: true, waL: true, waP: true, waH: true, hzTime: '10:00', reportOn: true, reportTime: '18:00', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
+const DEF = { waOn: true, waD: true, waL: true, waP: true, waH: true, waU: true, udTime: '10:00', udDays: 30, hzTime: '10:00', reportOn: true, reportTime: '18:00', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
 
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
@@ -330,6 +330,53 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
   }
   async function waTo() { let to = ''; try { const w = await access.doc('waParchi').get(), pf = w.exists ? (w.data() || {}).prFrom : null; to = String((Array.isArray(pf) && pf[0]) || ''); } catch {} return String(to || '03450412515').replace(/\D/g, ''); }
   async function waErr(txt) { try { const id = `rp-err-${Date.now().toString(36)}`; await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to: await waTo(), nm: 'Malik', kind: 'rem', eid: id, txt: String(txt).slice(0, 600) }); } catch (e) { log('waErr: ' + e.message); } }
+  // ---------- 🧾 v2.0: UDHAAR REPORT (malik 15 Nov 2026: "un ka paigham hamein WhatsApp par aana chahiye rozana subah · 1 month se koi wasooli nahi aati") ----------
+  //   Roz subah (udTime, default 10:00 — PC der se on ho to usi din jab bhi) malik ko: jin khaton se LENA hai aur udDays (30) din se wasooli nahi aayi.
+  //   Baqaya = app jaisa hisaab (kh-wa balOf ki copy — ek badlo to doosra). Sirf malik ko (waOut id rp-…-u-… = reply 'print' bhi chale); gahak ko KABHI kuch nahi. AI nahi.
+  const UD_CASH_FROM = '2026-09-20', udBill = e => (Array.isArray(e.posBillIds) && e.posBillIds.length > 0) || !!e.posBill;
+  const udSgn = e => (['credit', 'payment'].includes(e.kind) || (e.kind === 'purchaseCash' && String(e.date || '') >= UD_CASH_FROM && udBill(e))) ? 1 : ['borrow', 'collection'].includes(e.kind) ? -1 : 0;
+  const udSkip = (e, id) => e.purchase === true && e.kind === 'borrow' && !String(id || '').startsWith('pos-') && udBill(e);
+  function udCalc(docs, N, today) {
+    const P = new Map(), A = new Map();
+    for (const [id, x] of docs) {
+      if (!x || x.deleted) continue;
+      if (x.type === 'party') { P.set(id, x); continue; }
+      if (x.type !== 'entry' || !x.partyId || udSkip(x, id)) continue;
+      const a = A.get(x.partyId) || { b: 0, lc: '', fc: '' }; a.b += udSgn(x) * (Number(x.amount) || 0);
+      const dt = String(x.date || ''); if (x.kind === 'collection' && dt > a.lc) a.lc = dt; if (x.kind === 'credit' && dt && (!a.fc || dt < a.fc)) a.fc = dt;
+      A.set(x.partyId, a);
+    }
+    const days = d => d ? Math.round((new Date(today + 'T12:00:00') - new Date(d + 'T12:00:00')) / 864e5) : null, rows = [];
+    for (const [id, p] of P) {
+      if (p.bank || p.kharcha || p.active === false || !String(p.name || '').trim() || SKIP_RX.test(String(p.name))) continue;
+      const a = A.get(id) || { b: 0, lc: '', fc: '' }, bal = (Number(p.opening) || 0) + a.b;
+      if (bal < 10000) continue;
+      const dy = days(a.lc || a.fc); if (dy != null && dy < N) continue;
+      rows.push({ n: String(p.name).trim(), b: bal, d: dy, w: !!a.lc });
+    }
+    rows.sort((x, y) => y.b - x.b);
+    return rows;
+  }
+  function udText(rows, N, t) {
+    const MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'], top = rows.slice(0, 20), rest = rows.slice(20), sum = L => L.reduce((s, r) => s + r.b, 0);
+    const L = [`🧾 Udhaar — ${N} din se wasooli nahi`, `${t.getDate()} ${MON[t.getMonth()]} · ${rows.length} khate · kul ${rs(sum(rows) / 100)}`, ''];
+    if (!rows.length) L.push('✅ Aisa koi khata nahi.');
+    top.forEach((r, i) => L.push(`${i + 1}. ${r.n} — ${rs(r.b / 100)} · ${r.d == null ? 'kabhi wasooli nahi' : r.w ? r.d + ' din' : r.d + ' din (wasooli kabhi nahi)'}`));
+    if (rest.length) L.push('', `… aur ${rest.length} khate (${rs(sum(rest) / 100)})`);
+    if (rows.length) L.push('', 'Is paigham par reply mein "print" likhein = thermal par list.');
+    return L.join('\n');
+  }
+  async function udSend(why) {
+    const cfg = await cfgGet(), N = Math.min(365, Math.max(7, Number(cfg.udDays) || 30)), t = now();
+    try {
+      const sn = await biz.collection('blueKhata').select('type', 'partyId', 'kind', 'amount', 'date', 'deleted', 'purchase', 'posBillIds', 'posBill', 'name', 'opening', 'bank', 'active', 'kharcha').get();
+      const rows = udCalc(sn.docs.map(d => [d.id, d.data() || {}]), N, dayOf(t)), id = `rp-${dayOf(t)}-u-${Date.now().toString(36)}`;
+      await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to: await waTo(), nm: 'Malik', kind: 'rem', eid: id, txt: udText(rows, N, t) });
+      try { await access.doc('reportWa').set({ uAt: Date.now(), uN: rows.length, uWhy: String(why || '') }, { merge: true }); } catch {}
+      log(`🧾 udhaar report WhatsApp par (${why}) — ${rows.length} khate`);
+      return rows.length;
+    } catch (e) { log('udhaar report: ' + e.message); await waErr('✕ Udhaar report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); return -1; }
+  }
   async function hzSend(why, full) {
     try { await hzPull(); } catch {}
     const t = now(), id = `rp-${dayOf(t)}-h-${Date.now().toString(36)}`, to = await waTo();
@@ -380,15 +427,16 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
       try { await hzPull(); } catch (e) { log('hazri: ' + e.message); }
       if (st.run && st.run.at) { const r0 = st.run; delete st.run; saveSt(st); try { await access.doc('reportWa').set({ err: 'Report atak gayi (PC dheera / POS ka sawal lamba) — dobara dabayein', errAt: Date.now() }, { merge: true }); } catch {} await waErr(`⚠️ Report (${r0.why || ''}) poori nahi hui — shop PC par ${Math.round((Date.now() - Number(r0.at)) / 60000)} min pehle shuru hui thi aur atak gayi (PC dheera / POS ka sawal lamba). Dobara "reports" likh kar dekhein; phir bhi na aaye to Settings → 🖥️ PC scripts ki screenshot bhejein.`); }
-      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); const rd = /^\d{4}-\d{2}-\d{2}$/.test(String(cfg.reportDay || '')) && Number(cfg.rdAt) === Number(cfg.reportNow) ? String(cfg.reportDay) : day; try { await access.doc('reportWa').set({ run: Date.now(), runDay: rd }, { merge: true }); } catch {} try { await runReport(rd, c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); try { await access.doc('reportWa').set({ err: String((e && e.message) || e).slice(0, 300), errAt: Date.now() }, { merge: true }); } catch {} await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } } }
+      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else if (o === 'u') await udSend('maanga'); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); const rd = /^\d{4}-\d{2}-\d{2}$/.test(String(cfg.reportDay || '')) && Number(cfg.rdAt) === Number(cfg.reportNow) ? String(cfg.reportDay) : day; try { await access.doc('reportWa').set({ run: Date.now(), runDay: rd }, { merge: true }); } catch {} try { await runReport(rd, c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); try { await access.doc('reportWa').set({ err: String((e && e.message) || e).slice(0, 300), errAt: Date.now() }, { merge: true }); } catch {} await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } } }
       else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; st.run = { at: Date.now(), why: 'roz wali' }; saveSt(st); try { await runReport(day, cfg, 'raat'); } catch (e) { log('report masla: ' + e.message); await waErr('✕ Roz wali report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); }
       if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waH !== false && hzRead() && due(cfg.hzTime || '10:00', 'hzDay', 3)) { st.hzDay = day; saveSt(st); await hzSend('subah', false); }
+      if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waU !== false && due(cfg.udTime || '10:00', 'udDay', 10)) { st.udDay = day; saveSt(st); await udSend('subah'); }
       if (Date.now() - lastAlive > 5 * 60000) { lastAlive = Date.now(); try { await access.doc('reportConfig').set({ alive: Date.now(), ver: VER }, { merge: true }); } catch {} }   // app: "PC zinda"
       onBeat?.();   // v1.1: dhadkan SIRF tab jab chakkar poora hua
     } catch (e) { log('masla: ' + e.message); if (e?.code === 16 || /UNAUTHENTICATED/.test(String(e?.message))) process.exit(1); }
     finally { clearTimeout(dog); busy = false; }
   }
-  return { buildAlert, buildReport, runAlert, runReport, tick, cfgGet, hzText, hzPull, hzSend };
+  return { buildAlert, buildReport, runAlert, runReport, tick, cfgGet, hzText, hzPull, hzSend, udCalc, udText, udSend };
 }
 
 module.exports = { makeReporter, dailyOf, perPiece, pieceCost, isWs, phone92, DEF };

@@ -57,7 +57,7 @@ out = {"macroExportVersion": 1, "macro": {
                        {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}],
     "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}],
     "m_actionList": acts, "m_constraintList": []},
-    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1)],
+    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1)] + REC.GV,
     "userIcons": None, "aiFeedback": "Display over other apps ijazat."}
 json.dump(out, open(os.path.join(D, "qaide.json"), "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(acts))
