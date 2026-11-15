@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.288.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.288.0';
-import { blurScore, blurText } from './pic-check.js?v=2.288.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.289.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.289.0';
+import { blurScore, blurText } from './pic-check.js?v=2.289.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -276,16 +276,22 @@ let posX = false;
 let wAll = (() => { try { return Number(localStorage.getItem('sam-pp-wall')) || 0; } catch { return 0; } })();
 let wOpen = false;   // v2.288.0 (malik: 'alag tab nahi — chips neeche ki taraf khulein'): ％ chip ke neeche patti
 const W_PCTS = [1, 1.25, 1.5, 2, 2.5, 3, 4, 5];
-const wDropHTML = () => `<div class="pp-wdrop"><div class="pp-wset">${W_PCTS.map(v => `<button type="button" class="${wAll === v ? 'is-in' : ''}" data-pp-wset="${v}">${v}%</button>`).join('')}<button type="button" class="${wAll > 0 ? '' : 'is-in'}" data-pp-wset="0">Band</button></div>
-    <div class="pp-wown"><input id="ppWown" type="number" min="0" step="any" inputmode="decimal" placeholder="apna %" value="${wAll > 0 && !W_PCTS.includes(wAll) ? wAll : ''}"><button type="button" data-pp-wset="own">✓ Lagao</button><small>Wholesale CTN + PCS · sab items par</small></div></div>`;
+let wLast = (() => { try { return Number(localStorage.getItem('sam-pp-wlast')) || 1; } catch { return 1; } })();
+// v2.289.0 (malik ki tasveer: chamakta gol button + on/off switch · 'chaurai ki bajaye neeche ki taraf aaye aur percentage likha ho'): button ke NEECHE seedhi (ek ke neeche ek) list
+const wDropHTML = () => `<div class="pp-wdrop" role="listbox">${W_PCTS.map(v => `<button type="button" class="${wAll === v ? 'is-in' : ''}" data-pp-wset="${v}"><b>${v}%</b><i>${wAll === v ? '✓' : ''}</i></button>`).join('')}
+    <div class="pp-wown"><input id="ppWown" type="number" min="0" step="any" inputmode="decimal" placeholder="apna %" value="${wAll > 0 && !W_PCTS.includes(wAll) ? wAll : ''}"><button type="button" data-pp-wset="own">✓</button></div>
+    <button type="button" class="pp-woff${wAll > 0 ? '' : ' is-in'}" data-pp-wset="0"><b>Band</b><i>${wAll > 0 ? '' : '✓'}</i></button></div>`;
 document.addEventListener('click', e => {
+  if (e.target.closest?.('[data-pp-wsw]')) { wOpen = false; wAllSet(wAll > 0 ? 0 : wLast); return; }   // switch = on / off (aakhri % yaad)
   if (e.target.closest?.('[data-pp-wchip]')) { wOpen = !wOpen; rerender(); return; }
-  const w = e.target.closest?.('[data-pp-wset]'); if (!w) return;
+  const w = e.target.closest?.('[data-pp-wset]');
+  if (!w) { if (wOpen && !e.target.closest?.('.pp-wdrop')) { wOpen = false; if (document.querySelector('[data-pp-root]')) rerender(); } return; }
   const v = w.dataset.ppWset === 'own' ? Number($('ppWown')?.value) || 0 : Number(w.dataset.ppWset) || 0;
   wOpen = false; wAllSet(v);
 });
 function wAllSet(p) {
   wAll = p > 0 ? p : 0; try { localStorage.setItem('sam-pp-wall', String(wAll)); } catch {}
+  if (wAll > 0) { wLast = wAll; try { localStorage.setItem('sam-pp-wlast', String(wLast)); } catch {} }
   if (wAll > 0) { cart.forEach(l => { l.wMode = wAll; l.wcMode = wAll; recalc(l); }); keepDraft(); }
   rerender(); notice(wAll > 0 ? `Wholesale +${wAll}% sab items par (CTN + PCS) — naye item par bhi khud` : 'Wholesale % band — rate haath se');
 }
@@ -743,7 +749,7 @@ export function renderPP() {
   if (pos) wai.watch();
   const bcBar = (edit && Number(edit.purchaseId) && typeof window.ntBcTick === 'function' ? `<div class="pp-bc" data-mn-keep="1">${window.ntBcTick('pos-' + Number(edit.purchaseId), 'big')}${typeof window.ntBcGo === 'function' ? `<button type="button" class="got pp-bcgo" data-pp-bcgo="1"${bcBusy ? ' disabled' : ''}>${bcBusy ? '⏳' : '✓ Check + 📌 Post' + (editNav?.list?.[editNav.i + 1] ? ' · agla ›' : editNav?.bc ? ' · list ›' : '')}</button>` : ''}</div>` : '');   // v2.128.0: ✓ Check + 📌 Post patti form band hone par bhi dikhe
   $('summary').innerHTML = `<div class="stock-head sale-head pp-head${pos ? ' pp-posr' : ''}" data-pp-root="1">
-    ${pos ? posHd : hdBar ? `<div class="pp-hrow">${hdBar}<button type="button" class="pp-wchip${wAll > 0 ? ' is-in' : ''}" data-pp-wchip="1" title="Wholesale % — sab items par">％ W ${wAll > 0 ? num(wAll) + '%' : '—'} ${wOpen ? '▴' : '▾'}</button></div>${wOpen ? wDropHTML() : ''}` : ''}${bcBar}${fromBarHTML()}<div class="pp-hd${hdShow ? '' : ' pp-hd-off'}">
+    ${pos ? posHd : hdBar ? `<div class="pp-hrow">${hdBar}<span class="pp-wbox"><span class="pp-wchip${wAll > 0 ? ' is-in' : ''}" data-pp-wchip="1" role="button" tabindex="0" title="Wholesale % — sab items par"><b>W ${wAll > 0 ? num(wAll) + '%' : '%'}</b><em>${wOpen ? '▴' : '▾'}</em><span class="pp-wsw" data-pp-wsw="1" role="switch" aria-checked="${wAll > 0}" title="On / Off"><i></i></span></span>${wOpen ? wDropHTML() : ''}</span></div>` : ''}${bcBar}${fromBarHTML()}<div class="pp-hd${hdShow ? '' : ' pp-hd-off'}">
     <div class="pp-modes"><button type="button" class="on">🧾 Items wali bill</button>${photoFormOf ? '<button type="button" data-pp-photo="1" data-mn="pp.photo" data-mn-i="📷" data-mn-t="Sirf photo" data-mn-s="photo + raqam (bina items)" data-mn-g="🧾 Purchase — kaam">📷 Sirf photo + raqam</button>' : ''}</div>
     ${billStripHTML()}
     ${edit ? `<div class="pp-edit"><b>✏️ EDIT — POS bill ${esc(edit.billNo || '')}</b><small>Save par yahi bill POS mein UPDATE hoga (naya nahi banega)</small><button type="button" data-pp-edit-off="1">✕ Edit chhodo</button></div>` : ''}

@@ -8230,8 +8230,6 @@ html body #list .pp-tbl tr.jn td{background:#ffe4e0;color:#7a1c12;font-weight:70
 /* v2.287.0 (malik 15 Nov): neeche ki patti khatam · upar daayein ％ chip · godam / barcode / ↺ / ✕ item ke andar · items tang (5 fi screen) · lagi tasveer se 🤖 */
 html body #summary .pp-hrow{display:flex;align-items:stretch;gap:6px;margin:4px 0 6px;min-width:0}
 html body #summary .pp-hrow .pp-hbar{flex:1 1 auto;width:auto;min-width:0;margin:0}
-html body #summary .pp-wchip{flex:none;align-self:center;min-height:38px;padding:0 13px;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2f9)!important;color:#1a2d53!important;font-weight:800!important;font-size:13.5px;white-space:nowrap}
-html body #summary .pp-wchip.is-in{border-color:#9bd8ad!important;background:linear-gradient(#f3fbf5,#e0f3e6)!important;color:#14532d!important}
 html body #dialogBody .pp-wset button{min-height:38px;padding:0 14px;border-radius:999px!important;font-weight:800!important;font-size:14px;white-space:nowrap}
 html body #dialogBody .pp-wset button.is-in{background:#14532d!important;color:#fff!important;border-color:#14532d!important}
 html body #list .pp-cr{padding:5px 8px 6px;margin:0 0 5px}
@@ -8251,12 +8249,26 @@ html body #list .pp-cr .pp-cg .pp-k input,html body #list .pp-cr .pp-cg .pp-k se
 html body #list .pp-billacts .pp-picai{border-color:#9bd8ad!important;background:linear-gradient(#f3fbf5,#e0f3e6)!important;color:#14532d!important;font-weight:800!important;white-space:nowrap}
 html body #list .pp-cr .pp-cg .pp-k input,html body #list .pp-cr .pp-cg .pp-k select{height:28px;min-height:28px}html body #list .pp-cr{margin:0 0 4px}html body #list .pp-tl{gap:4px}html body #list .pp-tl .pp-lbl{margin:0!important;width:30px;height:28px}
 
-/* v2.288.0: ％ W chip ke neeche khulne wali patti (alag khirki nahi) */
-html body #summary .pp-wdrop{margin:0 0 6px;padding:8px 10px;border-radius:14px;background:#fff;border:1px solid #dde3ef;box-shadow:0 4px 14px rgba(20,30,60,.10)}
-html body #summary .pp-wdrop .pp-wset{display:flex;flex-wrap:wrap;gap:6px}
-html body #summary .pp-wdrop .pp-wset button{min-height:36px;padding:0 13px;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2f9)!important;color:#1a2d53!important;font-weight:800!important;font-size:14px;white-space:nowrap}
-html body #summary .pp-wdrop .pp-wset button.is-in{background:#14532d!important;color:#fff!important;border-color:#14532d!important}
-html body #summary .pp-wdrop .pp-wown{display:flex;align-items:center;gap:6px;margin-top:7px;min-width:0}
-html body #summary .pp-wdrop .pp-wown input{flex:none;width:92px;height:36px;min-height:36px;padding:0 8px;border:1px solid #d9e0ec;border-radius:11px;font-weight:700;font-size:14px;text-align:right}
-html body #summary .pp-wdrop .pp-wown button{flex:none;min-height:36px;padding:0 12px;border-radius:999px!important;background:#14532d!important;color:#fff!important;border:0!important;font-weight:800!important;font-size:13.5px;white-space:nowrap}
-html body #summary .pp-wdrop .pp-wown small{flex:1;min-width:0;font-size:12.5px;color:#5d6b88;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+/* v2.289.0 (malik ki tasveer): Wholesale ka chamakta gol button + on/off switch, neeche ki taraf SEEDHI list (har line par %) */
+html body #summary .pp-hrow{position:relative;z-index:6}
+html body #summary .pp-wbox{position:relative;flex:none;align-self:center}
+html body #summary span.pp-wchip{display:inline-flex;align-items:center;gap:6px;height:40px;padding:0 5px 0 13px;border-radius:999px;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent;
+  background:linear-gradient(180deg,#ffffff,#eaf3ff);border:1.5px solid #9fd0ff;color:#16345f;white-space:nowrap;
+  box-shadow:0 0 0 2px rgba(120,190,255,.28),0 0 14px rgba(60,150,255,.38),inset 0 1px 0 #fff,inset 0 -3px 6px rgba(120,170,230,.18)}
+html body #summary span.pp-wchip b{font-size:14.5px;font-weight:800;letter-spacing:.01em}
+html body #summary span.pp-wchip em{font-style:normal;font-size:11px;color:#5d7fb0}
+html body #summary .pp-wsw{position:relative;flex:none;width:46px;height:28px;border-radius:999px;background:linear-gradient(180deg,#d7deea,#c3ccdb);box-shadow:inset 0 1px 3px rgba(20,40,80,.28);transition:background .18s}
+html body #summary .pp-wsw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:linear-gradient(180deg,#ffffff,#e9eef6);box-shadow:0 1px 3px rgba(20,40,80,.35);transition:left .18s}
+html body #summary span.pp-wchip.is-in .pp-wsw{background:linear-gradient(180deg,#3d8bff,#1f6fe6);box-shadow:inset 0 1px 3px rgba(10,40,110,.35),0 0 8px rgba(60,140,255,.5)}
+html body #summary span.pp-wchip.is-in .pp-wsw i{left:21px}
+html body #summary .pp-wdrop{position:absolute;right:0;top:calc(100% + 7px);z-index:40;width:176px;display:flex;flex-direction:column;gap:5px;padding:8px;border-radius:18px;
+  background:linear-gradient(180deg,#ffffff,#f1f6fd);border:1.5px solid #b9dcff;box-shadow:0 0 0 2px rgba(120,190,255,.18),0 12px 28px rgba(20,50,110,.22)}
+html body #summary .pp-wdrop>button{display:flex;align-items:center;justify-content:space-between;min-height:38px;padding:0 14px;border-radius:999px!important;border:1px solid #d5e3f5!important;
+  background:linear-gradient(180deg,#fff,#eef4fc)!important;color:#16345f!important;font-size:15px;white-space:nowrap}
+html body #summary .pp-wdrop>button b{font-weight:800}html body #summary .pp-wdrop>button i{font-style:normal;font-weight:800}
+html body #summary .pp-wdrop>button.is-in{background:linear-gradient(180deg,#3d8bff,#1f6fe6)!important;color:#fff!important;border-color:#1f6fe6!important;box-shadow:0 0 10px rgba(60,140,255,.45)}
+html body #summary .pp-wdrop>button.pp-woff{color:#8f1d12!important;border-color:#f0c9c4!important}
+html body #summary .pp-wdrop>button.pp-woff.is-in{background:linear-gradient(180deg,#e25a4b,#c53a2c)!important;color:#fff!important;border-color:#c53a2c!important;box-shadow:none}
+html body #summary .pp-wdrop .pp-wown{display:flex;gap:5px;min-width:0}
+html body #summary .pp-wdrop .pp-wown input{flex:1;min-width:0;height:38px;min-height:38px;padding:0 10px;border:1px solid #c9dcf5;border-radius:999px;font-weight:700;font-size:14.5px;text-align:center;background:#fff;color:#16345f}
+html body #summary .pp-wdrop .pp-wown button{flex:none;width:44px;min-height:38px;padding:0!important;border-radius:999px!important;background:linear-gradient(180deg,#3d8bff,#1f6fe6)!important;color:#fff!important;border:0!important;font-weight:800!important;font-size:16px}

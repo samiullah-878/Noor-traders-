@@ -8421,3 +8421,10 @@ Malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, 
   larke ki likhi tadad par raqam se RATE banta hai (pehle jaisa). Dono tarteeb: raqam -> rate (`l.amtIn` yaad) ya rate -> raqam. Ctn / Pcs haath se likhte hi `qAuto` band. Phone lines + table + card teeno (ek hi input handler).
 - ％ chip: `wAllForm` (dlg) hata -> `wOpen` + `wDropHTML` (summary mein chip ke neeche `.pp-wdrop`: 1 · 1.25 · 1.5 · 2 · 2.5 · 3 · 4 · 5 · Band + apna % ✓ Lagao) -> wohi `wAllSet`.
 - TEST: node --check + qFromAmt ka hisaab node mein (10800 / 300, pack 6 = 6 ctn; 10500 = 5 ctn + 5 pcs; rate 0 = kuch nahi). Asal phone par nahi. AI nahi.
+
+## v2.289.0 (2026-11-15) — 🧾 Purchase: Wholesale ka chamakta button + on/off switch, neeche SEEDHI list
+- Malik ne tasveer bheji (chamakta neela gol input + on/off switch): 'wholesale ka button is tarah ka banao · chaurai ki bajaye neeche ki taraf aaye aur percentage likha ho'.
+- `.pp-wchip` ab `<span role=button>` (andar switch hai — button ke andar button nahi): safed-neela gradient + neeli chamak (box-shadow), 'W 1.5% ▾' + `.pp-wsw` switch
+  (dabao = on / off; off se on = aakhri % `wLast`, localStorage `sam-pp-wlast`). Baqi chip dabao = `.pp-wdrop` button ke NEECHE (absolute, daayein, 176px) — ek ke neeche ek: 1% … 5% (chuna hua neela ✓), apna % + ✓, Band.
+  Bahar dabao = band. Purani chaurai wali chips patti (v2.288.0) hata di.
+- TEST: node --check + headless Chrome mein banawati HTML ki tasveer (shakal theek). Asal phone par nahi. AI nahi.
