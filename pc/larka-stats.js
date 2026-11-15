@@ -1,5 +1,8 @@
 // =========================================================
-//  larka-stats.js  v2 (2026-10-13 raat: 📦 WHOLESALE alag — malik: "larkon ki sale screen par wholesale ke bill ke baghair / saath, check box".
+//  larka-stats.js  v3 (2026-11-15, malik: 'Godam 1 / 2 / 3 se jo items bikein wo larkon ki sale mein NA aayein — apps mein aur WhatsApp par wohi report'):
+//    LARKA (SP Man) ki sale = bill ka total MINUS wo lines jin ka godam (SaleDetail.GBranchID, na ho = bill ki branch) naam mein 'godam' rakhta ho;
+//    jis bill ki sab lines godam ki hon wo bill ginti mein bhi nahi. POS user wala hissa pehle jaisa. SQL na chale = purana hisaab (report kabhi na ruke) + j.gd 0.
+//  v2 (2026-10-13 raat: 📦 WHOLESALE alag — malik: "larkon ki sale screen par wholesale ke bill ke baghair / saath, check box".
 //                     'whole sale' party ke bill: sum.larka.wdays / wbina, sum.user.wdays (sirf wholesale ka hissa — app minus karti hai)
 //                     aur har bill ke aakhir mein 8th khana ws (1 = wholesale). v: 2) · v1 (2026-10-13) — LARKA SALE REPORT app ke liye: POS -> Firestore posStats (har 5 minute, larka-auto.bat)
 //  Wohi hisaab jo larka-report\larka-report.js v3 (larka-report.html) banata hai — ab app ki "👦 Larka Sale" screen mein bhi.
@@ -30,32 +33,52 @@ const rs = v => Math.round(Number(v) || 0);
 const hashOf = s => crypto.createHash('sha1').update(s).digest('hex');
 const ago = n => { const d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - n); return d; };
 
-async function read(p) {
+const gdSrc = cond => `(SELECT s0.SaleID, s0.SaleNo, s0.SaleDate, s0.SupplyManID, s0.CreatedBy, s0.PartyID, s0.DocStatusID, s0.IsCreditSale, s0.BranchID,
+    CASE WHEN CAST(s0.TotalSale AS FLOAT) - ISNULL(g.GA, 0) < 0 THEN 0 ELSE CAST(s0.TotalSale AS FLOAT) - ISNULL(g.GA, 0) END AS TotalSale
+  FROM dbo.Sale s0 LEFT JOIN (SELECT d.SaleID,
+      SUM(CASE WHEN LOWER(ISNULL(b.BranchName, '')) LIKE '%godam%' THEN CAST(d.Qty AS FLOAT) * CAST(d.Rate AS FLOAT) ELSE 0 END) AS GA,
+      SUM(CASE WHEN LOWER(ISNULL(b.BranchName, '')) LIKE '%godam%' THEN 0 ELSE 1 END) AS DN
+    FROM dbo.SaleDetail d JOIN dbo.Sale h ON h.SaleID = d.SaleID LEFT JOIN dbo.Branch b ON b.BranchID = ISNULL(NULLIF(d.GBranchID, 0), h.BranchID)
+    ${cond ? 'WHERE ' + cond : ''} GROUP BY d.SaleID) g ON g.SaleID = s0.SaleID WHERE ISNULL(g.DN, 1) > 0)`;
+async function read(p, gd = true) {
   const men = (await p.request().query('SELECT SupplyManID, SupplyManName FROM dbo.SupplyMan ORDER BY SupplyManName')).recordset
     .map(r => ({ id: r.SupplyManID, name: String(r.SupplyManName || '').trim() }));
-  const days = (await p.request().query(`
-    SELECT CONVERT(char(10), s.SaleDate, 120) AS D, s.SupplyManID AS M, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
-    FROM dbo.Sale s WHERE ISNULL(s.SupplyManID, 0) <> 0 AND s.DocStatusID <> 3
-    GROUP BY CONVERT(char(10), s.SaleDate, 120), s.SupplyManID`)).recordset;
-  const first = days.reduce((a, r) => (!a || r.D < a ? r.D : a), '');
-  // jab se naam lagna shuru hua, us ke baad har din kitne bills naam ke baghair bane
-  const bina = first ? (await p.request().input('a', sql.DateTime, toDate(first)).query(`
-    SELECT CONVERT(char(10), SaleDate, 120) AS D, COUNT(*) AS N, SUM(CAST(TotalSale AS FLOAT)) AS T FROM dbo.Sale
-    WHERE SaleDate >= @a AND ISNULL(SupplyManID, 0) = 0 AND DocStatusID <> 3 GROUP BY CONVERT(char(10), SaleDate, 120)`)).recordset : [];
   // v2: wholesale party ("whole sale", "whole sale (purana)" …) — un ka hissa alag, app "baghair / saath" chun le
   const wsIds = (await p.request().query(`SELECT PartyID FROM dbo.Party WHERE LOWER(PartyName) LIKE '%whole%sale%'`)).recordset.map(r => Number(r.PartyID)).filter(Boolean);
   const inWs = `ISNULL(s.PartyID, 0) IN (${wsIds.length ? wsIds.join(',') : '0'})`;
-  const wdays = wsIds.length ? (await p.request().query(`
-    SELECT CONVERT(char(10), s.SaleDate, 120) AS D, s.SupplyManID AS M, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
-    FROM dbo.Sale s WHERE ISNULL(s.SupplyManID, 0) <> 0 AND s.DocStatusID <> 3 AND ${inWs}
-    GROUP BY CONVERT(char(10), s.SaleDate, 120), s.SupplyManID`)).recordset : [];
-  const wbina = wsIds.length && first ? (await p.request().input('a', sql.DateTime, toDate(first)).query(`
-    SELECT CONVERT(char(10), s.SaleDate, 120) AS D, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T FROM dbo.Sale s
-    WHERE s.SaleDate >= @a AND ISNULL(s.SupplyManID, 0) = 0 AND s.DocStatusID <> 3 AND ${inWs} GROUP BY CONVERT(char(10), s.SaleDate, 120)`)).recordset : [];
+  let days, first, bina, wdays, wbina;
+  if (gd) {   // v3: EK sawal (godam ki lines minus) -> din x larka x wholesale; baqi jor yahin (SaleDetail ka poora chakkar sirf ek dafa)
+    const all = (await p.request().query(`
+      SELECT CONVERT(char(10), s.SaleDate, 120) AS D, ISNULL(s.SupplyManID, 0) AS M, CASE WHEN ${inWs} THEN 1 ELSE 0 END AS W, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+      FROM ${gdSrc('')} s WHERE s.DocStatusID <> 3
+      GROUP BY CONVERT(char(10), s.SaleDate, 120), ISNULL(s.SupplyManID, 0), CASE WHEN ${inWs} THEN 1 ELSE 0 END`)).recordset;
+    const agg = (rows, key) => { const m = new Map(); for (const r of rows) { const k = key(r), o = m.get(k) || { D: r.D, M: r.M, N: 0, T: 0 }; o.N += Number(r.N) || 0; o.T += Number(r.T) || 0; m.set(k, o); } return [...m.values()]; };
+    days = agg(all.filter(r => Number(r.M)), r => r.D + '|' + r.M);
+    first = days.reduce((a, r) => (!a || r.D < a ? r.D : a), '');
+    bina = first ? agg(all.filter(r => !Number(r.M) && r.D >= first), r => r.D) : [];
+    wdays = agg(all.filter(r => Number(r.M) && Number(r.W)), r => r.D + '|' + r.M);
+    wbina = first ? agg(all.filter(r => !Number(r.M) && Number(r.W) && r.D >= first), r => r.D) : [];
+  } else {   // purana hisaab (poora bill) — sirf jab upar wala sawal POS par na chale
+    days = (await p.request().query(`
+      SELECT CONVERT(char(10), s.SaleDate, 120) AS D, s.SupplyManID AS M, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+      FROM dbo.Sale s WHERE ISNULL(s.SupplyManID, 0) <> 0 AND s.DocStatusID <> 3
+      GROUP BY CONVERT(char(10), s.SaleDate, 120), s.SupplyManID`)).recordset;
+    first = days.reduce((a, r) => (!a || r.D < a ? r.D : a), '');
+    bina = first ? (await p.request().input('a', sql.DateTime, toDate(first)).query(`
+      SELECT CONVERT(char(10), SaleDate, 120) AS D, COUNT(*) AS N, SUM(CAST(TotalSale AS FLOAT)) AS T FROM dbo.Sale
+      WHERE SaleDate >= @a AND ISNULL(SupplyManID, 0) = 0 AND DocStatusID <> 3 GROUP BY CONVERT(char(10), SaleDate, 120)`)).recordset : [];
+    wdays = wsIds.length ? (await p.request().query(`
+      SELECT CONVERT(char(10), s.SaleDate, 120) AS D, s.SupplyManID AS M, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+      FROM dbo.Sale s WHERE ISNULL(s.SupplyManID, 0) <> 0 AND s.DocStatusID <> 3 AND ${inWs}
+      GROUP BY CONVERT(char(10), s.SaleDate, 120), s.SupplyManID`)).recordset : [];
+    wbina = wsIds.length && first ? (await p.request().input('a', sql.DateTime, toDate(first)).query(`
+      SELECT CONVERT(char(10), s.SaleDate, 120) AS D, COUNT(*) AS N, SUM(CAST(s.TotalSale AS FLOAT)) AS T FROM dbo.Sale s
+      WHERE s.SaleDate >= @a AND ISNULL(s.SupplyManID, 0) = 0 AND s.DocStatusID <> 3 AND ${inWs} GROUP BY CONVERT(char(10), s.SaleDate, 120)`)).recordset : [];
+  }
   const since = ago(BILL_DAYS);
   const bills = (await p.request().input('b', sql.DateTime, since).query(`
     SELECT TOP ${MAX_BILLS} s.SaleNo, CONVERT(char(16), s.SaleDate, 120) AS W, s.SupplyManID AS M, s.TotalSale, s.IsCreditSale, pt.PartyName
-    FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
+    FROM ${gd ? gdSrc('h.SaleDate >= @b') : 'dbo.Sale'} s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
     WHERE ISNULL(s.SupplyManID, 0) <> 0 AND s.DocStatusID <> 3 AND s.SaleDate >= @b ORDER BY s.SaleDate DESC, s.SaleID DESC`)).recordset;
 
   // ---- POS user (jis login se bill bana = Sale.CreatedBy). "stock fraq" ke bills asal sale nahi (post-farq.js) — nahi ginay jate.
@@ -96,7 +119,8 @@ async function read(p) {
   const t0 = Date.now(); let pool;
   try {
     pool = await new sql.ConnectionPool(SQL_CONFIG).connect();
-    const D = await read(pool);
+    let D, gdOk = 1; try { D = await read(pool, true); } catch (e) { gdOk = 0; console.log('⚠ godam ke baghair wala hisaab nahi chala (' + String(e.message || e).slice(0, 160) + ') — purana hisaab'); D = await read(pool, false); }
+    D.sum.gd = gdOk;
     await pool.close(); pool = null;
     while (JSON.stringify(D.bills).length > MAX_JSON && D.bills.user.bills.length > 100) D.bills.user.bills.length = Math.floor(D.bills.user.bills.length * 0.8);
     const js = JSON.stringify(D.sum), jb = JSON.stringify(D.bills);

@@ -9,7 +9,7 @@
 //   · jawab: usi chat mein seedha (socket) · malik + Mubeen ko waOut se (to: number). Manzoori = us paigham par reply 1 (haan) / 2 (nahi) — waOut doc `hq`.
 // wa-out.js sirf bulata hai (handle / own / tick). AI nahi.
 const fs = require('fs'), path = require('path');
-const VER = '1.0';
+const VER = '1.1';
 const URL_IN = 'https://asia-south1-nt-traders.cloudfunctions.net/bluein';
 const REASONS = [['Khana', 30], ['Namaz', 20], ['Bank', 45], ['Ghar', 60], ['Dukan ka kaam', 60], ['Aur', 30]];
 const FREE = 2;
@@ -18,6 +18,11 @@ const dayOf = t => `${t.getFullYear()}-${pad2(t.getMonth() + 1)}-${pad2(t.getDat
 const t12 = t => `${((t.getHours() + 11) % 12) + 1}:${pad2(t.getMinutes())} ${t.getHours() < 12 ? 'am' : 'pm'}`;
 const dur = m => m >= 60 ? `${Math.floor(m / 60)} gh ${m % 60} min` : `${m} min`;
 const nth = n => n === 1 ? 'pehli' : n === 2 ? 'doosri' : n === 3 ? 'teesri' : n + 'vi';
+// v1.1 (15 Nov, malik: 'number select kar ke hazri lag jaye — duty par aane ka waqt ho · sirf main / Mubeen · subah paigham mujhe aur Mubeen ko'):
+//   'hazri 1 3 5 8' = un codes ki hazri ABHI (hazri function a: in) · 'hazri nahi 3' = WhatsApp wali hazri wapas (a: unin) · 'hazri list' = code + aaj kis ki lagi.
+//   Sirf approvers (malik + Mubeen). Subah ASK_AT par dono ko 'kaun kaun aaya?' (din mein 1 dafa, PC on ho to 12 baje tak). Akela 'hazri' = report (kh-wa, pehle jaisa).
+const HZIN = /^\s*ha[zj]i?r[iy]\s+((?:\d{1,3}[\s,]+)*\d{1,3})\s*$/i, HZNO = /^\s*ha[zj]i?r[iy]\s+(?:nahi|nai|no|wapas|hatao)\s+(\d{1,3})\s*$/i, HZLS = /^\s*ha[zj]i?r[iy]\s+(?:list|codes?)\s*$/i;
+const ASK_AT = 9 * 60 + 15;
 const YES = /^\s*(1|ha+n|han|ok|yes|ji)\s*$/i, NO = /^\s*(2|nahi|nai|no)\s*$/i, CODE = /^\s*(\d{1,3})\s*$/, LIST = /^\s*(codes?|code\s*list|larko+n?\s*ke\s*code)\s*$/i;
 
 function makeHz({ biz, log, put, dir, who, norm, now }) {
@@ -69,6 +74,42 @@ function makeHz({ biz, log, put, dir, who, norm, now }) {
   const errText = e => e === 'nokey' ? 'Hazri app abhi juri nahi (Blue Khata → Reports → "Hazri app jorein").' : e === 'key' ? 'Hazri app ki chaabi nahi mili — Blue Khata → Reports → "Hazri app dobara jorein".' : e === 'staff' ? 'Yeh larka hazri app mein chalu nahi.' : 'Hazri app se rabta nahi hua (' + e + '). Thori der baad dobara likhein.';
   const tell = async (id, txt, extra, skip) => { for (const a of await approvers()) if (a.p !== skip) await put(`${id}-${a.p.slice(-4)}`, { to: a.p, nm: a.n, kind: 'rem', txt, ...(extra || {}) }); };
 
+  // ---- v1.1: number se hazri (sirf malik / Mubeen) ----
+  const inOf = r => String((r && r.i) || '').slice(0, 5);
+  function todayText(c, head) {
+    const h = hz(), L = Object.keys(c.m).map(p => [Number(c.m[p]), String(c.nm[p] || p), p]).sort((a, b) => a[0] - b[0]);
+    return head + '\n\n' + L.map(x => { const r = h ? h.rows.find(q => String(q.p || '') === x[2]) : null, t = inOf(r); return `${t ? '✅' : '⬜'} ${x[0]}  ${x[1]}${t ? ' — ' + t : ''}`; }).join('\n');
+  }
+  async function mark(ctx, text) {
+    const ap = await approvers(), c = await codesGet();
+    if (!ap.some(a => a.p === ctx.from)) { if (!ctx.by && !Object.prototype.hasOwnProperty.call(c.m, ctx.from)) return false; await ctx.reply('✕ Hazri sirf malik / Mubeen laga sakte hain.'); return true; }
+     if (!Object.keys(c.m).length) { await ctx.reply('⚠️ Abhi koi code nahi bana — hazri app juri nahi ya aaj ka data nahi aaya.'); return true; }
+    const by = ctx.by || (ap.find(a => a.p === ctx.from) || {}).n || 'WhatsApp', wid = String(ctx.wid || Date.now()).replace(/[^a-zA-Z0-9]/g, '').slice(0, 30);
+    if (HZLS.test(text)) { await ctx.reply(todayText(c, '👥 *Aaj ki hazri* (✅ lagi · ⬜ nahi)') + '\n\nLagane ke liye: hazri 1 3 5'); return true; }
+    let m = text.match(HZNO);
+    if (m) {
+      const st = byCode(c, Number(m[1])); if (!st) { await ctx.reply(`✕ Code ${m[1]} nahi mila ("hazri list" likh kar dekhein).`); return true; }
+      const r = await call({ a: 'unin', phone: st.phone, by });
+      await ctx.reply(r.ok ? `↩ ${st.code} ${st.name} ki hazri (${r.t}) wapas ho gayi.` : r.err === 'none' ? `• ${st.code} ${st.name} ki aaj hazri lagi hi nahi.` : r.err === 'own' ? `✕ ${st.code} ${st.name} ne hazri khud app se lagayi thi — wo hazri app se hi badlegi.` : r.err === 'outdone' ? `✕ ${st.code} ${st.name} ka Check-Out lag chuka — hazri app se badlein.` : '⚠️ ' + errText(r.err));
+      return true;
+    }
+    m = text.match(HZIN); if (!m) return false;
+    const nums = [...new Set(m[1].split(/[\s,]+/).map(Number).filter(n => n > 0))], found = [], miss = [];
+    for (const n of nums) { const st = byCode(c, n); if (st) found.push(st); else miss.push(n); }
+    if (!found.length) { await ctx.reply(`✕ In mein se koi code nahi mila: ${miss.join(', ')} ("hazri list" likh kar dekhein).`); return true; }
+    const r = await call({ a: 'in', phones: found.map(x => x.phone), by });
+    if (!r.ok) { await ctx.reply('⚠️ ' + errText(r.err)); return true; }
+    const L = [], okN = [];
+    for (const st of found) { const x = (r.res || []).find(q => q.phone === st.phone) || {};
+      if (x.st === 'ok') { okN.push(`${st.code} ${st.name}`); L.push(`✅ ${st.code} ${st.name} — ${x.t}${Number(x.late) > 0 ? ' (' + dur(Number(x.late)) + ' late)' : ''}`); }
+      else if (x.st === 'had') L.push(`• ${st.code} ${st.name} — pehle se lagi (${x.t})`);
+      else L.push(`✕ ${st.code} ${st.name} — hazri app mein chalu nahi`); }
+    for (const n of miss) L.push(`✕ code ${n} nahi mila`);
+    await ctx.reply(`👥 Hazri (${okN.length} lagi):\n` + L.join('\n') + (okN.length ? '\n\nGhalti ho to: hazri nahi <code>' : ''));
+    if (okN.length) await tell(`hzi-${wid}`, `👥 ${by} ne hazri lagayi (${r.t}): ${okN.join(', ')}`, null, ctx.from);
+    dayAt = 0;
+    return true;
+  }
   // wajah chuni -> hazri app ko bhejo
   async function goOut(st, ri, ctx) {
     const [reason, minutes] = REASONS[ri], r = await call({ a: 'out', phone: st.phone, reason, minutes, free: FREE, by: ctx.by });
@@ -113,8 +154,11 @@ function makeHz({ biz, log, put, dir, who, norm, now }) {
   }
   // aane wala paigham. ctx: { text, jid, from (number ya ''), quoted, wid, khBusy (kharcha menu chal raha), reply(txt), sendJid(jid, txt) }. true = hamara tha
   async function handle(ctx) {
-    const text = String(ctx.text || ''); if (!text || text.length > 30) return false;
+    const text = String(ctx.text || ''); if (!text) return false;
+    const big = !ctx.quoted && text.length <= 160 && (HZIN.test(text) || HZNO.test(text) || HZLS.test(text));
+    if (!big && text.length > 30) return false;
     ctx.by = (ctx.from && who && who(ctx.from)) || '';
+    if (big) return mark(ctx, text);
     if (ctx.quoted) return decide(ctx);
     const c = await codesGet();
     if (LIST.test(text)) { const ap = await approvers(); if (!ap.some(a => a.p === ctx.from)) return false; if (!Object.keys(c.m).length) { await ctx.reply('⚠️ Abhi koi code nahi bana — hazri app juri nahi ya aaj ka data nahi aaya.'); return true; } await ctx.reply(listText(c)); return true; }
@@ -145,6 +189,8 @@ function makeHz({ biz, log, put, dir, who, norm, now }) {
     if (!seen) { try { seen = JSON.parse(fs.readFileSync(seenFile, 'utf8')); } catch { seen = null; } }
     if (!seen || seen.d !== h.d) seen = { d: h.d, ids: [] };
     const c = await codesGet(); let ch = false;
+    { const t = clock(), mins = t.getHours() * 60 + t.getMinutes();   // v1.1: subah 'kaun kaun aaya?' malik + Mubeen ko (din mein 1 dafa)
+      if (mins >= ASK_AT && mins < 12 * 60 && seen.ask !== h.d && Object.keys(c.m).length) { seen.ask = h.d; ch = true; await tell(`hza-${h.d}`, todayText(c, '👥 *Hazri — kaun kaun aaya?*') + '\n\nJo aaye hain un ke code likh dein, jaise:\nhazri 1 3 5'); } }
     for (const r of h.rows) if (r.q && r.q[0] && !Number(r.q[2]) && !seen.ids.includes(r.q[0])) {
       seen.ids.push(r.q[0]); ch = true; const code = c.m[r.p] || '';
       await tell(`hzq-${r.q[0]}`, `❓ ${code} ${r.n} bahar jana chahta hai (hazri app se) — ${r.q[1] || ''}\n\nIS paigham par reply karein:\n1 = haan\n2 = nahi`, { hq: String(r.q[0]), hc: code, hn: r.n, hr: r.q[1] || '' });

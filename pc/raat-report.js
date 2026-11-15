@@ -23,7 +23,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '2.0';
+const VER = '2.1';
 // v1.9 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS'): POS ke dbo.Sale mein COGS ka khana HAI HI NAHI — har report isi par girti thi.
 //   Ab colOf() pehle sys.columns dekhta hai (asal naam, bari / chhoti likhai); na ho = NULL -> nafa line ke khareed rate se (pehle se bana hisaab).
 //   reportDay sirf usi dafa jab usi hukum (rdAt == reportNow) ke saath aaya ho — warna AAJ (Report screen ki purani tareekh atki rehti thi).
@@ -49,6 +49,13 @@ const DEF = { waOn: true, waD: true, waL: true, waP: true, waH: true, waU: true,
 const r2 = v => Math.round((Number(v) || 0) * 100) / 100;
 const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
 const pad2 = n => String(n).padStart(2, '0');
+const GD_SALE = `(SELECT s0.SaleID, s0.SaleDate, s0.SupplyManID, s0.PartyID, s0.DocStatusID,
+    CASE WHEN CAST(s0.TotalSale AS FLOAT) - ISNULL(g.GA, 0) < 0 THEN 0 ELSE CAST(s0.TotalSale AS FLOAT) - ISNULL(g.GA, 0) END AS TotalSale
+  FROM dbo.Sale s0 LEFT JOIN (SELECT d.SaleID,
+      SUM(CASE WHEN LOWER(ISNULL(b.BranchName, '')) LIKE '%godam%' THEN CAST(d.Qty AS FLOAT) * CAST(d.Rate AS FLOAT) ELSE 0 END) AS GA,
+      SUM(CASE WHEN LOWER(ISNULL(b.BranchName, '')) LIKE '%godam%' THEN 0 ELSE 1 END) AS DN
+    FROM dbo.SaleDetail d JOIN dbo.Sale h ON h.SaleID = d.SaleID LEFT JOIN dbo.Branch b ON b.BranchID = ISNULL(NULLIF(d.GBranchID, 0), h.BranchID)
+    WHERE h.SaleDate >= @a AND h.SaleDate < @b GROUP BY d.SaleID) g ON g.SaleID = s0.SaleID WHERE ISNULL(g.DN, 1) > 0)`;
 const dayOf = d => `${d.getFullYear()}-${pad2(d.getMonth() + 1)}-${pad2(d.getDate())}`;
 const prevDay = day => { const d = new Date(day + 'T12:00:00'); d.setDate(d.getDate() - 1); return dayOf(d); };
 const rs = v => 'Rs ' + Math.round(Number(v) || 0).toLocaleString('en-PK');
@@ -202,11 +209,16 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     const ws = { n: wsBills.length, total: r2(wsBills.reduce((s, x) => s + x.total, 0)), farq: r2(wsBills.reduce((s, x) => s + x.farq, 0)),
       shakN: wsBills.filter(x => x.shak).length, shakFarq: r2(wsBills.filter(x => x.shak).reduce((s, x) => s + x.farq, 0)), counterN: wsBills.filter(x => x.counter).length, small, bills: wsBills.slice(0, 40) };
     // --- v1.5: larka-wise + sab se zyada nafe wale items ---
+    // v2.1 (15 Nov, malik: 'godam 1 / 2 / 3 se biki items larkon ki sale mein na aayein'): godam ki lines minus (larka-stats v3 wala hi qaida); SQL na chale = purana hisaab
     let larka = [];
-    try { larka = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`SELECT m.SupplyManName AS N, COUNT(*) AS C, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+    const larkaQ = async q => (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(q)).recordset.map(x => ({ n: String(x.N || '').trim().slice(0, 30), c: Number(x.C) || 0, t: r2(x.T) })).slice(0, 40);
+    try { larka = await larkaQ(`SELECT m.SupplyManName AS N, COUNT(*) AS C, SUM(CAST(s.TotalSale AS FLOAT)) AS T
+      FROM ${GD_SALE} s JOIN dbo.SupplyMan m ON m.SupplyManID = s.SupplyManID LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
+      WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(pt.PartyName, '') NOT LIKE '%noor%trader%'
+      GROUP BY m.SupplyManName ORDER BY SUM(CAST(s.TotalSale AS FLOAT)) DESC`); } catch (e) { log('larka (godam ke baghair) nahi chala: ' + e.message + ' — purana hisaab'); try { larka = await larkaQ(`SELECT m.SupplyManName AS N, COUNT(*) AS C, SUM(CAST(s.TotalSale AS FLOAT)) AS T
       FROM dbo.Sale s JOIN dbo.SupplyMan m ON m.SupplyManID = s.SupplyManID LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID
       WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3 AND ISNULL(pt.PartyName, '') NOT LIKE '%noor%trader%'
-      GROUP BY m.SupplyManName ORDER BY SUM(CAST(s.TotalSale AS FLOAT)) DESC`)).recordset.map(x => ({ n: String(x.N || '').trim().slice(0, 30), c: Number(x.C) || 0, t: r2(x.T) })).slice(0, 40); } catch (e) { log('larka nahi parhe: ' + e.message); }
+      GROUP BY m.SupplyManName ORDER BY SUM(CAST(s.TotalSale AS FLOAT)) DESC`); } catch (e2) { log('larka nahi parhe: ' + e2.message); } }
     const topNafa = [...ipf].sort((a, b) => b[1] - a[1]).slice(0, 5).map(([n, v]) => ({ n, rs: r2(v) }));
     // --- purchase ---
     const pl = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`SELECT d.PurchaseID, d.ItemID, d.Qty, d.Rate, i.ItemName, ISNULL(i.PackQty,0) AS Pack,
@@ -328,7 +340,9 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     if (age > 40) L.push('', `⚠️ Yeh data ${hzDur(age)} purana hai (hazri app ka server chup).`);
     return L.join('\n');
   }
-  async function waTo() { let to = ''; try { const w = await access.doc('waParchi').get(), pf = w.exists ? (w.data() || {}).prFrom : null; to = String((Array.isArray(pf) && pf[0]) || ''); } catch {} return String(to || '03450412515').replace(/\D/g, ''); }
+  let WA_FOR = '';   // v2.1: 'reports' menu kisi jure number ne maanga = report usi ko (nafa kabhi nahi)
+  async function waMb() { try { const w = await access.doc('waParchi').get(), pt = w.exists ? (w.data() || {}).prTo : null; return String((Array.isArray(pt) && pt[0]) || '').replace(/\D/g, ''); } catch { return ''; } }
+  async function waTo() { if (WA_FOR) return WA_FOR; let to = ''; try { const w = await access.doc('waParchi').get(), pf = w.exists ? (w.data() || {}).prFrom : null; to = String((Array.isArray(pf) && pf[0]) || ''); } catch {} return String(to || '03450412515').replace(/\D/g, ''); }
   async function waErr(txt) { try { const id = `rp-err-${Date.now().toString(36)}`; await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to: await waTo(), nm: 'Malik', kind: 'rem', eid: id, txt: String(txt).slice(0, 600) }); } catch (e) { log('waErr: ' + e.message); } }
   // ---------- 🧾 v2.0: UDHAAR REPORT (malik 15 Nov 2026: "un ka paigham hamein WhatsApp par aana chahiye rozana subah · 1 month se koi wasooli nahi aati") ----------
   //   Roz subah (udTime, default 10:00 — PC der se on ho to usi din jab bhi) malik ko: jin khaton se LENA hai aur udDays (30) din se wasooli nahi aayi.
@@ -381,6 +395,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     try { await hzPull(); } catch {}
     const t = now(), id = `rp-${dayOf(t)}-h-${Date.now().toString(36)}`, to = await waTo();
     try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to, nm: 'Malik', kind: 'rem', eid: id, txt: hzText(hzRead(), t, full) }); } catch (e) { log('waOut hazri: ' + e.message); return 0; }
+    if (!WA_FOR) { const mb = await waMb(); if (mb && mb !== to) { try { await biz.collection('waOut').doc(id + 'm').create({ st: 'new', at: Date.now(), to: mb, nm: 'Mubeen', kind: 'rem', eid: id + 'm', txt: hzText(hzRead(), t, full) }); } catch (e) { log('waOut hazri Mubeen: ' + e.message); } } }
     try { await access.doc('hazriWa').set({ sent: Date.now(), why: String(why || ''), ver: VER }, { merge: true }); } catch {}
     log(`👥 hazri WhatsApp par (${why})`);
     return 1;
@@ -402,7 +417,8 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     let n = 0;
     if (cfg.waOn !== false) {
       const to = await waTo(), stamp = Date.now().toString(36);
-      for (const [k, txt] of waTexts(r, cfg)) { const id = `rp-${r.day}-${k}-${stamp}`; try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to, nm: 'Malik', kind: 'rem', eid: id, txt }); n++; } catch (e) { log('waOut: ' + e.message); } }
+      for (const [k, txt] of waTexts(r, cfg)) { const id = `rp-${r.day}-${k}-${stamp}`; try { await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to, nm: 'Malik', kind: 'rem', eid: id, txt }); n++; } catch (e) { log('waOut: ' + e.message); }
+        if (k === 'h' && !WA_FOR) { const mb = await waMb(); if (mb && mb !== to) { try { await biz.collection('waOut').doc(id + 'm').create({ st: 'new', at: Date.now(), to: mb, nm: 'Mubeen', kind: 'rem', eid: id + 'm', txt }); } catch (e) { log('waOut Mubeen: ' + e.message); } } } }
     }
     try { await access.doc('reportWa').set({ at: Date.now(), day: r.day, n, why: String(why || ''), ver: VER }); } catch (e) { log('reportWa: ' + e.message); }
     return n;
@@ -427,7 +443,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
       try { await hzPull(); } catch (e) { log('hazri: ' + e.message); }
       if (st.run && st.run.at) { const r0 = st.run; delete st.run; saveSt(st); try { await access.doc('reportWa').set({ err: 'Report atak gayi (PC dheera / POS ka sawal lamba) — dobara dabayein', errAt: Date.now() }, { merge: true }); } catch {} await waErr(`⚠️ Report (${r0.why || ''}) poori nahi hui — shop PC par ${Math.round((Date.now() - Number(r0.at)) / 60000)} min pehle shuru hui thi aur atak gayi (PC dheera / POS ka sawal lamba). Dobara "reports" likh kar dekhein; phir bhi na aaye to Settings → 🖥️ PC scripts ki screenshot bhejein.`); }
-      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; if (o) { try { await access.doc('reportConfig').set({ waOnly: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else if (o === 'u') await udSend('maanga'); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); const rd = /^\d{4}-\d{2}-\d{2}$/.test(String(cfg.reportDay || '')) && Number(cfg.rdAt) === Number(cfg.reportNow) ? String(cfg.reportDay) : day; try { await access.doc('reportWa').set({ run: Date.now(), runDay: rd }, { merge: true }); } catch {} try { await runReport(rd, c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); try { await access.doc('reportWa').set({ err: String((e && e.message) || e).slice(0, 300), errAt: Date.now() }, { merge: true }); } catch {} await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } } }
+      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; WA_FOR = o && cfg.waFor ? String(cfg.waFor).replace(/\D/g, '') : ''; if (WA_FOR) c2.waP = false; if (o || cfg.waFor) { try { await access.doc('reportConfig').set({ waOnly: '', waFor: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else if (o === 'u') await udSend('maanga'); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); const rd = /^\d{4}-\d{2}-\d{2}$/.test(String(cfg.reportDay || '')) && Number(cfg.rdAt) === Number(cfg.reportNow) ? String(cfg.reportDay) : day; try { await access.doc('reportWa').set({ run: Date.now(), runDay: rd }, { merge: true }); } catch {} try { await runReport(rd, c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); try { await access.doc('reportWa').set({ err: String((e && e.message) || e).slice(0, 300), errAt: Date.now() }, { merge: true }); } catch {} await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } WA_FOR = ''; } }
       else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; st.run = { at: Date.now(), why: 'roz wali' }; saveSt(st); try { await runReport(day, cfg, 'raat'); } catch (e) { log('report masla: ' + e.message); await waErr('✕ Roz wali report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); }
       if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waH !== false && hzRead() && due(cfg.hzTime || '10:00', 'hzDay', 3)) { st.hzDay = day; saveSt(st); await hzSend('subah', false); }
       if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waU !== false && due(cfg.udTime || '10:00', 'udDay', 10)) { st.udDay = day; saveSt(st); await udSend('subah'); }

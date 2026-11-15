@@ -38,7 +38,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.24';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.25';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -365,7 +365,7 @@ async function main() {
   }
   // v1.22: 🚶 larkon ki bahar jane ki request (hz-wa.js). true = yeh paigham usi ka tha
   let HZ = null; try { HZ = require('./hz-wa.js')({ biz, log, dir: DIR, norm: normPh, who: p => (KHW && KHW.who ? KHW.who(p) || '' : ''), put: (id, x) => qPut(id, x) }); } catch (e) { log('⚠️ hz-wa.js nahi chala: ' + e.message); }
-  const hzSeen = new Set(), HZ_NEW = /^\s*(\d{1,3}|codes?|code\s*list|larko+n?\s*ke\s*code)\s*$/i, HZ_ANS = /^\s*(1|2|ha+n|han|ok|yes|ji|nahi|nai|no)\s*$/i;
+  const hzSeen = new Set(), HZ_NEW = /^\s*(\d{1,3}|codes?|code\s*list|larko+n?\s*ke\s*code|ha[zj]i?r[iy]\s+(?:(?:\d{1,3}[\s,]+)*\d{1,3}|(?:nahi|nai|no|wapas|hatao)\s+\d{1,3}|list|codes?))\s*$/i, HZ_ANS = /^\s*(1|2|ha+n|han|ok|yes|ji|nahi|nai|no)\s*$/i;
   async function hzIn(m, c, tx, s, fromMe) {
     if (!HZ) return false;
     const jid = String((m.key && m.key.remoteJid) || ''); if (!jid || /@g\.us$|@broadcast$|@newsletter$/.test(jid)) return false;
@@ -418,7 +418,7 @@ async function main() {
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
         if (ktx && ktx.length <= 3 && await gpReply(m, c, ktx, s)) continue;   // v1.18: 🚪 gate pass ka jawab (1 / 2) — sirf gate numbers, sirf gate paigham par reply
         if (ktx && ktx.length <= 8 && await repPrint(m, c, ktx, s, false)) continue;   // v1.24: 🖨 report par reply print -> thermal (sirf malik)
-        if (ktx && ktx.length <= 30 && await hzIn(m, c, ktx, s, false)) continue;
+        if (ktx && (ktx.length <= 30 || (ktx.length <= 160 && /^\s*ha[zj]i?r[iy]\s/i.test(ktx))) && await hzIn(m, c, ktx, s, false)) continue;
         // v1.23: 📝 kh-wa ne is number se TAFSEEL maangi ho (khPend stg 'f') to us ka agla likha paigham kh-wa ko — sirf ijazat wale number, baqi sab pehle jaisa
         if (KHW && KHW.waits && ktx && ktx.length <= 300 && !KHW.looks(ktx)) { const kn0 = await fromNum(m, s);
           if (kn0 && KHW.who(kn0) && await KHW.waits(kn0)) { const kt0 = Number(m.messageTimestamp && typeof m.messageTimestamp === 'object' ? (m.messageTimestamp.toNumber ? m.messageTimestamp.toNumber() : m.messageTimestamp.low) : m.messageTimestamp) * 1000 || 0;

@@ -8369,3 +8369,17 @@ Malik: "ek system banao jis mein PC ka naam ho, wohi SQL wala server uthaye — 
 - Jagah ki list (jgList) SIRF phone ke global mein — md/ PUBLIC, coordinates / pata repo mein KABHI nahi. Popup par 'recording' ka lafz nahi.
 - variableSetter (Java se global) pehli dafa istemal — phone par test nahi; javac + stubs se logic jaancha. Na chale = file root mein '_din…' naam se (recording nahi rukti).
 3) FolderSync: malik ne phone par lagaya (NT Awaz -> Drive, To right folder); 'Permission to access files not found' = All files access ijazat deni thi.
+
+
+=== v2.285.0 + PC (hz-wa v1.1 · kh-wa v1.9 · raat-report v2.1 · larka-stats v3 · wa-out v1.25 · wa-parchi v2.35) + hazri functions v255 (15 Nov 2026 raat) ===
+Malik: 'number select kar ke hazri lag jaye (1) · paigham sab mujhe, hazri wala Mubeen ko bhi · codes aur reports mein nafa ke ilawa sab (jure number) ·
+        Godam 1 / 2 / 3 se biki items larkon ki sale mein NA aayein — apps aur WhatsApp par wohi report'.
+1) 👥 HAZRI NUMBER SE: Business number par 'hazri 1 3 5' (sirf malik + Mubeen = hz-wa approvers: waParchi prFrom[0] / prTo[0]) -> hazri function a: in (hazri repo functions v255) ->
+   aaj ki hazri abhi ke waqt par ('WhatsApp se', manual). 'hazri nahi 3' = wapas (sirf WhatsApp wali, bina Check-Out) · 'hazri list' = code + aaj kis ki lagi.
+   Subah 9:15 (ASK_AT, PC on ho to 12 baje tak, din mein 1 dafa) dono ko 'kaun kaun aaya?'. Akela 'hazri' = report (pehle jaisa). Anjaan number ko jawab nahi.
+2) 📊 REPORTS MENU SAB JURE NUMBERS KO (kh-wa v1.9): 1 Daily · 2 Larka · (3 Profit · 4 Teeno SIRF malik — doosron ke menu mein line hi nahi, maangein to ✕) · 5 Hazri · 6 Udhaar · 7 Sab codes.
+   Report maangne wale ko hi (reportConfig.waFor -> raat-report v2.1 WA_FOR; WA_FOR ho to waP hamesha false). Roz wali reports sirf malik ko; hazri (subah + shaam) Mubeen ko bhi (waMb = prTo[0]).
+3) 🏬 LARKE KI SALE = SIRF DUKAN KA MAAL: larka-stats v3 (app ki Larka report + 🏆 ranking) + raat-report v2.1 (WhatsApp Larka-wise) — bill ka total MINUS wo lines jin ka godam
+   (SaleDetail.GBranchID, na ho = bill ki branch) naam mein 'godam'; sab lines godam ki = bill ginti mein nahi. POS user wala hissa pehle jaisa. SQL na chale = purana hisaab (sum.gd 0). App: chhoti line '🏬 Godam … shamil nahi' (sum.gd).
+- Test: hz-wa naqli Firestore + fetch (node) · larka-stats naqli DB (SQL ka matn dekha) · udhaar wala test dobara. Asal POS / WhatsApp / hazri Firebase par test NAHI. AI nahi.
+- Mubeen ka number malik ne chat mein diya (0346-…1193) — repo mein nahi likha (PUBLIC); system WhatsApp Parchi ki setting (prTo) wala number leta hai.

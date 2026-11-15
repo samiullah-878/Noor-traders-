@@ -1,4 +1,5 @@
 // =========================================================
+// 2.35 (15 Nov): kh-wa v1.9 (reports menu har jure number ko, nafa sirf malik · 7 Sab codes) — sirf dobara shuru hone ke liye chhua
 // v2.33 (14 Nov, malik ki screenshot: tasveer -> '03711439200' alag paigham -> 'Print auto' = 'gahak? (number nahi)'): (1) PH_RE sirf 030–035 maanta tha — 0371… (naya series) number hi nahi samjha;
 //        ab 036–039 bhi (0 / 92 ke saath). (2) number ALAG chhote paigham mein ho (tasveer / Print se pehle ya baad, 10 min) = bzNum / gahakSet.
 // v2.32 (14 Nov): kh-wa v1.7 (👥 'hazri' likhne par hazri ki report) — is file mein sirf version (doctor dobara chalaye).
@@ -93,7 +94,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.34';   // v2.34: kh-wa v1.8 (tafseel lazmi) — is file mein sirf version (doctor dobara chalaye)
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.35';   // v2.34: kh-wa v1.8 (tafseel lazmi) — is file mein sirf version (doctor dobara chalaye)
 const TH_PRINTER = 'TM-T88IV', W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');

@@ -210,6 +210,7 @@ function paint() {
   const shown = r.keys.slice(0, MAX_ROWS), list = r.bills.slice(0, MAX_BILLS);
   root.innerHTML = `<div class="bc-head">
     ${chips(Object.entries(MODES).map(([k, m]) => [k, m.label]), 'data-lk-by', k => k === st.by)}
+    ${st.by === 'larka' && data.sum?.gd ? '<small class="lk-gd">🏬 Godam 1 / 2 / 3 se bika maal is mein shamil nahi — sirf dukan ka</small>' : ''}
     <div class="lk-filter">
       <label>${esc(s.word)}<select data-lk-man><option value="all">${esc(s.all)}</option>${s.men.map(m => `<option value="${esc(m.id)}"${String(m.id) === st.man ? ' selected' : ''}>${esc(m.name)}</option>`).join('')}</select></label>
       <label>Tareekh se<input type="date" data-lk-from value="${esc(st.from)}"></label>

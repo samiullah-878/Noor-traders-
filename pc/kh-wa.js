@@ -17,7 +17,7 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.8';   // v1.8 (14 Nov, malik: 'tafseel ke baghair entry nahi banni chahiye — WhatsApp wali par tafseel nahi aa rahi'): kharcha / payment li / di mein tafseel na ho to entry se PEHLE sawal (khPend stg 'f', 10 min) — jawab = tafseel, phir entry. Transfer par nahi.
+const VER = '1.9';   // v1.9 (15 Nov, malik: 'jitne bhi code hain reports mein shamil karein — number dabane par sab code aayein · reports mein nafa ke ilawa sab (jure number bhi) · nafa sirf mujhe'): 'reports' / 'hazri' ab har jure number ko (report usi ko — reportConfig.waFor, raat-report v2.1), 3 Profit / 4 Teeno SIRF malik; 6 Udhaar · 7 Sab codes (codesTxt)   // v1.8 (14 Nov, malik: 'tafseel ke baghair entry nahi banni chahiye — WhatsApp wali par tafseel nahi aa rahi'): kharcha / payment li / di mein tafseel na ho to entry se PEHLE sawal (khPend stg 'f', 10 min) — jawab = tafseel, phir entry. Transfer par nahi.
 // v1.7:   // v1.7 (14 Nov): 👥 'hazri' (sirf malik) -> reportConfig {reportNow, waOnly 'h'} -> raat-report v1.7; 'reports' menu mein 5 Hazri   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
 // v1.5:   // v1.5 (13 Nov): 🔔 WhatsApp reminder — 'reminder <likhai> / kal se' · 'all reminder show' · '3 off' · 'reminder off'; roz 11 baje, jab tak off na ho; har number ka apna (malik, Mubeen)
 // v1.4:   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
@@ -97,6 +97,23 @@ function make({ biz, log = () => {} }) {
     const L = [...PT.values()].filter(p => okParty(p) && p.id !== not), r = DH.smartFind(L, q, p => String(p.name || ''), p => p.id, 40), out = [];
     for (const p of [...r.hits, ...(strict ? [] : r.near)]) { if (!out.includes(p)) out.push(p); if (out.length >= 5) break; }
     return out;
+  }
+  // v1.9: 📖 sab codes — ek paigham mein har hukum + larkon ke code + kharcha khaton ke number (nafa / cancel wali line sirf malik ko)
+  async function codesTxt(mk) {
+    const L = ['📖 *Sab codes* (Business number par likhein)', '',
+      '👥 *Hazri lagana* (malik / Mubeen): hazri 1 3 5  ·  hazri nahi 3  ·  hazri list',
+      '🚶 *Bahar jana*: larka sirf apna code likhe (jaise 4) -> wajah ka number',
+      '🧾 *Kharcha*: khate ka number + tafseel + raqam, jaise  001 Imran ne paisa liya 4900',
+      '💵 *Payment / transfer*: khate ka naam likhein -> list se number -> 1 li · 2 di · 3 transfer · 4 PDF · 5 print',
+      '🔔 *Reminder*: reminder <baat>  ·  all reminder  ·  3 off',
+      '📊 *Reports*: reports  ·  hazri',
+      '🖨 *Print*: kisi report par reply mein  print'];
+    if (mk) L.push('↩ *Cancel* (sirf malik): entry ke jawab wale paigham par reply  cancel');
+    try { const sn = await BA.doc('hzCodes').get(), d = sn.exists ? sn.data() || {} : {}, m = d.m || {}, nm = d.nm || {};
+      const A = Object.keys(m).map(p => [Number(m[p]), String(nm[p] || p)]).sort((a, b) => a[0] - b[0]); if (A.length) L.push('', '👦 *Larkon ke code*', A.map(x => x[0] + ' ' + x[1]).join('  ·  ')); } catch {}
+    try { await parties(); const K = Object.keys(num).map(id => [Number(num[id]), PT.get(id)]).filter(x => x[0] && okParty(x[1])).sort((a, b) => a[0] - b[0]);
+      if (K.length) L.push('', '🧾 *Kharcha khaton ke number*', K.slice(0, 80).map(x => String(x[0]).padStart(3, '0') + ' ' + String(x[1].name).trim()).join('\n')); } catch {}
+    return L.join('\n');
   }
   const PEND = BA.doc('khPend'), KN = { 1: 'Payment LI (wasooli)', 2: 'Payment DI', 3: 'Transfer' };
   const listTxt = L => L.map((p, i) => `${i + 1}. ${p.name}`).join('\n');
@@ -245,9 +262,12 @@ function make({ biz, log = () => {} }) {
       await remSave(ph, R); await pendDrop(ph); await say(ph, 'kw-' + w, `✅ ${n} reminder band ho gaye.`); return true;
     }
     if (d.stg === 'r') {
-      if (!pk || pk[2] != null) return false; const k = { 1: 'd', 2: 'l', 3: 'p', 4: 'all', 5: 'h' }[Number(pk[1])]; if (!k) { await say(ph, 'kx-' + w, '✕ 1 se 5 tak number bhejein.'); return true; }
-      await pendDrop(ph); await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: k }, { merge: true });
-      await say(ph, 'kw-' + w, '⏳ Report ban rahi hai — 1-2 minute mein malik ke WhatsApp par aayegi.'); return true;
+      if (!pk || pk[2] != null) return false; const n = Number(pk[1]), k = { 1: 'd', 2: 'l', 3: 'p', 4: 'all', 5: 'h', 6: 'u', 7: 'c' }[n], mk = isMalik(ph);
+      if (!k || (!mk && (k === 'p' || k === 'all'))) { await say(ph, 'kx-' + w, mk ? '✕ 1 se 7 tak number bhejein.' : '✕ 1, 2, 5, 6 ya 7 bhejein.'); return true; }
+      await pendDrop(ph);
+      if (k === 'c') { await say(ph, 'kw-' + w, await codesTxt(mk)); return true; }
+      await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: k, waFor: mk ? '' : ph }, { merge: true });
+      await say(ph, 'kw-' + w, '⏳ Report ban rahi hai — 1-2 minute mein ' + (mk ? 'aap' : 'aap hi') + ' ke WhatsApp par aayegi.'); return true;
     }
     if (d.stg === 'm') {
       if (!sm) return false; const p = PT.get(d.pid); if (!okParty(p)) { await pendDrop(ph); await say(ph, 'kx-' + w, '✕ Yeh khata ab nahi mila.'); return true; }
@@ -321,10 +341,10 @@ function make({ biz, log = () => {} }) {
       await say(ph, 'kc-' + w, `↩ Wapas ho gaya: ${rsT(e.amount / 100)}${e.note ? ' — ' + String(e.note).slice(0, 80) : ''}`); return true;
     }
     const fresh = !ts || Date.now() - ts <= 10 * 60000;
-    if (HZ_RE.test(text)) { if (!fresh) return true; if (!isMalik(ph)) { await say(ph, 'kx-' + w, '✕ Hazri ki report sirf malik maang sakta hai.'); return true; }
-      await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: 'h' }, { merge: true }); await say(ph, 'kw-' + w, '⏳ Hazri ki report aa rahi hai (1 minute).'); return true; }
-    if (REP_RE.test(text)) { if (!fresh) return true; if (!isMalik(ph)) { await say(ph, 'kx-' + w, '✕ Reports sirf malik maang sakta hai.'); return true; }
-      await pendSet(ph, { stg: 'r', w, by: name }); await say(ph, 'kq-' + w, '📊 Kaun si report?\n\n1 Daily Sale ka hisaab\n2 Larka-wise\n3 Dukan ka profit\n4 Teeno\n5 Hazri (larke)\n\nNumber bhejein (0 = chhoro)'); return true; }
+    if (HZ_RE.test(text)) { if (!fresh) return true;
+      await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: 'h', waFor: isMalik(ph) ? '' : ph }, { merge: true }); await say(ph, 'kw-' + w, '⏳ Hazri ki report aa rahi hai (1 minute).'); return true; }
+    if (REP_RE.test(text)) { if (!fresh) return true;
+      await pendSet(ph, { stg: 'r', w, by: name }); await say(ph, 'kq-' + w, '📊 Kaun si report?\n\n1 Daily Sale ka hisaab\n2 Larka-wise' + (isMalik(ph) ? '\n3 Dukan ka profit\n4 Teeno' : '') + '\n5 Hazri (larke)\n6 Udhaar (wasooli nahi aayi)\n7 Sab codes (kya kya likh sakte hain)\n\nNumber bhejein (0 = chhoro)'); return true; }
     let pd = fresh ? await pendGet(ph) : null;
     if (pd && pd.stg === 'f') { const r = await tafseel(ph, name, w, text, pd); if (r !== null) return r; pd = await pendGet(ph); }
     if (fresh && (PICK_RE.test(text) || STG_RE.test(text))) { if (pd && pd.stg && pd.stg !== 'f' && await stage(ph, name, w, text, pd)) return true; }
