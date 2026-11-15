@@ -8313,3 +8313,8 @@ Malik (rack ka size screen ki photo): "ye video ki tarah chal raha ho (= larki, 
 ==================== v2.280.4 (15 Nov 2026) — 🔍 DHOONDO: GODAM KA STOCK SUNEHRI GHERE MEIN ====================
 Malik (Dhoondo ki photo, "Noor 2 Ctn 14 · G1 5 Ctn"): "is ke godam ke gird gold daira laga do".
 - pos-stock.js `ntItemFind` ab `per` [{m: dukan?, t}] bhi deta hai; shell.js `dhSubHTML` godam wale hisse `.dh-gd` (sunehri gol ghera), dukan (🏪 Noor) saada. `sub` wahi (purana raasta). AI nahi.
+
+
+==================== v2.280.5 (15 Nov 2026) — 🔍 DHOONDO: GODAM KA NAAM ALAG GOL MEIN ====================
+Malik ("G1 10 CTN" ki photo): "godam ka 1 aur stock wala 1 ek jaise lag rahe — peeche ya upar neeche karo".
+- `ntItemFind().per` mein `n` (godam naam) + `q` (tadad) alag; shell.js `dhSubHTML`: sunehri ghere ke andar naam `.dh-gn` (gehra sunehri bhara gol, safed harf) phir tadad. 🏬 nishan hata (naam hi kaafi). Item ki chhoti line ab wrap hoti hai (doosra godam "…" mein nahi katta). AI nahi.
