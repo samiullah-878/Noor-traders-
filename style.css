@@ -8076,39 +8076,11 @@ html body #dialogBody .jz-list.jz-first{margin-top:0!important}
 /* v2.250.1: 🤖 Jaanch ka card — khanon ke naam (Ctn / Pcs / Kh / W / R) bare (malik: 'naam small hai, nazar nahi aata'); PC par poora card EK screen mein (scroll nahi), Wholesale + Parchoon chips EK line */
 html body #dialogBody .jc-f{font-size:14px!important;font-weight:800!important;color:#1d2f4d!important}
 html body #dialogBody .jc-f small,html body #dialogBody .jc-sec{font-size:12.5px!important}
-@media (min-width:1100px){
-html.pcm body #dialogBody .jc-patti{max-height:120px!important;overflow:hidden!important;margin-bottom:4px!important}
-html.pcm body #dialogBody .jc-card{padding-top:4px!important;padding-bottom:4px!important}
-html.pcm body #dialogBody .jc-card :is(.jc-g4,.jc-g2,.jc-kulrow){margin:2px 0!important;gap:8px!important}
-html.pcm body #dialogBody .jc-card input{height:36px!important;min-height:0!important;padding-top:2px!important;padding-bottom:2px!important;font-size:17px!important}
-html.pcm body #dialogBody .jc-card .jc-sec{margin:2px 0!important;padding:0!important}
-html.pcm body #dialogBody .jc-card .jc-mrph{display:none!important}
-html.pcm body #dialogBody .jc-card .jc-g2.jc-mrp{grid-template-columns:repeat(4,minmax(0,1fr))!important}
-html.pcm body #dialogBody .rate-chips{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:4px 22px!important;margin:4px 0!important;padding:4px 8px!important}
-html.pcm body #dialogBody .rate-chips .rc-head{order:9!important;flex:0 0 auto!important;margin:0!important}
-html.pcm body #dialogBody .rate-chips .rc-head small{display:none!important}
-html.pcm body #dialogBody .rate-chips .rc-row{flex:0 1 auto!important;margin:0!important;flex-wrap:nowrap!important}
-html.pcm body #dialogBody .rate-chips .rc-row button{min-height:0!important;height:30px!important;padding:0 10px!important}
+@media (min-width:1100px){html.pcm body #dialogBody .jc-patti{max-height:120px!important;overflow:hidden!important;margin-bottom:4px!important}html.pcm body #dialogBody .jc-card{padding-top:4px!important;padding-bottom:4px!important}html.pcm body #dialogBody .jc-card :is(.jc-g4,.jc-g2,.jc-kulrow){margin:2px 0!important;gap:8px!important}html.pcm body #dialogBody .jc-card input{height:36px!important;min-height:0!important;padding-top:2px!important;padding-bottom:2px!important;font-size:17px!important}html.pcm body #dialogBody .jc-card .jc-sec{margin:2px 0!important;padding:0!important}html.pcm body #dialogBody .jc-card .jc-mrph{display:none!important}html.pcm body #dialogBody .jc-card .jc-g2.jc-mrp{grid-template-columns:repeat(4,minmax(0,1fr))!important}html.pcm body #dialogBody .rate-chips{display:flex!important;flex-wrap:wrap!important;align-items:center!important;gap:4px 22px!important;margin:4px 0!important;padding:4px 8px!important}html.pcm body #dialogBody .rate-chips .rc-head{order:9!important;flex:0 0 auto!important;margin:0!important}html.pcm body #dialogBody .rate-chips .rc-head small{display:none!important}html.pcm body #dialogBody .rate-chips .rc-row{flex:0 1 auto!important;margin:0!important;flex-wrap:nowrap!important}html.pcm body #dialogBody .rate-chips .rc-row button{min-height:0!important;height:30px!important;padding:0 10px!important}
 }
 
 /* v2.250.2: Jaanch card PC — aur tang (malik: 'neeche scroll na karna pare, chips ko close karo') */
-@media (min-width:1100px){
-html.pcm body #dialogBody .jc-patti{max-height:92px!important;margin-bottom:2px!important}
-html.pcm body #dialogBody .jc-card{padding-top:2px!important;padding-bottom:2px!important}
-html.pcm body #dialogBody .jc-card>*{margin-top:1px!important;margin-bottom:1px!important}
-html.pcm body #dialogBody .jc-card :is(.jc-g4,.jc-g2,.jc-kulrow){margin:1px 0!important;gap:3px 8px!important}
-html.pcm body #dialogBody .jc-card input{height:30px!important;font-size:16px!important;padding:0 6px!important}
-html.pcm body #dialogBody .jc-card .jc-f{gap:0!important;font-size:13px!important;line-height:1.15!important}
-html.pcm body #dialogBody .jc-card .jc-f small{font-size:11.5px!important;line-height:1.05!important;margin:0!important}
-html.pcm body #dialogBody .jc-card :is(.jc-sec,.jc-why,.jc-sub,.jc-units,.jc-per,.jc-kul small){margin:0!important;padding-top:0!important;padding-bottom:0!important;line-height:1.2!important;min-height:0!important}
-html.pcm body #dialogBody .jc-card .jc-units button{height:24px!important;min-height:0!important;padding:0 10px!important;font-size:12px!important}
-html.pcm body #dialogBody .jc-card .jc-g2.jc-mrp{grid-template-columns:repeat(6,minmax(0,1fr))!important}
-html.pcm body #dialogBody .rate-chips{gap:2px 16px!important;margin:1px 0!important;padding:2px 6px!important}
-html.pcm body #dialogBody .rate-chips .rc-row{gap:4px!important}
-html.pcm body #dialogBody .rate-chips .rc-row button{height:26px!important;padding:0 8px!important;font-size:13px!important}
-html.pcm body #dialogBody .rate-chips .rc-lab{width:auto!important;font-size:11.5px!important;line-height:1.05!important;margin-right:4px}
-html.pcm body #dialogBody .jc-acts.jc-sticky{padding-top:3px!important;padding-bottom:3px!important;gap:6px!important}
-html.pcm body #dialogBody .jc-acts.jc-sticky button{height:36px!important;min-height:0!important}
+@media (min-width:1100px){html.pcm body #dialogBody .jc-patti{max-height:92px!important;margin-bottom:2px!important}html.pcm body #dialogBody .jc-card{padding-top:2px!important;padding-bottom:2px!important}html.pcm body #dialogBody .jc-card>*{margin-top:1px!important;margin-bottom:1px!important}html.pcm body #dialogBody .jc-card :is(.jc-g4,.jc-g2,.jc-kulrow){margin:1px 0!important;gap:3px 8px!important}html.pcm body #dialogBody .jc-card input{height:30px!important;font-size:16px!important;padding:0 6px!important}html.pcm body #dialogBody .jc-card .jc-f{gap:0!important;font-size:13px!important;line-height:1.15!important}html.pcm body #dialogBody .jc-card .jc-f small{font-size:11.5px!important;line-height:1.05!important;margin:0!important}html.pcm body #dialogBody .jc-card :is(.jc-sec,.jc-why,.jc-sub,.jc-units,.jc-per,.jc-kul small){margin:0!important;padding-top:0!important;padding-bottom:0!important;line-height:1.2!important;min-height:0!important}html.pcm body #dialogBody .jc-card .jc-units button{height:24px!important;min-height:0!important;padding:0 10px!important;font-size:12px!important}html.pcm body #dialogBody .jc-card .jc-g2.jc-mrp{grid-template-columns:repeat(6,minmax(0,1fr))!important}html.pcm body #dialogBody .rate-chips{gap:2px 16px!important;margin:1px 0!important;padding:2px 6px!important}html.pcm body #dialogBody .rate-chips .rc-row{gap:4px!important}html.pcm body #dialogBody .rate-chips .rc-row button{height:26px!important;padding:0 8px!important;font-size:13px!important}html.pcm body #dialogBody .rate-chips .rc-lab{width:auto!important;font-size:11.5px!important;line-height:1.05!important;margin-right:4px}html.pcm body #dialogBody .jc-acts.jc-sticky{padding-top:3px!important;padding-bottom:3px!important;gap:6px!important}html.pcm body #dialogBody .jc-acts.jc-sticky button{height:36px!important;min-height:0!important}
 }
 
 /* v2.267.0: 🔍 rack ka size + item ka qad (Online Dukan → Racks → 🔍) */
@@ -8158,6 +8130,8 @@ html body #wdDlg .wd-zi.is-in{outline:2px solid #ffd84d;outline-offset:-1px;back
 #wdDlg .wd-zs.is-in{background:rgba(255,216,77,.22);box-shadow:inset 0 0 0 2px #ffd84d}
 html body #wdDlg .wd-zi{position:relative;z-index:1;flex:0 1 auto;min-width:0;width:calc(var(--wu,14)*var(--u,3.4px));height:min(100%,calc(var(--hu,14)*var(--u,3.4px) + var(--tg)));padding:0!important;border-radius:0!important}
 html body #wdDlg .wd-zi.is-in{z-index:5}
+/* 🖼 v2.280.3: har item ka 3D kinara (website jaisa — dukan.css .it::after), faasla nahi barhta */
+html body #wdDlg .wd-zi::after{content:"";position:absolute;left:0;right:0;top:0;bottom:var(--tg,15px);pointer-events:none;border-radius:3px;box-shadow:inset 2px 2px 0 rgba(255,255,255,.9),inset -2px -2px 0 rgba(8,16,40,.62),inset 0 0 0 3px rgba(255,255,255,.14),2px 3px 4px rgba(0,0,0,.32)}
 #wdDlg .wd-zt{font:800 11px/1.3 system-ui;padding:0 4px;margin:0 0 1px;max-width:none;overflow:visible;flex:none}
 #wdDlg .wd-zno{left:-8px;top:2px;transform:none;width:18px;height:20px;border-radius:0 0 8px 0;font:800 12px/20px system-ui;z-index:3;opacity:.92}
 #wdDlg .wd-zp.none{background:rgba(255,255,255,.2);border-radius:3px}

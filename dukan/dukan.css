@@ -587,8 +587,17 @@ html.lite .k-led{animation:none}
 .kg-say{position:absolute;left:62%;bottom:86%;margin:0;padding:8px 12px;border-radius:14px 14px 14px 4px;background:#fff;color:#1b2f5c;font:700 13.5px/1.35 Manrope,sans-serif;white-space:nowrap;box-shadow:0 6px 18px rgba(15,25,50,.22);opacity:0;transform:translateY(6px) scale(.94);transform-origin:left bottom;transition:opacity .3s ease,transform .3s ease;pointer-events:none}
 .kg-say b{font:800 15px/1.2 "Baloo 2",Manrope,sans-serif;color:#b8860b}
 .k-greet.hi .kg-say{opacity:1;transform:none}
+/* v2.280.3: video ki tarah — saans, palkein, haath hilana (sirf chhoti SVG ke transform; blur / filter nahi) */
+.k-greet svg{transform-origin:50% 100%;animation:kgBreath 3.6s ease-in-out infinite}
+@keyframes kgBreath{0%,100%{transform:scaleY(1)}50%{transform:scaleY(1.012)}}
+.kg-lid{transform-box:fill-box;transform-origin:50% 0;transform:scaleY(0);animation:kgBlink 4.2s linear infinite}
+@keyframes kgBlink{0%,93%,100%{transform:scaleY(0)}95.5%,97%{transform:scaleY(1)}}
+.kg-arm{transform-box:view-box;transform-origin:110px 138px}
+.k-greet.wv .kg-arm{animation:kgWave 2.5s ease-in-out 1}
+@keyframes kgWave{0%,100%{transform:rotate(0)}16%{transform:rotate(-178deg)}28%{transform:rotate(-198deg)}40%{transform:rotate(-170deg)}52%{transform:rotate(-198deg)}64%{transform:rotate(-170deg)}78%{transform:rotate(-185deg)}}
+html.lite .k-greet svg,html.lite .kg-lid{animation:none}
 html.lite .k-greet.hi .kg-top{animation:none}
-@media (prefers-reduced-motion:reduce){.k-greet.hi .kg-top{animation:none}.k-greet{transition:none}}
+@media (prefers-reduced-motion:reduce){.k-greet svg,.kg-lid,.k-greet.wv .kg-arm{animation:none}.k-greet.hi .kg-top{animation:none}.k-greet{transition:none}}
 @keyframes kHint{from{transform:translate(-50%,-50%)}to{transform:translate(-50%,calc(-50% - 10px))}}
 html.lite .k-hint{animation:none}
 .top .ic.room{background:var(--gold);color:#1b2f5c}
@@ -627,6 +636,8 @@ html.lite .k-hint{animation:none}
 .bay.tt .shelf.fx .it{flex:0 1 auto;min-width:0;width:calc(var(--wu,14)*var(--u,3.4px));height:min(100%,calc(var(--hu,14)*var(--u,3.4px) + var(--tg)));padding:0}
 .bay.tt .it-box{padding-bottom:0}
 .bay.tt .it-box img{border-radius:0}
+/* 🖼 v2.280.3 (malik: 'ek item ke ird-gird 3D border — door se items mix na lagein'): har item ke dabbe par ubhra hua kinara (upar-baayein roshni, neeche-daayein saya). Faasla NAHI barhta (items jure hi), dher par ek hi frame. */
+.bay.tt .shelf.fx .it::after{content:"";position:absolute;left:0;right:0;top:0;bottom:var(--tg,15px);pointer-events:none;border-radius:3px;box-shadow:inset 2px 2px 0 rgba(255,255,255,.9),inset -2px -2px 0 rgba(8,16,40,.62),inset 0 0 0 3px rgba(255,255,255,.14),2px 3px 4px rgba(0,0,0,.32)}
 .bay.tt .tag{font-size:var(--tf);line-height:1.3;padding:0 4px;margin:0 0 1px;max-width:none;overflow:visible;flex:none}
 .bay.tt .tag small{display:none}
 .bay.tt .tag small.pu{display:inline;font-size:.68em}

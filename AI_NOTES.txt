@@ -8301,3 +8301,10 @@ Malik: "jab bhi website par koi aaye to larki jhuk kar hello kare — idhar khar
 - dukan/kamra.js: `GIRL` (bani hui poori qad ki larki, counter wali jaisi shakal) + `#kGreet` (.k-greet) = 3D scene ke BAHAR 2D parat, baayein neeche. Shutter khulte hi (`showHint` -> `greetGo`, HAR dafa — sessionStorage ki shart se pehle) 0.5 s baad `bow()`: `.kg-top` (kamar se upar) do dafa jhukta hai + bubble "Assalam o Alaikum 👋 Khush aamdeed!" 5 s. Larki par tap = dobara salaam.
 - Aage chale (scroll > 160 unit) = `.away` (baayein nikal jati), wapas darwaze par = phir nazar. LITE / kam-harkat phone par jhukna nahi, sirf bubble. Blur / filter / scroll-time CSS var nahi. Counter wali larki wahi.
 - Jagah (baayein neeche) andaze se — malik ne 'idhar' ki tasveer nahi bheji; doosri jagah = `.k-greet` left / bottom. Asal phone par test nahi. AI nahi.
+
+
+==================== v2.280.3 (15 Nov 2026) — 🙋‍♀️ LARKI VIDEO KI TARAH + 🖼 ITEM KA 3D KINARA ====================
+Malik (rack ka size screen ki photo): "ye video ki tarah chal raha ho (= larki, us ne 1 chuna) · ek item ke ird-gird 3D border ho jis se door se item mix na lagein".
+- Larki (dukan/kamra.js GIRL + dukan.css): hamesha saans (`kgBreath`) + palkein (`.kg-lid`, `kgBlink`); har 8 s bari bari haath hilana (`wave()` -> `.wv`, `.kg-arm`) / jhukna (`bow()`) — sirf jab nazar aa rahi ho (tab chhupa / `.away` = kuch nahi). LITE / kam-harkat = purana (sirf bubble).
+- 3D kinara: website `.bay.tt .shelf.fx .it::after` + app rack ka size `#wdDlg .wd-zi::after` — inset roshni / saya, neeche `--tg` (rate ki parchi) chhor kar. Faasla NAHI barha (v2.272.0 ka qaida wahi), dher par ek hi frame. Dono jagah EK jaisi box-shadow — ek badlo to doosri bhi.
+- Asal phone par test nahi (sirf yahan preview). AI nahi.
