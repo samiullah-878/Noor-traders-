@@ -23,7 +23,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '2.1';
+const VER = '2.2';
 // v1.9 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS'): POS ke dbo.Sale mein COGS ka khana HAI HI NAHI — har report isi par girti thi.
 //   Ab colOf() pehle sys.columns dekhta hai (asal naam, bari / chhoti likhai); na ho = NULL -> nafa line ke khareed rate se (pehle se bana hisaab).
 //   reportDay sirf usi dafa jab usi hukum (rdAt == reportNow) ke saath aaya ho — warna AAJ (Report screen ki purani tareekh atki rehti thi).
@@ -391,6 +391,20 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       return rows.length;
     } catch (e) { log('udhaar report: ' + e.message); await waErr('✕ Udhaar report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); return -1; }
   }
+  // v2.2 (15 Nov, malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, item wise aur stock wise'): 📦 khatam hone wala maal SIRF maangne par
+  //   ('reports' -> 8, waOnly 'k'). Wohi buildAlert (stock ÷ roz ki bikri) — 5 din se kam = list, 2 din se kam 🔴. Khud roz KABHI nahi. Rate / nafa is paigham mein nahi.
+  async function khSend(why) {
+    try {
+      const a = await buildAlert({ ...(await cfgGet()), alertRed: 2, alertYellow: 5 }), t = now(), top = a.items.slice(0, 25), id = `rp-${dayOf(t)}-k-${Date.now().toString(36)}`;
+      const L = ['📦 *Maal khatam hone wala* (5 din se kam)', `${a.redN} 🔴 (2 din se kam) · ${a.yellowN} 🟡`, ''];
+      if (!top.length) L.push('✅ Aisa koi item nahi.');
+      top.forEach((x, i) => L.push(`${i + 1}. ${x.lvl === 'red' ? '🔴' : '🟡'} ${x.n} — stock ${x.have} ${x.u} · roz ${x.daily} · ${x.left <= 0 ? 'KHATAM' : x.left + ' din'}`));
+      if (a.redN + a.yellowN > top.length) L.push('', `… aur ${a.redN + a.yellowN - top.length} items`);
+      if (top.length) L.push('', 'Stock = sab jagah ka jor · roz = 30 din ki ausat bikri. Reply "print" = thermal.');
+      await biz.collection('waOut').doc(id).create({ st: 'new', at: Date.now(), to: await waTo(), nm: 'Malik', kind: 'rem', eid: id, txt: L.join('\n') });
+      log(`📦 khatam hone wala maal WhatsApp par (${why}) — ${top.length} items`); return top.length;
+    } catch (e) { log('khatam report: ' + e.message); await waErr('✕ Khatam hone wale maal ki report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); return -1; }
+  }
   async function hzSend(why, full) {
     try { await hzPull(); } catch {}
     const t = now(), id = `rp-${dayOf(t)}-h-${Date.now().toString(36)}`, to = await waTo();
@@ -443,7 +457,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
       // v1.3: ⏰ subah ki khatam-maal khabar (runAlert) BAND — malik ne kaha zaroorat nahi
       try { await hzPull(); } catch (e) { log('hazri: ' + e.message); }
       if (st.run && st.run.at) { const r0 = st.run; delete st.run; saveSt(st); try { await access.doc('reportWa').set({ err: 'Report atak gayi (PC dheera / POS ka sawal lamba) — dobara dabayein', errAt: Date.now() }, { merge: true }); } catch {} await waErr(`⚠️ Report (${r0.why || ''}) poori nahi hui — shop PC par ${Math.round((Date.now() - Number(r0.at)) / 60000)} min pehle shuru hui thi aur atak gayi (PC dheera / POS ka sawal lamba). Dobara "reports" likh kar dekhein; phir bhi na aaye to Settings → 🖥️ PC scripts ki screenshot bhejein.`); }
-      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; WA_FOR = o && cfg.waFor ? String(cfg.waFor).replace(/\D/g, '') : ''; if (WA_FOR) c2.waP = false; if (o || cfg.waFor) { try { await access.doc('reportConfig').set({ waOnly: '', waFor: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else if (o === 'u') await udSend('maanga'); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); const rd = /^\d{4}-\d{2}-\d{2}$/.test(String(cfg.reportDay || '')) && Number(cfg.rdAt) === Number(cfg.reportNow) ? String(cfg.reportDay) : day; try { await access.doc('reportWa').set({ run: Date.now(), runDay: rd }, { merge: true }); } catch {} try { await runReport(rd, c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); try { await access.doc('reportWa').set({ err: String((e && e.message) || e).slice(0, 300), errAt: Date.now() }, { merge: true }); } catch {} await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } WA_FOR = ''; } }
+      if (Number(cfg.reportNow) > (st.reportNow || 0)) { st.reportNow = Number(cfg.reportNow); saveSt(st); { const o = String(cfg.waOnly || ''), c2 = ['d', 'l', 'p'].includes(o) ? { ...cfg, waOn: true, waD: o === 'd', waL: o === 'l', waP: o === 'p', waH: false } : o === 'all' ? { ...cfg, waOn: true, waD: true, waL: true, waP: true, waH: false } : cfg; WA_FOR = o && cfg.waFor ? String(cfg.waFor).replace(/\D/g, '') : ''; if (WA_FOR) c2.waP = false; if (o || cfg.waFor) { try { await access.doc('reportConfig').set({ waOnly: '', waFor: '' }, { merge: true }); } catch {} } if (o === 'h') await hzSend('maanga', true); else if (o === 'u') await udSend('maanga'); else if (o === 'k') await khSend('maanga'); else { st.run = { at: Date.now(), why: o ? 'WhatsApp se' : 'app se' }; saveSt(st); const rd = /^\d{4}-\d{2}-\d{2}$/.test(String(cfg.reportDay || '')) && Number(cfg.rdAt) === Number(cfg.reportNow) ? String(cfg.reportDay) : day; try { await access.doc('reportWa').set({ run: Date.now(), runDay: rd }, { merge: true }); } catch {} try { await runReport(rd, c2, o ? 'WhatsApp se' : 'app se abhi'); } catch (e) { log('report masla: ' + e.message); try { await access.doc('reportWa').set({ err: String((e && e.message) || e).slice(0, 300), errAt: Date.now() }, { merge: true }); } catch {} await waErr('✕ Report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); } WA_FOR = ''; } }
       else if (cfg.reportOn !== false && due(cfg.reportTime, 'reportDay', 24)) { st.reportDay = day; st.run = { at: Date.now(), why: 'roz wali' }; saveSt(st); try { await runReport(day, cfg, 'raat'); } catch (e) { log('report masla: ' + e.message); await waErr('✕ Roz wali report nahi bani: ' + String((e && e.message) || e).slice(0, 300)); } delete st.run; saveSt(st); }
       if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waH !== false && hzRead() && due(cfg.hzTime || '10:00', 'hzDay', 3)) { st.hzDay = day; saveSt(st); await hzSend('subah', false); }
       if (cfg.reportOn !== false && cfg.waOn !== false && cfg.waU !== false && due(cfg.udTime || '10:00', 'udDay', 10)) { st.udDay = day; saveSt(st); await udSend('subah'); }
