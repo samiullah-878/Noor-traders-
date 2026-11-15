@@ -8205,3 +8205,24 @@ html body #dialogBody .srv-warn{margin:7px 0 0;padding:7px 9px;border-radius:10p
 
 /* v2.285.0: Larka report — godam ka maal shamil nahi (larka-stats v3) */
 html body .lk-gd{display:block;margin:4px 2px 6px;font-size:13.5px;opacity:.8}
+
+/* v2.286.0: 🤖 Bill ki jaanch ka page nahi (malik 15 Nov) — AI ke items seedhe bill ki list mein: upar bill ka tukda + ek patli line, har item ke neeche 📌 yaad / ❓ yaad nahi */
+html body #list .pp-pospat{position:relative;height:64px;border:1px solid #d9e0ec;border-radius:12px;background:#f2f4f9 no-repeat;margin:0 0 6px;cursor:zoom-in;overflow:hidden}
+html body #list .pp-pospat .jc-mark{position:absolute;left:0;right:0;top:19px;height:26px;border:2px solid #d69e1c;background:rgba(214,158,28,.10);pointer-events:none}
+html body #list .pp-posj{display:flex;flex-wrap:wrap;gap:4px 10px;align-items:center;padding:6px 10px;margin:0 0 7px;border-radius:12px;background:#f3f6fb;border:1px solid #d9e0ec;font-size:13.5px;color:#1a2d53;min-width:0}
+html body #list .pp-posj button{min-height:32px;padding:0 12px;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#f1f4fa)!important;color:#1a2d53!important;font-weight:700!important;font-size:13px;white-space:nowrap;margin-left:4px}
+html body #list .pp-posj .pp-posask{background:#fff3c4;border-radius:10px;padding:3px 8px}
+html body #list .pp-posj .pp-poswhy{flex:1 1 100%;min-width:0;color:#34435e;font-size:13px}
+html body #list .pp-posj .pp-poswhy:empty{display:none}
+html body #list .pp-posj .red{color:#c62828}html body #list .pp-posj .green{color:#1b7a34}
+html body #list .pp-jl{display:flex;align-items:center;gap:8px;margin:3px 0 5px;min-width:0}
+html body #list .pp-jl small{flex:1;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-size:13.5px;color:#34435e;font-weight:600}
+html body #list .pp-jt{flex:none;min-height:32px;padding:0 12px;border-radius:999px!important;font-size:13px;font-weight:800!important;white-space:nowrap;border:1px solid #b9dcc4!important;background:linear-gradient(#f3fbf5,#e3f4e8)!important;color:#14532d!important}
+html body #list .pp-jt.fz{border-color:#e6cf8f!important;background:linear-gradient(#fffaf0,#fdf0cf)!important;color:#7a5409!important}
+html body #list .pp-jt.no{border-color:#f0b8b0!important;background:linear-gradient(#fff6f5,#ffe4e0)!important;color:#8f1d12!important}
+html body #list .pp-cr.jy{border-left:4px solid #d69e1c}html body #list .pp-cr.jr{border-left:4px solid #d64535}
+html body #list .pp-jnr{display:flex;align-items:center;gap:8px;margin:0 0 7px;padding:6px 8px;border-radius:14px;border:1px solid #f0b8b0;background:#fff1ef;min-width:0}
+html body #list .pp-jnr .pp-jnb{flex:1;min-width:0;min-height:38px;padding:0 10px;border-radius:11px!important;border:0!important;background:transparent!important;color:#8f1d12!important;font-weight:800!important;font-size:14px;text-align:left;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #list .pp-jnr small{flex:none;font-size:13px;color:#8f1d12;font-weight:700}
+html body #list .pp-jnr .pp-jnx{flex:none;min-width:34px;min-height:34px;border-radius:999px!important;border:1px solid #f0b8b0!important;background:#fff!important;color:#8f1d12!important;font-weight:800!important}
+html body #list .pp-tbl tr.jn td{background:#ffe4e0;color:#7a1c12;font-weight:700}html body #list .pp-tbl tr.jy td{background:#fff8e1}html body #list .pp-tbl tr.jr td{background:#ffeceb}

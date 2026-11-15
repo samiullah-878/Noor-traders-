@@ -8391,3 +8391,14 @@ Malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, 
 - Roz khud KOI naya paigham nahi (malik ko zyada reports pasand nahi). 'Dukan mein khatam / godam mein hai' wala alag nishan abhi nahi (stock = sab jagah ka jor).
 - wa-out / wa-parchi sirf dobara shuru hone ke liye chhue (VER +1). App nahi badli. Asal POS par test nahi. AI nahi.
 - GHALTI (isi kaam mein): pehla python (kh-wa edit) fail hua magar agla hukum alag line par tha -> raat-report.js manifest ke baghair push ho gayi (commit 25c1ae7); foran is commit se theek. Sabaq neeche CLAUDE.md mein.
+
+## v2.286.0 (2026-11-15) — 🤖 'Bill ki jaanch' ka page BAND: AI ke items seedhe bill ki list mein, har item par 📌 yaad / ❓ yaad nahi
+- Malik (screenshot ke saath): 'yeh poora page nahi hona chahiye · items par direct likha ho · naam yaad hai / nahi hai yaad'. Larka is page se bohat tang tha.
+- purchase.js: `JZ_PAGE = false` -> `aiRender` / `jCard` phone par bhi `posJ()` (dialog band + list). Phone ki patli lines (`rowsHTML`): har AI item ke neeche `.pp-jl` =
+  `jTagHTML` chip (📌 Naam yaad hai / 📌 Milta julta / ❓ Naam yaad nahi — dabao = `aiPickForm`, item badlo) + 'bill: <bill ka naam>'; jis line ka item nahi mila = laal
+  `.pp-jnr` (`jnDiv`, apni jagah bill ki tarteeb mein; ❓ dabao = item chuno, ✕ = chhoro). Upar `posJbar` (bill ka tukda chuni line ka + ginti · farq · PCS / CTN ka sawal)
+  ab phone par bhi. Line ka rang `.pp-cr.jy / .jr`. Phone ka table view bhi (jOn).
+- Naam yaad: AI ke chune naam ab FORAN yaad nahi hote — `jLearnSave` bill save par (sirf byAi / milta julta / larke ka khud chuna, jo ab bhi bill mein hai). Larke ka chuna (aiPicked) foran.
+- Card / Khulasa / '✓ hari pakki' wale purane dialog ab nahi khulte (code pari hai — `JZ_PAGE = true` se wapas). PC (posMode) pehle jaisa (AI band, sirf tasveer).
+- style.css naye rules + `tools/pcm.py` dobara. AI: wohi Gemini (koi naya AI nahi). TEST: sirf node --check — asal phone par nahi dekha; malik se screenshot maango.
+- Ghalti (meri): screenshot dekh kar keh diya 'ghalat naam yaad ho gaye' (pasban book -> mouse glue board) — malik: 'naam sahi hai'. Supplier ka apna naam alag hota hai; andaze se ghalat mat kaho, poochho.
