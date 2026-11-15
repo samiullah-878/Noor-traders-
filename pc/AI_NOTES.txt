@@ -4780,3 +4780,11 @@ Malik: "jab report mujhe send ho koi bhi, us ka print reply mein likhoon to prin
 - ⚡ Raftar: apne number (malik / Mubeen / jure) ke jawab pehle se tez line (isFast, 0.6 s) par hain; gahak ka faasla (cfg.gap) KABHI kam nahi (ban). Naya WhatsApp jawab = isi tez line se, beech mein AI / lamba kaam nahi.
 - Test: txtSlip namoone par chala (output dekha), node --check dono. ASAL WhatsApp / printer par nahi.
 - Hazri app (ALAG repo nt-traders-) v253: Staff list "☑ Kai chunein" -> 🚫 Band / 🗑 Delete ek saath (data.bulkStaff, ek batch). Tafseel us repo ke AI_NOTES mein.
+
+
+=== v2.283.0 + doctor v3.2 (15 Nov 2026) — 🔒 SERVER PC KA NAAM ===
+Malik: "ek system banao jis mein PC ka naam ho, wohi SQL wala server uthaye — confusion door" · "abhi default server ka naam likhna hai".
+- pc/doctor.js v3.2: har chakkar blueAccess/serverPc {host} (na ho = DESKTOP-Q1SLV77; Firestore na mile = server-pc.txt pichhla jawab). os.hostname() barabar ho tabhi scripts.
+  Na mile = blockedCycle: sab services ke process band (NT-PRINT nahi; ffmpeg image se; /T kabhi nahi), blueAccess/pcBlocked {at, host, want, n}; pcStatus / pcCpu nahi likhta. Naam wapas mile = khud chalu.
+- App Settings > PC scripts: 🔒 Server PC chip + ✏️ Badlo (sirf malik, confirm), doosre PC ki ⛔ warning (10 min taza). cloud.getServerPc / saveServerPc. Rules nahi badle (blueAccess malik).
+- Test: stub Firestore + process list (node) — default, match, ghair-match, offline cache, band karna. Asal PC par test nahi hua. AI nahi.

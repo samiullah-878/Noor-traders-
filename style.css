@@ -8192,3 +8192,13 @@ html.dk body #dialogBody .fx-st.is-in,html[data-theme="dark"] body #dialogBody .
 
 /* v2.279.1 (malik 14 Nov, ☰ ki screenshot: 'in ki upar zaroorat nahi ab'): ☰ slider ke upar '📌 Is screen ke' chips ka hissa chhupa — wohi kaam har screen ke ⋮ mein hain. Wapas mat lao jab tak malik na kahe. */
 #chipDrawer .dr-pins{display:none!important}
+
+/* v2.283.0: 🔒 Server PC ka naam (Settings > PC scripts) */
+html body #dialogBody .srv-box{margin:8px 0 10px;padding:9px 11px;border:1px solid rgba(180,140,40,.35);border-radius:14px;background:linear-gradient(180deg,rgba(255,215,120,.10),rgba(255,215,120,.03))}
+html body #dialogBody .srv-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center}
+html body #dialogBody .srv-chip{display:inline-flex;align-items:center;gap:5px;min-height:34px;padding:0 12px;border-radius:999px;border:1px solid rgba(180,140,40,.55);background:linear-gradient(180deg,rgba(255,225,150,.28),rgba(255,205,100,.12));font-size:14px;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .srv-b{min-height:34px!important;height:34px;padding:0 12px!important;border-radius:999px!important;font-size:14px!important;white-space:nowrap;width:auto!important;flex:0 0 auto}
+html body #dialogBody .srv-b.ok{background:linear-gradient(180deg,#1f9d55,#178a48)!important;color:#fff!important;border-color:#178a48!important}
+html body #dialogBody .srv-box input{flex:1 1 150px;min-width:0;height:34px;padding:0 10px;border-radius:11px;font-size:15px;text-transform:uppercase}
+html body #dialogBody .srv-box small{display:block;margin-top:6px;font-size:13px;opacity:.75}
+html body #dialogBody .srv-warn{margin:7px 0 0;padding:7px 9px;border-radius:10px;background:rgba(220,40,40,.12);color:#c62828;font-size:14px}

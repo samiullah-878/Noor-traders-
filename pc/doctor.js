@@ -30,7 +30,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.1';
+const VER = '3.2';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -232,7 +232,7 @@ function cpuLabel(name, pid) {
   return String(name || '?').slice(0, 40);
 }
 async function cpuTick() {
-  if (CPU.busy || process.platform !== 'win32') return; CPU.busy = true;
+  if (BLOCKED || CPU.busy || process.platform !== 'win32') return; CPU.busy = true;
   try {
     const now = Date.now(), t = cpuTotal(), cores = os.cpus().length || 1;
     // v3.1: Win32_Process (WMI) — SYSTEM ke program (SQL Server, antivirus) ka CPU bhi deta hai (Get-Process bina admin 0 deta tha → "CPU 43%" magar list mein sirf 3%).
@@ -263,6 +263,43 @@ async function cpuTick() {
 
 const statusRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcStatus');
 const checkRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcCheck');
+
+// ---------- 🔒 v3.2: SERVER KA NAAM (malik 15 Nov 2026: "ek system jis mein PC ka naam ho — wohi SQL wala server uthaye, confusion door") ----------
+//   blueAccess/serverPc {host} (malik app Settings > PC scripts se; doc na ho = SRV_DEF). Is PC ka Windows naam wohi ho tabhi scripts chalti hain.
+//   Naam na mile = is PC ki sab server scripts BAND (NT-PRINT nahi chhera — counter ka bill print) + blueAccess/pcBlocked (app mein warning); pcStatus / pcCpu kabhi nahi likhta.
+//   Firestore na mile = pichhla jawab (server-pc.txt), wo bhi na ho = SRV_DEF. taskkill /T kabhi nahi.
+const SRV_DEF = 'DESKTOP-Q1SLV77', SRV_FILE = path.join(DIR, 'server-pc.txt');
+const srvRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('serverPc');
+const blockRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcBlocked');
+let BLOCKED = false, blockSaid = '';
+async function serverName() {
+  let w = ''; const ref = srvRef();
+  if (ref) {
+    let t;
+    try {
+      const d = await Promise.race([ref.get(), new Promise((_, no) => { t = setTimeout(() => no(Error('timeout')), 8000); })]);
+      w = String((d.exists && d.data() && d.data().host) || '').trim() || SRV_DEF;
+      try { fs.writeFileSync(SRV_FILE, w); } catch {}
+    } catch (e) { w = ''; }
+    finally { clearTimeout(t); }
+  }
+  if (!w) { try { w = fs.readFileSync(SRV_FILE, 'utf8').trim(); } catch {} }
+  return w || SRV_DEF;
+}
+const isServer = w => String(w).trim().toUpperCase() === String(os.hostname()).trim().toUpperCase();
+async function blockedCycle(want) {
+  BLOCKED = true;
+  const list = procs(); let n = 0;
+  if (list) for (const s of services) {
+    if (s.script === 'nt-print.js') continue;
+    for (const q of list) if (runsBat(q, s) || runsScript(q, s)) { killPid(q.pid); n++; }
+  }
+  if (n) { try { execSync('taskkill /F /IM ffmpeg.exe', { stdio: 'ignore', windowsHide: true, timeout: 15000 }); } catch {} }
+  if (n || blockSaid !== want) log(`⛔ ye PC (${os.hostname()}) server nahi — server ka naam "${want}" hai. Scripts band${n ? ' (' + n + ' process band ki)' : ''}. Naam app > Settings > PC scripts se badalta hai.`);
+  blockSaid = want;
+  const ref = blockRef();
+  if (ref) await ref.set({ at: Date.now(), host: os.hostname(), want, doctor: VER, n }).catch(e => log('⚠ pcBlocked: ' + e.message));
+}
 
 // ---------- atka kaam (v2) ----------
 const kick = {};   // script -> { at, n, key }
@@ -319,6 +356,9 @@ async function cycle(why, full = true) {
       if (changed.includes('doctor.js')) restartSelf = true;
     } else log('GitHub tak nahi pahuncha (internet?) — sirf jaanch');
     if (!services.length) try { services = JSON.parse(fs.readFileSync(path.join(DIR, 'manifest.json'), 'utf8')).services || []; } catch {}
+    const srvWant = await serverName();   // v3.2: 🔒 sirf server ke naam wala PC
+    if (!isServer(srvWant)) { await blockedCycle(srvWant); if (restartSelf) { log('doctor.js khud nayi aayi — dobara shuru'); setTimeout(() => process.exit(0), 1500); } return; }
+    if (BLOCKED) { BLOCKED = false; blockSaid = ''; log('✅ ab yehi PC server hai — scripts chalu'); }
     let list = procs();
     if (list && hideOnce(list)) { await new Promise(r => setTimeout(r, 3000)); list = procs() || list; }
     const blind = !list;   // v2.9: process list nahi mili — andhe ho kar kuch shuru / band NAHI
