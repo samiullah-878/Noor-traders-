@@ -8342,3 +8342,8 @@ Malik (rack screen, patla Sparkle 200gm): "ek hi item ke 4-5 piece lagane hon to
 - Chhoti durusti: neeche ke chips wrap (side scroll nahi), shelf ka number footer ke upar nahi aata (`.wd-f` z-index).
 - Door se dukan (kamra.js) ka nazara in dono ko abhi nahi dikhata (sirf paas wala rack + app). AI nahi.
 - Jaanch: node --check + khula.js ka hisaab node se (qatar 4 = chaurai x4, wx 2 = x2). Asal phone / website par test NAHI.
+
+
+=== 15 Nov 2026 (raat) — server badla + jawab ka qaida ===
+- Purana server (ab naam OLD-SERVER) band: Startup se KHATA-DOCTOR.vbs / NT-PRINT.vbs hataye + wscript / cmd / node / ffmpeg band (admin PowerShell; aam PowerShell se khata script bachi reh gayi thi). Naya server DESKTOP-Q1SLV77 server-setup.ps1 se chal gaya (doctor v3.1, 34/35). Printer drivers (Epson thermal, TSC TTP-244 Pro, HP A4) malik kal khud lagayega.
+- Naya qaida (CLAUDE.md 1): jawab chhota magar poora — 4-6 line, seedhi baat pehle. Koi code nahi badla, AI nahi.

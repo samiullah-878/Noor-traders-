@@ -6,6 +6,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 ## 1. Baat cheet
 - Jawab **Roman Urdu** mein (Latin harf). Hindi/Devanagari ya Urdu script NAHI — malik parh nahi sakta.
 - Jawab **chhota** — phone par lamba parhna mushkil.
+- **Chhota magar POORA (malik, 15 Nov 2026: 'jawab small ho aur saara jawab us mein ho')**: 4-6 line, seedhi baat pehle; wajah / tafseel / mashware ki lambi list sirf jab malik maange. Jo baat malik ko chahiye wo chhoot na jaye — lamba likhne ke bajaye faltu hissa kaato.
 - Batao kahan AI use ho raha hai aur kahan nahi.
 
 ## 2. Kaam ka tareeqa
