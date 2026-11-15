@@ -8288,3 +8288,9 @@ Malik: "mujhe notes bhi do likhne ke liye — jab wo sawal poochta hai raat ko, 
 - Test: JB ki logic asal Java (javac) se — quote / backslash / nayi line ke saath JSON sahi; naye hisse MCP validator VALID; if / end barabar; ntkSend stub test. ASAL phone par NAHI — malik se screenshot.
 - QAIDA: phone se app mein kuch likhna = isi raaste (webhook se chaabi phone par, REST create + khufia chaabi); chaabi / link kabhi md/ mein nahi. Sawal wale popup ka naya waqt / sawal = raat.py mein, malik ke kehne par.
 - AI nahi. Shop PC ki zaroorat nahi.
+
+
+==================== v2.280.1 (15 Nov 2026) — 👩‍💼 WEBSITE KE COUNTER PAR LARKI ====================
+Malik (website ki photo, counter par topi wala aadmi): "yahan par khubsoorat si larki bitha do jo bohat khubsoorat ho".
+- dukan/kamra.js `MAN` SVG badla: lambe baal, dupatta, bari aankhein, salaam wala haath (class .k-man / .k-arm wahi — lehrana wahi). Bani hui shakal, asal insaan nahi. Aur kuch nahi badla. AI nahi.
+- Wapas aadmi / doosri shakal = malik ke kehne par.
