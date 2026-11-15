@@ -3,7 +3,7 @@
 // Raasta: MacroDroid (bahar, charging / gaana / call / dukan Wi-Fi nahi) → phone folder "NT Awaz" → FolderSync → Drive → malik ka
 //   Google Apps Script (awaz-gas.js: jagah ka naam, file ka naya naam, Gemini notes, Sheet "Meri Baatein") → yahan awazNotes (khufia chaabi).
 // App mein AI NAHI — sirf dikhana, ☐ kaam tick, dhoondo, PDF. Apni <dialog> (web-dukan jaisi), chips ⋮ ke andar (keyboard qaida).
-import { smartFind } from './dukan/dhoond.js?v=2.279.3';
+import { smartFind } from './dukan/dhoond.js?v=2.280.0';
 
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
@@ -32,7 +32,7 @@ export function awOpen(ctx) {
   }
   try { d.showModal(); } catch { d.setAttribute('open', ''); }
   window.ntAwClose = () => { back(); return true; };
-  watch(); paint();
+  watch(); paint(); ntkSend(false);
 }
 function close() { try { un?.(); } catch {} un = null; const d = $('awDlg'); try { d?.close(); } catch {} window.ntAwClose = null; }
 function back() { if (menu) { menu = false; paint(); return; } if (mode !== 'list') { mode = 'list'; paint(); return; } close(); }
@@ -82,11 +82,11 @@ function kaamHTML(n) {
   return `<div class="aw-ks">${K.map(k => `<button type="button" class="aw-k${k.ok ? ' is-in' : ''}" data-aw-k="${esc(n.id)}|${k.i}">${k.ok ? '✓' : '☐'} ${esc(k.t)}</button>`).join('')}</div>`;
 }
 function cardHTML(n) {
-  const isOpen = open === n.id, call = n.src === 'call';
-  const top = `${call ? '📞' : '🎙'} ${esc(n.tm || '')}${n.pl ? ' · 📍 ' + esc(n.pl) : ''}${n.who && !call ? '' : n.who ? ' · ' + esc(n.who) : ''}`;
+  const isOpen = open === n.id, call = n.src === 'call', nt = n.fn === 'likha';   // v2.280.0: 📝 phone ke popup par likha jawab
+  const top = `${nt ? '📝' : call ? '📞' : '🎙'} ${esc(n.tm || '')}${nt ? ' · likha' : ''}${n.pl ? ' · 📍 ' + esc(n.pl) : ''}${n.who && !call ? '' : n.who ? ' · ' + esc(n.who) : ''}`;
   const btns = `${n.au ? `<a class="aw-c" href="${esc(n.au)}" target="_blank" rel="noopener">▶ Suno</a>` : ''}${n.mp ? `<a class="aw-c" href="${esc(n.mp)}" target="_blank" rel="noopener">📍 Map</a>` : ''}<button type="button" class="aw-c" data-aw-hide="${esc(n.id)}">🙈 Chhupao</button>`;
   if (n.kh) return `<div class="aw-card kh" data-aw-o="${esc(n.id)}"><div class="aw-l1">🔇 ${top} · khamosh</div>${isOpen ? `<div class="aw-bt">${btns}</div>` : ''}</div>`;
-  return `<div class="aw-card${isOpen ? ' is-in' : ''}" data-aw-o="${esc(n.id)}"><div class="aw-l1">${top}</div><b class="aw-tt">${esc(n.tt || '(bina unwan)')}</b>`
+  return `<div class="aw-card${isOpen ? ' is-in' : ''}${nt ? ' nt' : ''}" data-aw-o="${esc(n.id)}"><div class="aw-l1">${top}</div><b class="aw-tt">${nt ? '❓ ' : ''}${esc(n.tt || '(bina unwan)')}</b>`
     + `<p class="aw-s">${esc(n.sum || '').replace(/\n/g, '<br>')}</p>`
     + (isOpen && n.wd ? `<p class="aw-wd">${esc(n.wd).replace(/\n/g, '<br>')}</p>` : '')
     + (!call && n.who && isOpen ? `<p class="aw-wd">👥 ${esc(n.who)}</p>` : '')
@@ -96,7 +96,7 @@ function menuHTML() {
   const B = (on, at, lab) => `<button type="button" class="aw-c${on ? ' is-in' : ''}" ${at}>${lab}</button>`;
   return `<div class="aw-mg"><small>📅 Din</small><div class="aw-row">${Object.entries(VIEWS).map(([k, v]) => B(view === k, `data-aw-v="${k}"`, v[0])).join('')}</div></div>`
     + `<div class="aw-mg"><small>👁 Dikhao</small><div class="aw-row">${B(onlyKaam, 'data-aw="kaam"', '☐ Sirf baqi kaam')}${B(showKh, 'data-aw="kh"', '🔇 Khamosh bhi')}</div></div>`
-    + `<div class="aw-mg"><small>🧾 Aur</small><div class="aw-row">${B(false, 'data-aw="pdf"', '📄 PDF (kholo + bhejo)')}${B(false, 'data-aw="setup"', '⚙️ Setup')}</div></div>`;
+    + `<div class="aw-mg"><small>🧾 Aur</small><div class="aw-row">${B(false, 'data-aw="pdf"', '📄 PDF (kholo + bhejo)')}${B(false, 'data-aw="ntk"', '📲 Phone ko chaabi bhejo')}${B(false, 'data-aw="setup"', '⚙️ Setup')}</div></div>`;
 }
 
 // ---------- ⚙️ setup (ek dafa) ----------
@@ -122,12 +122,13 @@ function setupHTML() {
       <li>Sab mita kar <button type="button" class="aw-c" data-aw="gas"${key ? '' : ' disabled'}>📋 Script copy</button> paste → 💾 Save.</li>
       <li>Upar function <b>setup</b> → ▶ Run → Allow. Drive mein Sheet <b>"Meri Baatein"</b> ban jayegi.</li>
       ${A.aiKey?.() ? '' : '<li>Gemini key: Project Settings → Script properties → <b>GEMINI_KEY</b> (app Settings ki AI key wali).</li>'}</ol>
+    <h4>📝 Likhe hue notes</h4><p class="aw-note">Phone ke subah 10:15 / raat ke sawal wale popup par <b>✍️ Likho</b> = jawab yahan (upar sawal, neeche jawab). Na aaye to ⋮ → <b>📲 Phone ko chaabi bhejo</b>.</p>
     <h4>⑤ Jagahein (naam)</h4><p class="aw-note">Sheet ke tab <b>Jagahein</b> mein: naam (Ghar, Dukan, Bega home) + location (Google Maps par ungli rakhein → upar ke number copy). Baqi jagah ka naam Google Maps khud deta hai.</p>
     <button type="button" class="aw-c" data-aw="list">‹ Wapas baatein</button></div>`;
 }
 async function copyGas() {
   try {
-    const m = await import('./awaz-gas.js?v=2.279.3');
+    const m = await import('./awaz-gas.js?v=2.280.0');
     const t = m.gasCode({ key, url: restUrl(), gem: A.aiKey?.() || '' });
     try { await navigator.clipboard.writeText(t); A.notice?.('📋 Script copy ho gaya — script.google.com par paste karein'); } catch { prompt('Copy karein:', t); }
   } catch (e) { A.notice?.('✕ ' + (e?.message || e)); }
@@ -137,6 +138,25 @@ async function mkKey() {
   const a = new Uint8Array(18); crypto.getRandomValues(a); const k = Array.from(a, b => b.toString(36).padStart(2, '0')).join('').slice(0, 32);
   try { await A.cloud.setAwazKey(k); key = k; A.notice?.('🔑 Chaabi ban gayi'); } catch (e) { A.notice?.('✕ ' + (e?.message || e)); }
   busyKey = false; paint();
+}
+
+// ---------- 📲 phone ke "✍️ Likho" popup ko chaabi (v2.280.0) ----------
+// Malik: "raat ke sawal par notes likh sakoon — is screen mein chale jayein". Phone ka MacroDroid (md/tools/raat.py) awazNotes mein likhta hai; chaabi + link repo mein nahi —
+// yeh screen khulte hi (din mein ek dafa) Falcon wale webhook ke device par `nt_notes` ko ntU (Firestore link) + ntK (chaabi) bhejti hai. no-cors: jawab nahi parh sakte.
+async function ntkSend(force) {
+  const say = m => { if (force) A.notice?.(m); };
+  try {
+    let k = await A.cloud.getAwazKey?.();
+    if (!k && A.cloud.setAwazKey) { const a = new Uint8Array(18); crypto.getRandomValues(a); k = Array.from(a, b => b.toString(36).padStart(2, '0')).join('').slice(0, 32); await A.cloud.setAwazKey(k); key = k; }
+    if (!k) { say('✕ Chaabi nahi bani'); return; }
+    const C = (await A.cloud.getFxCfg?.()) || {}, m = String(C.wh || '').trim().match(/^(https:\/\/trigger\.macrodroid\.com\/[A-Za-z0-9_-]{6,})\//);
+    if (!m) { say('✕ Phone ka webhook link nahi mila — Gaari → ⚙️ Falcon setup mein MacroDroid ka link lagayein, phir yahan dobara'); return; }
+    const sig = today() + '|' + k.slice(0, 5) + '|' + m[1].slice(-5);
+    if (!force) { try { if (localStorage.getItem('sam-aw-ntk') === sig) return; } catch {} }
+    await fetch(m[1] + '/nt_notes?ntU=' + encodeURIComponent(restUrl()) + '&ntK=' + encodeURIComponent(k) + '&t=' + Date.now(), { method: 'GET', mode: 'no-cors', cache: 'no-store' });
+    try { localStorage.setItem('sam-aw-ntk', sig); } catch {}
+    say('📲 Chaabi phone ko bhej di — ab popup ka ✍️ Likho yahan aayega');
+  } catch (e) { say('✕ Chaabi nahi gayi: ' + (e?.message || e)); }
 }
 
 // ---------- 📄 PDF ----------
@@ -167,6 +187,7 @@ function onClick(e) {
     case 'list': mode = 'list'; paint(); return;
     case 'mkkey': mkKey(); return;
     case 'gas': copyGas(); return;
+    case 'ntk': menu = false; paint(); ntkSend(true); return;
   }
 }
 export const _awTest = { state: () => ({ notes, view, q, onlyKaam, showKh, mode, open, key }) };

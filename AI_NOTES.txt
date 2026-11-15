@@ -8273,3 +8273,18 @@ Malik (YouTube ki screenshot, upar "▶ YouTube · 117:53 baqi" patti): "YouTube
 ==================== Hazri app v254 (ALAG repo nt-traders-, 15 Nov 2026) — malik ka panel chhota ====================
 Malik: "ek screen par 8 larkon ke naam, upar / neeche small, 🔔 mein sab requests / notifications, baqi ⋮ mein, Urdu sirf mulazim ke hazri page par". Hazri repo mein bana (owner.js / urdu.js / styles.css) —
 tafseel us repo ke AI_NOTES.txt (v254). Blue Khata ka koi code nahi badla; yahan sirf CLAUDE.md mein qaida.
+
+
+==================== v2.280.0 + md pkg v46 (15 Nov 2026) — ✍️ SAWAL PAR LIKHO -> 🎙 MERI BAATEIN ====================
+Malik: "mujhe notes bhi do likhne ke liye — jab wo sawal poochta hai raat ko, notes mein likh bhi sakoon" · "subah 10:15 ka bhi laga do" ·
+"us app mein jo recording wali screen hai us mein wo notes chale jayein — upar sawal aur neeche us ka jawab jo main likhoon" -> "Meri baatein screen bani hui hai, us mein".
+- PHONE (md/tools/raat.py, macro '🌙 Raat ke sawal'): teen waqt — 10:15 subah (☀️ Aaj ke 3 zaroori kaam, khirki 10:15–13:59), 20:30, 21:15; unlock par bhi (aaj ka na dikha ho).
+  Popup ke button ab "✍️ Likho" / "Baad mein" -> Likho = likhne ka khana (SetVariable user prompt) -> JavaAction JB jawab ko JSON-mehfooz karta hai ->
+  HTTP POST awazNotes {k, v, at, day, tm, src 'mic', fn 'likha', tt = sawal ka naam, sum = jawab, ks []} (rules 2.90 wahi — koi rules badlao NAHI).
+  Net / chaabi na ho = globals ntP1..3 mein jama (chaabi ke baghair), har unlock par dobara koshish, 2xx par khali.
+- CHAABI: repo / md (PUBLIC) mein NAHI. Macro ka WebHookTrigger `nt_notes` (sirf ntU, ntK badal sakta hai) — app awaz.js `ntkSend` (Meri baatein khulte hi, din mein ek dafa; ⋮ "📲 Phone ko chaabi bhejo")
+  Falcon wale webhook ke device (blueAccess/gaariFxCfg.wh) par ntU (Firestore REST link) + ntK (awazKey) bhejta hai. Chaabi na ho to bana deta hai. Webhook link na ho = saaf paigham.
+- APP awaz.js: card `fn === 'likha'` = 📝 · upar ❓ sawal (chhota), neeche jawab poora (peela card `.aw-card.nt`). Setup mein ek line.
+- Test: JB ki logic asal Java (javac) se — quote / backslash / nayi line ke saath JSON sahi; naye hisse MCP validator VALID; if / end barabar; ntkSend stub test. ASAL phone par NAHI — malik se screenshot.
+- QAIDA: phone se app mein kuch likhna = isi raaste (webhook se chaabi phone par, REST create + khufia chaabi); chaabi / link kabhi md/ mein nahi. Sawal wale popup ka naya waqt / sawal = raat.py mein, malik ke kehne par.
+- AI nahi. Shop PC ki zaroorat nahi.
