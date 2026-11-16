@@ -8317,3 +8317,14 @@ html body #dialogBody .dd-s{font-style:normal;font-size:13px;font-weight:800;whi
 html body #dialogBody .dd-go{height:40px;min-height:0;border-radius:999px!important;font-weight:800;font-size:15px}
 html body #dialogBody .dd-go[disabled]{opacity:.45}
 html body #dialogBody .dd-note{font-size:13px}
+/* v2.298.0 🏦 Bank screen chips CHHOTE (malik 16 Nov: "chips small kar do") — Reminder · ↩ · 📝 Note · 🖨 Chhapi · Dobara print EK patli qatar */
+html body .bkp .bkp-row .bkp-acts{gap:5px!important;margin-top:6px!important;flex-wrap:wrap;align-items:center}
+html body .bkp .bkp-row .bkp-acts .bkp-ic,html body .bkp .bkp-row .bkp-acts .bkp-memo.add,html body .bkp .bkp-row .bkp-acts .prn-again,html body .bkp .bkp-row .bkp-acts .prn-chip{min-height:26px!important;height:26px;min-width:26px;padding:0 9px!important;margin:0!important;border-radius:999px!important;font:700 11px/24px system-ui,sans-serif!important;white-space:nowrap;box-shadow:none!important;width:auto!important;display:inline-flex!important;align-items:center;gap:3px;box-sizing:border-box}
+html body .bkp .bkp-row .bkp-acts .prn-box{display:contents!important;margin:0!important;padding:0!important;border:0!important;background:none!important}
+html body .bkp .bkp-row .bkp-acts .prn-chip{max-width:190px;overflow:hidden;text-overflow:ellipsis;background:rgba(16,185,129,.1)!important;color:#047857!important;border:1px solid rgba(16,185,129,.22)}
+html body .bkp .bkp-row .bkp-acts .prn-chip.warn,html body .bkp .bkp-row .bkp-acts .prn-chip.bad{background:#fff4e5!important;color:#9a3412!important;border-color:#fdba74}
+html body .bkp .bkp-row .bkp-acts .prn-again{background:linear-gradient(135deg,#123a6b,#0b2545)!important;color:#fff!important;border:0!important}
+html body .bkp .bkp-row .bkp-amt small{font-size:10px!important;padding:2px 7px!important}
+html body .bkp .bkp-row .bkp-dt{display:inline-block;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;background:rgba(11,61,107,.08);color:#0b3d6b;margin-right:2px}
+html.dk body .bkp .bkp-row .bkp-dt{background:rgba(188,212,255,.14);color:#bcd4ff}
+html.dk body .bkp .bkp-row .bkp-acts .prn-chip{background:rgba(16,185,129,.16)!important;color:#6ee7b7!important}

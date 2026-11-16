@@ -279,6 +279,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **📵 Nayi report = sirf maangne par (malik 15 Nov: 'itni reports parhi nahi jayengi')**: malik ko roz khud aane wala NAYA paigham / report bina us ke kahe mat lagao — nayi report `reports` menu (kh-wa stg r) mein ek number bana kar do (8 = 📦 maal khatam hone wala, raat-report `khSend`). Roz khud sirf wohi jo malik ne khud maanga (shaam ki reports, hazri, udhaar, hazri ka sawal).
 
+- **🏦 Bank screen chips chhote + Mahina-war patti (v2.298.0, 16 Nov)** (malik: 'chips small kar do · Mahina / weekly dabayein to upar wali patti bhi usi par'): bank-inbox `pDone` / `pPend` = 🔔 · ↩ · 📝 Note · 🖨 Chhapi · Dobara print EK patli qatar (26px, `.bkp-acts`, voucher number chhota `shortCode` sirf dikhawe mein); din ki patti `gHead` range se: Aaj = din-war · 7 din = ek dabba · Mahina / Sab = mahine-war (har line par `.bkp-dt` tareekh). Bank screen mein naya chip = isi `.bkp-acts` qatar mein, alag bara dabba nahi.
+
 ## 4. POS / PC — KHATARNAK, dhyan se
 - POS = Cognitive Solutions (SQL Server). Jo script POS mein **likhti** hai (item-post, purchase-post, transfer-sync, sale-post…) us mein **koi value kabhi 0/khali na jaye jis se POS divide karta ho** — khas taur par **PackQty (carton pcs) kam az kam 1**. (18 Oct 2026: "kala tail khula" ka PackQty 0 gaya → counter sale "Divide by zero", bill band.)
 - Parhne wali scripts (rack, irep, stats) POS mein kabhi kuch nahi likhti.

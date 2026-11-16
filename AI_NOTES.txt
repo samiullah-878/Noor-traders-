@@ -8559,3 +8559,11 @@ Malik: 'is mein wo entries bhi chahiye jo App ko POS jaisa / POS ko app jaisa / 
 Malik (amjad islam, POS ✓): 'yahan app jaise voucher aur JV voucher nahi aa raha'. Wajah: woh khata PC ke autoMilan ne khud barabar kiya tha — job dir 'auto', hum sirf app|pos dikhate the.
 - app ddJobs + PC milanMade / milanJobUndo: dir 'auto' bhi (bill jaanch wala nahi); har voucher ki taraf log se (`… app mein likh diya` = app copy + POS asal; baqi = [app: wala POS voucher ya opening JV).
 - AI nahi. Test: node --check + stub.
+
+=== v2.298.0 (16 Nov 2026) — Bank screen chips chhote + range-war patti ===
+Malik: 'chips small kar do · Mahina / weekly click par upar wali (Aaj · tareekh · +/-) patti bhi usi par lage'.
+- bank-inbox.js: pDone / pPend mein Reminder · ↩ · Note likhein (khali) · Chhapi chip · Dobara print EK qatar (.bkp-acts); JV-00000000781 → JV-781 sirf dikhawa (shortCode, data-prn-again wahi).
+- Range: Aaj = din-war dabbe · 7 din = ek dabba '7 din · X se' · Mahina / Sab = mahine-war ('Is mahina · November 2026'); din-war ke ilawa har line par chhoti tareekh (.bkp-dt).
+- style.css aakhir mein .bkp .bkp-acts 26px chips (prn-box display:contents).
+- POS lookup wala plan malik ne ROKA ('POS wala nahi').
+- Test: stub render 4 range (node). Phone par nahi dekha. AI nahi.
