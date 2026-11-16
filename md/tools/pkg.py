@@ -83,6 +83,8 @@ import rec as RCM
 mrc, vrc = fix(json.loads(json.dumps(RCM.RC)), h64('claude|recording'), '🎙 Recording')   # v43 (14 Nov): har 10 min ka tukda jab tak recOff = 0; band / shuru Falsafa ke popup se
 import jagah as JGM
 mjg, vjg = fix(json.loads(json.dumps(JGM.JG)), h64('claude|jagah'), '📍 Jagah ka naam')   # v47 (15 Nov): nayi jagah ka naam ek dafa -> recording us naam ke folder mein
+import raatband as RBM
+mrb, vrb = fix(json.loads(json.dumps(RBM.RB)), h64('claude|raatband'), '🌙 Raat 12-11 band')   # v53 (17 Nov): purana ⛔ Subah 11 tak band, yeh naya — sirf package list, koi OR / variable nahi
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
@@ -92,13 +94,13 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "GHALTI theek: raat 12 wala sirf chuni apps band kare (pehle sab band ho gayi thin).",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mrc, mjg],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "Purana ⛔ Subah 11 tak BAND · naya 🌙 Raat 12-11 band (sirf list wali apps).",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
-       "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧘 10 min break", "Mobiel locked"],   # v50 (17 Nov): malik ka apna "Mobiel locked" band (OK diya) — har app / Recents band karta tha   # v48: break malik ne band karwaya
+       "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧘 10 min break", "Mobiel locked", "⛔ Subah 11 tak"],   # v53: malik ne kaha purana band   # v50 (17 Nov): malik ka apna "Mobiel locked" band (OK diya) — har app / Recents band karta tha   # v48: break malik ne band karwaya
        "del": []}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))
