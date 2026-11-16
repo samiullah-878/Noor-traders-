@@ -8420,3 +8420,11 @@ html body #list .kt.kt-on .kt-h::before{content:'';border-right:1px solid #cfd6e
 html body #list .kt-ck{width:18px;height:18px;min-height:0;margin:0 auto;padding:0;border:1.5px solid #64748b;border-radius:4px;background:#fff!important;color:#1f2937!important;font-size:12px;font-weight:900;line-height:15px;align-self:center;justify-self:center}
 html body #list .kt-r.kt-y .kt-ck{background:#ffd60a!important;border-color:#b58900}
 html body #list .kt-r.kt-y>.kt-a:not(:empty),html body #list .kt-r.kt-y>.kt-b{background:#ffe866!important}
+
+/* v2.306.0: ☑ Tally search ke andar */
+label.search .kt-sbtn{position:absolute;right:6px;top:50%;transform:translateY(-50%);height:30px;padding:0 10px;border-radius:999px;border:1px solid #cbd5e1;background:linear-gradient(#fff,#eef2f8)!important;color:#1f2937!important;font-size:12px;font-weight:800;white-space:nowrap;display:flex;align-items:center;gap:4px;z-index:2;cursor:pointer}
+label.search .kt-sbtn.is-in{border-color:#d4a20b;background:linear-gradient(#fff8d6,#ffe98a)!important}
+label.search .kt-sbtn b{font-weight:800}
+label.search.has-kt input{padding-right:104px!important}
+html body #list .kt-top{margin:0 0 4px}
+html body label.search.has-kt{position:relative}
