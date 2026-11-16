@@ -24,9 +24,13 @@ def ft(text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "optio
 FTHIDE = {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": "ntsb"}
 # v49 (17 Nov, malik: "Settings, Play Store, social media, YouTube, MacroDroid band — baqi sab khuli"): ab SIRF yeh band, baqi sab khuli (pehle ulta: sab band siwae ALLOW)
 NOBLOCK = ['android.settings', 'android.vending', 'facebook', 'instagram', 'tiktok', 'musically', 'snapchat', 'youtube', 'twitter', 'com.zhiliaoapp', 'anthropic.claude', 'netflix', 'com.amazon.avod', 'primevideo', 'hotstar', 'game', 'com.dts.freefire', 'com.tencent.ig', 'com.pubg', 'roblox', 'supercell', 'king.candy', 'miniclip', 'com.mojang', 'com.playrix', 'com.ea.gp', 'gameloft', 'ludo', 'carrom']   # v51 (17 Nov, malik): + Claude, games, Netflix, Prime Video
-BLOCK2 = [strne("pk", "", True), NOT_LAUNCHER, NO_CALL, anyof(*[has("{lv=pk}", p, True) for p in NOBLOCK],
-      # MacroDroid bhi band — magar 🚨 sawal ka popup khud MacroDroid ki khirki hai: sawal ke 20 s tak usay mat chhero
-      {'m_classType': 'LogicConstraint', 'm_SIGUID': 0, 'm_isOrCondition': False, 'm_constraintList': [has("{lv=pk}", 'macrodroid', True), gt('askAge', 20, True)]})]
+# v52 (17 Nov GHALTI): LogicConstraint ke ghalat fields (m_isOrCondition / m_constraintList) = khali sharat = SAB apps band ho gayi thi.
+# Ab LogicConstraint NAHI — IfCondition ka apna OR (m_isOrCondition, Remote mein azmaya) + 'hit' flag.
+def ifor(c): return {"m_classType": "IfConditionAction", "m_SIGUID": 0, "m_constraintList": c, "m_isOrCondition": True}
+def eqs(n, v): return {'m_classType': 'CompareValueConstraint', 'm_SIGUID': 0, 'type': 2, 'value1': '{lv=%s}' % n, 'value2': v, 'comparisonType': 0, 'ignoreCase': True}
+BASE = [strne("pk", "", True), NOT_LAUNCHER, NO_CALL]
+HITCHK = [ifor([has("{lv=pk}", p, True) for p in NOBLOCK]), sstr("hit", "1", True), END,
+          iff([has("{lv=pk}", 'macrodroid', True), gt('askAge', 20, True)]), sstr("hit", "1", True), END]
 PATTI = [HOME, ft("⛔ Subah 11 baje khulega"), pause(3), FTHIDE]
 BLOCKED = [strne("pk", "", True), NOT_LAUNCHER, NO_CALL, has(ALLOWS, ",{lv=pk},", False)] + [has("{lv=pk}", p, False) for p in PARTS]
 a = [
@@ -34,7 +38,8 @@ a = [
     iff([tod(0, 0, 10, 59), SCR, lt("emL", 1, True)]),
       iff([trig(T2, "App khuli")]), sstr("pk", "{app_package}", True), ELSE, sstr("pk", "{fg_app_package}", True), END,
       expr("askAge", NOW + "-{v=sbAsk}", True),
-      iff(BLOCK2),
+      sstr("hit", "0", True), iff(BASE), *HITCHK, END,
+      iff([eqs("hit", "1")]),
         iff([trig(T2, "App khuli"), strne("sbEmDay", "{dayofmonth}"), gt("askAge", 30, True)]),
           expr("sbAsk", NOW),
           iff([boolc("never", True)]),
@@ -56,7 +61,7 @@ SB = {"macroExportVersion": 1, "macro": {
     "m_description": "Raat 12 se subah 11 tak SIRF Settings, Play Store, MacroDroid, Claude, games, social media (Facebook, Instagram, TikTok, Snapchat, X, Threads, Messenger), YouTube, Netflix, Prime Video band — baqi sab apps khuli. "
                      "Band = Home + 3 s patti. 🚨 Zaroori: din mein 1 dafa 10 minute. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1,
-    "localVariables": [lvar("emL"), lvar("askAge"), lvar("pk", 2), lvar("never", 0)],
+    "localVariables": [lvar("emL"), lvar("askAge"), lvar("pk", 2), lvar("hit", 2), lvar("never", 0)],
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 60, "m_useAlarm": False},
         {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "isAllApps": True, "m_packageNameList": [], "m_applicationNameList": []}],
