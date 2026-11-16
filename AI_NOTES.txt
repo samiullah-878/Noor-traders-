@@ -8519,3 +8519,6 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
 - 16 Nov 14:32 (sirf notes): thermal ka 'hal' GHALAT nikla. 14:22 label 'printer nahi mila', 14:28 parchi 'print nahi hua' -> Spooler: Stopped. Windows record: 13:37:30 + 13:41:30 spoolsv crash (ntdll, 0xc0000005 / 0xc0000374),
   14:18:47 crash faulting module EpsonPH.dll 1.3.8.0 (2009), 7034 'terminated unexpectedly 3 time(s)' = khud dobara nahi chala. Pehla crash nayi line banne (13:35) ke 2 min baad, jab thermal abhi roka hua tha
   -> shak: Epson ke port par doosri line (Generic) hi wajah. thermal-off False / thermal-ok True tha (chowkidar ne nahi roka). Malik ko command di: nayi line hatao + thermal roko. Agla kaam (OK par): driver ke zariye chhaapna.
+
+- 16 Nov 14:53 (sirf notes): malik — printer asal mein TM-T88V hai, driver T88IV ka lagaya tha. Shak: ghalat / purana driver hi Spooler crash (EpsonPH.dll) ki jarr. Plan malik ko diya: T88IV doosri line hatao,
+  Epson ki site se TM-T88V driver, POS bill test, phir scripts ka naam + parchi test (malik ke saamne). Abhi tak koi code nahi badla.
