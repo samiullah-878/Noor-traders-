@@ -310,6 +310,7 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
   4. **Printer ka naam khud chun-na** (meri tabdeeli) ne malik ki ghair-hazri mein server atka diya. Printer / POS / paise ko chhoone wali tabdeeli = pehle test malik ki maujoodgi mein, default BAND, chalu sirf malik ke button se.
   5. **PC command dena**: hamesha EK line (`try{ … }catch{ … }`, `;` se jora) — AnyDesk se kai lines paste hon to ULTI tarteeb se chal jati hain (13:33: pehle printer, phir driver -> 'driver does not exist'). Aakhir mein sabz 'HO GAYA' / laal 'NAHI HUA'. Process ko 'khata-sync' lafz se mat dhoondo.
   6. **Andaza = andaza keh kar batao**: 'taar nahi lagi hogi' ghalat nikla (taar lagi thi). Wajah pakki na ho to pehle app ke dabbe (🖨 Printers ki '⏳ N job', 🔥 CPU, 🆔 PC list) ki photo maango.
+  8. **PC ka haal har kuch second (v2.292.4, doctor v3.11)**: `seenBeat` har 20 s, app ka 🖥 dabba har 10 s khud taza. App mein PC ka koi bhi 'kab dekha' dikhao to us ki likhai kitni der baad hoti hai pehle jaancho — 30 min wali likhai ko 'PC chup hai' mat samjho (16 Nov: isi se ghalat kaha 'doctor chup').
   7. **Malik ka naya qaida**: jo bhi bara masla aaye, us ka sabaq usi din CLAUDE.md + AI_NOTES mein likho — malik ke kahe baghair.
 
 ## 5. Security (kabhi nahi)

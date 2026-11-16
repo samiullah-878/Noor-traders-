@@ -31,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.10';
+const VER = '3.11';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -393,8 +393,18 @@ async function seenTick(run) {
     }
     let ip = ''; try { for (const l of Object.values(os.networkInterfaces())) for (const i of l || []) if (i.family === 'IPv4' && !i.internal && !ip) ip = i.address; } catch {}
     const ref = seenRef(); if (!ref) return;
+    ME.run = run ? 1 : 0;
     await ref.set({ m: { [mid]: { at: Date.now(), host: os.hostname(), run: run ? 1 : 0, doctor: VER, ip, ...(ME.info || {}) } } }, { merge: true });
   } catch (e) { log('⚠ pcSeen: ' + String(e?.message || e).slice(0, 80)); }
+}
+// v3.11 (16 Nov, malik: 'har kuch second baad taza hona chahiye'): poori pehchan sirf bare chakkar (30 min) par jati thi -> app mein chalta PC '22 min pehle' dikhta tha.
+// Ab har 20 s sirf waqt + haal (halki likhai, hadd 10 s, ek waqt mein ek).
+async function seenBeat() {
+  if (ME.beat || ME.run === undefined) return;
+  const mid = ME.mid, ref = mid && seenRef(); if (!ref) return;
+  ME.beat = true;
+  try { await Promise.race([ref.set({ m: { [mid]: { at: Date.now(), run: ME.run } } }, { merge: true }), new Promise((_, no) => setTimeout(() => no(new Error('hadd')), 10000))]); } catch (e) {}
+  ME.beat = false;
 }
 async function serverName() {
   let w = '', mid = '', ok = false; const ref = srvRef();
@@ -576,6 +586,7 @@ lock.on('listening', async () => {
   ensureStartup(); ensureModules(); ensureChupa();
   await cycle('shuru');
   setTimeout(cpuTick, 20000); setInterval(cpuTick, 60000);
+  setInterval(() => { seenBeat().catch(() => {}); }, 20000);
   setTimeout(prnTick, 35000); setInterval(prnTick, 120000);   // v3.3: 🖨 printers app mein   // v3.0: 🔥 CPU app mein
   setInterval(() => cycle('30 minute'), EVERY);
   setInterval(() => cycle('2 minute', false), QUICK);

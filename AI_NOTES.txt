@@ -8503,3 +8503,7 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
 - 16 Nov 13:40 (sirf qaide, code nahi): malik — 'important cheezein / problems qaide mein likha karo'. CLAUDE.md hissa 4 ke aakhir mein '📌 NAYA SERVER PC — 16 Nov ke masle aur sabaq' (7 nuqte:
   purana server band, tala sirf doctor wale PC par, thermal RAW ke liye doosri line 'TM-T88IV' Generic / Text Only (13:35 malik ne command chalai — 'HO GAYA'; parchi ka test baqi),
   printer ki tabdeeli default band, PC command ek line, andaza = andaza, har bare masle ka sabaq usi din likho).
+
+- v2.292.4 / doctor v3.11 (16 Nov 14:05): malik — 'DESKTOP-Q1S… har kuch second baad taza hona chahiye'. PC ki pehchan (pcSeen) sirf bare chakkar (30 min) par jati thi -> chalta server '22 min pehle ⚪' dikhta
+  (meri ghalti: maine is se 'doctor chup hai' samjha, jab ke Printers dabba 2 min pehle taza tha). Ab doctor `seenBeat` har 20 s (sirf at + run), app dabba har 10 s khud taza, 'N s pehle', 🟢 = 2 min ke andar.
+  manifest 2026-11-16.9. Asal PC par test nahi. AI nahi.
