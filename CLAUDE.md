@@ -289,6 +289,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **📅 Khata PDF / print par tareekh ke chips (v2.301.0, 16 Nov)** (malik: 'khata print PDF par date — aaj kal week monthly apni date bhi, upar chips'): khate ki Report preview ke upar `.kr-row` (Aaj · Kal · 7 din · Mahina · Sab · 🗓 do date) — chip = WAHI `report()` dobara (`krGo`: from/to sirf us dauran, khate ki screen ka filter wapas wahi); PDF + 🖨 thermal dono isi tareekh se. Khate ki koi nayi PDF / print ka raasta banao to `kr` option + yehi chips.
 
+- **🖥 Counter ka naam = NT-PRINT se (v2.302.0, PC pc-names.js v1.0, 16 Nov)** (malik: 'computer ke naam auto aane chahiye · naam device ka NT-PRINT ke zariye · server par NT-PRINT chal raha hai ke nahi'): host -> naam EK jagah `pc/pc-names.js` (PC_DEFAULT < local-config pcNames < printPCs.name) — bill-clip / live-cam / pos-sales-dekho / gate-pass / raat-report sab `PN.names()`; camera channel purane naam se likha ho to `PN.oldName()` se bhi milta. App ⚙️ Camera setup ki list = NT-PRINT wale PC (🟢 chalu vX / 🔴 band N min / ⚪ NT-PRINT nahi, 🖥 server) + aaj ke bill wale counter; Save par purane naam ki line hat jati hai. Naya counter naam wala kaam isi file se — scripts mein naya PC_DEFAULT mat likho.
+
 ## 4. POS / PC — KHATARNAK, dhyan se
 - POS = Cognitive Solutions (SQL Server). Jo script POS mein **likhti** hai (item-post, purchase-post, transfer-sync, sale-post…) us mein **koi value kabhi 0/khali na jaye jis se POS divide karta ho** — khas taur par **PackQty (carton pcs) kam az kam 1**. (18 Oct 2026: "kala tail khula" ka PackQty 0 gaya → counter sale "Divide by zero", bill band.)
 - Parhne wali scripts (rack, irep, stats) POS mein kabhi kuch nahi likhti.

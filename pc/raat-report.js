@@ -23,7 +23,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '2.2';
+const VER = '2.3';
 // v1.9 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS'): POS ke dbo.Sale mein COGS ka khana HAI HI NAHI — har report isi par girti thi.
 //   Ab colOf() pehle sys.columns dekhta hai (asal naam, bari / chhoti likhai); na ho = NULL -> nafa line ke khareed rate se (pehle se bana hisaab).
 //   reportDay sirf usi dafa jab usi hukum (rdAt == reportNow) ke saath aaya ho — warna AAJ (Report screen ki purani tareekh atki rehti thi).
@@ -481,7 +481,7 @@ if (require.main === module) {
   if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
   const biz = getFirestore().collection('businesses').doc(BUSINESS_ID);
   let pool = null; const getPool = async () => { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool({ requestTimeout: 120000, connectionTimeout: 15000, ...SQL_CONFIG }).connect(); return pool; };
-  const pcNames = () => { try { return { ...PC_DEFAULT, ...(JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).pcNames || {}) }; } catch { return PC_DEFAULT; } };
+  const PN = require('./pc-names.js'); PN.start(biz); const pcNames = () => PN.names(DIR);   // v2.3: naam NT-PRINT se
   const R = makeReporter({ getPool, sql, biz, log, pcNames, onBeat: beat });
   const arg = process.argv;
   if (arg.includes('--report') || arg.includes('--alert')) {

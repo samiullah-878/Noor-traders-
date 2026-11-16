@@ -4962,3 +4962,11 @@ Malik ne DigiKhata PDF ki tasveer bheji: 'jab bhi PDF / print nikle aisa aana ch
 - khataTpData: v:2 + A rows; L/R bhi (purane PC ke liye).
 - PC pos-khata-sync w4b khataSlip: J.A ho to naya layout (line 1 '#. tareekh tafseel', line 2 baayan | daayan | baqaya, aakhir Kul); warna purana do-taraf.
 - Test: khataSlip stub output dekha; PDF phone par nahi dekha. AI nahi.
+
+
+=== v2.302.0 (16 Nov 2026) — 🖥 Counter ke naam NT-PRINT se ===
+- Malik: camera setup mein computer ke naam khud aayein (NT-PRINT ke device naam), aur server par NT-PRINT chal raha hai ke nahi dikhe.
+- pc/pc-names.js v1.0 (nayi): printPCs onSnapshot -> host->naam; PC_DEFAULT < local-config pcNames < NT-PRINT naam; oldName() = purana naam (channel milane ke liye).
+- bill-clip v2.6, live-cam v1.5 (channel purane naam se bhi), pos-sales-dekho v2.13, gate-pass v1.3, raat-report v2.3 = pcNames ab PN.names().
+- tally.js openSetup: list = printPCs (🟢/🔴/⚪, 🖥 server = billClipPc.host) + aaj ke bill counter; purane alias wale bill dohra nahi. CSS .bt-chn.
+- AI nahi. Asal PC par test nahi hua (stub test hua).

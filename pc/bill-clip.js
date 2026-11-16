@@ -1,5 +1,5 @@
 // =========================================================
-//  bill-clip.js  v2.5 (2026-11-10) — 🎯 pehli item ka ASAL waqt counter ki POS screen se (posAdds, NT-PRINT v1.32) + clip PRINT hote hi (post ka intezar nahi)
+//  bill-clip.js  v2.6 (2026-11-16: counter ka naam NT-PRINT se — pc-names.js; purane naam ka channel bhi chalta) ·  v2.5 (2026-11-10) — 🎯 pehli item ka ASAL waqt counter ki POS screen se (posAdds, NT-PRINT v1.32) + clip PRINT hote hi (post ka intezar nahi)
 //  v2.4 (2026-11-10) — 🔗 recording wali line ki COPY PC ke andar (udp 127.0.0.1:48500+ch) → live-cam v1.2 (NVR live ko doosra rabta nahi deta tha: "error -138"); copy se recording gire = khud purana tareeqa.
 //  v2.3 (2026-11-10) — 🎬 video AAKHRI ITEM tak (`lt`, pos-sales-dekho v2.7): POS ka 'Created & Printed' waqt bill khatam hone se pehle ka hota hai → 18 item ke bill ki sirf 2 min video, 6 item ke baad app shuru se chala deti (malik). Ab t1 = max(print, aakhri item) + post. haal (billClipPc) mein `pcs` = setting ke counter naam (Live camera bina bill ke bhi).
 //  v2.2 (2026-11-09) — 🎯 clip PEHLI ITEM se: `pre` 0 = bill ki pehli scan (`ft`, pos-sales-dekho v2.5) se 15 s pehle → print + post s; ft na ho = 120 s pehle. ⚙️ chips: Pehli item · 1 · 2 · 3 · 5 min.
@@ -48,7 +48,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.5';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.6';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -277,7 +277,7 @@ async function loadKnown() {   // aaj + kal ke clip docs (dobara na banein)
 //   Bill ki pehli item = us counter ke pichhle bill ke baad se is bill ke print tak ke ADD (beech mein 4 min se bara waqfa = pichhla kaam, wahan ruk).
 //   Counter ki ghari alag ho sakti hai -> off = (server ko mila − counter ka now) ka sab se chhota namoona.
 const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
-const pcNames = () => { try { return { ...PC_DEFAULT, ...(JSON.parse(fs.readFileSync(path.join(__dirname, 'local-config.json'), 'utf8')).pcNames || {}) }; } catch { return PC_DEFAULT; } };
+const PN = require('./pc-names.js'); PN.start(biz); const pcNames = () => PN.names(__dirname);   // v2.6: naam NT-PRINT se (pc-names.js)
 const ADDS = new Map(); let addsFirst = true;
 biz.collection('posAdds').onSnapshot(s => { const names = pcNames(), now = Date.now();
   s.docChanges().forEach(c => { if (c.type === 'removed') return; const x = c.doc.data() || {}, host = String(x.host || c.doc.id).toUpperCase(), nm = String(names[host] || host.replace(/^DESKTOP-/i, ''));
@@ -302,7 +302,7 @@ function pick() {
     const posted = Number(b.ps) === 2 && Number(b.pt) > 0, printed = Number(b.ct) > 0;   // v2.5: PRINT hote hi clip — post ka intezar nahi
     if (!rq && (!(posted || printed) || !(Number(b.n) > 0))) continue;
     if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000))) { if (rq && k.st === 'ok') reqDone(id, 'ok'); continue; }
-    const ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()]) || 0;
+    const ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()] ?? CF.ch[PN.oldName(b.pc)]) || 0;
     const rec = ch && recs.get(ch)?.p ? 20 : 90;   // v2.0: apni recording = 20 s baad hi; NVR playback 1-2 min peeche likhta — 90 s
     const lt = Number(b.lt) || 0, endAt = Math.max(anchorOf(b), lt > anchorOf(b) && lt - anchorOf(b) < 20 * 60000 ? lt : 0, 0);   // v2.3: aakhri item ke baad hi
     if (now - endAt < (CF.post + rec) * 1000) continue;
@@ -331,7 +331,7 @@ async function work() {
   } finally { busy = false; if (!AUTHBAD && pick().length && CF.on && ffPath()) kick(); }
 }
 async function one(b) {
-  const id = String(b.id), ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()]) || 0;
+  const id = String(b.id), ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()] ?? CF.ch[PN.oldName(b.pc)]) || 0;
   const k = known.get(id) || { tries: 0 }; const tries = (k.tries || 0) + 1;
   const base = { no: String(b.no || ''), day: billsDay || dayOf(b.pt || b.ct), pt: Number(b.pt) || 0, tm: Number(b.tm) || 0, ct: Number(b.ct) || 0, an: anchorOf(b), pc: String(b.pc || ''), p: String(b.p || ''), t: Number(b.t) || 0, by: String(b.by || ''), nl: Number(b.n) || 0, at: Date.now(), tries, ver: VER };
   if (!ch) {   // counter ka camera lagaya hi nahi — skip (malik ⚙️ mein chip lagaye)

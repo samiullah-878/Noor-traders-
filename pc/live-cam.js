@@ -28,7 +28,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.4';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.5';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -71,7 +71,8 @@ biz.collection('blueAccess').doc('billClip').onSnapshot(s => {
 const credOf = x => String(x || '').replace(/[\s/?#]/g, c => encodeURIComponent(c));   // bill-clip v1.4 jaisa: ffmpeg %-decode nahi karta
 function liveUrl(ch, main) { const u = credOf(CF.user), p = credOf(CF.pw); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${main ? 1 : 2}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${main ? 0 : 1}`; }
 function warnViewers(p, why) { for (const [id, v] of viewers) if (v.pipe === p && v.warn !== why) { v.warn = why; REQ.doc(id).set({ warn: why, warnAt: Date.now() }, { merge: true }).catch(() => {}); } }   // v1.1: asal wajah app ko (khamosh nahi)
-const chOf = pc => Number(CF.ch[pc] ?? CF.ch[String(pc || '').toLowerCase()]) || 0;
+const PN = require('./pc-names.js'); PN.start(biz);   // v1.5: counter ka naam NT-PRINT se — purane naam ka channel bhi
+const chOf = pc => Number(CF.ch[pc] ?? CF.ch[String(pc || '').toLowerCase()] ?? CF.ch[PN.oldName(pc)]) || 0;
 const hint = e => { e = String(e || ''); if (/\b401\b|unauthori[sz]ed/i.test(e)) return 'NVR ka user / password ghalat (401)'; if (/\b404\b|not found/i.test(e)) return 'NVR par ye channel nahi (404)'; if (/timed? ?out|refused|unreachable/i.test(e)) return 'NVR tak rasta nahi (IP / LAN)'; if (/invalid data/i.test(e)) return 'NVR ne video nahi di (restart / RTSP band)'; return e.slice(0, 120); };
 
 // ---------- 🔗 v1.2: recording wali line ki copy (bill-clip v2.4 → udp 127.0.0.1:48500+ch, mpegts) — NVR par doosra rabta nahi ----------

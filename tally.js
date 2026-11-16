@@ -246,7 +246,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.301.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.302.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
@@ -351,7 +351,22 @@ async function openSetup() {
   if (!isOwner()) return;
   const d = dlg(); delete d.dataset.unp; delete d.dataset.list; d.innerHTML = '<div class="bt-dbody">⏳</div>'; if (!d.open) d.showModal();
   let cf = {}; try { cf = await cloud.getBillClipCfg(); } catch (e) { cf = {}; }
-  const pcs = new Set(Object.keys(cf.ch || {})); for (const b of bills.values()) if (b.pc) pcs.add(String(b.pc));
+  // v2.302.0: counter ke naam NT-PRINT se (printPCs) + har counter ka haal; purana channel purane naam se bhi bhar jata hai
+  const NT_DEF = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
+  let nts = [];
+  try { nts = await new Promise(res => { let done = false, u = null; const fin = L => { if (done) return; done = true; res(L || []); setTimeout(() => { try { u && u(); } catch {} }, 0); };
+    setTimeout(() => fin([]), 4000); u = cloud.listenPrintPCs ? cloud.listenPrintPCs(fin) : (fin([]), null); }); } catch { nts = []; }
+  const ch0 = cf.ch || {}, rows = new Map(), alias = new Set(), srvH = String((pcSt || {}).host || '').toUpperCase();
+  for (const x of nts) {
+    const h = String(x.host || '').toUpperCase(), nm = String(x.name || '').trim().slice(0, 40) || h; if (!nm) continue;
+    const bare = h.replace(/^[A-Z]+-/, ''), m = Math.max(0, Math.round((Date.now() - (Number(x.at) || 0)) / 60000));
+    [NT_DEF[h], h, bare].forEach(a => a && a !== nm && alias.add(a));
+    rows.set(nm, { v: ch0[nm] ?? ch0[nm.toLowerCase()] ?? ch0[NT_DEF[h]] ?? ch0[h] ?? ch0[bare] ?? '', srv: !!srvH && srvH === h,
+      st: m <= 5 ? `🟢 NT-PRINT v${x.ver || '?'}` : `🔴 NT-PRINT band ${m > 120 ? Math.round(m / 60) + ' ghante' : m + ' min'}` });
+  }
+  if (!nts.length) for (const k of Object.keys(ch0)) rows.set(k, { v: ch0[k], st: '' });
+  for (const b of bills.values()) { const p = String(b.pc || ''); if (p && !rows.has(p) && !alias.has(p)) rows.set(p, { v: ch0[p] ?? '', st: '⚪ NT-PRINT nahi laga' }); }
+  const pcs = new Set(rows.keys());
   const st = pcSt || {};
   const inp = (k, ph, v, type) => `<label class="bt-f"><span>${ph}</span><input type="${type || 'text'}" data-cf="${k}" value="${esc(v ?? '')}" autocomplete="off"></label>`;
   d.innerHTML = `<div class="bt-dhead"><b>⚙️ Camera setup (malik)</b><button type="button" class="bt-x" data-x="1">×</button></div>
@@ -366,7 +381,8 @@ async function openSetup() {
       <div class="bt-grid">${inp('ip', 'NVR ka IP (LAN)', cf.ip)}${inp('port', 'RTSP port', cf.port || 554, 'number')}${inp('user', 'NVR user', cf.user || 'admin')}${inp('pw', 'NVR password', cf.pw, 'password')}
         ${inp('post', 'Print ke BAAD (s)', cf.post || 20, 'number')}${inp('keep', 'Clip rakho (din)', cf.keep || 2, 'number')}${inp('rk', 'PC par live recording rakho (min)', cf.rk || 180, 'number')}${inp('rep', 'Shaam ka paigham (HH:MM)', cf.rep || '20:30')}</div>
       <div class="bt-ihead">🖥 Counter ↔ camera channel (NVR ka channel number)</div>
-      <div class="bt-chlist">${[...pcs].sort().map(p => `<label class="bt-ch"><b>${esc(p)}</b><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc((cf.ch || {})[p] ?? '')}" placeholder="ch"></label>`).join('') || '<small>Aaj koi POS bill nahi — bill aane par counter ke naam yahan aayenge</small>'}</div>
+      <div class="bt-chlist">${[...pcs].sort().map(p => { const r = rows.get(p) || {}; return `<label class="bt-ch"><span class="bt-chn"><b>${esc(p)}</b><small>${esc(r.st || '')}${r.srv ? ' · 🖥 server' : ''}</small></span><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc(r.v ?? '')}" placeholder="ch"></label>`; }).join('') || '<small>Koi counter nahi mila — counter PC par NT-PRINT chalu ho to naam yahan khud aayega</small>'}</div>
+      <p class="bt-sub">🖥 Naam har counter ke NT-PRINT ki setting se khud aate hain. 🟢 = NT-PRINT chal raha · 🔴 = band · ⚪ = us PC par NT-PRINT nahi.</p>
       <p class="bt-sub">🖥 PC: ${st.at ? (Date.now() - st.at < 5 * 60000 ? '🟢 chalu' : '⚫ chup ' + ago(st.at)) + ' · v' + esc(st.ver || '?') + (st.ff ? ' · ffmpeg ✓' : ' · ffmpeg ⏳') + (st.today ? ` · aaj ${st.today.n} (✓ ${st.today.ok} ✕ ${st.today.err})` : '') + (st.last ? ' · ' + esc(st.last) : '') + (st.err ? ' · ⚠ ' + esc(st.err) : '') : 'abhi report nahi (PC 3-5 min mein script lagata hai)'}</p>
       ${st.rec && Object.keys(st.rec).length ? `<p class="bt-sub">🎞 Recording: ${Object.entries(st.rec).map(([ch, r]) => `ch ${esc(ch)} ${r.on ? '🟢' : '⚫'} ${r.n || 0} min${r.last ? ' · ' + tm(r.last) : ''}${r.err ? ' · ' + esc(r.err) : ''}`).join(' · ')}</p>` : ''}
       ${st.test ? `<p class="bt-sub bt-test${st.test.ok ? '' : ' bad'}">🔎 Rabta test (${tm(st.test.at)}, ch ${esc(st.test.ch)}): ${st.test.ok ? '✅ NVR se live video mili — password / IP theek' : '✕ ' + esc(st.test.err) + (st.test.raw ? `<br><small>${esc(st.test.raw)}</small>` : '')}</p>` : ''}

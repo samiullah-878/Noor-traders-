@@ -1,5 +1,5 @@
 // =========================================================
-//  gate-pass.js  v1.2 (2026-11-03: 🐞 shuru mein pehle ke gate pass na parh sake (internet der se) = jab tak parh na le KUCH nahi likhta — pehle sab dobara likhta
+//  gate-pass.js  v1.3 (2026-11-16: counter ka naam NT-PRINT se — pc-names.js) · v1.2 (2026-11-03: 🐞 shuru mein pehle ke gate pass na parh sake (internet der se) = jab tak parh na le KUCH nahi likhta — pehle sab dobara likhta
 //                 aur posted bill ka "post ka waqt" (pt) abhi ka ho jaata) · v1.1 (2026-11-01: 🔵 UN-POSTED bhi — malik: "Bills jaisa: laal = posted (tick), neela = un-posted (baad mein laal)" · ps 1/2 ·
 //                 scan ke dauran nayi line bhi (SaleDetail ginti/jor jaanch mein)) · v1.0 (2026-11-01) — 🚪 GATE PASS KA RECORD (POS ke POSTED bill → app, ~1 second)
 //  Malik: "jitne bhi gate pass nikal rahe hain un ka record app mein · har customer alag · jo bill POST ho jaye usi ka gate pass
@@ -28,7 +28,7 @@ const p2 = n => String(n).padStart(2, '0');
 const dayOf = d => { d = d instanceof Date ? d : new Date(d); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
 const isFarqName = n => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(n || ''));   // pos-sales-dekho jaisa — ginti ka farq bill gate pass nahi
 const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
-const pcNames = () => { try { return { ...PC_DEFAULT, ...(JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).pcNames || {}) }; } catch { return PC_DEFAULT; } };
+const PN = require('./pc-names.js'); const pcNames = () => PN.names(DIR);   // v1.3: naam NT-PRINT se (pc-names.js)
 
 // ---------- SQL qataren → har bill ka gate pass doc ----------
 // rows: SaleID, SaleNo, SaleDate, BranchID, PartyName, SN (SystemNotes), ItemID, ItemName, PackQty, Qty, G (line ka godam)
@@ -70,7 +70,7 @@ function main() {
   const SQL_CONFIG = require('./sql-config.js');
   SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
   if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
-  const db = getFirestore(), GP = db.collection('businesses').doc(BUSINESS_ID).collection('gatePass');
+  const db = getFirestore(), GP = db.collection('businesses').doc(BUSINESS_ID).collection('gatePass'); PN.start(db.collection('businesses').doc(BUSINESS_ID));
   let pool = null;
   const getPool = async () => { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool(SQL_CONFIG).connect(); return pool; };
   let names = {}, namesAt = 0;
@@ -85,7 +85,7 @@ function main() {
     const y = new Date(); y.setDate(y.getDate() - 1);
     const sn = await GP.where('day', '>=', dayOf(y)).get();
     sn.forEach(d => { const x = d.data() || {}; known.set(Number(d.id), { h: x.off ? '' : hashOf(x), pt: Number(x.pt) || 0, ps: Number(x.ps) === 1 ? 1 : 2, off: x.off ? 1 : 0, day: String(x.day || '') }); });
-    log(`🚪 gate-pass v1.2 shuru — pehle se ${known.size} gate pass (aaj + kal) · har ${EVERY / 1000} sec POS ke bills (🔵 un-posted + 🔴 posted) dekhta hai`);
+    log(`🚪 gate-pass v1.3 shuru — pehle se ${known.size} gate pass (aaj + kal) · har ${EVERY / 1000} sec POS ke bills (🔵 un-posted + 🔴 posted) dekhta hai`);
   }
   async function once() {
     const p = await getPool();
