@@ -8328,3 +8328,37 @@ html body .bkp .bkp-row .bkp-amt small{font-size:10px!important;padding:2px 7px!
 html body .bkp .bkp-row .bkp-dt{display:inline-block;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;background:rgba(11,61,107,.08);color:#0b3d6b;margin-right:2px}
 html.dk body .bkp .bkp-row .bkp-dt{background:rgba(188,212,255,.14);color:#bcd4ff}
 html.dk body .bkp .bkp-row .bkp-acts .prn-chip{background:rgba(16,185,129,.16)!important;color:#6ee7b7!important}
+/* v2.299.0 🏦 Bank screen: hero CHHOTA (2 patli lines + chhota chart) + har entry 2 patli lines, tap = chips (malik 16 Nov: "chart bohat chhota · ek screen par 10 payments") */
+html body .summary>div.bkp-hero.bkp-hero.cmp,html body #summary .bkp-hero.cmp{padding:9px 12px 8px!important;border-radius:16px!important}
+html body .bkp-hero.cmp::after{display:none}
+html body .bkp-hero.cmp .bkp-h1{display:flex;align-items:center;gap:7px;min-width:0;position:relative;z-index:1}
+html body .bkp-hero.cmp .bkp-bank{font-size:16px;flex:none}
+html body .bkp-hero.cmp .bkp-hn{flex:1;min-width:0;font-size:13px!important;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;opacity:.92}
+html body .bkp-hero.cmp .bkp-hb{font-size:17px!important;font-weight:900;white-space:nowrap;font-variant-numeric:tabular-nums}
+html body .bkp-hero.cmp .bkp-hs{font-style:normal;font-size:10.5px;font-weight:800;padding:1px 7px;border-radius:999px;background:rgba(255,255,255,.14);white-space:nowrap}
+html body .bkp-hero.cmp .bkp-chip{min-height:26px!important;height:26px;padding:0 8px!important;font-size:12px!important;border-radius:999px!important}
+html body .bkp-hero.cmp .bkp-h2{display:flex;align-items:center;gap:6px;margin-top:6px;position:relative;z-index:1}
+html body .bkp-hero.cmp .bkp-h2>span{font-size:12px;font-weight:800;padding:2px 8px;border-radius:999px;white-space:nowrap;font-variant-numeric:tabular-nums}
+html body .bkp-hero.cmp .bkp-h2>span.in{background:rgba(52,211,153,.2);color:#a7f3d0!important}html body .bkp-hero.cmp .bkp-h2>span.out{background:rgba(251,113,133,.2);color:#fecdd3!important}
+html body .bkp-hero.cmp .bkp-h2>span i{font-style:normal;opacity:.7;font-size:10.5px}
+html body .bkp-hero.cmp .bkp-spark{flex:1;max-width:110px;margin:0 0 0 auto!important;height:20px!important;gap:3px}
+html body .bkp-hero.cmp .bkp-spark span{padding-bottom:0!important}html body .bkp-hero.cmp .bkp-spark em{display:none}
+html body .bkp-hero.cmp .bkp-spark i{width:4px}
+html body .bkp-hero.cmp .bkp-cash,html body .bkp-hero.cmp .bkp-pcin{display:block;margin-top:4px!important;font-size:10.5px!important;opacity:.75;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;position:relative;z-index:1}
+html body .bkp .bkp-day{gap:5px}
+html body .bkp .bkp-dh{padding:5px 4px!important}
+html body .bkp .bkp-row.cmp{gap:9px!important;padding:7px 10px!important;border-radius:13px!important;align-items:center!important;cursor:pointer}
+html body .bkp .bkp-row.cmp .bkp-av{width:30px;height:30px;border-radius:10px}html body .bkp .bkp-row.cmp .bkp-av i{font-size:11px}
+html body .bkp .bkp-row.cmp .bkp-mid{gap:1px}
+html body .bkp .bkp-row.cmp .bkp-nm{font-size:13.5px}
+html body .bkp .bkp-row.cmp .bkp-meta{font-size:11px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;overflow-wrap:normal}
+html body .bkp .bkp-row.cmp .bkp-meta .bkp-txn{display:none}
+html body .bkp .bkp-row.cmp .bkp-ics{font-size:10.5px}
+html body .bkp .bkp-row.cmp .bkp-amt{font-size:14.5px;gap:2px}
+html body .bkp .bkp-row.cmp .bkp-amt small{font-size:9.5px!important;padding:1px 6px!important}
+html body .bkp .bkp-row.cmp .bkp-x{display:none}
+html body .bkp .bkp-row.cmp.is-in{align-items:flex-start!important;box-shadow:0 0 0 2px rgba(37,99,235,.25)!important}
+html body .bkp .bkp-row.cmp.is-in .bkp-x{display:block}
+html body .bkp .bkp-row.cmp.is-in .bkp-meta{white-space:normal}html body .bkp .bkp-row.cmp.is-in .bkp-meta .bkp-txn{display:inline}
+html body .bkp .bkp-seg{min-height:0!important}html body .bkp .bkp-seg button{min-height:32px!important;padding:3px 10px!important;font-size:12.5px!important}
+html body .bkp-hero.cmp .bkp-bank{width:auto!important;height:auto!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;font-size:16px!important}

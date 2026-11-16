@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.298.0';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.299.0';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -700,7 +700,7 @@ function pickAcct() {
 }
 window.addEventListener?.('sam-bank-pick', e => { if (e.detail && O.owner && O.owner() && alias['@hbl'] !== e.detail) saveHbl(e.detail); });
 window.addEventListener?.('sam-notes', () => { if (onScreen()) renderHbl(); });
-let showDt = false;   // v2.298.0: 7 din / Mahina / Sab = ek dabba, har line par tareekh
+let showDt = false, rowOpen = '';   // v2.299.0: rowOpen = jis entry ke chips khule (ek waqt ek)   // v2.298.0: 7 din / Mahina / Sab = ek dabba, har line par tareekh
 const dShort = d => d ? new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { day: '2-digit', month: 'short' }) : '';
 const shortCode = h => String(h || '').replace(/· ([A-Z]{2,4})-0+(\d)/g, '· $1-$2');   // v2.298.0: JV-00000000781 → JV-781 (sirf dikhawa)
 const memoIn = h => /^\s*<button/.test(h || '');   // 📝 Note likhein (khali) = chips ki usi qatar mein
@@ -737,9 +737,10 @@ function pDone(v) {
   const kx = kxName(src);   // v2.113.0: 🧾 kharcha mein laga
   const mh = src ? memoHTML(src, true, v.id) : '', pc = v.e && O.printChip ? shortCode(O.printChip(v.e)) : '';
   const kindTag = v.cash ? 'Closing cash' : kx ? '🧾 ' + kx : v.e && v.e.posNo ? 'Bill · kharcha' : v.e && v.e.transferId ? 'Khate mein' : 'Daily + khata';
-  return `<article class="bkp-row done ${v.dir}"><div class="bkp-av ${v.dir}">${v.dir === 'in' ? '↓' : '↑'}<i>${esc(initials(name))}</i></div>
-    <div class="bkp-mid"><div class="bkp-top"><b class="bkp-nm">${esc(name)}</b></div><div class="bkp-meta">${showDt && v.date ? `<span class="bkp-dt">${esc(dShort(v.date))}</span> ` : ''}${esc(meta)}${txn ? ` <span class="bkp-txn">${esc(txn)}</span>` : ''}</div>${kx ? `<div class="bkp-who kxd"><span class="bkp-pk kx">🧾 Kharcha</span><b>${esc(kx)}</b><small>Akhrajat mein · Daily mein nahi</small></div>` : ''}
-      ${v.cash ? '' : `<div class="bkp-acts sm">${noteBtn(txn, 'v:' + v.id).replace('bk-nb', 'bkp-ic bk-nb')}${undo}${memoIn(mh) ? mh : ''}${pc}</div>`}${memoIn(mh) ? '' : mh}${v.cash && pc ? `<div class="bkp-acts sm">${pc}</div>` : ''}</div>
+  const nt = noteOf(txn), ic = (v.e && v.e.posPrintErr ? '⚠️' : v.e && v.e.posPrintedAt ? '🖨✓' : v.e && v.e.posCode ? '🧾' : '') + (nt && !nt.done ? ' 🔔' : '') + (src && String(src.note || '').trim() ? ' 📝' : '');
+  return `<article class="bkp-row done cmp ${v.dir}${rowOpen === v.id ? ' is-in' : ''}" data-bk-row="${esc(v.id)}"><div class="bkp-av ${v.dir}">${v.dir === 'in' ? '↓' : '↑'}<i>${esc(initials(name))}</i></div>
+    <div class="bkp-mid"><div class="bkp-top"><b class="bkp-nm">${esc(name)}</b></div><div class="bkp-meta">${ic ? `<span class="bkp-ics">${ic}</span> ` : ''}${showDt && v.date ? `<span class="bkp-dt">${esc(dShort(v.date))}</span> ` : ''}${esc(meta)}${txn ? ` <span class="bkp-txn">${esc(txn)}</span>` : ''}</div><div class="bkp-x">${kx ? `<div class="bkp-who kxd"><span class="bkp-pk kx">🧾 Kharcha</span><b>${esc(kx)}</b><small>Akhrajat mein · Daily mein nahi</small></div>` : ''}
+      ${v.cash ? '' : `<div class="bkp-acts sm">${noteBtn(txn, 'v:' + v.id).replace('bk-nb', 'bkp-ic bk-nb')}${undo}${memoIn(mh) ? mh : ''}${pc}</div>`}${memoIn(mh) ? '' : mh}${v.cash && pc ? `<div class="bkp-acts sm">${pc}</div>` : ''}</div></div>
     <div class="bkp-amt ${v.dir}">${v.dir === 'in' ? '+' : '−'}${m(v.amt)}<small class="ok">✓ ${kindTag}</small></div></article>`;
 }
 function spark(H) {
@@ -784,12 +785,12 @@ export function renderHbl() {
   const inT = mv.filter(v => v.dir === 'in').reduce((n, v) => n + v.amt, 0), outT = mv.filter(v => v.dir === 'out').reduce((n, v) => n + v.amt, 0), bal = hblBalance(H);
   const nIn = mv.filter(v => v.dir === 'in').length, nOut = mv.filter(v => v.dir === 'out').length, own = O.owner && O.owner();
   const banks = (O.parties ? O.parties() : []).filter(p => p.bank), cashA = hblCash(H);
-  $('summary').innerHTML = `${acctChips(H, R)}<div class="bkp-hero${isCard ? ' card' : ''}"><div class="bkp-hhead"><span class="bkp-bank">${isCard ? '💳' : '🏦'}</span><div><small>${isCard ? 'CREDIT CARD' : 'BANK ACCOUNT'}</small><b>${esc(H ? H.name : 'HBL khata nahi chuna')}</b>${H && !isHbl && !isCard && acctKeysOf(H.id).length ? `<small class="bkp-pcin">${pcinOn(H.id) ? '🖥 aaye paise PC khud lagata hai' : '☐ aaye paise haath se'} · …${esc(acctKeysOf(H.id).join(', …'))}</small>` : ''}</div>${own && isHbl ? '<button type="button" class="bkp-chip" data-hbl-acct="1">✏️ Badlo</button>' : ''}</div>
-    <div class="bkp-bal"><small>${isCard ? 'Card ka udhaar' : 'Abhi ka baqaya'}</small><strong>${m(Math.abs(bal))}</strong><span class="bkp-st">${bal > 0 ? 'Lene hain' : bal < 0 ? 'Dene hain' : 'Barabar'} · khate jaisa</span></div>
+  // v2.299.0 (malik: "upar wala chart bohat chhota · ek screen par 10 payments"): hero = 2 patli lines + chhota chart
+  $('summary').innerHTML = `${acctChips(H, R)}<div class="bkp-hero cmp${isCard ? ' card' : ''}"><div class="bkp-h1"><span class="bkp-bank">${isCard ? '💳' : '🏦'}</span><b class="bkp-hn">${esc(H ? H.name : 'HBL khata nahi chuna')}</b><strong class="bkp-hb">${m(Math.abs(bal))}</strong><em class="bkp-hs">${bal > 0 ? 'Lene' : bal < 0 ? 'Dene' : 'Barabar'}</em>${own && isHbl ? '<button type="button" class="bkp-chip" data-hbl-acct="1" data-mn="hbl.acct" data-mn-i="✏️" data-mn-t="HBL khata badlo" data-mn-g="🏦 Bank">✏️</button>' : ''}</div>
+    <div class="bkp-h2"><span class="in">↓ ${m(inT)} <i>${nIn}</i></span><span class="out">↑ ${m(outT)} <i>${nOut}</i></span>${H ? spark(H) : ''}</div>
+    ${H && !isHbl && !isCard && acctKeysOf(H.id).length ? `<small class="bkp-pcin">${pcinOn(H.id) ? '🖥 aaye paise PC khud lagata hai' : '☐ aaye paise haath se'} · …${esc(acctKeysOf(H.id).join(', …'))}</small>` : ''}
     ${cardBox(H, R)}
-    ${H ? spark(H) : ''}
-    <div class="bkp-stats"><div class="in"><span>↓</span><div><small>Aaye</small><b>${m(inT)}</b><em>${nIn} len-den</em></div></div><div class="out"><span>↑</span><div><small>Gaye</small><b>${m(outT)}</b><em>${nOut} len-den</em></div></div></div>
-    ${cashA && isHbl ? `<div class="bkp-cash">💵 Closing se HBL ko diya cash ${m(cashA)} — Closing Cash khata mein (baqaye mein nahi)</div>` : ''}</div>`;
+    ${cashA && isHbl ? `<div class="bkp-cash">💵 Closing se diya cash ${m(cashA)} — baqaye mein nahi</div>` : ''}</div>`;
   const seg = (a, v, cur, l) => `<button type="button" class="${cur === v ? 'on' : ''}" data-${a}="${v}">${l}</button>`;
   let list = '';
   if (stab === 'baqi') list = pend.map(pPend).join('') || `<div class="bkp-empty">🎉<b>${q ? 'Is search mein kuch baqi nahi' : 'Sab lag gaye'}</b><small>Naya SMS / email aate hi yahan aayega</small></div>`;
@@ -807,8 +808,8 @@ export function renderHbl() {
   const qv = qOpen && $('list').querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`)?.value;
   $('list').innerHTML = `<div class="bk-screen bkp">${H ? '' : `<div class="bk-warn">⚠️ HBL khata chunein: ${banks.length ? `<select data-bk-bank><option value="">— chunein —</option>${banks.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select>` : 'pehle bank ka khata banayein'}</div>`}
     <div class="bkp-seg">${seg('hbl-tab', 'sab', stab, '📅 Din-war')}${seg('hbl-tab', 'baqi', stab, `⏳ Baqi${R.pend.length ? ' <b>' + R.pend.length + '</b>' : ''}`)}</div>
-    ${stab === 'baqi' ? '' : `<div class="bkp-seg sm">${[['aaj', 'Aaj'], ['7', '7 din'], ['mahina', 'Mahina'], ['sab', 'Sab']].map(([v, l]) => seg('hbl-range', v, range, l)).join('')}</div>`}
-    <details class="bkp-info"><summary>ⓘ Kaise kaam karta hai</summary><p>🟢 <b>Aaye</b>: koi khata nahi poochha jata — seedha HBL Noor Traders mein (Daily: Akhrajat), Server PC khud lagata hai aur HBL parchi foran nikalti hai. 🔴 <b>Gaye</b>: "kis ko diya?" — seedha us ke khate mein (Daily mein nahi); yaad naam khud lagte hain. 🧾 <b>Bill</b> (GEPCO waghera HBL Mobile se): HBL se minus + aap ka chuna kharcha khata (Daily / POS mein nahi). 🏦 SMS / email mein doosra account number (maslan loan) ho to pehle poochta hai. 📅 Purani tareekh wale pehle poochte hain. Upar search mein naam / raqam / TXN likhein.</p></details>
+    ${stab === 'baqi' ? '' : `<div class="bkp-seg sm" data-mn-seg="hbl.range" data-mn-i="📅" data-mn-t="Kis muddat ka" data-mn-g="🏦 Bank">${[['aaj', 'Aaj'], ['7', '7 din'], ['mahina', 'Mahina'], ['sab', 'Sab']].map(([v, l]) => seg('hbl-range', v, range, l)).join('')}</div>`}
+    <details class="bkp-info" data-mn-box="hbl.info" data-mn-i="ⓘ" data-mn-t="Kaise kaam karta hai" data-mn-g="🏦 Bank"><summary>ⓘ Kaise kaam karta hai</summary><p>🟢 <b>Aaye</b>: koi khata nahi poochha jata — seedha HBL Noor Traders mein (Daily: Akhrajat), Server PC khud lagata hai aur HBL parchi foran nikalti hai. 🔴 <b>Gaye</b>: "kis ko diya?" — seedha us ke khate mein (Daily mein nahi); yaad naam khud lagte hain. 🧾 <b>Bill</b> (GEPCO waghera HBL Mobile se): HBL se minus + aap ka chuna kharcha khata (Daily / POS mein nahi). 🏦 SMS / email mein doosra account number (maslan loan) ho to pehle poochta hai. 📅 Purani tareekh wale pehle poochte hain. Upar search mein naam / raqam / TXN likhein.</p></details>
     ${list}</div>`;
   if (qOpen) { const i = $('list').querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`); if (i) { i.value = qv || ''; i.focus(); search(i); } }
   if (memoOpen) { const ta = $('list').querySelector(`[data-bk-memo-t="${CSS.escape(memoOpen)}"]`); if (ta && document.activeElement !== ta) { try { ta.focus({ preventScroll: true }); const n = ta.value.length; ta.setSelectionRange(n, n); } catch {} } }   // v2.113.0: likhte waqt naya SMS aaye to bhi likha hua wahi
@@ -840,6 +841,12 @@ export function openPrinter() {
 }
 setInterval(() => { try { if (prnOpen()) $('dialogBody').innerHTML = prnHTML(); } catch {} }, 60000);
 document.addEventListener('click', e => { if (e.target.closest?.('[data-prn-open],#prnStatusBtn')) openPrinter(); });
+document.addEventListener('click', e => {   // v2.299.0: patli entry par tap = us ke chips (Reminder · ↩ · Note · Dobara print)
+  const r = e.target.closest?.('.bkp [data-bk-row]'); if (!r || e.target.closest('button,a,input,textarea,select,.bkp-x')) return;
+  const id = r.getAttribute('data-bk-row'), on = !r.classList.contains('is-in');
+  for (const x of document.querySelectorAll('.bkp [data-bk-row].is-in')) x.classList.remove('is-in');
+  r.classList.toggle('is-in', on); rowOpen = on ? id : '';
+});
 // Daily screen ka hissa — us din HBL mein kya aaya / gaya (cash hisaab se alag)
 export function hblDay(date) {
   if (!canUse()) return '';

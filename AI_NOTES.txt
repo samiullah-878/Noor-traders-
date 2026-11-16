@@ -8567,3 +8567,10 @@ Malik: 'chips small kar do · Mahina / weekly click par upar wali (Aaj · tareek
 - style.css aakhir mein .bkp .bkp-acts 26px chips (prn-box display:contents).
 - POS lookup wala plan malik ne ROKA ('POS wala nahi').
 - Test: stub render 4 range (node). Phone par nahi dekha. AI nahi.
+
+=== v2.299.0 (16 Nov 2026) — Bank screen: chhota hero + ek screen par 10 entries ===
+Malik: 'upar wala chart bohat chhota · ek screen par ek time par 10 payments · qaida mein likh do'.
+- bank-inbox.js renderHbl: hero .bkp-hero.cmp 2 lines (naam · baqaya · Lene / ↓ Aaye · ↑ Gaye + 20px chart); ✏️ Badlo data-mn (⋮). Range chips data-mn-seg 'hbl.range', 'Kaise kaam karta hai' data-mn-box 'hbl.info' (phone par ⋮ mein).
+- pDone: .bkp-row.cmp 2 patli lines + nishan (🖨✓ / ⚠️ / 🔔 / 📝); chips (Reminder · ↩ · Note · Chhapi · Dobara print) .bkp-x sirf tap par — document click data-bk-row, ek waqt ek (rowOpen), list dobara paint nahi. Baqi (pend) entries pehle jaisi poori (un par kaam karna hota hai).
+- CLAUDE.md mein PAKKA qaida: bank screen par ek waqt 10 entries.
+- Test: stub render + Chrome screenshot (390 px par 12 entries). Phone par nahi dekha. AI nahi.
