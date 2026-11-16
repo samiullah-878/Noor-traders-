@@ -4949,3 +4949,9 @@ Malik: 'is mein wo entries bhi chahiye jo App ko POS jaisa / POS ko app jaisa / 
 - PC milanJobUndo: ids[2..] = sirf wohi voucher; asal job par `undone` list, sab ho jayein to undoneAt. pos-milan madeOf undone ghatata hai.
 - Ghalti theek: dd-bar sticky (peecha transparent) list ke upar chadhti thi -> static.
 - AI nahi. Test: node --check + stub test.
+
+
+## v2.297.0 (16 Nov 2026) — ⚖️ Barabar se bani mein 🤖 PC ke khud wale kaam bhi (PC pos-khata-sync w4)
+Malik (amjad islam, POS ✓): 'yahan app jaise voucher aur JV voucher nahi aa raha'. Wajah: woh khata PC ke autoMilan ne khud barabar kiya tha — job dir 'auto', hum sirf app|pos dikhate the.
+- app ddJobs + PC milanMade / milanJobUndo: dir 'auto' bhi (bill jaanch wala nahi); har voucher ki taraf log se (`… app mein likh diya` = app copy + POS asal; baqi = [app: wala POS voucher ya opening JV).
+- AI nahi. Test: node --check + stub.

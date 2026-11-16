@@ -1,5 +1,5 @@
 {
- "version": "2026-11-16.13",
+ "version": "2026-11-16.14",
  "note": "raat-report v2.2 + kh-wa v1.10: reports menu 8 = maal khatam hone wala (sirf maangne par). Pichhla: hz-wa v1.1 (hazri number se) + kh-wa v1.9 (reports sab ko, nafa sirf malik, sab codes) + raat-report v2.1 + larka-stats v3 (godam ka maal larke ki sale mein nahi) + wa-out v1.25. Pichhla: raat-report v2.0: subah ki udhaar report (N din se wasooli nahi) malik ke WhatsApp par. Pichhla: doctor v3.2: server PC ka naam (blueAccess/serverPc, default DESKTOP-Q1SLV77) - doosre naam wala PC scripts band rakhe. Pichhla: hz-wa v1.0 (nayi file) + wa-out v1.22: larkon ki bahar jane ki request WhatsApp se. Pichhla: 14 Nov: raat-report v1.9 (POS Sale.COGS khana nahi = andaza, aaj ki report, app ko haal) + item-report v1.9 (nafa COGS ke baghair). Pichhla: wa-parchi v2.33: gahak ka number alag paigham mein bhi + 0371\u2026 jaise naye number. Pichhla: raat-report v1.8: report na bane / atak jaye to malik ko WhatsApp par wajah. Pichhla: \ud83d\udc65 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: \ud83d\udc64 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (\u26a0\ufe0f Print auto / \u2705 Parchi Mubeen ko gayi / \u23f0 / \u25b6\ufe0f \u2014 waOut pp) + \"Print auto 0344\u2026\" reply bhi; Bu",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
@@ -13,7 +13,7 @@
   "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
   "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
   "label-print.js": "926f0010c856696258bbdfbe87fb0db4f4a421c542cddf26856ce45c66850061",
-  "pos-khata-sync.js": "011157332ef45ff3fc1b7cc31a4622482dc8e70ad63d6c27f72a54d3ee6a3941",
+  "pos-khata-sync.js": "6b0658fa012800db68acb4ccd21f83edfcbed65696760558817d302759058c26",
   "post-farq.js": "e41505f00578b0477386adbee095ab507e06e76019a4caa73fc2ea66d1a9ef04",
   "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
   "purchase-post.js": "284c63b22719ba6d4ec4c551985b9edc762597f20fcb3a4c5f04100a2d3a6aee",

@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-16 (w4): ↩ 🤖 PC ke KHUD barabar (autoMilan, dir 'auto') wale kaam bhi wapas — har voucher ki taraf log se (app mein likh diya = POS ka asal + app copy; baqi = [app: wala POS voucher / opening JV). Bill jaanch wale 'auto' kabhi nahi.
 //  2026-11-16 (w3): ↩ WAPAS SIRF TICK WALE (app 🗑 Din ki entries -> ⚖️ Barabar se bani): milanJobs ['@undo-job', job, ...codes] = sirf wohi voucher (isi job ke bane); asal job par `undone` list, sab ho jayein to undoneAt.
 //  2026-11-16 (w2): 🖨 KHATA PARCHI PAR HAR ENTRY KA BAQAYA (malik: 'baqaya kitna tha wo nahi likha aa raha kisi bhi amount par') — app khataTpData L/R row[3] = us entry ke baad ka baqaya (PAISA, + lene) -> khataSlip teesri patli line 'Baqaya X LENE'. Purani app (row[3] nahi) = pehle jaisa.
 //  2026-11-16 (w): ↩ BARABAR WALA KAAM WAPAS (malik: haseeb cus par '📱 App ko POS jaisa' se 10 bani — 'POS se bhi delete ho jaiya or apps se bhi jo voucher abhi bana hain'): milanJobs ids ['@undo-job', <job>] -> SIRF us job ki BANI hui cheezein (fix.mk, purane job mein log ki 'done' lines): POS voucher delete + app entry 🗑 (deleted, link deleted). Kabhi khud nahi, sirf malik ke chip + list ke OK se. AI nahi.
@@ -1279,26 +1280,26 @@ function milanMade(o) {
   if (o && o.fix && Array.isArray(o.fix.mk) && o.fix.mk.length && typeof o.fix.mk[0] === 'string' && o.fix.mkJob) return o.fix.mk.map(String);
   const out = [];
   for (const x of (Array.isArray(o && o.log) ? o.log : [])) {
-    const t = String(x);
-    if (o.dir === 'app') { const m = t.match(/^(.+?): app mein likh diya$/); if (m) out.push(m[1].trim()); }
-    else { const m = t.match(/^([A-Za-z]{2,6}-\d{2,}): /); if (m && !/pehle se|sirf jor/.test(t)) out.push(m[1]); }
+    const t = String(x), ma = t.match(/^(.+?): app mein likh diya$/);   // (w4) 'auto' (PC ne khud) = dono taraf
+    if (o.dir !== 'pos' && ma) { out.push(ma[1].trim()); continue; }
+    if (o.dir !== 'app') { const m = t.match(/^([A-Za-z]{2,6}-\d{2,}): /); if (m && !/pehle se|sirf jor|app mein likh diya/.test(t)) out.push(m[1]); }
   }
   return [...new Set(out)];
 }
 async function milanJobUndo(pool, j, origId, say) {
   const ref = biz.collection('milanJobs').doc(String(origId)), sn = await ref.get(), o = sn.exists ? (sn.data() || {}) : null;
-  if (!o || !['app', 'pos'].includes(o.dir) || (Array.isArray(o.ids) && String(o.ids[0] || '').startsWith('@')) || String(o.partyId) !== String(j.partyId)) { say('asal job nahi mila'); return 'fail'; }
+  if (!o || !['app', 'pos', 'auto'].includes(o.dir) || /bill jaanch/i.test(String(o.byName || '')) || (Array.isArray(o.ids) && String(o.ids[0] || '').startsWith('@')) || String(o.partyId) !== String(j.partyId)) { say('asal job nahi mila'); return 'fail'; }
   if (o.undoneAt) { say('yeh kaam pehle hi wapas ho chuka'); return 'skip'; }
   const made = milanMade(o), was = new Set((o.undone || []).map(String)), want = Array.isArray(j.ids) ? j.ids.slice(2).map(String) : [];   // (w3) malik ne jo tick kiye — sirf wohi (aur sirf isi job ke bane)
   const codes = made.filter(c => !was.has(c) && (!want.length || want.includes(c))); if (!codes.length) { say('is job mein hatane ko kuch nahi bacha'); return 'skip'; }
-  const okC = [];
+  const okC = [], kindOf = c => (o.dir === 'auto' ? ((o.log || []).some(x => String(x) === c + ': app mein likh diya') ? 'app' : 'pos') : o.dir);
   let ok = 0, bad = 0;
   for (const c of codes.slice(0, 300)) {
     try {
       const keys = []; for (const [k, l] of links) if (l && String(l.code) === c && !l.deleted) keys.push(k);
       const v = (await pool.request().input('c', sql.VarChar(50), c).query('SELECT TOP 1 VoucherID, SystemNote, CreatedOn FROM dbo.Voucher WHERE VoucherCode = @c AND ISNULL(VoucherStatusID, 1) <> 3 ORDER BY VoucherID DESC')).recordset[0];
-      if (o.dir === 'pos' && v && !/\[app:/.test(String(v.SystemNote || ''))) { say(`${c}: yeh voucher app ne nahi banaya — nahi chheda`); bad++; continue; }
-      if (o.dir === 'app' && !keys.length) { say(`${c}: app mein is ki entry nahi mili — nahi chheda`); bad++; continue; }
+      if (kindOf(c) === 'pos' && v && !/\[app:/.test(String(v.SystemNote || ''))) { say(`${c}: yeh voucher app ne nahi banaya — nahi chheda`); bad++; continue; }
+      if (kindOf(c) === 'app' && !keys.length) { say(`${c}: app mein is ki entry nahi mili — nahi chheda`); bad++; continue; }
       if (v && !DRY) await posDeleteVoucher(pool, Number(v.VoucherID));
       let n = 0;
       for (const k of keys) {
