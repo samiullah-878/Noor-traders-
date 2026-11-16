@@ -4895,3 +4895,7 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
   hamari scripts RAW data seedha bhejti hain aur yeh APD driver ('ReceiptE4', port ESDPRT001) RAW job ko nahi nikalta. Hal ka plan: naye PC par DOOSRI line 'TM-T88IV' Windows ke
   'Generic / Text Only' driver se USI port par (POS wali line nahi chherni) -> malik '▶ Thermal dobara chalu'. Roka hua naam ab 'TM-T88IV-BAND' (taake nayi line lagte hi bina ijazat na chhape).
   manifest 2026-11-16.8. Asal Windows par test nahi. AI nahi.
+
+- 16 Nov 13:40 (sirf qaide, code nahi): malik — 'important cheezein / problems qaide mein likha karo'. CLAUDE.md hissa 4 ke aakhir mein '📌 NAYA SERVER PC — 16 Nov ke masle aur sabaq' (7 nuqte:
+  purana server band, tala sirf doctor wale PC par, thermal RAW ke liye doosri line 'TM-T88IV' Generic / Text Only (13:35 malik ne command chalai — 'HO GAYA'; parchi ka test baqi),
+  printer ki tabdeeli default band, PC command ek line, andaza = andaza, har bare masle ka sabaq usi din likho).
