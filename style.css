@@ -8409,3 +8409,14 @@ html body #list .kt-b small{font-size:10px}
 html body #list .kt-p{font-style:normal;font-size:9px;font-weight:700;opacity:.8}
 html body #list .kt-n{display:block;white-space:nowrap}
 html body #list .kt-a .kt-n{font-size:11.5px;letter-spacing:-.3px}
+
+/* v2.305.0: ☑ Tally */
+html body #list .kt-top{display:flex;gap:6px;align-items:center;margin:0 0 6px}
+html body #list .kt-tg,html body #list .kt-clr{height:32px;padding:0 12px;border-radius:999px;border:1px solid #cbd5e1;background:linear-gradient(#fff,#eef2f8)!important;color:#1f2937!important;font-weight:700;font-size:12.5px;white-space:nowrap}
+html body #list .kt-tg.is-in{border-color:#d4a20b;background:linear-gradient(#fff8d6,#ffe98a)!important}
+html body #list .kt-tg b{font-weight:800;margin-left:4px}
+html body #list .kt.kt-on .kt-h,html body #list .kt.kt-on .ledger-item.kt-r{grid-template-columns:24px minmax(0,1fr) 66px 66px 76px!important}
+html body #list .kt.kt-on .kt-h::before{content:'';border-right:1px solid #cfd6e2}
+html body #list .kt-ck{width:18px;height:18px;min-height:0;margin:0 auto;padding:0;border:1.5px solid #64748b;border-radius:4px;background:#fff!important;color:#1f2937!important;font-size:12px;font-weight:900;line-height:15px;align-self:center;justify-self:center}
+html body #list .kt-r.kt-y .kt-ck{background:#ffd60a!important;border-color:#b58900}
+html body #list .kt-r.kt-y>.kt-a:not(:empty),html body #list .kt-r.kt-y>.kt-b{background:#ffe866!important}

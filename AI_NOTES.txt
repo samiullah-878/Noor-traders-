@@ -8605,3 +8605,8 @@ Malik: 'khata print PDF par date aaj kal week monthly apni date bhi upar chips'.
 
 === v2.304.0 (16 Nov 2026) — 📒 Khata table chhota ===
 - Malik: 'Hum ne dena hai' kat raha tha, 991,000.08 baqaye ke khane mein ghus raha tha. Khane 68/68/78px, font 12px, paise chhote (.kt-p), tafseel 2 line. AI nahi.
+
+
+=== v2.305.0 (16 Nov 2026) — ☑ Khata table mein Tally ===
+- Malik: khate ki tally ke liye chhota tick — tick = raqam peeli (scroll par bhi), dobara = wapas; upar chhota chip se chalu.
+- app.js ktOn/ktSet/ktSave + click handler (capture), ledgerTblHTML mein .kt-top chip + .kt-ck; style.css .kt-tg/.kt-ck/.kt-y. Sirf localStorage (sam-kh-tally, sam-kh-tk:<khata>), hisaab par asar nahi. AI nahi.
