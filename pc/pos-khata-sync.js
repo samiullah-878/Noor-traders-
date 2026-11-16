@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-16 (w): ↩ BARABAR WALA KAAM WAPAS (malik: haseeb cus par '📱 App ko POS jaisa' se 10 bani — 'POS se bhi delete ho jaiya or apps se bhi jo voucher abhi bana hain'): milanJobs ids ['@undo-job', <job>] -> SIRF us job ki BANI hui cheezein (fix.mk, purane job mein log ki 'done' lines): POS voucher delete + app entry 🗑 (deleted, link deleted). Kabhi khud nahi, sirf malik ke chip + list ke OK se. AI nahi.
 //  2026-11-14 (v): 🖨 WHATSAPP REPORT KA PRINT — khataPrints j.k 'txt' (wa-out v1.24: malik report par reply 'print') -> txtSlip thermal; nateeja malik ko waOut (doc mein `wa`). Voucher / baqi print nahi chhede.
 //  2026-11-13 (u): 🏷 PARTY KA NAAM PARCHI KE UPAR (English mota + Urdu) — malik: "party name upar aaye Urdu English mein, sab wasooli / kharcha / payment di / li / transfer par". Beech wala naam hata. Bank (HBL / Alfalah) parchi wahi.
 //  2026-11-04 (q): ⚡ VOUCHER + PARCHI FORAN (malik: "waiting time nahi — parchi usi time, voucher bhi foran, har entry") — nayi entry ka voucher ALAG line
@@ -1271,6 +1272,44 @@ async function milanBalanceUndo(pool, j, origId, say) {
   if (!DRY) await ref.set({ undoneAt: Date.now() }, { merge: true });
   say(`${v ? code + ': POS se hata diya' : code + ' POS mein pehle hi nahi'} · ${n} entries ka nishan hata (${name})`); return 'done';
 }
+// 2026-11-16 (w): ↩ normal barabar job (dir app / pos) ki bani hui cheezein wapas — POS voucher + app entry DONO (malik ka hukum). Purana job: mk nahi to log ki 'done' lines.
+function milanMade(o) {
+  if (o && o.fix && Array.isArray(o.fix.mk) && o.fix.mk.length && typeof o.fix.mk[0] === 'string' && o.fix.mkJob) return o.fix.mk.map(String);
+  const out = [];
+  for (const x of (Array.isArray(o && o.log) ? o.log : [])) {
+    const t = String(x);
+    if (o.dir === 'app') { const m = t.match(/^(.+?): app mein likh diya$/); if (m) out.push(m[1].trim()); }
+    else { const m = t.match(/^([A-Za-z]{2,6}-\d{2,}): /); if (m && !/pehle se|sirf jor/.test(t)) out.push(m[1]); }
+  }
+  return [...new Set(out)];
+}
+async function milanJobUndo(pool, j, origId, say) {
+  const ref = biz.collection('milanJobs').doc(String(origId)), sn = await ref.get(), o = sn.exists ? (sn.data() || {}) : null;
+  if (!o || !['app', 'pos'].includes(o.dir) || (Array.isArray(o.ids) && String(o.ids[0] || '').startsWith('@')) || String(o.partyId) !== String(j.partyId)) { say('asal job nahi mila'); return 'fail'; }
+  if (o.undoneAt) { say('yeh kaam pehle hi wapas ho chuka'); return 'skip'; }
+  const codes = milanMade(o); if (!codes.length) { say('is job mein koi bani hui cheez nahi mili'); return 'skip'; }
+  let ok = 0, bad = 0;
+  for (const c of codes.slice(0, 300)) {
+    try {
+      const keys = []; for (const [k, l] of links) if (l && String(l.code) === c && !l.deleted) keys.push(k);
+      const v = (await pool.request().input('c', sql.VarChar(50), c).query('SELECT TOP 1 VoucherID, SystemNote, CreatedOn FROM dbo.Voucher WHERE VoucherCode = @c AND ISNULL(VoucherStatusID, 1) <> 3 ORDER BY VoucherID DESC')).recordset[0];
+      if (o.dir === 'pos' && v && !/\[app:/.test(String(v.SystemNote || ''))) { say(`${c}: yeh voucher app ne nahi banaya — nahi chheda`); bad++; continue; }
+      if (o.dir === 'app' && !keys.length) { say(`${c}: app mein is ki entry nahi mili — nahi chheda`); bad++; continue; }
+      if (v && !DRY) await posDeleteVoucher(pool, Number(v.VoucherID));
+      let n = 0;
+      for (const k of keys) {
+        const ids = k.startsWith('transfer:') ? [`transfer-${k.slice(9)}-out`, `transfer-${k.slice(9)}-in`] : k.startsWith('entry:') ? [k.slice(6)] : [];
+        let first = null;
+        for (const id of ids) { const d = app.get(id); if (!d || d.deleted) continue; const rec = DRY ? d : await appWrite(id, { ...d, deleted: true }, d); if (!first) first = rec; n++; }
+        await setLink(k, { voucherId: 0, deleted: true, ...(first ? { appHash: appHashEntry({ ...first, deleted: true }) } : {}) });
+      }
+      say(`${c}: ${v ? 'POS se hata' : 'POS mein pehle hi nahi'} · app ki ${n} entry 🗑`); ok++;
+    } catch (e) { say(`${c}: ${e.message || e}`); bad++; }
+  }
+  if (!DRY) await ref.set({ undoneAt: Date.now(), undoJob: String(j.id || '') }, { merge: true });
+  say(`↩ wapas: ${ok} hat gaye${bad ? ` · ${bad} nahi` : ''}`);
+  return bad && !ok ? 'fail' : 'done';
+}
 async function runMilanJobs(pool, acct, acctIds, importVoucher) {
   const snap = await biz.collection('milanJobs').where('status', '==', 'new').limit(25).get();   // 2026-10-27: 'sab khate' ek saath
   for (const d of snap.docs) {
@@ -1284,12 +1323,15 @@ async function runMilanJobs(pool, acct, acctIds, importVoucher) {
       else if (ids[0] === '@undo-opening' && ids[1]) count(await milanOpeningUndo(pool, { ...j, id: d.id }, ids[1], say));
       else if (ids[0] === '@balance') count(await milanBalance(pool, acct, acctIds, j, say, await purchaseAccount(pool), d.id));   // 2026-11-11 (t): ⚖️ ek voucher se barabar
       else if (ids[0] === '@undo-balance' && ids[1]) count(await milanBalanceUndo(pool, { ...j, id: d.id }, ids[1], say));   // 2026-10-29 (j): ↩ wapas (malik ki ijazat)
+      else if (ids[0] === '@undo-job' && ids[1]) count(await milanJobUndo(pool, { ...j, id: d.id }, ids[1], say));   // 2026-11-16 (w): ↩ barabar wala kaam wapas (malik)
       else if (j.dir === 'pos') {
         const purAc = await purchaseAccount(pool);
-        for (const id of ids) count(await milanSendOne(pool, acct, id, say, purAc));
+        const mk = [];
+        for (const id of ids) { const r = await milanSendOne(pool, acct, id, say, purAc); count(r); const pc = r === 'done' && String((app.get(id) || {}).posCode || ''); if (pc) mk.push(pc); }
+        j._fix = { mk: mk.slice(0, 300), mkJob: 1 };
       } else if (j.dir === 'app') {
         if (!ids.length) say('koi voucher nahi');
-        else { const vs = await vouchersByCode(pool, ids); for (const c of ids) count(await milanImportOne(acctIds, importVoucher, vs.get(c), c, say)); }
+        else { const vs = await vouchersByCode(pool, ids), mk = []; for (const c of ids) { const r = await milanImportOne(acctIds, importVoucher, vs.get(c), c, say); count(r); if (r === 'done') mk.push(c); } j._fix = { mk: mk.slice(0, 300), mkJob: 1 }; }
       } else say('dir ghalat: ' + j.dir);
     } catch (e) { say('masla: ' + (e.message || e)); fail++; }
     await ref.set({ status: 'done', done, fail, skip, log: L.slice(0, 120), doneAt: Date.now(), ...(j._fix ? { fix: j._fix } : {}) }, { merge: true });

@@ -8522,3 +8522,10 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
 
 - 16 Nov 14:53 (sirf notes): malik — printer asal mein TM-T88V hai, driver T88IV ka lagaya tha. Shak: ghalat / purana driver hi Spooler crash (EpsonPH.dll) ki jarr. Plan malik ko diya: T88IV doosri line hatao,
   Epson ki site se TM-T88V driver, POS bill test, phir scripts ka naam + parchi test (malik ke saamne). Abhi tak koi code nahi badla.
+
+
+## v2.293.0 (16 Nov 2026) — ↩ Barabar wala kaam WAPAS (PC pos-khata-sync w)
+Malik (haseeb cus, Farq ki entries par '✅ 10 ban gayi'): 'POS se bhi delete ho jaye aur app se bhi — jo voucher abhi bane hain'.
+- App pos-milan.js: natije wale dabbe ke neeche (sirf malik, job dir app|pos, done > 0) chip '↩ Is kaam ko wapas (POS + app) N' -> list (voucher no · raqam) + warning (ek taraf pehle se tha) -> confirm -> milanJobs ids ['@undo-job', <job id>] (rules 2.77 wahi, naya rule nahi).
+- PC milanJobUndo: SIRF us job ki BANI cheezein (naye job: fix.mk + mkJob; purane: log ki 'done' lines — PC milanMade, app madeOf HUBAHU) -> POS voucher delete (dir pos par sirf [app: wala) + app entry deleted (🗑) + link deleted; asal job par undoneAt. Dobara nahi chalta.
+- AI nahi. Test: sirf node --check — asal PC / POS par chala kar nahi dekha.

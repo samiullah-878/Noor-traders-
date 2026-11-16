@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.292.5';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.293.0';
 const TOL = 100, PRE_FROM = '2026-09-15';   // v2.0: PC LINES_FROM / START_DATE jaisa
 const OPEN_RX = /opening|shuru ka baqaya|sabqa baqaya/i;   // v1.7 = PC autoMilan OPEN_RX   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
@@ -362,8 +362,31 @@ function fixHTML(p, D) {
   const chips = busy ? '' : `<div class="pm-fix"><small>Barabar karo:</small>${nA ? `<button type="button" data-pm-fix="app">📱 App ko POS jaisa <i>${nA}</i></button>` : ''}${nP ? `<button type="button" data-pm-fix="pos">🖥 POS ko app jaisa <i>${nP}</i></button>` : ''}${!nA && !nP ? '<span class="pm-fixok">✓ voucher wali koi entry baqi nahi (purchase bill sync.js se)' + (D.appOnly.some(a => /^pos-\d+$/.test(String(a.e.id)) && jzOf(a.e)) ? ' — bill ki 🔎 wajah neeche' : '') + '</span>' : ''}</div>`;
   const jt = j && j.status === 'done' ? (j.by === 'auto' ? '🤖 PC ne khud: ' : '') + ([j.done ? `✅ ${j.done} ban gayi` : '', j.skip ? `↩ ${j.skip} pehle se thi (kuch nahi kiya)` : '', j.fail ? `✕ ${j.fail} nahi bani` : ''].filter(Boolean).join(' · ') || '✓ kuch karna nahi para') : '';
   const stale = j && j.status === 'done' && (Number(led()?.at) || 0) < (Number(j.doneAt) || 0);
+  const isU = j && Array.isArray(j.ids) && j.ids[0] === '@undo-job';
+  const undo = j && !isU && j.status === 'done' && j.done > 0 && j.id && !j.undoneAt && ['app', 'pos'].includes(j.dir) && !(Array.isArray(j.ids) && String(j.ids[0] || '').startsWith('@')) && madeOf(j).length ? `<div class="pm-fix"><button type="button" data-pm-undo="${esc(j.id)}">↩ Is kaam ko wapas (POS + app) <i>${madeOf(j).length}</i></button></div>` : '';
+  if (isU) return chips + `<div class="pm-fixst ${j.status === 'done' ? (j.fail && !j.done ? 'warn' : 'ok') : 'wait'}"><b>${j.status === 'done' ? (String((j.log || []).slice(-1)[0] || '↩ wapas: 0')) : '⏳ Shop PC wapas kar raha hai — POS se voucher + app se entry (1–2 min)'}</b>${Array.isArray(j.log) && j.log.length ? `<details><summary>tafseel (${j.log.length})</summary>${j.log.map(x => `<div>${esc(x)}</div>`).join('')}</details>` : ''}</div>`;
   const st = j ? `<div class="pm-fixst ${j.status === 'done' ? (j.fail ? 'warn' : 'ok') : 'wait'}"><b>${j.status === 'done' ? jt : (Array.isArray(j.ids) && j.ids[0] === '@opening' ? '⏳ Shop PC opening barabar kar raha hai — ' + (j.dir === 'app' ? 'app ka sabqa POS jaisa' : 'POS mein JV') + ' (1–2 min)' : '⏳ Shop PC bana raha hai — ' + (j.dir === 'app' ? 'app mein ' : 'POS mein ') + (j.n || '') + ' entries (1–2 min)')}</b>${j.status === 'done' ? `<small>${stale ? '⏳ POS ka naya baqaya aa raha hai (1 min) — screen khud taza hogi' : '✓ Neeche ka hisaab naye POS data se hai'}</small>` : ''}${Array.isArray(j.log) && j.log.length ? `<details><summary>tafseel (${j.log.length})</summary>${j.log.map(x => `<div>${esc(x)}</div>`).join('')}</details>` : ''}</div>` : '';
-  return chips + st;
+  return chips + st + undo;
+}
+// 2026-11-16 (v2.293.0): ↩ barabar wale kaam ki BANI hui cheezein (PC pos-khata-sync w milanMade jaisa — ek badlo to doosra)
+function madeOf(o) {
+  if (o && o.fix && o.fix.mkJob && Array.isArray(o.fix.mk)) return o.fix.mk.map(String);
+  const out = [];
+  for (const x of (Array.isArray(o && o.log) ? o.log : [])) {
+    const t = String(x);
+    if (o.dir === 'app') { const m = t.match(/^(.+?): app mein likh diya$/); if (m) out.push(m[1].trim()); }
+    else { const m = t.match(/^([A-Za-z]{2,6}-\d{2,}): /); if (m && !/pehle se|sirf jor/.test(t)) out.push(m[1]); }
+  }
+  return [...new Set(out)];
+}
+async function undoGo(jid) {
+  const p = jobParty, j = (jobs || []).find(x => x.id === jid); if (!p || !j) return;
+  const L = madeOf(j); if (!L.length) { C.notice('Is kaam mein koi bani hui cheez nahi mili'); return; }
+  const ln = (j.log || []).filter(x => L.some(c => String(x).startsWith(c + ':'))).slice(0, 15).join('\n');
+  const msg = `↩ WAPAS — ${p.name}\n${L.length} cheezein jo ${j.dir === 'app' ? '📱 App ko POS jaisa' : '🖥 POS ko app jaisa'} se bani thin:\n\n${ln}${L.length > 15 ? '\n…' : ''}\n\n• POS se voucher HAMESHA ke liye hat jayega\n• App se entry 🗑 mein jayegi\n${j.dir === 'app' ? '⚠️ Yeh vouchers pehle se POS mein thay (app mein sirf copy bani thi) — POS se bhi hat jayenge.' : '⚠️ App ki yeh entries pehle se thin (POS mein sirf voucher bana tha) — app se bhi hat jayengi.'}\n\nPakka hatayein?`;
+  if (!confirm(msg)) return;
+  try { await C.addJob({ partyId: p.id, dir: j.dir, ids: ['@undo-job', jid], n: L.length, amt: 0 }); C.notice('⏳ Shop PC ko kaha — 1–2 min'); jobs = [{ status: 'new', dir: j.dir, ids: ['@undo-job', jid], n: L.length, at: Date.now() }, ...jobs]; repaintDiff(); }
+  catch (err) { C.notice('Nahi gaya: ' + (err?.message || err)); }
 }
 function jobWatch(pid) {
   if (jobPid === pid && jobStop) return;
@@ -523,7 +546,7 @@ document.addEventListener('input', e => { const t = e.target; if (!t?.dataset?.p
 document.addEventListener('change', e => { const t = e.target; if (t?.dataset?.pmObsel && ob) { if (t.checked) ob.sel.add(t.dataset.pmObsel); else ob.sel.delete(t.dataset.pmObsel); obPaint(); return; } if (!t?.dataset?.pmBsel || !bulk) return; if (t.checked) bulk.sel.add(t.dataset.pmBsel); else bulk.sel.delete(t.dataset.pmBsel); bulkPaint(); });
 document.addEventListener('click', e => {
   if (!C) return;
-  const b = e.target.closest?.('[data-pm-bfix],[data-pm-ou],[data-pm-ougo],[data-pm-ouall],[data-pm-ofix],[data-pm-ob],[data-pm-obgo],[data-pm-oball],[data-pm-obnone],[data-pm-cash],[data-pm-post],[data-pm-bill],[data-pm-send],[data-pm-bulk],[data-pm-bulkgo],[data-pm-ball],[data-pm-bsafe],[data-pm-bnone],[data-pm-bsend],[data-pm-taza],[data-pm-fix],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
+  const b = e.target.closest?.('[data-pm-bfix],[data-pm-ou],[data-pm-ougo],[data-pm-ouall],[data-pm-ofix],[data-pm-ob],[data-pm-obgo],[data-pm-oball],[data-pm-obnone],[data-pm-cash],[data-pm-post],[data-pm-bill],[data-pm-send],[data-pm-bulk],[data-pm-bulkgo],[data-pm-ball],[data-pm-bsafe],[data-pm-bnone],[data-pm-bsend],[data-pm-taza],[data-pm-fix],[data-pm-undo],[data-pm-f],[data-pm-open],[data-pm-diff],[data-pm-back],[data-pm-tog]'); if (!b) return;
   if (b.dataset.pmSend) { e.stopPropagation(); e.preventDefault(); sendOne(b.dataset.pmSend); return; }
   if (b.dataset.pmBfix) { e.stopPropagation(); bfixGo(b.dataset.pmBfix, b.dataset.pmBfid); return; }
   if (b.dataset.pmOfix) { e.stopPropagation(); ofixGo(b.dataset.pmOfix); return; }
@@ -537,6 +560,7 @@ document.addEventListener('click', e => {
   if (b.dataset.pmObnone != null && ob) { ob.sel = new Set(); obPaint(); return; }
   if (b.dataset.pmCash || b.dataset.pmPost || b.dataset.pmBill) { e.stopPropagation(); e.preventDefault(); jzGo(b); return; }
   if (b.dataset.pmFix) { e.stopPropagation(); fixGo(b.dataset.pmFix); return; }
+  if (b.dataset.pmUndo) { e.stopPropagation(); undoGo(b.dataset.pmUndo); return; }
   if (b.dataset.pmTaza) { e.stopPropagation(); tazaGo(); return; }
   if (b.dataset.pmBulk === 'go') { e.stopPropagation(); bulkStart(); return; }
   if (b.dataset.pmBulkgo === 'old') { if (bulk) bulkLoad(); return; }
