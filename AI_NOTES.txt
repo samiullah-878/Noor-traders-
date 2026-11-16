@@ -8461,3 +8461,13 @@ Malik (🖨 Printers dabbe ki screenshot: ❌ TM-T88IV nahi, list mein 'EPSON TM
 - doctor v3.5: `thName(names)` prnTick ki list se naam chun kar thermal-printer.txt taza rakhta hai; app ke 🖨 dabbe ka 'Thermal' ab isi naam se milta hai.
 - nt-print (counter) nahi chhera (us ka apna ntPrinter / default). sale-post counterPrinters (local-config) wahi.
 - manifest 2026-11-16.3. TEST: node --check sab + pick ka node namoona. Asal Windows / printer par nahi chalaya. AI nahi.
+
+
+=== 16 Nov 2026 (dopahar) — PURANA SERVER HAATH SE BAND (code nahi badla) ===
+Deleted entries mein aaj ki wasooli (11:19) + POS Purchase 2844 / 2842 '⛔ POS mein nahi (delete)' (9:39) = purana PC apni purani POS DB se app ki entries hata raha tha.
+PC scripts ki 🆔 list mein sirf NAYA PC aaya (OptiPlex 7080, Windows 2026-11-11, 🔒 Yehi server) — purane par doctor chalta hi nahi tha: 9 purani scripts seedhi
+(`node sync-bills.js`, post-farq, sync-stock, label-print, subcode-sync, transfer-sync, rate-lagao, sale-post, purchase-post + pos-khata-sync) — is liye naam / mid ka tala us tak nahi pohanchta.
+Malik ne command maangi -> purane PC par: node / bat band, Startup saaf, folder rename NAHI hua (istemal mein) -> `firebase-key.json` + `local-config.json` ka naam `.BAND` = 'PAKKA BAND'.
+Sabaq: (1) doctor ka tala sirf us PC par chalta hai jahan naya doctor chale — purana PC list mein na aaye to haath se band karna parta hai. (2) PowerShell mein line-line paste par
+akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block mein. (3) process ko 'khata-sync' lafz se mat dhoondo — command line sirf `node x.js` hoti hai.
+(4) folder rename na ho to chaabi files (.BAND) ka naam badalna kaafi hai. Baqi: malik aaj ki deleted entries wapas laye; label par Urdu naam + naye server ki kami ki jaanch.
