@@ -8272,3 +8272,12 @@ html body #summary .pp-wdrop>button.pp-woff.is-in{background:linear-gradient(180
 html body #summary .pp-wdrop .pp-wown{display:flex;gap:5px;min-width:0}
 html body #summary .pp-wdrop .pp-wown input{flex:1;min-width:0;height:38px;min-height:38px;padding:0 10px;border:1px solid #c9dcf5;border-radius:999px;font-weight:700;font-size:14.5px;text-align:center;background:#fff;color:#16345f}
 html body #summary .pp-wdrop .pp-wown button{flex:none;width:44px;min-height:38px;padding:0!important;border-radius:999px!important;background:linear-gradient(180deg,#3d8bff,#1f6fe6)!important;color:#fff!important;border:0!important;font-weight:800!important;font-size:16px}
+/* v2.290.0: 🖨 PC scripts screen — printers ka dabba */
+.prn-box{margin:8px 0;padding:10px 12px;border-radius:16px;background:#fff;border:1px solid #dde3ef}
+.prn-head{display:flex;flex-wrap:wrap;align-items:baseline;gap:4px 10px;margin-bottom:7px}.prn-head b{font-size:15px;color:#16345f}.prn-head small{font-size:13px;color:#5d6b88}
+.prn-want{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(230px,100%),1fr));gap:6px;margin-bottom:8px}
+.prn-w{padding:7px 10px;border-radius:12px;border:1px solid #d9e0ec;background:#f6f8fc;min-width:0}.prn-w b{display:block;font-size:14px}.prn-w span{display:block;font-size:14.5px;font-weight:800;color:#16345f;overflow-wrap:anywhere}.prn-w small{display:block;font-size:12.5px;color:#5d6b88}
+.prn-w.g{border-color:#b9dcc4;background:#f1faf4}.prn-w.y{border-color:#e6cf8f;background:#fffaf0}.prn-w.r{border-color:#f0b8b0;background:#fff1ef}.prn-w.r small{color:#8f1d12;font-weight:700}
+.prn-list{display:flex;flex-direction:column;gap:4px}
+.prn-r{display:flex;flex-wrap:wrap;align-items:center;gap:3px 8px;padding:6px 9px;border-radius:11px;background:#f6f8fc;min-width:0}.prn-r i{font-style:normal;flex:none}.prn-r b{font-size:14.5px;color:#16345f;overflow-wrap:anywhere}
+.prn-r em{font-style:normal;font-size:11.5px;font-weight:800;padding:1px 8px;border-radius:999px;background:#e3ecfb;color:#1f4fa8}.prn-r small{flex:1 1 100%;font-size:12.5px;color:#5d6b88;overflow-wrap:anywhere}

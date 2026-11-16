@@ -8428,3 +8428,12 @@ Malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, 
   (dabao = on / off; off se on = aakhri % `wLast`, localStorage `sam-pp-wlast`). Baqi chip dabao = `.pp-wdrop` button ke NEECHE (absolute, daayein, 176px) — ek ke neeche ek: 1% … 5% (chuna hua neela ✓), apna % + ✓, Band.
   Bahar dabao = band. Purani chaurai wali chips patti (v2.288.0) hata di.
 - TEST: node --check + headless Chrome mein banawati HTML ki tasveer (shakal theek). Asal phone par nahi. AI nahi.
+
+## v2.290.0 (2026-11-16) — 🖨 PC scripts screen: server PC ke printers ke naam + haalat (PC doctor v3.3)
+- Malik (naye server PC par driver lagate hue): 'script wali screen mein jo printer add ho jayein un ka naam add kar do' -> plan -> OK.
+- PC `doctor.js` v3.3 `prnTick` (35 s baad, phir har 2 min; async + 20 s hadd): `Get-CimInstance Win32_Printer` -> naam · driver · port · offline · default
+  (Microsoft PDF / XPS / Fax / OneNote / AnyDesk printer bahar) + `prnWant` = scripts ke zaroori naam (Thermal `TM-T88IV` — scripts mein pakka likha; Label = `label-settings.json` ka `printer`, na ho 'TSC TTP-244 Pro')
+  -> `blueAccess/pcPrinters {at, host, list[], want[{k,n,ok,off}], ver}` — sirf badle to / har 10 min. PowerShell ka jawab khali = kuch nahi likhta. Server-name tale (BLOCKED) wale PC par nahi chalta. Sirf parhna.
+- App: cloud `getPcPrinters` + main file `prnHTML / prnPaint / prnLoad` -> Settings -> 🖥️ PC scripts mein `#pcPrn` dabba '🖨 Printers': upar zaroori naam ✅ mil gaya / ⚠️ band / ❌ is naam ka printer nahi; neeche har printer 🟢 / 🔴 + driver · port. Rules nahi badle (blueAccess malik parh sakta hai).
+- A4 printer ka naam is milan mein nahi (us ki apni screen 🖨 A4 Print mein haalat hai) — list mein nazar aata hai.
+- manifest 2026-11-16.1 (sirf doctor.js ka hash). TEST: node --check + parse ka namoona node mein. Asal Windows par nahi chalaya — malik se screenshot. AI nahi.

@@ -1,5 +1,6 @@
 // =========================================================
 //  doctor.js  v3.1 (2026-11-10: 🔥 CPU list ab WMI Win32_Process se — SQL Server / antivirus jaise SYSTEM program bhi; ek jaise program jama (×N); 'baqi' line.)
+//  v3.3 (2026-11-16: 🖨 is PC par lage printers ke naam + haalat har 2 min app ko (blueAccess/pcPrinters) + scripts ko jo naam chahiye (thermal TM-T88IV, label label-settings.json) mila ya nahi — malik: 'script wali screen mein jo printer add ho jayein un ka naam'. Sirf parhna.)
 //  v3.0 (2026-11-10: 🔥 PC ka CPU / RAM + sab se zyada CPU wale 5 program har 1 min app ko (blueAccess/pcCpu) — malik: "CPU 100% · data app mein aa jaye". Async, doctor nahi rukta.)
 //  v2.9 (2026-10-22: 🩹 21-Oct shaam 6:50 doctor CHUP ho gaya aur stock script bhi band — subah tak koi dobara chalane wala nahi. Ab: (1) taskkill /T (poora tree) KABHI NAHI —
 //              Windows mare hue parent ka PID naye process ko de deta hai, /T phir be-taaluq scripts (stock) aur doctor ki apni loop bhi band kar deta · (2) WMIC / taskkill par waqt ki hadd
@@ -30,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.2';
+const VER = '3.3';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -261,6 +262,33 @@ async function cpuTick() {
   } catch (e) { log('⚠ cpu: ' + String(e?.message || e).slice(0, 80)); } finally { CPU.busy = false; }
 }
 
+// v3.3: 🖨 PRINTERS — Windows mein lage printers (naam · driver · port · haalat) + scripts ke zaroori naam. Sirf parhna, kuch nahi badalta. Async + hadd (doctor nahi rukta).
+const prnRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcPrinters');
+const PRN = { busy: false, last: '', at: 0 };
+const PRN_SKIP = /^(microsoft (print to pdf|xps document writer)|fax|onenote|send to onenote|anydesk printer)/i;
+function prnWant() {   // scripts jis naam se chhapti hain
+  let lbl = 'TSC TTP-244 Pro';
+  try { const o = JSON.parse(fs.readFileSync(path.join(__dirname, 'label-settings.json'), 'utf8')); if (o && typeof o.printer === 'string' && o.printer.trim()) lbl = o.printer.trim(); } catch {}
+  return [{ k: 'Thermal parchi / bill', n: 'TM-T88IV' }, { k: 'Barcode label', n: lbl }];
+}
+async function prnTick() {
+  if (BLOCKED || PRN.busy || process.platform !== 'win32') return; PRN.busy = true;
+  try {
+    const out = await psRun('Get-CimInstance Win32_Printer | ForEach-Object { "$($_.Name)|$($_.DriverName)|$($_.PortName)|$([int]$_.WorkOffline)|$([int]$_.PrinterStatus)|$([int]$_.Default)" }', 20000);
+    if (!out.trim()) return;   // jawab nahi = kuch mat likho (khali list jhooti hoti)
+    const list = [];
+    for (const l of out.split(/\r?\n/)) { const a = l.trim().split('|'); if (a.length < 6 || !a[0] || PRN_SKIP.test(a[0])) continue;
+      list.push({ n: a[0].slice(0, 80), d: String(a[1] || '').slice(0, 80), p: String(a[2] || '').slice(0, 40), off: a[3] === '1' || a[4] === '7' ? 1 : 0, def: a[5] === '1' ? 1 : 0 }); }
+    list.sort((x, y) => x.n.localeCompare(y.n));
+    const low = s => String(s || '').trim().toLowerCase();
+    const want = prnWant().map(w => { const f = list.find(x => low(x.n) === low(w.n)); return { k: w.k, n: w.n, ok: f ? 1 : 0, off: f ? f.off : 0 }; });
+    const sig = JSON.stringify([list, want]), now = Date.now();
+    if (sig === PRN.last && now - PRN.at < 10 * 60000) return;   // sirf badle to / har 10 min
+    const ref = prnRef(); if (!ref) return;
+    await ref.set({ at: now, host: os.hostname(), list: list.slice(0, 30), want, ver: VER }); PRN.last = sig; PRN.at = now;
+  } catch (e) { log('⚠ printers: ' + String(e?.message || e).slice(0, 80)); } finally { PRN.busy = false; }
+}
+
 const statusRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcStatus');
 const checkRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcCheck');
 
@@ -448,7 +476,8 @@ lock.on('listening', async () => {
   setInterval(() => { if (busy && cycleAt && Date.now() - cycleAt > 10 * 60 * 1000) { log('⚠ chakkar 10 min se atka — doctor dobara shuru ho raha hai'); setTimeout(() => process.exit(1), 1000); } }, 30000);
   ensureStartup(); ensureModules(); ensureChupa();
   await cycle('shuru');
-  setTimeout(cpuTick, 20000); setInterval(cpuTick, 60000);   // v3.0: 🔥 CPU app mein
+  setTimeout(cpuTick, 20000); setInterval(cpuTick, 60000);
+  setTimeout(prnTick, 35000); setInterval(prnTick, 120000);   // v3.3: 🖨 printers app mein   // v3.0: 🔥 CPU app mein
   setInterval(() => cycle('30 minute'), EVERY);
   setInterval(() => cycle('2 minute', false), QUICK);
   // v2.7: har 3 min sirf manifest ka version — naya ho to foran update (30 min ka intezar nahi)
