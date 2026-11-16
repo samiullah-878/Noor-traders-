@@ -26,7 +26,7 @@ const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
 const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.6';
-const TH_PRINTER = 'TM-T88IV';   // dukan ka thermal (pos-khata-sync wala naam)
+const TH_PRINTER = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })();   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 

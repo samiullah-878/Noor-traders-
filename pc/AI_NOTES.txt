@@ -4846,3 +4846,14 @@ is liye v3.2 ka naam wala tala dono ko server maanta tha. Purana PC apni purani 
   (`srvSeenHTML`): 🟢 chal raha / ⛔ band rakha / ⚪ purana, '✅ Yehi server' (confirm). 2 PC 10 min mein zinda + mid nahi = laal warning.
 - Jab tak malik na chune kuch nahi badalta. Cloned Windows (ek MachineGuid) = dono ek hi nazar aayenge — tab naam badalna hi hal.
 - manifest 2026-11-16.2. TEST: node --check + list ka node namoona. Asal Windows par nahi chalaya. AI nahi.
+
+
+=== doctor v3.5 + thermal-name.js v1.0 (16 Nov 2026) — 🧾 THERMAL PRINTER KA NAAM KHUD ===
+Malik (🖨 Printers dabbe ki screenshot: ❌ TM-T88IV nahi, list mein 'EPSON TM-T88IV Receipt'): 'Epson TM-T88IV receipt printer hi asal hai, us ko add kar do auto.'
+- NAYI file pc/thermal-name.js: `pick(names)` = bilkul 'TM-T88IV' ho to wohi -> warna naam mein 'TM-T88' wala (Copy baad mein) -> warna 'TM-T88IV'.
+  `name()` = thermal-printer.txt {n, at} (12 ghante) warna ek dafa PowerShell (15 s). Sirf parhta hai — Windows ka printer naam nahi badalta.
+- 7 scripts mein pakka naam ki jagah `require('./thermal-name.js').name()` (try/catch, file na ho = 'TM-T88IV'): a4-print (TH_PRINTER), factory-post,
+  pos-khata-sync, post-farq, sale-post, transfer-sync, wa-parchi (TH_PRINTER). Script ka apna version number nahi badla (sirf yeh ek line).
+- doctor v3.5: `thName(names)` prnTick ki list se naam chun kar thermal-printer.txt taza rakhta hai; app ke 🖨 dabbe ka 'Thermal' ab isi naam se milta hai.
+- nt-print (counter) nahi chhera (us ka apna ntPrinter / default). sale-post counterPrinters (local-config) wahi.
+- manifest 2026-11-16.3. TEST: node --check sab + pick ka node namoona. Asal Windows / printer par nahi chalaya. AI nahi.

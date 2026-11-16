@@ -86,7 +86,7 @@ const LOOP_SECONDS = 60;
 const BORROW_FROM = Date.parse('2026-10-27T00:00:00+05:00');   // 2026-10-27: 📦 'Saman liya' (app-origin borrow) is waqt ke baad bani = POS JV khud (purani = app 'Sab khate POS mein bhejo' / milanJobs)
 const AUTO_PRINT = true;             // app se POS mein nayi entry bante hi rasid print
 const PRINT_WIDTH = 42;              // rasid ki chaurai (TM-T88IV 80mm = 42 akshar)
-const PRINTER_NAME = 'TM-T88IV';     // Windows mein printer ka naam (sale-post.js wala)
+const PRINTER_NAME = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })();     // Windows mein printer ka naam (sale-post.js wala)
 const SHOP_PHONE = '03450412515';
 // ------------------------------------------
 

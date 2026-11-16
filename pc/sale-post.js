@@ -52,7 +52,7 @@ const SALE_PERSON = 1;             // SPID
 const WHOLESALE_NAME = 'whole sale';
 const AUTO_PRINT = true;           // rasid script hi chhapti hai (PRINTER_NAME par, notepad ke baghair)
 const PRINT_WIDTH = 32;
-const PRINTER_NAME = 'TM-T88IV';   // Devices and Printers mein jo naam likha hai — ghalat ho to yahan theek karein
+const PRINTER_NAME = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })();   // Devices and Printers mein jo naam likha hai — ghalat ho to yahan theek karein
 // 2026-10-03: COUNTER printer — app 'counter' (abdurehman / bilal / mithu) bhejti hai; naam local-config.json counterPrinters mein (COUNTER-PRINTER.bat)
 function printerFor(counter) { try { const m = JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')).counterPrinters || {}; const n = counter && m[String(counter)]; return n ? String(n) : PRINTER_NAME; } catch { return PRINTER_NAME; } }
 const LOCK_PORT = 47815;           // ek hi sale-post chale

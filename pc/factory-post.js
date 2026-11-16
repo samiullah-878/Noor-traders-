@@ -157,7 +157,7 @@ async function post(ref, b) {
   }
 }
 // ---------- 🖨 PARCHI (v1.2) — server ka TM-T88IV, raw ESC/POS (post-farq jaisa RawCached.dll) ----------
-const PRINTER_NAME = 'TM-T88IV', W = 32;
+const PRINTER_NAME = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })(), W = 32;
 // v1.4 (2026-10-19): 🔤 URDU — item ke naam ke neeche Urdu naam (blueAccess/urduNames, transfer-sync v4.8 jaisa). Urdu ho to nt-parchi ki tasveer wali
 //   parchi (tez worker); na chale to bina Urdu purana RAW raasta (parchi kabhi na ruke).
 let UR = null; try { UR = require('./urdu-names.js'); } catch (e) { console.log('urdu-names.js nahi: ' + e.message); }   // v1.4: 🔤 Urdu naam parchi par

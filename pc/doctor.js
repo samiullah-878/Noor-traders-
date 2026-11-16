@@ -31,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.4';
+const VER = '3.5';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -266,10 +266,18 @@ async function cpuTick() {
 const prnRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcPrinters');
 const PRN = { busy: false, last: '', at: 0 };
 const PRN_SKIP = /^(microsoft (print to pdf|xps document writer)|fax|onenote|send to onenote|anydesk printer)/i;
-function prnWant() {   // scripts jis naam se chhapti hain
+function prnWant(names) {   // scripts jis naam se chhapti hain
   let lbl = 'TSC TTP-244 Pro';
   try { const o = JSON.parse(fs.readFileSync(path.join(__dirname, 'label-settings.json'), 'utf8')); if (o && typeof o.printer === 'string' && o.printer.trim()) lbl = o.printer.trim(); } catch {}
-  return [{ k: 'Thermal parchi / bill', n: 'TM-T88IV' }, { k: 'Barcode label', n: lbl }];
+  return [{ k: 'Thermal parchi / bill', n: thName(names) }, { k: 'Barcode label', n: lbl }];
+}
+// v3.5: 🧾 thermal ka naam khud (thermal-name.js) — "TM-T88IV" na ho to jis ke naam mein TM-T88 ho (naya server: "EPSON TM-T88IV Receipt"). File na aayi ho = purana pakka naam.
+let TH_SAID = '';
+function thName(names) {
+  try { const T = require('./thermal-name.js'), n = T.pick(names || []); let c = null; try { c = JSON.parse(fs.readFileSync(T.FILE, 'utf8')); } catch {}
+    if (names && names.length && (!c || c.n !== n || Date.now() - (Number(c.at) || 0) > 6 * 3600000)) T.save(n);
+    if (n !== TH_SAID) { TH_SAID = n; log('🧾 thermal printer: ' + n); }
+    return n; } catch (e) { return 'TM-T88IV'; }
 }
 async function prnTick() {
   if (BLOCKED || PRN.busy || process.platform !== 'win32') return; PRN.busy = true;
@@ -281,7 +289,7 @@ async function prnTick() {
       list.push({ n: a[0].slice(0, 80), d: String(a[1] || '').slice(0, 80), p: String(a[2] || '').slice(0, 40), off: a[3] === '1' || a[4] === '7' ? 1 : 0, def: a[5] === '1' ? 1 : 0 }); }
     list.sort((x, y) => x.n.localeCompare(y.n));
     const low = s => String(s || '').trim().toLowerCase();
-    const want = prnWant().map(w => { const f = list.find(x => low(x.n) === low(w.n)); return { k: w.k, n: w.n, ok: f ? 1 : 0, off: f ? f.off : 0 }; });
+    const want = prnWant(list.map(x => x.n)).map(w => { const f = list.find(x => low(x.n) === low(w.n)); return { k: w.k, n: w.n, ok: f ? 1 : 0, off: f ? f.off : 0 }; });
     const sig = JSON.stringify([list, want]), now = Date.now();
     if (sig === PRN.last && now - PRN.at < 10 * 60000) return;   // sirf badle to / har 10 min
     const ref = prnRef(); if (!ref) return;

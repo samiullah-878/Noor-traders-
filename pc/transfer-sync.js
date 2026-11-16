@@ -42,7 +42,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 // ---------------- SETTINGS ----------------
 const BUSINESS_ID = 'noor-traders';
 const CREATED_BY = 1;                // POS user: Administrator
-const PRINTER_NAME = 'TM-T88IV';     // thermal rasid printer (sale-post wala)
+const PRINTER_NAME = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })();     // thermal rasid printer (sale-post wala)
 const PRINT_WIDTH = 42;
 const AUTO_PRINT = true;             // transfer note banate hi print
 const SHOP_NAME = 'NOOR TRADERS', SHOP_PHONE = '03450412515';

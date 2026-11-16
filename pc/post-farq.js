@@ -41,7 +41,7 @@ const SALE_PERSON = 1;             // SPID
 const BUSINESS_ID = 'noor-traders';
 const AUTO_PRINT = true;           // rasid script hi chhapti hai (PRINTER_NAME par, notepad ke baghair)
 const PRINT_WIDTH = 32;            // rasid ki chaurai (akshar ek line mein) — lines tooten to kam karein
-const PRINTER_NAME = 'TM-T88IV';   // Devices and Printers mein jo naam likha hai — ghalat ho to yahan theek karein
+const PRINTER_NAME = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })();   // Devices and Printers mein jo naam likha hai — ghalat ho to yahan theek karein
 // ------------------------------------------
 
 const DIR = __dirname;
