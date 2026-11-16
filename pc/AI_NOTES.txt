@@ -4877,3 +4877,6 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
 - thermal-name v1.1: thermal-off.txt ho to `name()` = 'TM-T88IV'. doctor `thOnCheck`: `blueAccess/thermalOn.at` > flag ka waqt -> flag hata + scripts dobara.
 - pcPrinters doc mein `sp` {off, at, cpu, jobs, rs, k}; app 🖨 dabba: laal '🛑 Thermal print ROKA hua hai' + malik ka '▶ Thermal dobara chalu' (cloud.thermalOn).
 - TEST: node --check. Asal Windows par nahi chalaya; doctor chup ho to yeh update NT-PRINT ke chowkidar ke baad hi pohanchega. AI nahi.
+
+- doctor v3.7 (16 Nov 12:15): malik — 'naye PC par taar lagi hai' (to wajah taar nahi). `jobsBy()` (Win32_PrintJob) = har printer ki line mein ruki jobs: 🖨 list mein '⏳ N job line mein'
+  + spoolFix se pehle `sp.q` (kis printer ki kitni). Agli dafa atke to pata chale thermal / label / A4 mein se kaun. Sirf parhna. manifest 2026-11-16.5.

@@ -31,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.6';
+const VER = '3.7';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -268,6 +268,12 @@ async function cpuTick() {
 //   (2) sab printers ki ruki jobs hatao + Spooler dobara (admin na ho to sirf jobs) (3) thermal wali scripts band -> agle chakkar mein naye naam se shuru.
 //   Wapas chalu SIRF malik ke hukum se (app 🖨 dabba '▶ Thermal dobara chalu' -> blueAccess/thermalOn.at). 30 min mein ek dafa se zyada nahi. taskkill /T nahi.
 const SPL = { n: 0, at: 0, busy: false, info: null };
+// v3.7: kis printer ki line mein kitni jobs ruki hain (malik: taar naye PC mein lagi hai, phir bhi spooler atka — kaun sa printer?). Sirf parhna.
+async function jobsBy() {
+  const out = await psRun('Get-CimInstance Win32_PrintJob | ForEach-Object { [string]$_.Name }', 15000); const m = {};
+  for (const l of String(out || '').split(/\r?\n/)) { const n = l.trim().replace(/,\s*\d+\s*$/, ''); if (n) m[n] = (m[n] || 0) + 1; }
+  return m;
+}
 const TH_SCRIPTS = ['pos-khata-sync.js', 'sale-post.js', 'transfer-sync.js', 'post-farq.js', 'factory-post.js', 'a4-print.js', 'wa-parchi.js'];
 const thOffFile = () => path.join(DIR, 'thermal-off.txt');
 function thRestart() { const list = procs(); let n = 0; if (list) for (const s of services) { if (!TH_SCRIPTS.includes(s.script)) continue; for (const q of list) if (runsScript(q, s)) { killPid(q.pid); n++; } } return n; }
@@ -281,10 +287,12 @@ async function spoolFix(p) {
   try {
     log(`🛑 Print Spooler atka (spoolsv ${Math.round(p)}%) — ruki jobs hata raha hoon, thermal print ROK raha hoon`);
     try { fs.writeFileSync(thOffFile(), String(Date.now())); } catch {}
+    const jb = await jobsBy(), jq = Object.entries(jb).map(([n, c]) => `${n}: ${c}`).join(' · ').slice(0, 300);
     const out = await psRun("$r=0; try { Stop-Service Spooler -Force -ErrorAction Stop; Remove-Item \"$env:windir\\System32\\spool\\PRINTERS\\*\" -Force -ErrorAction SilentlyContinue; Start-Service Spooler -ErrorAction Stop; $r=1 } catch { try { Start-Service Spooler -ErrorAction SilentlyContinue } catch {} }; $n=0; if ($r -eq 0) { Get-CimInstance Win32_Printer | ForEach-Object { $j=@(Get-PrintJob -PrinterName $_.Name -ErrorAction SilentlyContinue); $n+=$j.Count; $j | Remove-PrintJob -ErrorAction SilentlyContinue } }; \"SPL|$n|$r\"", 90000);
     const m = String(out || '').match(/SPL\|(\d+)\|(\d)/);
     const k = thRestart();
-    SPL.info = { at: Date.now(), cpu: Math.round(p), jobs: m ? Number(m[1]) : -1, rs: m ? Number(m[2]) : -1, k };
+    SPL.info = { at: Date.now(), cpu: Math.round(p), jobs: m ? Number(m[1]) : -1, rs: m ? Number(m[2]) : -1, k, q: jq };
+    if (jq) log('🛑 ruki jobs: ' + jq);
     log(`🛑 spooler: ${m ? m[1] + ' job hati, Spooler ' + (m[2] === '1' ? 'dobara chala' : 'dobara NAHI chala (admin nahi)') : 'PowerShell se jawab nahi'} · ${k} thermal script dobara shuru`);
     PRN.last = '';
   } finally { SPL.busy = false; SPL.n = 0; }
@@ -322,6 +330,7 @@ async function prnTick() {
     const list = [];
     for (const l of out.split(/\r?\n/)) { const a = l.trim().split('|'); if (a.length < 6 || !a[0] || PRN_SKIP.test(a[0])) continue;
       list.push({ n: a[0].slice(0, 80), d: String(a[1] || '').slice(0, 80), p: String(a[2] || '').slice(0, 40), off: a[3] === '1' || a[4] === '7' ? 1 : 0, def: a[5] === '1' ? 1 : 0 }); }
+    const jb = await jobsBy(); for (const x of list) { const c = jb[x.n]; if (c) x.j = c; }
     list.sort((x, y) => x.n.localeCompare(y.n));
     const low = s => String(s || '').trim().toLowerCase();
     const want = prnWant(list.map(x => x.n)).map(w => { const f = list.find(x => low(x.n) === low(w.n)); return { k: w.k, n: w.n, ok: f ? 1 : 0, off: f ? f.off : 0 }; });
