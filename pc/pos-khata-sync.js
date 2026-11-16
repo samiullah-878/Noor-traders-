@@ -1827,12 +1827,27 @@ function khataSlip(J) {
   const B1 = ESC + 'E\x01', B0 = ESC + 'E\x00';
   const segs = (w, ...ps) => { let len = 0, o = ''; for (const [t, b] of ps) { let x = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); if (len + x.length > w) x = x.slice(0, Math.max(0, w - len)); len += x.length; o += b && x ? B1 + x + B0 : x; } return o + ' '.repeat(Math.max(0, w - len)); };
   const Ls = Array.isArray(J.L) ? J.L : [], Rs = Array.isArray(J.R) ? J.R : [], two = (a, b) => fit(a, CW) + '|' + fit(b, CW), hrB = sm('-'.repeat(WB)), mid = sm('-'.repeat(CW) + '+' + '-'.repeat(CW));
+  const v2 = Array.isArray(J.A);   // 2026-11-16 (w4b): app v2.300.0 — EK table (DigiKhata jaisi, malik): line 1 tareekh + tafseel, line 2 baayan | daayan | baqaya
   const out = [ESC + '@', C + bold('NOOR TRADERS') + sm('  ' + SHOP_PHONE), C + bold('KHATA')];
   for (const x of (ascii(J.n) ? wrap(ascii(J.n).toUpperCase(), Math.floor(W / 2)).slice(0, 3) : ['(NAAM URDU MEIN)'])) out.push(C + big2(x.trim()));
   { const ur = urPartyOf({ pid: J.pid, name: J.n }); if (ur) out.push(UR.line(ur, 52, 1)); }
   out.push(L + sm(rowW(WB, ascii(J.sub).slice(0, 34), printStamp(new Date()))), hrB);
   { const st = side(Number(J.op) || 0) + ' Rs.', am = n(Math.abs(Number(J.op) || 0)); out.push(sm(segs(WB, [fit('Opening:', Math.max(1, WB - st.length - am.length)), 0], [st, 0], [am, 1]))); }
   out.push(C + bold('AB BAQAYA - ' + side(Number(J.b) || 0)), C + big2('Rs.' + n(Math.abs(Number(J.b) || 0))), L + hrB);
+  if (v2) {
+    const rj = (t, w) => { t = String(t ?? '').replace(/[^\x20-\x7e]/g, ''); return t.length > w ? t.slice(-w) : ' '.repeat(w - t.length) + t; };
+    const tri = (x, y, z, bx) => sm(segs(WB, ['  ', 0], [rj(x, 16), bx], [' ', 0], [rj(y, 16), bx], [' ', 0], [rj(z, 20), 0]));
+    out.push(smb(rowW(WB, 'TAREEKH  TAFSEEL', '')), tri(ascii(J.lt).slice(0, 16), ascii(J.rt).slice(0, 16), 'BAQAYA', 0), hrB);
+    J.A.forEach((r, i) => {
+      if (!Array.isArray(r)) return;
+      out.push(sm(fit(`${i + 1}. ${ascii(r[0])}  ${ascii(r[3])}`, WB)));
+      const bv = r[4] != null && r[4] !== '' ? n(Math.abs(Number(r[4]) || 0)) + ' ' + side(Number(r[4]) || 0) : '';
+      out.push(tri(r[1] === 1 ? n(r[2]) : '', r[1] === 2 ? n(r[2]) : '', bv, 1));
+    });
+    out.push(hrB, tri('Kul ' + n(J.tl), 'Kul ' + n(J.tr), n(Math.abs(Number(J.b) || 0)) + ' ' + side(Number(J.b) || 0), 1), L + hrB, C + bold('AB BAQAYA - ' + side(Number(J.b) || 0) + '  Rs.' + n(Math.abs(Number(J.b) || 0))), '');
+    out.push(GS + 'V\x42\x00');
+    return out.join('\r\n');
+  }
   out.push(smb(two(J.lt, J.rt)), sm(segs(CW, ['Kul Rs.', 0], [n(J.tl), 1], [` (${Ls.length})`, 0]) + '|' + segs(CW, ['Kul Rs.', 0], [n(J.tr), 1], [` (${Rs.length})`, 0])), mid);
   const amt = r => { const m = n(r[1]).slice(0, CW - 1); return segs(CW, [fit(ascii(r[0]), CW - m.length), 0], [m, 1]); };   // tareekh patli + raqam MOTI (daayein)
   const cell = r => Array.isArray(r) ? [amt(r), ascii(r[2])] : [' '.repeat(CW), ''];

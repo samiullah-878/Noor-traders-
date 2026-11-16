@@ -8574,3 +8574,10 @@ Malik: 'upar wala chart bohat chhota · ek screen par ek time par 10 payments ·
 - pDone: .bkp-row.cmp 2 patli lines + nishan (🖨✓ / ⚠️ / 🔔 / 📝); chips (Reminder · ↩ · Note · Chhapi · Dobara print) .bkp-x sirf tap par — document click data-bk-row, ek waqt ek (rowOpen), list dobara paint nahi. Baqi (pend) entries pehle jaisi poori (un par kaam karna hota hai).
 - CLAUDE.md mein PAKKA qaida: bank screen par ek waqt 10 entries.
 - Test: stub render + Chrome screenshot (390 px par 12 entries). Phone par nahi dekha. AI nahi.
+
+=== v2.300.0 (16 Nov 2026) — Khata PDF + thermal parchi = EK table (DigiKhata jaisi) ===
+Malik ne DigiKhata PDF ki tasveer bheji: 'jab bhi PDF / print nikle aisa aana chahiye'.
+- khata PDF: headers # · Tareekh · Tafseel · (ledgerTitles baayan) · (daayan) · Baqaya; har entry ek qatar (khOrdered), raqam apne khane mein (laal / hara), baqaya runningOf; neeche Kul + aakhri baqaya. pdfCell ab r:1 = text-align right. Table class kh-two wahi (tez raasta).
+- khataTpData: v:2 + A rows; L/R bhi (purane PC ke liye).
+- PC pos-khata-sync w4b khataSlip: J.A ho to naya layout (line 1 '#. tareekh tafseel', line 2 baayan | daayan | baqaya, aakhir Kul); warna purana do-taraf.
+- Test: khataSlip stub output dekha; PDF phone par nahi dekha. AI nahi.

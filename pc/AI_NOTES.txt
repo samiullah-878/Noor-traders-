@@ -4955,3 +4955,10 @@ Malik: 'is mein wo entries bhi chahiye jo App ko POS jaisa / POS ko app jaisa / 
 Malik (amjad islam, POS ✓): 'yahan app jaise voucher aur JV voucher nahi aa raha'. Wajah: woh khata PC ke autoMilan ne khud barabar kiya tha — job dir 'auto', hum sirf app|pos dikhate the.
 - app ddJobs + PC milanMade / milanJobUndo: dir 'auto' bhi (bill jaanch wala nahi); har voucher ki taraf log se (`… app mein likh diya` = app copy + POS asal; baqi = [app: wala POS voucher ya opening JV).
 - AI nahi. Test: node --check + stub.
+
+=== v2.300.0 (16 Nov 2026) — Khata PDF + thermal parchi = EK table (DigiKhata jaisi) ===
+Malik ne DigiKhata PDF ki tasveer bheji: 'jab bhi PDF / print nikle aisa aana chahiye'.
+- khata PDF: headers # · Tareekh · Tafseel · (ledgerTitles baayan) · (daayan) · Baqaya; har entry ek qatar (khOrdered), raqam apne khane mein (laal / hara), baqaya runningOf; neeche Kul + aakhri baqaya. pdfCell ab r:1 = text-align right. Table class kh-two wahi (tez raasta).
+- khataTpData: v:2 + A rows; L/R bhi (purane PC ke liye).
+- PC pos-khata-sync w4b khataSlip: J.A ho to naya layout (line 1 '#. tareekh tafseel', line 2 baayan | daayan | baqaya, aakhir Kul); warna purana do-taraf.
+- Test: khataSlip stub output dekha; PDF phone par nahi dekha. AI nahi.
