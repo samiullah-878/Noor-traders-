@@ -8507,3 +8507,6 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
 - v2.292.4 / doctor v3.11 (16 Nov 14:05): malik — 'DESKTOP-Q1S… har kuch second baad taza hona chahiye'. PC ki pehchan (pcSeen) sirf bare chakkar (30 min) par jati thi -> chalta server '22 min pehle ⚪' dikhta
   (meri ghalti: maine is se 'doctor chup hai' samjha, jab ke Printers dabba 2 min pehle taza tha). Ab doctor `seenBeat` har 20 s (sirf at + run), app dabba har 10 s khud taza, 'N s pehle', 🟢 = 2 min ke andar.
   manifest 2026-11-16.9. Asal PC par test nahi. AI nahi.
+
+- 16 Nov 14:04: malik — 'chal gaya hai print'. Naye server par thermal parchi doosri line 'TM-T88IV' (Generic / Text Only, ESDPRT001) se nikal aayi (pehle admin se Spooler ki line saaf, phir ▶ Thermal dobara chalu).
+  Thermal ka masla HAL. Baqi: label par Urdu naam (malik ka sawal, jaanch adhoori), hatai hui entries / bill 2844 + 2842 wapas, WhatsApp QR naye server par.
