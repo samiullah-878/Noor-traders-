@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-16 (w2): 🖨 KHATA PARCHI PAR HAR ENTRY KA BAQAYA (malik: 'baqaya kitna tha wo nahi likha aa raha kisi bhi amount par') — app khataTpData L/R row[3] = us entry ke baad ka baqaya (PAISA, + lene) -> khataSlip teesri patli line 'Baqaya X LENE'. Purani app (row[3] nahi) = pehle jaisa.
 //  2026-11-16 (w): ↩ BARABAR WALA KAAM WAPAS (malik: haseeb cus par '📱 App ko POS jaisa' se 10 bani — 'POS se bhi delete ho jaiya or apps se bhi jo voucher abhi bana hain'): milanJobs ids ['@undo-job', <job>] -> SIRF us job ki BANI hui cheezein (fix.mk, purane job mein log ki 'done' lines): POS voucher delete + app entry 🗑 (deleted, link deleted). Kabhi khud nahi, sirf malik ke chip + list ke OK se. AI nahi.
 //  2026-11-14 (v): 🖨 WHATSAPP REPORT KA PRINT — khataPrints j.k 'txt' (wa-out v1.24: malik report par reply 'print') -> txtSlip thermal; nateeja malik ko waOut (doc mein `wa`). Voucher / baqi print nahi chhede.
 //  2026-11-13 (u): 🏷 PARTY KA NAAM PARCHI KE UPAR (English mota + Urdu) — malik: "party name upar aaye Urdu English mein, sab wasooli / kharcha / payment di / li / transfer par". Beech wala naam hata. Bank (HBL / Alfalah) parchi wahi.
@@ -1830,10 +1831,12 @@ function khataSlip(J) {
   out.push(smb(two(J.lt, J.rt)), sm(segs(CW, ['Kul Rs.', 0], [n(J.tl), 1], [` (${Ls.length})`, 0]) + '|' + segs(CW, ['Kul Rs.', 0], [n(J.tr), 1], [` (${Rs.length})`, 0])), mid);
   const amt = r => { const m = n(r[1]).slice(0, CW - 1); return segs(CW, [fit(ascii(r[0]), CW - m.length), 0], [m, 1]); };   // tareekh patli + raqam MOTI (daayein)
   const cell = r => Array.isArray(r) ? [amt(r), ascii(r[2])] : [' '.repeat(CW), ''];
+  const bq = r => (Array.isArray(r) && r[3] != null && r[3] !== '') ? 'Baqaya ' + n(Math.abs(Number(r[3]) || 0)) + ' ' + side(Number(r[3]) || 0) : '';   // 2026-11-16 (w2): har entry ke baad ka baqaya (app card wala, malik)
   for (let i = 0; i < Math.max(Ls.length, Rs.length); i++) {
-    const a = cell(Ls[i]), b = cell(Rs[i]);
+    const a = cell(Ls[i]), b = cell(Rs[i]), qa = bq(Ls[i]), qb = bq(Rs[i]);
     out.push(sm(a[0] + '|' + b[0]));
     if (a[1] || b[1]) out.push(sm(two(a[1], b[1])));
+    if (qa || qb) out.push(sm(two(qa, qb)));
   }
   out.push(mid, smb(two('Kul Rs.' + n(J.tl), 'Kul Rs.' + n(J.tr))), L + hrB, C + bold('AB BAQAYA - ' + side(Number(J.b) || 0) + '  Rs.' + n(Math.abs(Number(J.b) || 0))), '');
   out.push(GS + 'V\x42\x00');   // kaghaz kaato

@@ -8529,3 +8529,11 @@ Malik (haseeb cus, Farq ki entries par '✅ 10 ban gayi'): 'POS se bhi delete ho
 - App pos-milan.js: natije wale dabbe ke neeche (sirf malik, job dir app|pos, done > 0) chip '↩ Is kaam ko wapas (POS + app) N' -> list (voucher no · raqam) + warning (ek taraf pehle se tha) -> confirm -> milanJobs ids ['@undo-job', <job id>] (rules 2.77 wahi, naya rule nahi).
 - PC milanJobUndo: SIRF us job ki BANI cheezein (naye job: fix.mk + mkJob; purane: log ki 'done' lines — PC milanMade, app madeOf HUBAHU) -> POS voucher delete (dir pos par sirf [app: wala) + app entry deleted (🗑) + link deleted; asal job par undoneAt. Dobara nahi chalta.
 - AI nahi. Test: sirf node --check — asal PC / POS par chala kar nahi dekha.
+
+
+## v2.294.0 (16 Nov 2026) — Khata parchi + PDF par HAR ENTRY ka baqaya (PC pos-khata-sync w2)
+Malik (thermal khata parchi ki photo): 'baqaya pehle kitna tha wo nahi likha aa raha kisi bhi amount par'.
+- App khataTpData: L/R har row ka 4th = runningOf(p.id) (wohi number jo entry card par 'Baqaya Rs … Lena'), PAISA.
+- PC khataSlip: har entry ke neeche teesri patli line 'Baqaya X LENE/DENE' (dono khane). Purani app = pehle jaisa.
+- PDF (kh-two): har side 'Baqaya' ka khana (Tareekh · raqam · Baqaya · Note).
+- AI nahi. Test: sirf node --check.
