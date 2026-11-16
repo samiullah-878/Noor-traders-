@@ -8362,3 +8362,11 @@ html body .bkp .bkp-row.cmp.is-in .bkp-x{display:block}
 html body .bkp .bkp-row.cmp.is-in .bkp-meta{white-space:normal}html body .bkp .bkp-row.cmp.is-in .bkp-meta .bkp-txn{display:inline}
 html body .bkp .bkp-seg{min-height:0!important}html body .bkp .bkp-seg button{min-height:32px!important;padding:3px 10px!important;font-size:12.5px!important}
 html body .bkp-hero.cmp .bkp-bank{width:auto!important;height:auto!important;padding:0!important;background:none!important;border:0!important;box-shadow:none!important;font-size:16px!important}
+/* v2.301.0 📅 Khata PDF / print par tareekh ke chips (Aaj · Kal · 7 din · Mahina · Sab · apni tareekh) */
+html body #dialogBody .kr-row{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:0 0 10px;padding:8px 10px;border-radius:14px;background:var(--surf2,#eef3ff);font-size:13px;font-weight:800}
+html body #dialogBody .kr-row .kr-c{min-height:30px!important;padding:0 12px!important;border-radius:999px!important;font:800 12.5px/28px system-ui,sans-serif!important;background:linear-gradient(180deg,#fff,#f1f5fb)!important;border:1px solid rgba(29,52,102,.18)!important;color:#1d3466!important;box-shadow:none!important;white-space:nowrap}
+html body #dialogBody .kr-row .kr-c.is-in{background:linear-gradient(135deg,#2563eb,#1d4ed8)!important;color:#fff!important;border-color:transparent!important}
+html body #dialogBody .kr-row .kr-own{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;border:1px solid rgba(29,52,102,.18);background:#fff}
+html body #dialogBody .kr-row .kr-own.is-in{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.18)}
+html body #dialogBody .kr-row .kr-own input{min-height:28px!important;height:28px;padding:0 4px!important;border:0!important;background:transparent!important;font-size:12.5px!important;width:auto;max-width:132px}
+html.dk body #dialogBody .kr-row{background:rgba(255,255,255,.06)}html.dk body #dialogBody .kr-row .kr-c{background:rgba(255,255,255,.08)!important;color:#dbe6ff!important}html.dk body #dialogBody .kr-row .kr-own{background:rgba(255,255,255,.06)}
