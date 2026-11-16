@@ -31,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.8';
+const VER = '3.9';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -276,6 +276,7 @@ async function jobsBy() {
 }
 const TH_SCRIPTS = ['pos-khata-sync.js', 'sale-post.js', 'transfer-sync.js', 'post-farq.js', 'factory-post.js', 'a4-print.js', 'wa-parchi.js'];
 const thOffFile = () => path.join(DIR, 'thermal-off.txt');
+const thOkFile = () => path.join(DIR, 'thermal-ok.txt');   // v3.9: malik ki ijazat (▶ Thermal dobara chalu) — is ke baghair thermal ka naam khud nahi chuna jata
 function thRestart() { const list = procs(); let n = 0; if (list) for (const s of services) { if (!TH_SCRIPTS.includes(s.script)) continue; for (const q of list) if (runsScript(q, s)) { killPid(q.pid); n++; } } return n; }
 function spoolWatch(p, cores) {
   const lim = Math.max(8, 100 / (cores || 1));
@@ -285,8 +286,9 @@ function spoolWatch(p, cores) {
 async function spoolFix(p, why, qn) {   // why 'q' (v3.8) = thermal ki line mein parchiyan phansi hain (printer chhap nahi raha), CPU nahi
   SPL.busy = true; SPL.at = Date.now();
   try {
-    log(why === 'q' ? `🛑 thermal printer chhap nahi raha — ${qn} parchi line mein phansi; line saaf + thermal print ROK raha hoon` : `🛑 Print Spooler atka (spoolsv ${Math.round(p)}%) — ruki jobs hata raha hoon, thermal print ROK raha hoon`);
+    log(why === 'new' ? '🛑 thermal ka khud chuna naam ab malik ki ijazat se — print ROK kar line saaf kar raha hoon (Epson par parchi phans kar Spooler 100% tha)' : why === 'q' ? `🛑 thermal printer chhap nahi raha — ${qn} parchi line mein phansi; line saaf + thermal print ROK raha hoon` : `🛑 Print Spooler atka (spoolsv ${Math.round(p)}%) — ruki jobs hata raha hoon, thermal print ROK raha hoon`);
     try { fs.writeFileSync(thOffFile(), String(Date.now())); } catch {}
+    try { fs.unlinkSync(thOkFile()); } catch {}
     const jb = await jobsBy(), jq = Object.entries(jb).map(([n, c]) => `${n}: ${c}`).join(' · ').slice(0, 300);
     const out = await psRun("$r=0; try { Stop-Service Spooler -Force -ErrorAction Stop; Remove-Item \"$env:windir\\System32\\spool\\PRINTERS\\*\" -Force -ErrorAction SilentlyContinue; Start-Service Spooler -ErrorAction Stop; $r=1 } catch { try { Start-Service Spooler -ErrorAction SilentlyContinue } catch {} }; $n=0; if ($r -eq 0) { Get-CimInstance Win32_Printer | ForEach-Object { $j=@(Get-PrintJob -PrinterName $_.Name -ErrorAction SilentlyContinue); $n+=$j.Count; $j | Remove-PrintJob -ErrorAction SilentlyContinue } }; \"SPL|$n|$r\"", 90000);
     const m = String(out || '').match(/SPL\|(\d+)\|(\d)/);
@@ -298,10 +300,16 @@ async function spoolFix(p, why, qn) {   // why 'q' (v3.8) = thermal ki line mein
   } finally { SPL.busy = false; SPL.n = 0; }
 }
 async function thOnCheck() {   // malik ka '▶ Thermal dobara chalu'
-  let offAt = 0; try { offAt = Number(fs.readFileSync(thOffFile(), 'utf8')) || 1; } catch { return; }
+  let okNow = false; try { okNow = fs.existsSync(thOkFile()); } catch {}
+  let offAt = 0; try { offAt = Number(fs.readFileSync(thOffFile(), 'utf8')) || 1; } catch {}
+  if (okNow && !offAt) return;
+  if (!okNow && !offAt) {   // v3.9: pehli dafa — ijazat nahi = rok do (ek dafa line saaf + scripts dobara), phir malik ke button ka intezar
+    if (!SPL.busy) await spoolFix(0, 'new', 0).catch(e => log('⚠ thermal rok: ' + String(e?.message || e).slice(0, 80)));
+    return;
+  }
   const d = fb(); if (!d) return;
   try { const s = await d.collection('businesses').doc('noor-traders').collection('blueAccess').doc('thermalOn').get(); const at = Number(s.exists && s.data() && s.data().at) || 0;
-    if (at > offAt) { try { fs.unlinkSync(thOffFile()); } catch {} const k = thRestart(); SPL.info = null; SPL.at = 0; PRN.last = ''; log(`▶ thermal dobara chalu (malik) — ${k} script dobara shuru`); } } catch {}
+    if (at > offAt) { try { fs.writeFileSync(thOkFile(), String(at)); } catch {} try { fs.unlinkSync(thOffFile()); } catch {} const k = thRestart(); SPL.info = null; SPL.at = 0; PRN.last = ''; log(`▶ thermal dobara chalu (malik) — ${k} script dobara shuru`); } } catch {}
 }
 
 // v3.3: 🖨 PRINTERS — Windows mein lage printers (naam · driver · port · haalat) + scripts ke zaroori naam. Sirf parhna, kuch nahi badalta. Async + hadd (doctor nahi rukta).

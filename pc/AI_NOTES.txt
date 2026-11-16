@@ -4885,3 +4885,8 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
   le raha hai magar chhaap nahi raha (driver ka port ESDPRT001 / printer error) — yehi spooler ke 100% ki jar thi. prnTick: thermal line mein 5+ jobs do jaanch tak kam na hon ->
   `spoolFix(0,'q',n)` (line saaf + thermal-off + scripts dobara), app laal dabba 'Printer chhap nahi raha tha — N parchi phansi thin'. Chalu sirf malik ke button se.
   Asal ilaaj dukan par: Windows 'Print Test Page' / Epson port (USB) / printer ki batti. manifest 2026-11-16.6. AI nahi.
+
+- doctor v3.9 / thermal-name v1.2 / app v2.292.3 (16 Nov 13:25): 12:55 phir spoolsv 79% (CPU 98%) — malik: 'shayad tumhari script mein problem hai'. Sach: scripts sirf RAW parchi bhejti hain
+  (nt-parchi WritePrinter), magar naye PC ka Epson driver (APD 'ReceiptE4', port ESDPRT001) usay printer tak nahi pohanchata -> Spooler ghoomta hai. Yeh meri thermal-name wali tabdeeli se
+  shuru hua (us se pehle is PC se parchi jati hi nahi thi). AB: khud chuna naam SIRF malik ki ijazat se (thermal-ok.txt, '▶ Thermal dobara chalu'); ijazat na ho = 'TM-T88IV' (print nahi).
+  Update lagte hi ek dafa `spoolFix(0,'new')`: line saaf + Spooler dobara ki koshish + thermal scripts dobara. spoolFix ok file bhi hatata hai. manifest 2026-11-16.7. AI nahi.
