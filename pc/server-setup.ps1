@@ -41,6 +41,21 @@ Pop-Location
 # 5) KHATA-DOCTOR (npm packages, Startup, sab services khud)
 Say "KHATA-DOCTOR chalu ho raha hai - pehli dafa packages 2-5 minute..." Green
 Start-Process cmd.exe -ArgumentList "/c `"$K\KHATA-DOCTOR.bat`"" -WorkingDirectory $K -WindowStyle Minimized
+# 6) Thermal (16 Nov 2026): hamari parchi RAW jati hai - Epson ke apne driver wali line (POS ki) par phans jati hai.
+#    Usi printer ki DOOSRI line 'TM-T88IV' saade driver se. POS wali line ko haath nahi lagta.
+try {
+  $adm = ([Security.Principal.WindowsPrincipal][Security.Principal.WindowsIdentity]::GetCurrent()).IsInRole([Security.Principal.WindowsBuiltInRole]::Administrator)
+  $have = Get-Printer -Name 'TM-T88IV' -ErrorAction SilentlyContinue
+  $ep = Get-Printer -ErrorAction SilentlyContinue | Where-Object { $_.Name -match 'TM-?\s?T88' -and $_.Name -ne 'TM-T88IV' } | Select-Object -First 1
+  if ($have) { Say "Thermal line 'TM-T88IV' pehle se hai." Green }
+  elseif (-not $ep) { Say "Thermal printer (Epson TM-T88) abhi is PC par nahi laga - lagane ke baad yehi command dobara chalayein." Yellow }
+  elseif (-not $adm) { Say "Thermal line ke liye PowerShell 'Run as administrator' se yehi command dobara chalayein." Yellow }
+  else {
+    if (-not (Get-PrinterDriver -Name 'Generic / Text Only' -ErrorAction SilentlyContinue)) { Add-PrinterDriver -Name 'Generic / Text Only' -ErrorAction Stop }
+    Add-Printer -Name 'TM-T88IV' -DriverName 'Generic / Text Only' -PortName $ep.PortName -ErrorAction Stop
+    Say "Thermal line 'TM-T88IV' ban gayi (port $($ep.PortName)). POS ki line waisi hi hai." Green
+  }
+} catch { Say ("Thermal line nahi bani: " + $_.Exception.Message) Red }
 Say ""
 Say "HO GAYA. 5-10 minute mein app ki Settings > PC scripts mein naya PC nazar aayega." Green
 Say "WhatsApp ke QR app ke settings se dobara jorne honge (WhatsApp ki apni hifazat)." Yellow

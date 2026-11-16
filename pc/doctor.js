@@ -31,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.11';
+const VER = '3.12';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -319,7 +319,7 @@ const PRN_SKIP = /^(microsoft (print to pdf|xps document writer)|fax|onenote|sen
 function prnWant(names) {   // scripts jis naam se chhapti hain
   let lbl = 'TSC TTP-244 Pro';
   try { const o = JSON.parse(fs.readFileSync(path.join(__dirname, 'label-settings.json'), 'utf8')); if (o && typeof o.printer === 'string' && o.printer.trim()) lbl = o.printer.trim(); } catch {}
-  return [{ k: 'Thermal parchi / bill', n: thName(names) }, { k: 'Barcode label', n: lbl }];
+  return [{ k: 'Thermal parchi / bill', n: thName(names), th: 1 }, { k: 'Barcode label', n: lbl }];
 }
 // v3.5: 🧾 thermal ka naam khud (thermal-name.js) — "TM-T88IV" na ho to jis ke naam mein TM-T88 ho (naya server: "EPSON TM-T88IV Receipt"). File na aayi ho = purana pakka naam.
 let TH_SAID = '';
@@ -345,7 +345,7 @@ async function prnTick() {
       SPL.qPrev = thN; } catch {}
     list.sort((x, y) => x.n.localeCompare(y.n));
     const low = s => String(s || '').trim().toLowerCase();
-    const want = prnWant(list.map(x => x.n)).map(w => { const f = list.find(x => low(x.n) === low(w.n)); return { k: w.k, n: w.n, ok: f ? 1 : 0, off: f ? f.off : 0 }; });
+    const want = prnWant(list.map(x => x.n)).map(w => { const f = list.find(x => low(x.n) === low(w.n)); return { k: w.k, n: w.n, ok: f ? 1 : 0, off: f ? f.off : 0, d: f ? f.d : '', ...(w.th ? { th: 1, raw: f && /generic/i.test(f.d) ? 1 : 0 } : {}) }; });   // v3.12: thermal line ka driver + 'raw' (saada driver = hamari parchi nikalti hai)
     let thOff = 0; try { thOff = Number(fs.readFileSync(thOffFile(), 'utf8')) || 1; } catch {}
     const sp = thOff ? { off: thOff, ...(SPL.info || {}) } : null;
     const sig = JSON.stringify([list, want, sp]), now = Date.now();

@@ -4906,3 +4906,8 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
 
 - 16 Nov 14:04: malik — 'chal gaya hai print'. Naye server par thermal parchi doosri line 'TM-T88IV' (Generic / Text Only, ESDPRT001) se nikal aayi (pehle admin se Spooler ki line saaf, phir ▶ Thermal dobara chalu).
   Thermal ka masla HAL. Baqi: label par Urdu naam (malik ka sawal, jaanch adhoori), hatai hui entries / bill 2844 + 2842 wapas, WhatsApp QR naye server par.
+
+- v2.292.5 / doctor v3.12 / server-setup.ps1 (16 Nov 14:15, malik ka OK): thermal ki ghalat line dobara na ho —
+  doctor pcPrinters.want mein thermal ke liye `th`, `d` (driver), `raw` (driver mein 'Generic' = 1). App 🖨 dabba: driver saada na ho = ⛔ laal 'is line se hamari parchi nahi nikalti',
+  aur '▶ Thermal dobara chalu' ki jagah band button (sirf roki hui haalat mein — chalti parchi ko khud nahi rokta). server-setup.ps1 qadam 6: 'TM-T88IV' line khud (admin + Epson laga ho), POS ki line nahi chherta.
+  manifest 2026-11-16.10 (server-setup manifest mein nahi — irm se seedha). Asal PC par test nahi. AI nahi.
