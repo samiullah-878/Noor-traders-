@@ -4,6 +4,7 @@
 #   HIFAZAT: koi variable / OR / LogicConstraint nahi — sirf PACKAGE LIST (trigger + ActiveApplicationConstraint).
 #   List se bahar ki app kabhi band nahi ho sakti (WhatsApp, bank, call, Chrome… sab khuli). AI nahi.
 import json, os
+from cb import expr, lt, gt, strne, boolc, trig, iff, END, ELSE, HOME, var, lvar, NOW
 D = os.path.dirname(os.path.abspath(__file__))
 APPS = [
     ("com.android.settings", "Settings"), ("com.android.vending", "Play Store"), ("com.arlosoft.macrodroid", "MacroDroid"),
@@ -26,26 +27,42 @@ FG = {"m_classType": "ActiveApplicationConstraint", "m_SIGUID": 0, "m_active": T
 def ft(text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 0, "identifier": "ntrb", "textToDisplay": text,
     "bgColor": -15788246, "textColor": -1, "alpha": 92, "updateLocation": False, "xPosition": 0.5, "yPosition": 0.04, "padding": 8, "textSize": 16,
     "corners": 14, "alignment": 0, "moveOption": 0, "variableWidth": True, "widthPercentage": 90, "showOverStatusBar": False, "enableShadow": True}
+# v54 (malik 01:28: "zaroori button bhi de do"): band app khulte hi sawal "🚨 10 min zaroori" — din mein 1 dafa 10 min sab khula.
+#   Purane globals hi (sbEm / sbAsk / sbEmDay — phone par pehle se bane). Sawal ka popup MacroDroid ki khirki hai: sawal ke 20 s tak kuch band nahi.
+PATTI = [ft("⛔ Subah 11 baje khulega"), {"m_classType": "PauseAction", "m_SIGUID": 0, "m_delayInSeconds": 3, "m_useAlarm": False},
+         {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": "ntrb"}]
 a = [
-    {"m_classType": "PauseAction", "m_SIGUID": 0, "m_delayInSeconds": 1, "m_useAlarm": False},
-    {"m_classType": "IfConditionAction", "m_SIGUID": 0, "m_constraintList": [FG]},
-      {"m_classType": "LaunchHomeScreenAction", "m_SIGUID": 0, "useAccessibilityService": True},
-      ft("⛔ Subah 11 baje khulega"),
-      {"m_classType": "PauseAction", "m_SIGUID": 0, "m_delayInSeconds": 3, "m_useAlarm": False},
-      {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": "ntrb"},
-    {"m_classType": "EndIfAction", "m_SIGUID": 0},
+    expr("emL", "{v=sbEm}-" + NOW, True),
+    iff([lt("emL", 1, True)]),
+      {"m_classType": "PauseAction", "m_SIGUID": 0, "m_delayInSeconds": 1, "m_useAlarm": False},
+      iff([FG]),
+        expr("askAge", NOW + "-{v=sbAsk}", True),
+        iff([gt("askAge", 20, True)]),
+          HOME,
+          iff([trig(T2, "App khuli"), strne("sbEmDay", "{dayofmonth}")]),
+            expr("sbAsk", NOW),
+            iff([boolc("never", True)]),
+            {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "⛔ Subah 11 baje tak band",
+             "text": "Zaroori kaam hai?<br>Aaj sirf <b>1 dafa 10 minute</b> sab khul sakta hai.", "positiveText": "🚨 10 min zaroori", "negativeText": "Theek hai",
+             "cancelAfterTimeout": True, "timeoutSeconds": 15, "htmlFormat": True, "useCustomColors": True, "textColor": -1, "bgColor": -15788246},
+              expr("sbEm", NOW + "+600"), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "sbEmDay", "m_type": 2, "isLocalVar": False}, "m_newStringValue": "{dayofmonth}"},
+            ELSE, *PATTI, END,
+          ELSE, *PATTI, END,
+        END,
+      END,
+    END,
 ]
 RB = {"macroExportVersion": 1, "macro": {
     "m_name": "🌙 Raat 12-11 band",
-    "m_description": "Raat 12 se subah 11 tak SIRF list wali apps band (Settings, Play Store, MacroDroid, Claude, social media, YouTube, Netflix, Prime, games). Baqi sab khuli. AI nahi.",
+    "m_description": "Raat 12 se subah 11 tak SIRF list wali apps band (Settings, Play Store, MacroDroid, Claude, social media, YouTube, Netflix, Prime, games). Baqi sab khuli. 🚨 Zaroori: din mein 1 dafa 10 minute sab khula. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [],
+    "localVariables": [lvar("emL"), lvar("askAge"), lvar("never", 0)],
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 30, "m_useAlarm": False},
         {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "isAllApps": False,
          "m_packageNameList": PK, "m_applicationNameList": NM}],
     "m_actionList": a,
     "m_constraintList": [{"m_classType": "TimeOfDayConstraint", "m_SIGUID": 0, "m_startHour": 0, "m_startMinute": 0, "m_endHour": 10, "m_endMinute": 59}]},
-    "globalVariables": [], "userIcons": None}
+    "globalVariables": [var("sbEm"), var("sbAsk"), var("sbEmDay", 2)], "userIcons": None}
 if __name__ == '__main__':
     json.dump(RB, open(os.path.join(D, 'raatband.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('raatband ok', len(PK))
