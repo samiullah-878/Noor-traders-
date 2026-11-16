@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.295.0';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.296.0';
 const TOL = 100, PRE_FROM = '2026-09-15';   // v2.0: PC LINES_FROM / START_DATE jaisa
 const OPEN_RX = /opening|shuru ka baqaya|sabqa baqaya/i;   // v1.7 = PC autoMilan OPEN_RX   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
@@ -369,7 +369,8 @@ function fixHTML(p, D) {
   return chips + st + undo;
 }
 // 2026-11-16 (v2.293.0): ↩ barabar wale kaam ki BANI hui cheezein (PC pos-khata-sync w milanMade jaisa — ek badlo to doosra)
-function madeOf(o) {
+function madeOf(o) { const U = new Set(((o && o.undone) || []).map(String)); return madeAll(o).filter(c => !U.has(c)); }
+function madeAll(o) {
   if (o && o.fix && o.fix.mkJob && Array.isArray(o.fix.mk)) return o.fix.mk.map(String);
   const out = [];
   for (const x of (Array.isArray(o && o.log) ? o.log : [])) {

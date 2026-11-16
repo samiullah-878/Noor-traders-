@@ -8295,7 +8295,10 @@ html body #summary .pp-wdrop .pp-wown button{flex:none;width:44px;min-height:38p
 
 /* v2.295.0: 🗑 Din ki entries hatao */
 html body #dialogBody .dd-root{display:grid;gap:10px;grid-template-columns:minmax(0,1fr)}
-html body #dialogBody .dd-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;position:sticky;top:-14px;z-index:2;padding:6px 0;background:inherit}
+html body #dialogBody .dd-bar{display:flex;flex-wrap:wrap;gap:6px;align-items:center;position:static;padding:2px 0}
+html body #dialogBody .dd-g{display:grid;gap:6px;padding:8px;border-radius:14px;border:1px solid #dde5f2;background:rgba(238,243,251,.6)}
+html body #dialogBody .dd-gt{font-size:15px;color:#223B6D}
+html body #dialogBody .dd-gt small{font-weight:600;color:#5b6b85;font-size:12px}
 html body #dialogBody .dd-bar button,html body #dialogBody .dd-bar input{height:34px;min-height:0;padding:0 14px;border-radius:999px!important;border:1px solid #c9d6ee!important;background:linear-gradient(180deg,#fff,#eef3fb)!important;color:#223B6D!important;font-weight:700;font-size:14px;white-space:nowrap}
 html body #dialogBody .dd-bar button.is-in{background:linear-gradient(180deg,#2f5bb0,#223B6D)!important;color:#fff!important;border-color:#223B6D!important}
 html body #dialogBody .dd-n{padding:0 10px;height:30px;line-height:30px;border-radius:999px;background:#eef3fb;color:#223B6D;font-weight:800;font-size:14px}

@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-16 (w3): ↩ WAPAS SIRF TICK WALE (app 🗑 Din ki entries -> ⚖️ Barabar se bani): milanJobs ['@undo-job', job, ...codes] = sirf wohi voucher (isi job ke bane); asal job par `undone` list, sab ho jayein to undoneAt.
 //  2026-11-16 (w2): 🖨 KHATA PARCHI PAR HAR ENTRY KA BAQAYA (malik: 'baqaya kitna tha wo nahi likha aa raha kisi bhi amount par') — app khataTpData L/R row[3] = us entry ke baad ka baqaya (PAISA, + lene) -> khataSlip teesri patli line 'Baqaya X LENE'. Purani app (row[3] nahi) = pehle jaisa.
 //  2026-11-16 (w): ↩ BARABAR WALA KAAM WAPAS (malik: haseeb cus par '📱 App ko POS jaisa' se 10 bani — 'POS se bhi delete ho jaiya or apps se bhi jo voucher abhi bana hain'): milanJobs ids ['@undo-job', <job>] -> SIRF us job ki BANI hui cheezein (fix.mk, purane job mein log ki 'done' lines): POS voucher delete + app entry 🗑 (deleted, link deleted). Kabhi khud nahi, sirf malik ke chip + list ke OK se. AI nahi.
 //  2026-11-14 (v): 🖨 WHATSAPP REPORT KA PRINT — khataPrints j.k 'txt' (wa-out v1.24: malik report par reply 'print') -> txtSlip thermal; nateeja malik ko waOut (doc mein `wa`). Voucher / baqi print nahi chhede.
@@ -1288,7 +1289,9 @@ async function milanJobUndo(pool, j, origId, say) {
   const ref = biz.collection('milanJobs').doc(String(origId)), sn = await ref.get(), o = sn.exists ? (sn.data() || {}) : null;
   if (!o || !['app', 'pos'].includes(o.dir) || (Array.isArray(o.ids) && String(o.ids[0] || '').startsWith('@')) || String(o.partyId) !== String(j.partyId)) { say('asal job nahi mila'); return 'fail'; }
   if (o.undoneAt) { say('yeh kaam pehle hi wapas ho chuka'); return 'skip'; }
-  const codes = milanMade(o); if (!codes.length) { say('is job mein koi bani hui cheez nahi mili'); return 'skip'; }
+  const made = milanMade(o), was = new Set((o.undone || []).map(String)), want = Array.isArray(j.ids) ? j.ids.slice(2).map(String) : [];   // (w3) malik ne jo tick kiye — sirf wohi (aur sirf isi job ke bane)
+  const codes = made.filter(c => !was.has(c) && (!want.length || want.includes(c))); if (!codes.length) { say('is job mein hatane ko kuch nahi bacha'); return 'skip'; }
+  const okC = [];
   let ok = 0, bad = 0;
   for (const c of codes.slice(0, 300)) {
     try {
@@ -1304,10 +1307,11 @@ async function milanJobUndo(pool, j, origId, say) {
         for (const id of ids) { const d = app.get(id); if (!d || d.deleted) continue; const rec = DRY ? d : await appWrite(id, { ...d, deleted: true }, d); if (!first) first = rec; n++; }
         await setLink(k, { voucherId: 0, deleted: true, ...(first ? { appHash: appHashEntry({ ...first, deleted: true }) } : {}) });
       }
-      say(`${c}: ${v ? 'POS se hata' : 'POS mein pehle hi nahi'} · app ki ${n} entry 🗑`); ok++;
+      say(`${c}: ${v ? 'POS se hata' : 'POS mein pehle hi nahi'} · app ki ${n} entry 🗑`); ok++; okC.push(c);
     } catch (e) { say(`${c}: ${e.message || e}`); bad++; }
   }
-  if (!DRY) await ref.set({ undoneAt: Date.now(), undoJob: String(j.id || '') }, { merge: true });
+  const und = [...new Set([...was, ...okC])];
+  if (!DRY) await ref.set({ undone: und, undoJob: String(j.id || ''), ...(made.every(c => und.includes(c)) ? { undoneAt: Date.now() } : {}) }, { merge: true });
   say(`↩ wapas: ${ok} hat gaye${bad ? ` · ${bad} nahi` : ''}`);
   return bad && !ok ? 'fail' : 'done';
 }

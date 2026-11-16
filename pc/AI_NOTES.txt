@@ -4941,3 +4941,11 @@ Malik: 'three dot ke andar aaj ki entries delete — POS mein bhi · date select
 - Na hatne wali (wajah likhi): POS purchase bill, HBL jora, posAuto, posted.
 - POS voucher = PC pos-khata-sync ka purana raasta (entry deleted -> posDeleteVoucher). PC badla nahi.
 - AI nahi. Test: sirf node --check.
+
+
+## v2.296.0 (16 Nov 2026) — 🗑 Din ki entries: '⚖️ Barabar se bani' (PC pos-khata-sync w3)
+Malik: 'is mein wo entries bhi chahiye jo App ko POS jaisa / POS ko app jaisa / jaanch mein ek JV voucher se aayin' (un ki tareekh purani hoti hai, JV sirf POS mein).
+- app: ddOpen ab cloud.listenMilanJobs se khate ke kaam parhta hai; chips '📅 Tareekh se' · '⚖️ Barabar se bani'. Doosre mein chune din (job.at) ke kaam dabbon mein (📱 / 🖥 / ⚖️ JV), har voucher ☐ (default un-tick) -> milanJobs ['@undo-job', job, ...codes] / ['@undo-balance', job]. Haal live: ⏳ PC hata raha · ✅ hat gaya · ✕ wajah.
+- PC milanJobUndo: ids[2..] = sirf wohi voucher; asal job par `undone` list, sab ho jayein to undoneAt. pos-milan madeOf undone ghatata hai.
+- Ghalti theek: dd-bar sticky (peecha transparent) list ke upar chadhti thi -> static.
+- AI nahi. Test: node --check + stub test.
