@@ -4933,3 +4933,11 @@ Malik (thermal khata parchi ki photo): 'baqaya pehle kitna tha wo nahi likha aa 
 - PC khataSlip: har entry ke neeche teesri patli line 'Baqaya X LENE/DENE' (dono khane). Purani app = pehle jaisa.
 - PDF (kh-two): har side 'Baqaya' ka khana (Tareekh · raqam · Baqaya · Note).
 - AI nahi. Test: sirf node --check.
+
+
+## v2.295.0 (16 Nov 2026) — 🗑 Din ki entries hatao (khata ⋮, sirf malik)
+Malik: 'three dot ke andar aaj ki entries delete — POS mein bhi · date select kar ke · default sab un-tick, hum tick laga kar delete'.
+- app.js: account-tools mein `data-acct-dday` (ac.dday) -> ddOpen -> modal: Aaj · Kal · 📅 tareekh, us din (e.date) ki is khate ki entries, ☐ default UN-tick, ☑ Sab, ✓ n/N, '🗑 N entries hatao (POS se bhi)' -> confirm -> save deleted 'noask' (kx jori bhi) / transfer = commitAccountTransfer remove. Har qatar ⏳/✅/✕.
+- Na hatne wali (wajah likhi): POS purchase bill, HBL jora, posAuto, posted.
+- POS voucher = PC pos-khata-sync ka purana raasta (entry deleted -> posDeleteVoucher). PC badla nahi.
+- AI nahi. Test: sirf node --check.
