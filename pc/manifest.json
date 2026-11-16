@@ -1,11 +1,11 @@
 {
- "version": "2026-11-16.5",
+ "version": "2026-11-16.6",
  "note": "raat-report v2.2 + kh-wa v1.10: reports menu 8 = maal khatam hone wala (sirf maangne par). Pichhla: hz-wa v1.1 (hazri number se) + kh-wa v1.9 (reports sab ko, nafa sirf malik, sab codes) + raat-report v2.1 + larka-stats v3 (godam ka maal larke ki sale mein nahi) + wa-out v1.25. Pichhla: raat-report v2.0: subah ki udhaar report (N din se wasooli nahi) malik ke WhatsApp par. Pichhla: doctor v3.2: server PC ka naam (blueAccess/serverPc, default DESKTOP-Q1SLV77) - doosre naam wala PC scripts band rakhe. Pichhla: hz-wa v1.0 (nayi file) + wa-out v1.22: larkon ki bahar jane ki request WhatsApp se. Pichhla: 14 Nov: raat-report v1.9 (POS Sale.COGS khana nahi = andaza, aaj ki report, app ko haal) + item-report v1.9 (nafa COGS ke baghair). Pichhla: wa-parchi v2.33: gahak ka number alag paigham mein bhi + 0371\u2026 jaise naye number. Pichhla: raat-report v1.8: report na bane / atak jaye to malik ko WhatsApp par wajah. Pichhla: \ud83d\udc65 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: \ud83d\udc64 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (\u26a0\ufe0f Print auto / \u2705 Parchi Mubeen ko gayi / \u23f0 / \u25b6\ufe0f \u2014 waOut pp) + \"Print auto 0344\u2026\" reply bhi; Bu",
  "files": {
   "thermal-name.js": "e79168370a7ec72bc9e8483563152c84f754d107c545d053984769e8f649b542",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
   "bills-auto.bat": "fc112e09019540b27ceefbc50a017ee68855b93d98c89c28099598a2cc11b8c1",
-  "doctor.js": "70ab19d5d8a1d5ed04f9b05ad5fe41909c5d04025b0cc15f941cae9dcc94611e",
+  "doctor.js": "891e1989e799bfd7451cc5387dcca7ebc476eb4a491474f28e8ef37b9b34c6a9",
   "farq-auto.bat": "43b036da0a9dc1c7f7ffd42f085a57b6ee2c208ce093bcd135e9720d15858f8c",
   "item-auto.bat": "3cf5fb7147862e01e667fcb2689428c9303539fe85b6b14762788658b6a108a3",
   "item-post.js": "e0f8b90ef8db435a2d5913d94784a59880d48edf4625288b30cde6eb2768563e",

@@ -4880,3 +4880,8 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
 
 - doctor v3.7 (16 Nov 12:15): malik — 'naye PC par taar lagi hai' (to wajah taar nahi). `jobsBy()` (Win32_PrintJob) = har printer ki line mein ruki jobs: 🖨 list mein '⏳ N job line mein'
   + spoolFix se pehle `sp.q` (kis printer ki kitni). Agli dafa atke to pata chale thermal / label / A4 mein se kaun. Sirf parhna. manifest 2026-11-16.5.
+
+- doctor v3.8 / app v2.292.2 (16 Nov 12:50): malik ki screenshot — 'EPSON TM-T88IV Receipt · ⏳ 10 job line mein' (🟢, naam mil gaya, taar naye PC mein). Yani printer parchiyan
+  le raha hai magar chhaap nahi raha (driver ka port ESDPRT001 / printer error) — yehi spooler ke 100% ki jar thi. prnTick: thermal line mein 5+ jobs do jaanch tak kam na hon ->
+  `spoolFix(0,'q',n)` (line saaf + thermal-off + scripts dobara), app laal dabba 'Printer chhap nahi raha tha — N parchi phansi thin'. Chalu sirf malik ke button se.
+  Asal ilaaj dukan par: Windows 'Print Test Page' / Epson port (USB) / printer ki batti. manifest 2026-11-16.6. AI nahi.
