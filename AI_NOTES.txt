@@ -8515,3 +8515,7 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
   doctor pcPrinters.want mein thermal ke liye `th`, `d` (driver), `raw` (driver mein 'Generic' = 1). App 🖨 dabba: driver saada na ho = ⛔ laal 'is line se hamari parchi nahi nikalti',
   aur '▶ Thermal dobara chalu' ki jagah band button (sirf roki hui haalat mein — chalti parchi ko khud nahi rokta). server-setup.ps1 qadam 6: 'TM-T88IV' line khud (admin + Epson laga ho), POS ki line nahi chherta.
   manifest 2026-11-16.10 (server-setup manifest mein nahi — irm se seedha). Asal PC par test nahi. AI nahi.
+
+- 16 Nov 14:32 (sirf notes): thermal ka 'hal' GHALAT nikla. 14:22 label 'printer nahi mila', 14:28 parchi 'print nahi hua' -> Spooler: Stopped. Windows record: 13:37:30 + 13:41:30 spoolsv crash (ntdll, 0xc0000005 / 0xc0000374),
+  14:18:47 crash faulting module EpsonPH.dll 1.3.8.0 (2009), 7034 'terminated unexpectedly 3 time(s)' = khud dobara nahi chala. Pehla crash nayi line banne (13:35) ke 2 min baad, jab thermal abhi roka hua tha
+  -> shak: Epson ke port par doosri line (Generic) hi wajah. thermal-off False / thermal-ok True tha (chowkidar ne nahi roka). Malik ko command di: nayi line hatao + thermal roko. Agla kaam (OK par): driver ke zariye chhaapna.
