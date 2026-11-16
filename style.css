@@ -8396,3 +8396,16 @@ html.dk body #list .kt,html.dk body #list .ledger-item.kt-r{background:#111a2b!i
 html.dk body #list .kt-h{background:#18233a}
 html.dk body #list .kt-d b{color:#e6edf8}
 html body .dt-view button.is-in{font-weight:800}
+
+/* v2.304.0: khata table chhota (malik: 'Hum ne dena hai thora small ho to table mein aa jaye') */
+html body #list .kt-h,html body #list .ledger-item.kt-r{grid-template-columns:minmax(0,1fr) 68px 68px 78px!important}
+html body #list .kt-h{font-size:11px}
+html body #list .kt-h small{font-size:10px}
+html body #list .kt-h>span,html body #list .kt-r>.kt-d,html body #list .kt-r>.kt-a,html body #list .kt-r>.kt-b{padding:5px 4px}
+html body #list .kt-d b{font-size:12px;line-height:1.2;white-space:normal;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;word-break:break-word}
+html body #list .kt-d small{font-size:10.5px}
+html body #list .kt-a,html body #list .kt-b{font-size:12px;letter-spacing:-.2px}
+html body #list .kt-b small{font-size:10px}
+html body #list .kt-p{font-style:normal;font-size:9px;font-weight:700;opacity:.8}
+html body #list .kt-n{display:block;white-space:nowrap}
+html body #list .kt-a .kt-n{font-size:11.5px;letter-spacing:-.3px}
