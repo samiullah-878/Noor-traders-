@@ -1,5 +1,5 @@
 // ============================================================
-//  thermal-name.js  v1.0 (2026-11-16) — 🧾 THERMAL PRINTER KA NAAM KHUD
+//  thermal-name.js  v1.1 (2026-11-16 dopahar: 🛑 thermal-off.txt ho to khud chun-na BAND — purana pakka naam; doctor v3.6 spooler atakne par lagata hai) · v1.0 (2026-11-16) — 🧾 THERMAL PRINTER KA NAAM KHUD
 //  Malik: naye server PC par printer ka naam "EPSON TM-T88IV Receipt" hai, scripts mein "TM-T88IV" pakka likha tha -> parchi nahi.
 //  "Epson TM-T88IV receipt printer hi asal hai, us ko add kar do auto."
 //  Qaida (pick): 1) bilkul "TM-T88IV" naam ka printer ho = wohi (purana server, kuch nahi badla)
@@ -19,7 +19,10 @@ function pick(names) {
   return c[0] || DEF;
 }
 function save(n) { try { fs.writeFileSync(FILE, JSON.stringify({ n, at: Date.now() })); } catch {} }
+const OFF = path.join(__dirname, 'thermal-off.txt');
+const isOff = () => { try { return fs.existsSync(OFF); } catch { return false; } };
 function name() {
+  if (isOff()) return DEF;   // v1.1: 🛑 spooler atka tha — malik ke '▶ Dobara chalu' tak pakka naam (naye server par = print nahi, spooler mehfooz)
   let c = null; try { c = JSON.parse(fs.readFileSync(FILE, 'utf8')); } catch {}
   if (c && c.n && Date.now() - (Number(c.at) || 0) < 12 * 3600000) return String(c.n);
   if (process.platform === 'win32') {
@@ -31,4 +34,4 @@ function name() {
   }
   return (c && c.n) ? String(c.n) : DEF;
 }
-module.exports = { name, pick, save, DEF, FILE };
+module.exports = { name, pick, save, DEF, FILE, OFF, isOff };

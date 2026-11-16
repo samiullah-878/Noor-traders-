@@ -31,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.5';
+const VER = '3.6';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -253,6 +253,7 @@ async function cpuTick() {
       const p = d / (dt * cores) * 100; sum += p;
       const k = cpuLabel(x.n, pid), g = grp.get(k) || { n: k, p: 0, m: 0, c: 0 }; g.p += p; g.m += x.m; g.c++; grp.set(k, g);
     }
+    try { const sp = grp.get('spoolsv'); spoolWatch(sp ? sp.p : 0, cores); } catch {}   // v3.6: 🛑 print spooler atka?
     let list = [...grp.values()].filter(g => g.p >= 0.5).sort((a, b) => b.p - a.p).slice(0, 6).map(g => ({ n: g.c > 1 ? `${g.n} ×${g.c}` : g.n, p: Math.min(100, Math.round(g.p * 10) / 10), m: g.m }));
     const rest = Math.round((cpu - list.reduce((a, g) => a + g.p, 0)) * 10) / 10;   // jo program minute ke andar shuru ho kar khatam ho gaye (chhoti ffmpeg / PowerShell) + chhote
     if (rest >= 3) list.push({ n: 'baqi (chhote + jo shuru ho kar khatam ho gaye)', p: rest, m: 0 });
@@ -260,6 +261,39 @@ async function cpuTick() {
     if (cpu >= 90) { if (!CPU.hot) CPU.hot = now; } else CPU.hot = 0;
     const ref = cpuRef(); if (ref) await ref.set({ at: now, host: os.hostname(), cores, cpu, ram, ramGb: Math.round(os.totalmem() / (1 << 30)), top: list, hj: JSON.stringify(CPU.hist), hot: CPU.hot || 0, ver: VER }).catch(() => {});
   } catch (e) { log('⚠ cpu: ' + String(e?.message || e).slice(0, 80)); } finally { CPU.busy = false; }
+}
+
+// ---------- 🛑 v3.6: PRINT SPOOLER KA CHOWKIDAR (16 Nov 2026 12:03 — naye server par spoolsv 100% CPU, doctor 15 min chup; malik dukan par nahi: 'is ko auto karo') ----------
+//   spoolsv 2 minute lagatar ek poore core se zyada (ya PC ka 8%+) = atka: (1) thermal-off.txt (thermal-name v1.1 -> scripts purana pakka naam, yani naye server par thermal print BAND)
+//   (2) sab printers ki ruki jobs hatao + Spooler dobara (admin na ho to sirf jobs) (3) thermal wali scripts band -> agle chakkar mein naye naam se shuru.
+//   Wapas chalu SIRF malik ke hukum se (app 🖨 dabba '▶ Thermal dobara chalu' -> blueAccess/thermalOn.at). 30 min mein ek dafa se zyada nahi. taskkill /T nahi.
+const SPL = { n: 0, at: 0, busy: false, info: null };
+const TH_SCRIPTS = ['pos-khata-sync.js', 'sale-post.js', 'transfer-sync.js', 'post-farq.js', 'factory-post.js', 'a4-print.js', 'wa-parchi.js'];
+const thOffFile = () => path.join(DIR, 'thermal-off.txt');
+function thRestart() { const list = procs(); let n = 0; if (list) for (const s of services) { if (!TH_SCRIPTS.includes(s.script)) continue; for (const q of list) if (runsScript(q, s)) { killPid(q.pid); n++; } } return n; }
+function spoolWatch(p, cores) {
+  const lim = Math.max(8, 100 / (cores || 1));
+  if (p >= lim) SPL.n++; else SPL.n = 0;
+  if (SPL.n >= 2 && !SPL.busy && Date.now() - SPL.at > 30 * 60000) spoolFix(p).catch(e => log('⚠ spooler: ' + String(e?.message || e).slice(0, 80)));
+}
+async function spoolFix(p) {
+  SPL.busy = true; SPL.at = Date.now();
+  try {
+    log(`🛑 Print Spooler atka (spoolsv ${Math.round(p)}%) — ruki jobs hata raha hoon, thermal print ROK raha hoon`);
+    try { fs.writeFileSync(thOffFile(), String(Date.now())); } catch {}
+    const out = await psRun("$r=0; try { Stop-Service Spooler -Force -ErrorAction Stop; Remove-Item \"$env:windir\\System32\\spool\\PRINTERS\\*\" -Force -ErrorAction SilentlyContinue; Start-Service Spooler -ErrorAction Stop; $r=1 } catch { try { Start-Service Spooler -ErrorAction SilentlyContinue } catch {} }; $n=0; if ($r -eq 0) { Get-CimInstance Win32_Printer | ForEach-Object { $j=@(Get-PrintJob -PrinterName $_.Name -ErrorAction SilentlyContinue); $n+=$j.Count; $j | Remove-PrintJob -ErrorAction SilentlyContinue } }; \"SPL|$n|$r\"", 90000);
+    const m = String(out || '').match(/SPL\|(\d+)\|(\d)/);
+    const k = thRestart();
+    SPL.info = { at: Date.now(), cpu: Math.round(p), jobs: m ? Number(m[1]) : -1, rs: m ? Number(m[2]) : -1, k };
+    log(`🛑 spooler: ${m ? m[1] + ' job hati, Spooler ' + (m[2] === '1' ? 'dobara chala' : 'dobara NAHI chala (admin nahi)') : 'PowerShell se jawab nahi'} · ${k} thermal script dobara shuru`);
+    PRN.last = '';
+  } finally { SPL.busy = false; SPL.n = 0; }
+}
+async function thOnCheck() {   // malik ka '▶ Thermal dobara chalu'
+  let offAt = 0; try { offAt = Number(fs.readFileSync(thOffFile(), 'utf8')) || 1; } catch { return; }
+  const d = fb(); if (!d) return;
+  try { const s = await d.collection('businesses').doc('noor-traders').collection('blueAccess').doc('thermalOn').get(); const at = Number(s.exists && s.data() && s.data().at) || 0;
+    if (at > offAt) { try { fs.unlinkSync(thOffFile()); } catch {} const k = thRestart(); SPL.info = null; SPL.at = 0; PRN.last = ''; log(`▶ thermal dobara chalu (malik) — ${k} script dobara shuru`); } } catch {}
 }
 
 // v3.3: 🖨 PRINTERS — Windows mein lage printers (naam · driver · port · haalat) + scripts ke zaroori naam. Sirf parhna, kuch nahi badalta. Async + hadd (doctor nahi rukta).
@@ -274,7 +308,7 @@ function prnWant(names) {   // scripts jis naam se chhapti hain
 // v3.5: 🧾 thermal ka naam khud (thermal-name.js) — "TM-T88IV" na ho to jis ke naam mein TM-T88 ho (naya server: "EPSON TM-T88IV Receipt"). File na aayi ho = purana pakka naam.
 let TH_SAID = '';
 function thName(names) {
-  try { const T = require('./thermal-name.js'), n = T.pick(names || []); let c = null; try { c = JSON.parse(fs.readFileSync(T.FILE, 'utf8')); } catch {}
+  try { const T = require('./thermal-name.js'), n = (T.isOff && T.isOff()) ? T.DEF : T.pick(names || []); let c = null; try { c = JSON.parse(fs.readFileSync(T.FILE, 'utf8')); } catch {}
     if (names && names.length && (!c || c.n !== n || Date.now() - (Number(c.at) || 0) > 6 * 3600000)) T.save(n);
     if (n !== TH_SAID) { TH_SAID = n; log('🧾 thermal printer: ' + n); }
     return n; } catch (e) { return 'TM-T88IV'; }
@@ -282,6 +316,7 @@ function thName(names) {
 async function prnTick() {
   if (BLOCKED || PRN.busy || process.platform !== 'win32') return; PRN.busy = true;
   try {
+    await thOnCheck();
     const out = await psRun('Get-CimInstance Win32_Printer | ForEach-Object { "$($_.Name)|$($_.DriverName)|$($_.PortName)|$([int]$_.WorkOffline)|$([int]$_.PrinterStatus)|$([int]$_.Default)" }', 20000);
     if (!out.trim()) return;   // jawab nahi = kuch mat likho (khali list jhooti hoti)
     const list = [];
@@ -290,10 +325,12 @@ async function prnTick() {
     list.sort((x, y) => x.n.localeCompare(y.n));
     const low = s => String(s || '').trim().toLowerCase();
     const want = prnWant(list.map(x => x.n)).map(w => { const f = list.find(x => low(x.n) === low(w.n)); return { k: w.k, n: w.n, ok: f ? 1 : 0, off: f ? f.off : 0 }; });
-    const sig = JSON.stringify([list, want]), now = Date.now();
+    let thOff = 0; try { thOff = Number(fs.readFileSync(thOffFile(), 'utf8')) || 1; } catch {}
+    const sp = thOff ? { off: thOff, ...(SPL.info || {}) } : null;
+    const sig = JSON.stringify([list, want, sp]), now = Date.now();
     if (sig === PRN.last && now - PRN.at < 10 * 60000) return;   // sirf badle to / har 10 min
     const ref = prnRef(); if (!ref) return;
-    await ref.set({ at: now, host: os.hostname(), list: list.slice(0, 30), want, ver: VER }); PRN.last = sig; PRN.at = now;
+    await ref.set({ at: now, host: os.hostname(), list: list.slice(0, 30), want, sp, ver: VER }); PRN.last = sig; PRN.at = now;
   } catch (e) { log('⚠ printers: ' + String(e?.message || e).slice(0, 80)); } finally { PRN.busy = false; }
 }
 

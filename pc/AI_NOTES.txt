@@ -4867,3 +4867,13 @@ Malik ne command maangi -> purane PC par: node / bat band, Startup saaf, folder 
 Sabaq: (1) doctor ka tala sirf us PC par chalta hai jahan naya doctor chale — purana PC list mein na aaye to haath se band karna parta hai. (2) PowerShell mein line-line paste par
 akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block mein. (3) process ko 'khata-sync' lafz se mat dhoondo — command line sirf `node x.js` hoti hai.
 (4) folder rename na ho to chaabi files (.BAND) ka naam badalna kaafi hai. Baqi: malik aaj ki deleted entries wapas laye; label par Urdu naam + naye server ki kami ki jaanch.
+
+
+=== v2.292.0 / doctor v3.6 / thermal-name v1.1 (16 Nov 2026, 12:10) — 🛑 PRINT SPOOLER KA CHOWKIDAR ===
+12:03 malik ki screenshot: naye server par CPU 100% = `spoolsv` (Windows Print Spooler), doctor 15 min chup. Sab se mumkin wajah: thermal-name v1.0 ke baad parchiyan
+'EPSON TM-T88IV Receipt' par jane lagin aur job line mein atak gayi (printer ki taar shayad abhi purane PC mein / driver). Malik dukan par nahi: 'is ko auto karo'.
+- doctor `spoolWatch` (cpuTick ke andar): spoolsv 2 minute lagatar >= ek core (ya 8%) -> `spoolFix`: thermal-off.txt + Spooler band / spool files saaf / chalu (admin na ho to
+  sirf apni ruki jobs hatao) + thermal wali 7 scripts band (doctor dobara shuru karta hai, ab purane pakke naam se = naye server par thermal print BAND). 30 min mein ek dafa.
+- thermal-name v1.1: thermal-off.txt ho to `name()` = 'TM-T88IV'. doctor `thOnCheck`: `blueAccess/thermalOn.at` > flag ka waqt -> flag hata + scripts dobara.
+- pcPrinters doc mein `sp` {off, at, cpu, jobs, rs, k}; app 🖨 dabba: laal '🛑 Thermal print ROKA hua hai' + malik ka '▶ Thermal dobara chalu' (cloud.thermalOn).
+- TEST: node --check. Asal Windows par nahi chalaya; doctor chup ho to yeh update NT-PRINT ke chowkidar ke baad hi pohanchega. AI nahi.
