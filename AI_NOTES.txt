@@ -8614,3 +8614,7 @@ Malik: 'khata print PDF par date aaj kal week monthly apni date bhi upar chips'.
 
 === v2.306.0 (16 Nov 2026) — ☑ Tally chip search ke andar + JAGAH BACHAO qaida ===
 - Malik: Tally chip bara tha aur poori qatar le raha tha -> ab search box ke andar daayein chhota chip (ktMount, label.search .kt-sbtn); 'Sab tick hatao' ⋮ mein (data-mn). Qaida CLAUDE.md mein: naya chip kabhi alag qatar mein nahi. AI nahi.
+
+
+=== v2.307.0 (16 Nov 2026) — ☑ Tally gol button ===
+- Malik: Tally button gol aur chhota, search ke andar. 32px gol, chalu = peela + narangi badge mein ginti (title mein n/N). AI nahi.

@@ -8428,3 +8428,8 @@ label.search .kt-sbtn b{font-weight:800}
 label.search.has-kt input{padding-right:104px!important}
 html body #list .kt-top{margin:0 0 4px}
 html body label.search.has-kt{position:relative}
+
+/* v2.307.0: ☑ Tally = chhota GOL button search ke andar (malik: 'gol sa banao') */
+html body label.search .kt-sbtn{width:32px!important;height:32px!important;min-height:0!important;min-width:0!important;padding:0!important;border-radius:50%!important;justify-content:center;font-size:16px!important;line-height:1!important;right:7px!important;box-shadow:0 1px 3px rgba(15,23,42,.15)}
+html body label.search .kt-sbtn b{position:absolute;top:-5px;right:-5px;min-width:16px;height:16px;padding:0 3px;border-radius:999px;background:#d97706;color:#fff;font-size:10px;line-height:16px;font-weight:800;text-align:center}
+html body label.search.has-kt input{padding-right:48px!important}
