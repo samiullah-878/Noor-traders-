@@ -4993,3 +4993,5 @@ Malik ne DigiKhata PDF ki tasveer bheji: 'jab bhi PDF / print nikle aisa aana ch
 
 === v2.307.0 (16 Nov 2026) — ☑ Tally gol button ===
 - Malik: Tally button gol aur chhota, search ke andar. 32px gol, chalu = peela + narangi badge mein ginti (title mein n/N). AI nahi.
+
+[2026-11-17] md pkg v49: '⛔ Subah 11 tak' (raat 12–10:59) ab SIRF Settings, Play Store, MacroDroid, Facebook/Messenger, Instagram/Threads, TikTok, Snapchat, X, YouTube band — baqi sab khuli (pehle sab band thi). 🚨 10 min wahi; sawal ke 20 s MacroDroid nahi rokta (apna popup). MCP validator VALID. Phone par test nahi. AI nahi.

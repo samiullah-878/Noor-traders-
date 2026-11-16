@@ -3,7 +3,7 @@
 #   SMS (bank OTP) · ghari / alarm · Settings · system (launcher, keyboard, permission, systemui). 🚨 Zaroori: din mein 1 dafa 10 minute (sbEmDay) — us dauran sab khula.
 #   Do trigger: har app khulne par + har 1 minute (jo app pehle se khuli ho). Call ke dauran kuch nahi. AI nahi. Phone par yahan test nahi ho sakta.
 import json, os
-from cb import setv, expr, sstr, lt, gt, strne, boolc, trig, SCR, tod, iff, END, ELSE, HOME, pause, var, lvar, NOW
+from cb import setv, expr, sstr, lt, gt, strne, boolc, trig, SCR, tod, iff, END, ELSE, HOME, pause, var, lvar, NOW, anyof
 from bank import PK as BANKS
 D = os.path.dirname(os.path.abspath(__file__))
 EMG = 600
@@ -22,14 +22,19 @@ def ft(text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "optio
     "bgColor": -15788246, "textColor": -1, "alpha": 92, "updateLocation": False, "xPosition": 0.5, "yPosition": 0.04, "padding": 8, "textSize": 16,
     "corners": 14, "alignment": 0, "moveOption": 0, "variableWidth": True, "widthPercentage": 90, "showOverStatusBar": False, "enableShadow": True}
 FTHIDE = {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": "ntsb"}
+# v49 (17 Nov, malik: "Settings, Play Store, social media, YouTube, MacroDroid band — baqi sab khuli"): ab SIRF yeh band, baqi sab khuli (pehle ulta: sab band siwae ALLOW)
+NOBLOCK = ['android.settings', 'android.vending', 'facebook', 'instagram', 'tiktok', 'musically', 'snapchat', 'youtube', 'twitter', 'com.zhiliaoapp']
+BLOCK2 = [strne("pk", "", True), NOT_LAUNCHER, NO_CALL, anyof(*[has("{lv=pk}", p, True) for p in NOBLOCK],
+      # MacroDroid bhi band — magar 🚨 sawal ka popup khud MacroDroid ki khirki hai: sawal ke 20 s tak usay mat chhero
+      {'m_classType': 'LogicConstraint', 'm_SIGUID': 0, 'm_isOrCondition': False, 'm_constraintList': [has("{lv=pk}", 'macrodroid', True), gt('askAge', 20, True)]})]
 PATTI = [HOME, ft("⛔ Subah 11 baje khulega"), pause(3), FTHIDE]
 BLOCKED = [strne("pk", "", True), NOT_LAUNCHER, NO_CALL, has(ALLOWS, ",{lv=pk},", False)] + [has("{lv=pk}", p, False) for p in PARTS]
 a = [
     expr("emL", "{v=sbEm}-" + NOW, True),
     iff([tod(0, 0, 10, 59), SCR, lt("emL", 1, True)]),
       iff([trig(T2, "App khuli")]), sstr("pk", "{app_package}", True), ELSE, sstr("pk", "{fg_app_package}", True), END,
-      iff(BLOCKED),
-        expr("askAge", NOW + "-{v=sbAsk}", True),
+      expr("askAge", NOW + "-{v=sbAsk}", True),
+      iff(BLOCK2),
         iff([trig(T2, "App khuli"), strne("sbEmDay", "{dayofmonth}"), gt("askAge", 30, True)]),
           expr("sbAsk", NOW),
           iff([boolc("never", True)]),
@@ -48,7 +53,7 @@ a = [
 ]
 SB = {"macroExportVersion": 1, "macro": {
     "m_name": "⛔ Subah 11 tak",
-    "m_description": "Raat 12 se subah 11 tak sab apps band — siwae phone / calls, WhatsApp, banking, MacroDroid, Chrome, SMS, ghari, Settings. "
+    "m_description": "Raat 12 se subah 11 tak SIRF Settings, Play Store, MacroDroid, social media (Facebook, Instagram, TikTok, Snapchat, X, Threads, Messenger) aur YouTube band — baqi sab apps khuli. "
                      "Band = Home + 3 s patti. 🚨 Zaroori: din mein 1 dafa 10 minute. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1,
     "localVariables": [lvar("emL"), lvar("askAge"), lvar("pk", 2), lvar("never", 0)],
