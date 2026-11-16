@@ -8494,3 +8494,8 @@ akela `return` hifazat nahi — poori command ek `if(...){...}else{...}` block m
   (nt-parchi WritePrinter), magar naye PC ka Epson driver (APD 'ReceiptE4', port ESDPRT001) usay printer tak nahi pohanchata -> Spooler ghoomta hai. Yeh meri thermal-name wali tabdeeli se
   shuru hua (us se pehle is PC se parchi jati hi nahi thi). AB: khud chuna naam SIRF malik ki ijazat se (thermal-ok.txt, '▶ Thermal dobara chalu'); ijazat na ho = 'TM-T88IV' (print nahi).
   Update lagte hi ek dafa `spoolFix(0,'new')`: line saaf + Spooler dobara ki koshish + thermal scripts dobara. spoolFix ok file bhi hatata hai. manifest 2026-11-16.7. AI nahi.
+
+- thermal-name v1.3 / doctor v3.10 (16 Nov 13:35): malik — 'hamara POS bhi to (isi Epson par) print nikal raha hai'. Yani printer / taar / driver aam (driver wale) print ke liye theek;
+  hamari scripts RAW data seedha bhejti hain aur yeh APD driver ('ReceiptE4', port ESDPRT001) RAW job ko nahi nikalta. Hal ka plan: naye PC par DOOSRI line 'TM-T88IV' Windows ke
+  'Generic / Text Only' driver se USI port par (POS wali line nahi chherni) -> malik '▶ Thermal dobara chalu'. Roka hua naam ab 'TM-T88IV-BAND' (taake nayi line lagte hi bina ijazat na chhape).
+  manifest 2026-11-16.8. Asal Windows par test nahi. AI nahi.
