@@ -4970,3 +4970,9 @@ Malik ne DigiKhata PDF ki tasveer bheji: 'jab bhi PDF / print nikle aisa aana ch
 - bill-clip v2.6, live-cam v1.5 (channel purane naam se bhi), pos-sales-dekho v2.13, gate-pass v1.3, raat-report v2.3 = pcNames ab PN.names().
 - tally.js openSetup: list = printPCs (🟢/🔴/⚪, 🖥 server = billClipPc.host) + aaj ke bill counter; purane alias wale bill dohra nahi. CSS .bt-chn.
 - AI nahi. Asal PC par test nahi hua (stub test hua).
+
+
+=== v2.303.0 (16 Nov 2026) — 📒 Khata screen = DigiKhata jaisa table ===
+- Malik: khate mein do alag khanon ki jagah ek table — tafseel | Payment di | Saman liya / Wasooli | aage baqaya.
+- app.js ledgerTblHTML + khView/paintKhView (sam-kh-view), index.html .dt-view (⋮ 'Khate ka view': 📋 Table / ▥ Purana view), style.css .kt / .kt-h / .kt-r.
+- Qatar tap = wahi li-x chips (edit, tasveer, print). AI nahi. Asal phone par test baqi (sirf namoona render).

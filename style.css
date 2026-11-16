@@ -8370,3 +8370,29 @@ html body #dialogBody .kr-row .kr-own{display:inline-flex;align-items:center;gap
 html body #dialogBody .kr-row .kr-own.is-in{border-color:#2563eb;box-shadow:0 0 0 2px rgba(37,99,235,.18)}
 html body #dialogBody .kr-row .kr-own input{min-height:28px!important;height:28px;padding:0 4px!important;border:0!important;background:transparent!important;font-size:12.5px!important;width:auto;max-width:132px}
 html.dk body #dialogBody .kr-row{background:rgba(255,255,255,.06)}html.dk body #dialogBody .kr-row .kr-c{background:rgba(255,255,255,.08)!important;color:#dbe6ff!important}html.dk body #dialogBody .kr-row .kr-own{background:rgba(255,255,255,.06)}
+
+/* v2.303.0: 📒 khata table (DigiKhata jaisa) */
+html body #list .kt{background:#fff;border:1.5px solid #1f2937;border-radius:10px;overflow:hidden}
+html body #list .kt-h,html body #list .ledger-item.kt-r{display:grid!important;grid-template-columns:minmax(0,1fr) 76px 76px 88px;align-items:center;column-gap:0}
+html body #list .kt-h{position:sticky;top:0;z-index:2;background:#eef2f8;border-bottom:1.5px solid #1f2937;font-weight:800;font-size:12.5px}
+html body #list .kt-h>span{padding:6px 6px;border-left:1px solid #cfd6e2;min-width:0;line-height:1.15;overflow:hidden;text-overflow:ellipsis}
+html body #list .kt-h>span:first-child{border-left:0}
+html body #list .kt-h>span:not(:first-child){text-align:right}
+html body #list .kt-h small{display:block;font-size:10.5px;font-weight:700;opacity:.85;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #list .ledger-item.kt-r{padding:0!important;margin:0!important;border:0!important;border-bottom:1px solid #e3e8f0!important;border-radius:0!important;box-shadow:none!important;background:#fff!important;cursor:pointer;min-height:0}
+html body #list .ledger-item.kt-r.transfer-entry{background:#f6f2ff!important}
+html body #list .ledger-item.kt-r.open{background:#f3f7ff!important}
+html body #list .kt-r>.kt-d,html body #list .kt-r>.kt-a,html body #list .kt-r>.kt-b{padding:6px 6px;min-width:0;border-left:1px solid #edf0f5;align-self:stretch;display:flex;flex-direction:column;justify-content:center}
+html body #list .kt-r>.kt-d{border-left:0}
+html body #list .kt-d b{font-size:13.5px;font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#1f2937}
+html body #list .kt-d b i{font-style:normal;font-weight:500;color:#475569}
+html body #list .kt-d small{font-size:12px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #list .kt-a{text-align:right;font-size:13.5px;font-weight:800;white-space:nowrap}
+html body #list .kt-b{text-align:right;font-size:13px;font-weight:800;white-space:nowrap}
+html body #list .kt-b small{display:block;font-size:11px;font-weight:700;opacity:.8}
+html body #list .kt-r>.li-x{grid-column:1/-1;padding:0 8px 8px}
+html body #list .kt-r:not(.open)>.li-x{display:none!important}
+html.dk body #list .kt,html.dk body #list .ledger-item.kt-r{background:#111a2b!important;border-color:#2a3650!important}
+html.dk body #list .kt-h{background:#18233a}
+html.dk body #list .kt-d b{color:#e6edf8}
+html body .dt-view button.is-in{font-weight:800}
