@@ -31,7 +31,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.3';
+const VER = '3.4';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -300,21 +300,53 @@ const SRV_DEF = 'DESKTOP-Q1SLV77', SRV_FILE = path.join(DIR, 'server-pc.txt');
 const srvRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('serverPc');
 const blockRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcBlocked');
 let BLOCKED = false, blockSaid = '';
+// ---------- 🆔 v3.4: PC KI APNI PEHCHAN (malik 16 Nov 2026: purana + naya server DONO ka naam ek — dono chale, purane ne app ki entries hata din) ----------
+//   Windows MachineGuid ka hash (har Windows ka alag; folder copy se nahi badalta / nahi jata). serverPc.mid (malik app se "Yehi server") ho to SIRF wohi PC server — naam nahi dekha jata.
+//   mid na chuna ho = purana naam wala tala (kuch nahi badalta). Apni pehchan na mile = naam wala tala (asal server ghalti se band na ho).
+//   Har PC (band wala bhi) blueAccess/pcSeen.m.<mid> likhta hai taake malik app mein dono dekh kar chune.
+const ME = { mid: '', got: false, info: null, infoAt: 0 };
+let SRV_MID = '';
+function myMid() {
+  if (ME.got) return ME.mid; ME.got = true;
+  if (process.platform !== 'win32') return '';
+  try {
+    const out = execSync('reg query "HKLM\\SOFTWARE\\Microsoft\\Cryptography" /v MachineGuid', { encoding: 'utf8', windowsHide: true, timeout: 10000, stdio: ['ignore', 'pipe', 'ignore'] });
+    const g = (out.match(/MachineGuid\s+REG_SZ\s+([0-9a-fA-F-]{8,})/) || [])[1] || '';
+    if (g) ME.mid = crypto.createHash('sha256').update('nt-pc|' + g.toLowerCase()).digest('hex').slice(0, 12);
+  } catch (e) { log('⚠ PC ki pehchan nahi mili: ' + String(e?.message || e).slice(0, 80)); ME.got = false; }
+  return ME.mid;
+}
+const seenRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcSeen');
+async function seenTick(run) {
+  const mid = myMid(); if (!mid) return;
+  try {
+    if (!ME.info || Date.now() - ME.infoAt > 6 * 3600000) {
+      const out = await psRun('$o=Get-CimInstance Win32_OperatingSystem; $c=Get-CimInstance Win32_Processor | Select-Object -First 1; $s=Get-CimInstance Win32_ComputerSystem; "$($o.InstallDate.ToString(\'yyyy-MM-dd\'))|$($c.Name)|$([math]::Round($s.TotalPhysicalMemory/1GB))|$($s.Model)"', 20000).catch(() => '');
+      const x = String(out || '').trim().split(/\r?\n/).pop().split('|');
+      if (x.length >= 3) { ME.info = { win: String(x[0] || '').slice(0, 10), cpu: String(x[1] || '').replace(/\s+/g, ' ').trim().slice(0, 60), ram: Number(x[2]) || 0, mdl: String(x[3] || '').trim().slice(0, 40) }; ME.infoAt = Date.now(); }
+    }
+    let ip = ''; try { for (const l of Object.values(os.networkInterfaces())) for (const i of l || []) if (i.family === 'IPv4' && !i.internal && !ip) ip = i.address; } catch {}
+    const ref = seenRef(); if (!ref) return;
+    await ref.set({ m: { [mid]: { at: Date.now(), host: os.hostname(), run: run ? 1 : 0, doctor: VER, ip, ...(ME.info || {}) } } }, { merge: true });
+  } catch (e) { log('⚠ pcSeen: ' + String(e?.message || e).slice(0, 80)); }
+}
 async function serverName() {
-  let w = ''; const ref = srvRef();
+  let w = '', mid = '', ok = false; const ref = srvRef();
   if (ref) {
     let t;
     try {
       const d = await Promise.race([ref.get(), new Promise((_, no) => { t = setTimeout(() => no(Error('timeout')), 8000); })]);
-      w = String((d.exists && d.data() && d.data().host) || '').trim() || SRV_DEF;
-      try { fs.writeFileSync(SRV_FILE, w); } catch {}
+      const x = (d.exists && d.data()) || {};
+      w = String(x.host || '').trim() || SRV_DEF; mid = /^[0-9a-f]{12}$/.test(String(x.mid || '')) ? String(x.mid) : ''; ok = true;
+      try { fs.writeFileSync(SRV_FILE, w + '|' + mid); } catch {}
     } catch (e) { w = ''; }
     finally { clearTimeout(t); }
   }
-  if (!w) { try { w = fs.readFileSync(SRV_FILE, 'utf8').trim(); } catch {} }
+  if (!ok) { try { const c = fs.readFileSync(SRV_FILE, 'utf8').trim().split('|'); w = c[0] || ''; mid = /^[0-9a-f]{12}$/.test(c[1] || '') ? c[1] : ''; } catch {} }
+  SRV_MID = mid;
   return w || SRV_DEF;
 }
-const isServer = w => String(w).trim().toUpperCase() === String(os.hostname()).trim().toUpperCase();
+const isServer = w => { const me = SRV_MID ? myMid() : ''; return SRV_MID && me ? SRV_MID === me : String(w).trim().toUpperCase() === String(os.hostname()).trim().toUpperCase(); };
 async function blockedCycle(want) {
   BLOCKED = true;
   const list = procs(); let n = 0;
@@ -323,10 +355,10 @@ async function blockedCycle(want) {
     for (const q of list) if (runsBat(q, s) || runsScript(q, s)) { killPid(q.pid); n++; }
   }
   if (n) { try { execSync('taskkill /F /IM ffmpeg.exe', { stdio: 'ignore', windowsHide: true, timeout: 15000 }); } catch {} }
-  if (n || blockSaid !== want) log(`⛔ ye PC (${os.hostname()}) server nahi — server ka naam "${want}" hai. Scripts band${n ? ' (' + n + ' process band ki)' : ''}. Naam app > Settings > PC scripts se badalta hai.`);
+  if (n || blockSaid !== want) log(`⛔ ye PC (${os.hostname()}) server nahi — ${SRV_MID ? 'malik ne doosra PC server chuna hai' : 'server ka naam "' + want + '" hai'}. Scripts band${n ? ' (' + n + ' process band ki)' : ''}. App > Settings > PC scripts se badalta hai.`);
   blockSaid = want;
   const ref = blockRef();
-  if (ref) await ref.set({ at: Date.now(), host: os.hostname(), want, doctor: VER, n }).catch(e => log('⚠ pcBlocked: ' + e.message));
+  if (ref) await ref.set({ at: Date.now(), host: os.hostname(), want, doctor: VER, n, mid: myMid(), byMid: SRV_MID ? 1 : 0 }).catch(e => log('⚠ pcBlocked: ' + e.message));
 }
 
 // ---------- atka kaam (v2) ----------
@@ -385,8 +417,9 @@ async function cycle(why, full = true) {
     } else log('GitHub tak nahi pahuncha (internet?) — sirf jaanch');
     if (!services.length) try { services = JSON.parse(fs.readFileSync(path.join(DIR, 'manifest.json'), 'utf8')).services || []; } catch {}
     const srvWant = await serverName();   // v3.2: 🔒 sirf server ke naam wala PC
-    if (!isServer(srvWant)) { await blockedCycle(srvWant); if (restartSelf) { log('doctor.js khud nayi aayi — dobara shuru'); setTimeout(() => process.exit(0), 1500); } return; }
+    if (!isServer(srvWant)) { await blockedCycle(srvWant); if (full) await seenTick(false); if (restartSelf) { log('doctor.js khud nayi aayi — dobara shuru'); setTimeout(() => process.exit(0), 1500); } return; }
     if (BLOCKED) { BLOCKED = false; blockSaid = ''; log('✅ ab yehi PC server hai — scripts chalu'); }
+    if (full) seenTick(true);   // v3.4: intezar nahi (chakkar na ruke)
     let list = procs();
     if (list && hideOnce(list)) { await new Promise(r => setTimeout(r, 3000)); list = procs() || list; }
     const blind = !list;   // v2.9: process list nahi mili — andhe ho kar kuch shuru / band NAHI

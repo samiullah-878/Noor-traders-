@@ -8202,6 +8202,17 @@ html body #dialogBody .srv-b.ok{background:linear-gradient(180deg,#1f9d55,#178a4
 html body #dialogBody .srv-box input{flex:1 1 150px;min-width:0;height:34px;padding:0 10px;border-radius:11px;font-size:15px;text-transform:uppercase}
 html body #dialogBody .srv-box small{display:block;margin-top:6px;font-size:13px;opacity:.75}
 html body #dialogBody .srv-warn{margin:7px 0 0;padding:7px 9px;border-radius:10px;background:rgba(220,40,40,.12);color:#c62828;font-size:14px}
+/* v2.291.0: 🆔 PC ki pehchan — dono PC ki list */
+html body #dialogBody .srv-note{margin:7px 0 0;font-size:14px;opacity:.8}
+html body #dialogBody .srv-pcs{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(260px,100%),1fr));gap:7px;margin-top:8px}
+html body #dialogBody .srv-pc{min-width:0;padding:8px 10px;border-radius:12px;border:1px solid rgba(120,130,150,.35);background:rgba(120,130,150,.07)}
+html body #dialogBody .srv-pc.me{border-color:#178a48;background:rgba(31,157,85,.10);box-shadow:0 0 0 1px rgba(31,157,85,.35) inset}
+html body #dialogBody .srv-pcl{display:flex;flex-wrap:wrap;gap:6px;align-items:center;justify-content:space-between;font-size:15px}
+html body #dialogBody .srv-st{font-size:13px;padding:2px 9px;border-radius:999px;white-space:nowrap;border:1px solid rgba(120,130,150,.4)}
+html body #dialogBody .srv-st.run{color:#178a48;border-color:rgba(31,157,85,.5)}
+html body #dialogBody .srv-st.blk{color:#c62828;border-color:rgba(220,40,40,.45)}
+html body #dialogBody .srv-pci{margin-top:3px;font-size:14px;opacity:.9;overflow-wrap:anywhere}
+html body #dialogBody .srv-pca{margin-top:7px;display:flex}
 
 /* v2.285.0: Larka report — godam ka maal shamil nahi (larka-stats v3) */
 html body .lk-gd{display:block;margin:4px 2px 6px;font-size:13.5px;opacity:.8}

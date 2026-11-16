@@ -4833,3 +4833,16 @@ Malik: 'itni reports parhi nahi jayengi — bas inhein reports mein add kar do, 
 - App: cloud `getPcPrinters` + main file `prnHTML / prnPaint / prnLoad` -> Settings -> 🖥️ PC scripts mein `#pcPrn` dabba '🖨 Printers': upar zaroori naam ✅ mil gaya / ⚠️ band / ❌ is naam ka printer nahi; neeche har printer 🟢 / 🔴 + driver · port. Rules nahi badle (blueAccess malik parh sakta hai).
 - A4 printer ka naam is milan mein nahi (us ki apni screen 🖨 A4 Print mein haalat hai) — list mein nazar aata hai.
 - manifest 2026-11-16.1 (sirf doctor.js ka hash). TEST: node --check + parse ka namoona node mein. Asal Windows par nahi chalaya — malik se screenshot. AI nahi.
+
+
+=== v2.291.0 / doctor v3.4 (16 Nov 2026) — 🆔 PC KI APNI PEHCHAN SE TALA ===
+Malik: Daily Sale ki wasooli save ke baad ghayab + kharcha parchi purane PC se nikli -> purana server bhi chal raha tha. Dono PC ka naam ek (DESKTOP-Q1SLV77)
+is liye v3.2 ka naam wala tala dono ko server maanta tha. Purana PC apni purani POS DB dekhta hai -> naye server ka voucher us mein nahi -> pos-khata-sync
+'POS mein delete hua' -> app ki entry deleted. (Wajah andaza hai jab tak malik purana PC band kar ke test na kare.)
+- doctor: `myMid()` = Windows MachineGuid (reg query) ka sha256 12 harf; `serverName()` ab serverPc.mid bhi parhta (SRV_MID, cache server-pc.txt 'naam|mid');
+  `isServer` = mid chuna ho + apni pehchan mili -> sirf mid; warna purana naam wala. `seenTick(run)` har full chakkar (band PC bhi) -> `blueAccess/pcSeen.m.<mid>`
+  {at, host, run, doctor, ip, win (Windows install tareekh), cpu, ram, mdl}. pcBlocked mein mid / byMid.
+- App: cloud `getServerPc` (+mid, seen), `saveServerMid`, `saveServerPc` ab merge (mid na mite). Settings -> PC scripts -> 🔒 dabbe mein PC ki list
+  (`srvSeenHTML`): 🟢 chal raha / ⛔ band rakha / ⚪ purana, '✅ Yehi server' (confirm). 2 PC 10 min mein zinda + mid nahi = laal warning.
+- Jab tak malik na chune kuch nahi badalta. Cloned Windows (ek MachineGuid) = dono ek hi nazar aayenge — tab naam badalna hi hal.
+- manifest 2026-11-16.2. TEST: node --check + list ka node namoona. Asal Windows par nahi chalaya. AI nahi.
