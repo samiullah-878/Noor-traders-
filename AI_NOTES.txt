@@ -8581,3 +8581,6 @@ Malik ne DigiKhata PDF ki tasveer bheji: 'jab bhi PDF / print nikle aisa aana ch
 - khataTpData: v:2 + A rows; L/R bhi (purane PC ke liye).
 - PC pos-khata-sync w4b khataSlip: J.A ho to naya layout (line 1 '#. tareekh tafseel', line 2 baayan | daayan | baqaya, aakhir Kul); warna purana do-taraf.
 - Test: khataSlip stub output dekha; PDF phone par nahi dekha. AI nahi.
+
+=== md pkg v48 (16 Nov 2026) — 10 minute break band ===
+Malik: 'wo 10 minute wala band karna tha'. md/tools/pkg.py: Paani popup mein BRM.ask() (10 minute ka break? sawal) ab nahi jurta; '🧘 10 min break' macro pkg se nikala + off list mein (phone par band, delete nahi). Phone ka Remote 5 min mein khud lagata hai. Phone par test nahi. AI nahi.

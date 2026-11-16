@@ -48,7 +48,7 @@ OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka G
 import brk as BRM
 # v41 (14 Nov): paani ke popup ke foran baad "10 minute ka break?" — dialog ke EndIf ke baad jorna
 _pa = paani['macro']['m_actionList']; _i = next(i for i, x in enumerate(_pa) if x.get('m_classType') == 'ToastAction' and '10 minute baad dobara yaad' in str(x.get('m_messageText')))
-assert _pa[_i + 1]['m_classType'] == 'EndIfAction'; _pa[_i + 2:_i + 2] = BRM.ask()
+assert _pa[_i + 1]['m_classType'] == 'EndIfAction'   # v48 (16 Nov, malik: '10 minute wala band karna tha'): break ka sawal HATA — BRM.ask() mat jodo jab tak malik na kahe
 mp, vp = fix(paani, OLD_PAANI_BREAK, '💧 Paani')
 mk, vk = fix(khana, h64('claude|khana'), '🍽 Khana-peena')
 ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
@@ -92,12 +92,12 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "Recording jagah-war folder mein (Dukan / Ghar…) + nayi jagah ka naam ek sawal se.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mbr, mrc, mjg],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "10 minute break band — Paani popup par break ka sawal nahi, 🧘 macro off.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mrc, mjg],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
-       "off": ["⌨️ Keyboard haptics ON (Battery saver)"],
+       "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧘 10 min break"],   # v48: break malik ne band karwaya
        "del": []}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))

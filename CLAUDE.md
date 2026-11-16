@@ -285,6 +285,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **📄 Khata PDF + parchi = EK table (v2.300.0, PC pos-khata-sync w4b, 16 Nov — PAKKA)** (malik ne DigiKhata ki PDF dikhai: 'jab bhi PDF / print nikle aisa aana chahiye — dono sides ke aage ek table'): PDF = # · Tareekh · Tafseel · baayan khana (laal) · daayan khana (hara) · Baqaya (us waqt ka, `runningOf`), neeche Kul; raqam daayein (`pdfCell` `r:1`). Do-taraf wala layout wapas mat lao. Thermal = `khataTpData` `A` [[tareekh, 1|2, paisa, tafseel, baqaya]] -> PC `khataSlip` v2: line 1 '#. tareekh tafseel', line 2 baayan | daayan | baqaya; purana L/R bhi bhejte hain (purana PC purani parchi). Khate ki koi nayi PDF / print isi ek-table shakal mein.
 
+- **🧘 10 min break BAND (md pkg v48, 16 Nov)** (malik: 'wo 10 minute wala band karna tha'): Paani popup ke baad break ka sawal HATA (`pkg.py` mein `BRM.ask()` nahi jorta) + '🧘 10 min break' macro `off` mein (delete nahi). Wapas mat lao jab tak malik na kahe; `brk.py` file rakhi hai.
+
 ## 4. POS / PC — KHATARNAK, dhyan se
 - POS = Cognitive Solutions (SQL Server). Jo script POS mein **likhti** hai (item-post, purchase-post, transfer-sync, sale-post…) us mein **koi value kabhi 0/khali na jaye jis se POS divide karta ho** — khas taur par **PackQty (carton pcs) kam az kam 1**. (18 Oct 2026: "kala tail khula" ka PackQty 0 gaya → counter sale "Divide by zero", bill band.)
 - Parhne wali scripts (rack, irep, stats) POS mein kabhi kuch nahi likhti.
