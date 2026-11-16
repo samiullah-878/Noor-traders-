@@ -8626,3 +8626,9 @@ Malik: 'khata print PDF par date aaj kal week monthly apni date bhi upar chips'.
 [2026-11-17 01:25] md pkg v53: '⛔ Subah 11 tak' off (malik). Naya '🌙 Raat 12-11 band' (raatband.py): sirf package list wali apps 0:00-10:59 band, koi variable / OR nahi. MCP validator VALID.
 
 - **🚨 Raat 12-11 band mein zaroori button (md pkg v54, 17 Nov)** (malik: 'zaroori button bhi de do'): list wali app khulte hi sawal '🚨 10 min zaroori' (din mein 1 dafa, 15 s) -> 10 min sab khula; purane globals `sbEm` / `sbAsk` / `sbEmDay`. Sawal ke 20 s tak Home nahi (popup MacroDroid ki khirki). List se bahar wali app ab bhi kabhi band nahi.
+=== v2.308.0 (2026-11-17) — ✅ Purchase list: check hua bill PEELA, check + post = AADHA PEELA AADHA LAAL ===
+Malik (screenshot Purchase list): "Check wala bill yellow ho jaye list mein" · "Check plus post half red half yellow".
+- puCard: POS bill par billChecks[e.id] ho = class `chk` (peela) · saath isPosted(e) = `chkp` (baayan aadha peela, daayan aadha laal, border bhi).
+  Card ki chips mein `.pu-k.chk` "Check · ✅ naam" (POS bill chip ke baad). Card par data-pu-id / data-pu-posted.
+- puChkPaint(): billChecks badle (listenBillChecks) to list dobara nahi banti — sirf card ka rang + chip apni jagah.
+- style.css (.pu-card.pu-c.chk / .chkp + dark mode). Data / rules / PC kuch nahi badla. AI nahi.

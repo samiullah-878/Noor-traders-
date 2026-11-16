@@ -6276,6 +6276,12 @@ html body .pu-card.pu-c .pu-k.amt{background:#eefbf1;border-color:#9bd8ad}html b
 html body .pu-card.pu-c .pu-k.ok,html body .pu-card.pu-c .pu-k.cash{background:#e7f7ee;border-color:#bfe8d0}html body .pu-card.pu-c .pu-k.ok b,html body .pu-card.pu-c .pu-k.cash b{color:#147548}
 html body .pu-card.pu-c .pu-k.wait,html body .pu-card.pu-c .pu-k.warn{background:#fff7e0;border-color:#f1dea6}html body .pu-card.pu-c .pu-k.wait b,html body .pu-card.pu-c .pu-k.warn b{color:#8a5a00}
 html body .pu-card.pu-c .pu-k.bad{background:#fdecec;border-color:#f6c1c1}html body .pu-card.pu-c .pu-k.bad b{color:#b42332}
+/* v2.308.0: ✅ check hua bill = peela · check + 📌 post = aadha peela aadha laal (malik 17 Nov) */
+html body .pu-card.pu-c.chk{background:linear-gradient(180deg,#fff9e0,#fff1bf)!important;border:1px solid #efcd5e!important;box-shadow:0 1px 2px rgba(138,90,0,.08),0 8px 20px -14px rgba(184,134,11,.45)!important}
+html body .pu-card.pu-c.chk.chkp{background:linear-gradient(90deg,#fff3c2 0%,#fff3c2 50%,#ffe0e0 50%,#ffe0e0 100%)!important;border-color:#efcd5e #ec9c9c #ec9c9c #efcd5e!important;border-left:4px solid #f2c230!important;border-right:4px solid #e05555!important}
+html body .pu-card.pu-c .pu-k.chk{background:linear-gradient(180deg,#fffbe8,#fff2c6);border-color:#efcd5e}html body .pu-card.pu-c .pu-k.chk b{color:#8a5a00}
+html.dk body .pu-card.pu-c.chk{background:linear-gradient(180deg,rgba(234,179,8,.22),rgba(234,179,8,.12))!important;border-color:rgba(234,179,8,.5)!important}
+html.dk body .pu-card.pu-c.chk.chkp{background:linear-gradient(90deg,rgba(234,179,8,.2) 0%,rgba(234,179,8,.2) 50%,rgba(239,68,68,.2) 50%,rgba(239,68,68,.2) 100%)!important}
 html body .pu-card.pu-c .pu-k.pos{background:#eef3ff;border-color:#c7d4f5}html body .pu-card.pu-c .pu-k.pos b{color:#2c4a85}
 html body .pu-card.pu-c .pu-k.credit{background:#f3f0ff;border-color:#d8ccff}html body .pu-card.pu-c .pu-k.credit b{color:#4f46e5}
 html body .pu-card.pu-c .pu-k.nt b{font-weight:600;color:#44566f}
