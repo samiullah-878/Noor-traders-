@@ -92,9 +92,10 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "Mobiel locked (malik ka apna macro) band — raat 12 wala ⛔ ab kaam karega.",
+       "note": "Raat 12 wale mein Claude, games, Netflix, Prime Video bhi band · Remote har 1 min.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, msb, mgh, mhb, man, mrc, mjg],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
+                 {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
        "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧘 10 min break", "Mobiel locked"],   # v50 (17 Nov): malik ka apna "Mobiel locked" band (OK diya) — har app / Recents band karta tha   # v48: break malik ne band karwaya

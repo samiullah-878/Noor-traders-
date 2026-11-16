@@ -23,7 +23,7 @@ def ft(text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "optio
     "corners": 14, "alignment": 0, "moveOption": 0, "variableWidth": True, "widthPercentage": 90, "showOverStatusBar": False, "enableShadow": True}
 FTHIDE = {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": "ntsb"}
 # v49 (17 Nov, malik: "Settings, Play Store, social media, YouTube, MacroDroid band — baqi sab khuli"): ab SIRF yeh band, baqi sab khuli (pehle ulta: sab band siwae ALLOW)
-NOBLOCK = ['android.settings', 'android.vending', 'facebook', 'instagram', 'tiktok', 'musically', 'snapchat', 'youtube', 'twitter', 'com.zhiliaoapp']
+NOBLOCK = ['android.settings', 'android.vending', 'facebook', 'instagram', 'tiktok', 'musically', 'snapchat', 'youtube', 'twitter', 'com.zhiliaoapp', 'anthropic.claude', 'netflix', 'com.amazon.avod', 'primevideo', 'hotstar', 'game', 'com.dts.freefire', 'com.tencent.ig', 'com.pubg', 'roblox', 'supercell', 'king.candy', 'miniclip', 'com.mojang', 'com.playrix', 'com.ea.gp', 'gameloft', 'ludo', 'carrom']   # v51 (17 Nov, malik): + Claude, games, Netflix, Prime Video
 BLOCK2 = [strne("pk", "", True), NOT_LAUNCHER, NO_CALL, anyof(*[has("{lv=pk}", p, True) for p in NOBLOCK],
       # MacroDroid bhi band — magar 🚨 sawal ka popup khud MacroDroid ki khirki hai: sawal ke 20 s tak usay mat chhero
       {'m_classType': 'LogicConstraint', 'm_SIGUID': 0, 'm_isOrCondition': False, 'm_constraintList': [has("{lv=pk}", 'macrodroid', True), gt('askAge', 20, True)]})]
@@ -53,7 +53,7 @@ a = [
 ]
 SB = {"macroExportVersion": 1, "macro": {
     "m_name": "⛔ Subah 11 tak",
-    "m_description": "Raat 12 se subah 11 tak SIRF Settings, Play Store, MacroDroid, social media (Facebook, Instagram, TikTok, Snapchat, X, Threads, Messenger) aur YouTube band — baqi sab apps khuli. "
+    "m_description": "Raat 12 se subah 11 tak SIRF Settings, Play Store, MacroDroid, Claude, games, social media (Facebook, Instagram, TikTok, Snapchat, X, Threads, Messenger), YouTube, Netflix, Prime Video band — baqi sab apps khuli. "
                      "Band = Home + 3 s patti. 🚨 Zaroori: din mein 1 dafa 10 minute. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1,
     "localVariables": [lvar("emL"), lvar("askAge"), lvar("pk", 2), lvar("never", 0)],
