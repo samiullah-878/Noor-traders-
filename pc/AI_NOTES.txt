@@ -5033,3 +5033,6 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 
 === app v2.311.0 (2026-11-17) — bankSms/_alias badla (PC bank-parchi parhta hai) ===
 - '@hbl' + '@a:6303' ab 'Hbl Noor Traders (Purana)' (pehle loan khata), '@a:7999' = 'Hbl loan 7999' + '@pcin:7999' = '1'. PC code NAHI badla — bank-parchi amap / hblId onSnapshot se khud naya naqsha leta hai: Raast / 6303 ke aaye = Purana, 7999 ke aaye = loan (pcin se pehle jaise khud). Wajah aur app ka kaam: root AI_NOTES v2.311.0.
+
+=== pos-khata-sync w5 (2026-11-17, app v2.313.0) ===
+- milanDiffPc: `!e.posX` — app ki '🚫 POS mein na bhejo' entries (posNo + posX) milan / ⚖️ @balance / 🤖 autoMilan mein nahi gini jatin (warna @balance un ki raqam JV se POS mein daal deta). Voucher pehle se nahi banta tha (posNo skip). Sirf posX — posNo akela (balFix / bank kharcha / sabqa) pehle jaisa.

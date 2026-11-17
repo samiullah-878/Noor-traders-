@@ -8527,3 +8527,9 @@ html body .bkp-accdrop button{display:flex!important;align-items:center;gap:8px;
 html body .bkp-accdrop button b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:800}
 html body .bkp-accdrop button em{font-style:normal;font-weight:900}
 html body .bkp-accdrop button.is-in{background:linear-gradient(135deg,#2f6bea,#1d4fd0)!important;color:#fff!important;border-color:transparent!important}
+/* v2.313.0 🚫 POS mein na bhejo (nayi entry ke form ke upar chhota ☐) + khate mein nishan */
+html body #dialogBody form .ef-posx{display:inline-flex!important;align-items:center;gap:7px;width:auto!important;max-width:100%;min-height:32px!important;margin:0 0 8px!important;padding:4px 12px 4px 8px!important;border-radius:999px!important;border:1px solid #f1c2c2!important;background:linear-gradient(180deg,#fff,#fff4f4)!important;color:#8a1c1c!important;font-size:13px!important;font-weight:800!important;white-space:nowrap;cursor:pointer;box-shadow:none!important}
+html body #dialogBody form .ef-posx input{width:18px!important;height:18px!important;min-height:0!important;margin:0!important;accent-color:#c62828;flex:none}
+html body #dialogBody form .ef-posx:has(input:checked){background:linear-gradient(135deg,#d32f2f,#b71c1c)!important;color:#fff!important;border-color:transparent!important}
+html body #dialogBody form p.ef-posx.is-in{background:#fdecec!important;color:#8a1c1c!important;border-color:#f1c2c2!important}
+.kt-px{display:inline-block;padding:0 6px;border-radius:999px;background:#fdecec;color:#b71c1c;font-size:10px;font-weight:800;white-space:nowrap}

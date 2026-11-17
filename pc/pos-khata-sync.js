@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-17 (w5): 🚫 app v2.313.0 'POS mein na bhejo' (entry posNo + posX) — voucher pehle se nahi banta (posNo); ab milanDiffPc bhi posX ko gin-ta nahi, taake ⚖️ Barabar (@balance) / 🤖 autoMilan us ki raqam POS mein na daalein.
 //  2026-11-16 (w4): ↩ 🤖 PC ke KHUD barabar (autoMilan, dir 'auto') wale kaam bhi wapas — har voucher ki taraf log se (app mein likh diya = POS ka asal + app copy; baqi = [app: wala POS voucher / opening JV). Bill jaanch wale 'auto' kabhi nahi.
 //  2026-11-16 (w3): ↩ WAPAS SIRF TICK WALE (app 🗑 Din ki entries -> ⚖️ Barabar se bani): milanJobs ['@undo-job', job, ...codes] = sirf wohi voucher (isi job ke bane); asal job par `undone` list, sab ho jayein to undoneAt.
 //  2026-11-16 (w2): 🖨 KHATA PARCHI PAR HAR ENTRY KA BAQAYA (malik: 'baqaya kitna tha wo nahi likha aa raha kisi bhi amount par') — app khataTpData L/R row[3] = us entry ke baad ka baqaya (PAISA, + lene) -> khataSlip teesri patli line 'Baqaya X LENE'. Purani app (row[3] nahi) = pehle jaisa.
@@ -957,7 +958,7 @@ const sendElig = e => !/^pos-/.test(String(e.id)) && !e.purchase && !String(e.po
 function milanDiffPc(appId, L, prePos) {
   const p = app.get(appId) || {};
   const pos = L.map(x => ({ ...x, used: false }));
-  const E = [...app.values()].filter(e => e.type === 'entry' && !e.deleted && e.partyId === appId && !skipsBal(e)).map(e => ({ e, amt: amtOf(e), used: false }));
+  const E = [...app.values()].filter(e => e.type === 'entry' && !e.deleted && e.partyId === appId && !skipsBal(e) && !e.posX).map(e => ({ e, amt: amtOf(e), used: false }));   // (w5) 🚫 posX = malik ne POS se bahar rakhi — milan / @balance / autoMilan mein nahi
   let preApp = 0; for (const a of E) if (/^pos-opening-/.test(String(a.e.id)) || /sabqa baqaya/i.test(String(a.e.note || '')) || (/^\d{4}-\d{2}-\d{2}$/.test(String(a.e.date || '')) && String(a.e.date) < START_DATE)) { preApp += a.amt; a.used = true; }   // 2026-10-29 (j): 15-Sep se pehle ki SAB app entries bhi (POS pre jaisa) — pehle sirf sabqa (HBL ghalti)
   let openPos = prePos; const openLines = []; for (const x of pos) if (x.open) { openPos += x.amt; x.used = true; openLines.push(x); }
   const diff = [], take = (a, x) => { a.used = true; x.used = true; if (Math.abs(a.amt - x.amt) > 100) diff.push({ a, x }); };

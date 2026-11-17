@@ -8673,3 +8673,10 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 === v2.312.0 (2026-11-17) — 🏦 Bank account ka EK chip ===
 - Malik (POS Purchase supplier chip + W% list ki tasveer): 'bank ka naam aisa chip, us par neeche list · chhota, zyada jagah na le'.
 - bank-inbox `acctChips`: `.bkp-accts` qatar ki jagah `.bkp-acc` > `.bkp-accchip` (data-bk-accdd toggle `accOpen` -> renderHbl) + `.bkp-accdrop` (data-bk-cur, wahi purana handler — ab `accOpen = false` bhi). Bahar tap = capture listener (composedPath '.bkp-acc' nahi) -> drop DOM hatao, chip ▾, paint nahi. Chip par ginti = doosre accounts ke ⏳ baqi. CSS style.css aakhir (v2.312.0). Test: headless Chrome mein markup + CSS ki tasveer (390px) — chip 34px, list 36px lines. AI nahi.
+
+=== v2.313.0 (2026-11-17) — 🚫 POS mein na bhejo + milan total se ===
+- Malik: nayi entry POS mein na bhejni ho to form ke upar chhota checkbox (OK). Phir: 'entries milane ke bajaye total barabar ho to theek'.
+- app.js: `POSX_K` / `canPosX` (owner || can('kh.posno')) / `posXHTML(kind, existing)` / `posXOf(f, existing)` entryForm ke upar; entryForm + unifiedExpenseForm ke `<form>` mein sab se pehle, save mein `...posXOf`. CAP list full mein 'kh.posno' + OPT_IN. Khate ki table (ledgerTblHTML) + purana view: posX && !posCode = '<b class=kt-px>🚫 POS nahi</b>'. pcWaitOf pehle se posNo chhorta hai (jhoota ⏳ nahi). Rules: staff entry create par keys ki pabandi nahi — rules nahi badle.
+- pos-milan.js: `pxOf` (entries array ki pehchan par cache) — pmRow farq = app − px − POS (r.px), pmLine kholne par '🚫 POS se bahar Rs X'. pmDiff E se posX bahar.
+- PC pos-khata-sync (w5): milanDiffPc E mein `!e.posX` (appBal / appOnly) -> @balance / autoMilan posX ki raqam POS mein nahi daalte. Manifest 2026-11-17.3.
+- Test: posX helpers + pxOf ka node test (owner / mulazim / CAP / edit / milan barabar). Asal phone / PC par nahi chalaya. AI nahi.

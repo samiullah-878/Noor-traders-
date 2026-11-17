@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.312.0';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.313.0';
 const TOL = 100, PRE_FROM = '2026-09-15';   // v2.0: PC LINES_FROM / START_DATE jaisa
 const OPEN_RX = /opening|shuru ka baqaya|sabqa baqaya/i;   // v1.7 = PC autoMilan OPEN_RX   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
@@ -46,13 +46,21 @@ function touchOf(id) {
   if (touchC.arr !== E) { const m = new Map(); for (const e of E) { if (!e) continue; const t = Math.max(tms(e.updatedAt), tms(e.createdAt)); for (const k of [e.partyId, e.fromPartyId, e.toPartyId]) if (k && t > (m.get(k) || 0)) m.set(k, t); } touchC = { arr: E, m }; }
   return touchC.m.get(id) || 0;
 }
-export function pmRow(p) {   // {app, pos, farq, state: 'ok'|'farq'|'none'|'wait'}
-  const app = C.balance(p), pos = posOf(p);
-  if (pos == null) return { app, pos: null, farq: 0, state: 'none' };
-  const farq = app - pos; if (Math.abs(farq) <= TOL) return { app, pos, farq, state: 'ok' };
+// v2.313.0 (malik 17 Nov: "entries milane ke bajaye total raqam barabar ho to theek"): milan pehle se TOTAL baqaye par hai (entries ki jaanch sirf farq par).
+//   Nayi baat: malik ki "🚫 POS mein na bhejo" wali entries (posX) jaan bujh kar POS mein nahi — un ka asar app baqaye se nikal kar milao (warna jhoota ⚠ farq).
+let pxC = { arr: null, m: null };
+function pxOf(id) {
+  const E = C.entries ? C.entries() : [];
+  if (pxC.arr !== E) { const m = new Map(); for (const e of E) if (e && !e.deleted && e.posX && e.partyId) m.set(e.partyId, (m.get(e.partyId) || 0) + appAmt(e)); pxC = { arr: E, m }; }
+  return pxC.m.get(id) || 0;
+}
+export function pmRow(p) {   // {app, pos, farq, px, state: 'ok'|'farq'|'none'|'wait'}
+  const app = C.balance(p), pos = posOf(p), px = pxOf(p.id);
+  if (pos == null) return { app, pos: null, farq: 0, px, state: 'none' };
+  const farq = app - px - pos; if (Math.abs(farq) <= TOL) return { app, pos, farq, px, state: 'ok' };
   const t = touchOf(p.id), at = Number(led()?.at) || 0;
-  if (t && t > at - 3000 && Date.now() - t < 3 * 60000) return { app, pos, farq, state: 'wait' };   // v2.169.0: ⏳
-  return { app, pos, farq, state: 'farq' };
+  if (t && t > at - 3000 && Date.now() - t < 3 * 60000) return { app, pos, farq, px, state: 'wait' };   // v2.169.0: ⏳
+  return { app, pos, farq, px, state: 'farq' };
 }
 let pmOpenLine = '';   // v1.2: chhoti chip, tap = bara (malik: "chips small, click karein to bara")
 export function pmLineHTML(p) {   // khate ki screen ke upar — chhoti chip; tap = poori baat + 🔍 Farq dhoondo
@@ -61,8 +69,9 @@ export function pmLineHTML(p) {   // khate ki screen ke upar — chhoti chip; ta
   if (r.state === 'none') return `<button type="button" class="pm-line none${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ${big ? 'mein yeh khata nahi juda' : '—'}</button>`;
   const am = autoToday()[p.id], rob = am && am.n ? (big ? ` · 🤖 PC ne aaj khud barabar kiya${am.txt ? ' (' + esc(String(am.txt).split(' | ')[0].slice(0, 90)) + ')' : ''}` : ' 🤖') : '';
   if (r.state === 'wait') return `<button type="button" class="pm-line none${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⏳${big ? ' nayi entry POS mein ja rahi hai — chand second' : ''}</button>`;   // v2.169.0
-  if (r.state === 'ok') return `<button type="button" class="pm-line ok${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ✓${big ? ` baqaya ${money(r.pos)} ${sideTxt(r.pos)} · barabar` : ''}${rob}</button>`;
-  return `<span class="pm-lw"><button type="button" class="pm-line bad${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⚠ ${money(r.farq)}${big ? ` farq · POS ${money(r.pos)} ${sideTxt(r.pos)} · app ${money(r.app)} ${sideTxt(r.app)}` : ''}</button>${big ? `<button type="button" class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq</button>` : ''}</span>`;
+  const pxT = big && r.px ? ` · 🚫 POS se bahar ${money(Math.abs(r.px))} (milan mein nahi gina)` : '';
+  if (r.state === 'ok') return `<button type="button" class="pm-line ok${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ✓${big ? ` baqaya ${money(r.pos)} ${sideTxt(r.pos)} · barabar` : ''}${pxT}${rob}</button>`;
+  return `<span class="pm-lw"><button type="button" class="pm-line bad${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⚠ ${money(r.farq)}${big ? ` farq · POS ${money(r.pos)} ${sideTxt(r.pos)} · app ${money(r.app)} ${sideTxt(r.app)}` : ''}${pxT}</button>${big ? `<button type="button" class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq</button>` : ''}</span>`;
 }
 export function pmCount() { if (!C || !led()) return 0; let n = 0; for (const p of C.parties()) { if (p.bank) continue; if (pmRow(p).state === 'farq') n++; } return n; }
 const agoTxt = t => { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
@@ -482,7 +491,7 @@ async function sendOne(id) {
 export function pmDiff(p, doc) {   // {appOnly:[], posOnly:[], diff:[], pre:{app,pos}, sum, farq, ok}
   let L = []; try { L = JSON.parse(doc?.j || '[]'); } catch {}
   const pos = L.filter(x => Number(x[7]) !== 3).map((x, i) => ({ i, d: x[0], code: x[1], dt: x[2], no: String(x[3] || ''), amt: (Number(x[4]) || 0) - (Number(x[5]) || 0), desc: x[6] || '', used: false }));
-  const E = C.entries().filter(e => e.partyId === p.id && !e.deleted && !skipsBalance(e)).map(e => ({ e, amt: appAmt(e), used: false }));
+  const E = C.entries().filter(e => e.partyId === p.id && !e.deleted && !e.posX && !skipsBalance(e)).map(e => ({ e, amt: appAmt(e), used: false }));   // v2.313.0: 🚫 posX = jaan bujh kar POS se bahar
   const appOnly = [], posOnly = [], diff = [];
   let preApp = 0; const preIds = [];
   for (const a of E) { if (/^pos-opening-/.test(String(a.e.id)) || /sabqa baqaya/i.test(String(a.e.note || '')) || (/^\d{4}-\d{2}-\d{2}$/.test(String(a.e.date || '')) && String(a.e.date) < PRE_FROM)) { preApp += a.amt; a.used = true; preIds.push(a); } }   // v2.0: 15-Sep se pehle ki SAB app entries (POS pre jaisa) — pehle sirf sabqa = HBL ghalti
