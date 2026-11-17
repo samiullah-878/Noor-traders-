@@ -8705,3 +8705,28 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 - 4) `?pc=old` ab sirf usi tab / session (sessionStorage) — localStorage ki purani 'sam-pc-old' khud mit-ti hai; agli dafa PC par mobile jaisi app.
 - 5) bill-clip v2.7: Windows ffmpeg 'Error number -138 occurred' = ETIMEDOUT (NVR tak rasta nahi) — `netErr` + TCP sawal (NVR:port 3 s) se pakka -> NETBAD: kaam + recording ruki, bill 'net' (koshish nahi gini, pehle 3 koshish = hamesha ke liye chhoot jata), har 5 min `netDiag` (server ke private IP, NVR IP, port 554 / 80, ek network ya nahi, rasta na ho to 30 min mein ek dafa apne /24 par port 554 kahan khula). Rasta khule = NETBAD 0 + recSync + ruke bill khud. billClipPc.net -> app camera setup '🌐 Network' line (alag network / NVR shayad yahan). Setting KHUD nahi badalti. Rabta test fail par bhi netDiag.
 - Test: pc-names node test (names / disp / chFind / live ulta host), bill-clip ke net helpers node test (tcp khula / band, netErr -138). Asal PC / NVR / counters par nahi chalaya. AI nahi.
+
+
+=== v2.317.0 (2026-11-17 raat): 📒 DAILY SALE — closing cash HATA · change Sale ke neeche · Sirf khata = chip + neeche list ===
+Malik (screenshots): "Sirf khata ki entries chips jaise HBL bank / purchase · neeche · upar ek chip jis ko dabane se khulein" -> phir
+"Nahi — purchase mein jo button dabane par neeche ki taraf open ho" · "closing cash ki ab zaroorat nahi, is ko bhi hata do" ·
+"SB hata do (payment wala dabba bhi) · change aur kal ka change sale ke neeche — jagah bach jaye".
+- 1) 🔒 Closing cash ka khana (ginti) + 💸 'Is cash se payment bhejo' dabba + neeche ka '🔒 Closing' button HATA. dailySheet ab 3 khane
+  (Sale · Wasooli · Akhrajat, `.cash-sheet.cs3`). cashColHTML / giveBoxHTML / closingForm ka code PARA hai (wapas chahiye to dailySheet ki
+  filter + actions) — DATA kuch delete nahi hua (closings docs wahi).
+- 2) ⬅️ Kal ka change + ➡️ Aaj ka change = `chgHTML(d,ds)` Sale khane ke total ke NEECHE: Kal ka (pichhle din se aaye to) EK patli line
+  'pichhle din se', warna <details> + WAHI countSheet; Aaj ka = <details data-chg> (khula jab aaj likha nahi), khula / band `dyChgOpen`
+  (document 'toggle' capture) — render par na toote. Save wahi setupCounts (closing doc ke change / opening field). CAP d.closing = 'Change ki ginti'.
+- 3) ⚖️ upar ka chip / farq-bar = sirf 'Galle mein hona' (Sale + Wasooli + Kal − Akhrajat − Aaj ka change). Closing baqi / Farq / Barabar ki
+  likhai HATI (closing ke baghair farq nahi).
+- 4) 📒 Sirf khata (Daily Sale mein shamil nahi wali entries): upar ki chips patti (dy-strip) mein `.dy-kc` chip '📒 Sirf khata · N / Rs …▾'
+  -> dabao = `dyKSet` -> usi #summary mein strip ke neeche `.dy-kdrop` (max 58vh, apna scroll) — har entry WAHI dyEntryHTML (2 patli lines +
+  kind ka chhota tag `.dy-kt`, tap = Receipt / Edit / Delete). Bahar tap = band (capture + composedPath; dialog / popover ke andar ka tap band
+  nahi karta). #summary ka 'baqi sab chhupao' CSS `.dy-kdrop.dy-kdrop.is-in` se toota. Purana bara 'day-out' hissa sirf purane PC (?pc=old) /
+  data-hero big par (CSS) — compact rows ke saath.
+- 5) Daily PDF: Closing cash + Farq chips ki jagah '⚖️ Galle mein hona'; sub line bhi. 🖨 Sab print (dyTpData 'a') ab `nc:1` -> PC
+  pos-khata-sync (x) daySlip: closing line / KAM-ZYADA nahi, 'GALLE MEIN HONA CHAHIYE Rs …'. Purana app (nc nahi) = PC pehle jaisa.
+- 6) Raat ki WhatsApp report (raat-report v2.5): 'Closing cash / Farq' ki jagah 'Aaj ka change' + 'Galle mein hona'; 'Closing cash abhi nahi
+  gini' / 'Cash farq' flags HATE. App ki report (report.js) khata card bhi wahi.
+- Test: naye hisson ki HUBAHU copy + stubs -> Playwright 390px (chip band / khula / entry ke chips / bahar tap band / Sale ke neeche change).
+  Asal app / asal data par nahi chalaya. AI nahi.

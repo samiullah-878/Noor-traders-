@@ -23,7 +23,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '2.4';   // 2026-11-17: counter ka naam = PC ka apna naam (pc-names v1.1)
+const VER = '2.5';   // 2026-11-17 (v2.5): closing cash / farq HATA (malik: 'closing cash ki ab zaroorat nahi') -> Aaj ka change + Galle mein hona
 // v1.9 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS'): POS ke dbo.Sale mein COGS ka khana HAI HI NAHI — har report isi par girti thi.
 //   Ab colOf() pehle sys.columns dekhta hai (asal naam, bari / chhoti likhai); na ho = NULL -> nafa line ke khareed rate se (pehle se bana hisaab).
 //   reportDay sirf usi dafa jab usi hukum (rdAt == reportNow) ke saath aaya ho — warna AAJ (Report screen ki purani tareekh atki rehti thi).
@@ -241,7 +241,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     // --- khata (Firestore) ---
     let khata = null;
     try { const ks = await biz.collection('blueKhata').where('date', 'in', [day, prevDay(day)]).get(); const d = dailyOf(day, ks.docs.map(x => ({ ...x.data(), id: x.id })));
-      khata = { sale: d.sale, collection: d.collection, expense: d.expense, payment: d.payment, credit: d.credit, borrow: d.borrow, opening: d.opening, cash: d.cash, closed: d.closed, difference: d.difference }; } catch (e) { log('khata nahi parha: ' + e.message); }
+      khata = { sale: d.sale, collection: d.collection, expense: d.expense, payment: d.payment, credit: d.credit, borrow: d.borrow, opening: d.opening, change: d.change, cash: d.cash, closed: d.closed, difference: d.difference }; } catch (e) { log('khata nahi parha: ' + e.message); }
     // --- transfer notes ---
     let transfer = null;
     try {
@@ -269,8 +269,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     if (loss.length) flags.push(`${loss.length} bill khareed se kam par bike (ghaata ${rs(lossRs)})`);
     if (ws.shakN) flags.push(`${ws.shakN} wholesale bill shak wale (chhoti tadad) · farq ${rs(ws.shakFarq)}`);
     if (ws.counterN) flags.push(`${ws.counterN} bill counter par wholesale rate par`);
-    if (khata && khata.closed && Math.abs(khata.difference) >= 100) flags.push(`Cash farq ${rs(khata.difference / 100)}`);
-    if (khata && !khata.closed) flags.push('Closing cash abhi nahi gini');
+    // v2.5: closing cash ka farq / 'abhi nahi gini' flag HATA (malik ne closing band ki)
     if (transfer && transfer.pendingN) flags.push(`${transfer.pendingN} transfer note check nahi hue`);
     if (transfer && transfer.farqN) flags.push(`${transfer.farqN} transfer note mein farq`);
     if (purchase.mehngaN) flags.push(`${purchase.mehngaN} item mehngay khareede`);
@@ -419,7 +418,7 @@ function makeReporter({ getPool, sql, biz, log = () => {}, pcNames = () => PC_DE
     const dt = new Date(r.day + 'T12:00:00').toLocaleDateString('en-GB', { day: 'numeric', month: 'short' }), t = new Date(r.at), tm = `${pad2(t.getHours())}:${pad2(t.getMinutes())}`, P = v => rs((Number(v) || 0) / 100), out = [];
     if (cfg.waD !== false) { const k = r.khata;
       out.push(['d', k ? [`📒 *Daily Sale — ${dt}* (${tm} tak)`, `Sale: ${P(k.sale)}`, `Wasooli: ${P(k.collection)}`, `Akhrajat: ${P((Number(k.expense) || 0) + (Number(k.payment) || 0))}`, `Kal ka change: ${P(k.opening)}`,
-        k.closed ? `Closing cash: ${P(k.cash)}` : 'Closing: abhi band nahi hua', k.closed ? (Math.abs(k.difference) < 100 ? 'Farq: barabar ✓' : `Farq: ${P(Math.abs(k.difference))} ${k.difference > 0 ? 'KAM' : 'ZYADA'}`) : '',
+        `Aaj ka change: ${P(k.change)}`, `Galle mein hona: ${P((Number(k.sale) || 0) + (Number(k.collection) || 0) + (Number(k.opening) || 0) - (Number(k.expense) || 0) - (Number(k.payment) || 0) - (Number(k.change) || 0))}`,
         `Udhaar diya: ${P(k.credit)}`, '', `🖥 POS sale: ${rs(r.sale.total)} · ${r.sale.n} bill`, `cash ${rs(r.sale.cash)} · udhaar ${rs(r.sale.credit)}`].filter((x, i, A) => x !== '' || A[i + 1]).join('\n') : `📒 *Daily Sale — ${dt}*\nKhata nahi parha ja saka`]); }
     if (cfg.waL !== false) out.push(['l', [`👦 *Larka-wise — ${dt}* (${tm} tak)`, ...((r.larka || []).length ? r.larka.map((x, i) => `${i + 1}. ${x.n} — ${rs(x.t)} · ${x.c} bill`) : ['Aaj kisi larke ke naam bill nahi'])].join('\n')]);
     if (cfg.waP !== false) out.push(['p', [`💰 *Profit — ${dt}* (${tm} tak)`, `Sale: ${rs(r.sale.total)} · ${r.sale.n} bill`, `Nafa (andaza): ~${rs(r.sale.profit)} (${r.sale.profitPct}%)`, r.lossN ? `⚠️ Ghaate wale bill: ${r.lossN} (${rs(r.lossRs)})` : '',

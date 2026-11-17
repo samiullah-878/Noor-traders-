@@ -1,5 +1,7 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-17 (x): 🖨 Daily print — app v2.317.0 ne closing cash HATA di (malik: 'closing cash ki ab zaroorat nahi'): J.nc = 1 ho to
+//    'Closing cash' line / KAM-ZYADA / 'CLOSING GINTI BAQI' nahi — sirf 'GALLE MEIN HONA CHAHIYE Rs …'. Purana app (nc nahi) = pehle jaisa.
 //  2026-11-17 (w6): ⚖️ Ek voucher (@balance) = SIRF EK JV (khata ↔ Equity) — transfer pehle milanSendOne se alag voucher jate the, ab nahi (malik: "aik hi voucher · sab entries nahi"); transfer ki dono taraf posNo + balFix. App ka ✕ Rok do = status 'stop' (yeh script sirf 'new' uthati hai).
 //  2026-11-17 (w5): 🚫 app v2.313.0 'POS mein na bhejo' (entry posNo + posX) — voucher pehle se nahi banta (posNo); ab milanDiffPc bhi posX ko gin-ta nahi, taake ⚖️ Barabar (@balance) / 🤖 autoMilan us ki raqam POS mein na daalein.
 //  2026-11-16 (w4): ↩ 🤖 PC ke KHUD barabar (autoMilan, dir 'auto') wale kaam bhi wapas — har voucher ki taraf log se (app mein likh diya = POS ka asal + app copy; baqi = [app: wala POS voucher / opening JV). Bill jaanch wale 'auto' kabhi nahi.
@@ -1895,9 +1897,10 @@ function daySlip(J) {
   const sum3 = () => {
     out.push(sm(amtR(WB, 'Kal ka change', J.o))); out.push(...rowsTxt(J.or));
     out.push(sm(amtR(WB, 'Aaj ka change', J.c))); out.push(...rowsTxt(J.cr));
-    out.push(sm(amtR(WB, 'Closing cash', J.ca))); out.push(...rowsTxt(J.kr));
+    if (!J.nc) { out.push(sm(amtR(WB, 'Closing cash', J.ca))); out.push(...rowsTxt(J.kr)); }
   };
   const farq = () => {
+    if (J.nc) { const h = (Number(J.s) || 0) + (Number(J.w) || 0) + (Number(J.o) || 0) - (Number(J.x) || 0) - (Number(J.c) || 0); out.push(C + bold('GALLE MEIN HONA CHAHIYE')); out.push(C + big2('Rs.' + n(h))); if (UR.isOn()) out.push(UR.line('گلے میں ہونا چاہیے', 40, 1)); return; }   // (x) closing hata
     if (!J.cl) { out.push(C + bold('CLOSING GINTI ABHI BAQI')); if (UR.isOn()) out.push(UR.line('کلوزنگ کی گنتی ابھی باقی ہے', 34, 1)); return; }
     const f = Number(J.f) || 0, hona = (Number(J.s) || 0) + (Number(J.w) || 0) + (Number(J.o) || 0) - (Number(J.x) || 0) - (Number(J.c) || 0);
     out.push(sm(rowW(WB, 'Hona chahiye Rs.' + n(hona), 'Gina Rs.' + n(J.ca))));
@@ -1918,8 +1921,9 @@ function daySlip(J) {
   grid('AKHRAJAT', J.X, J.x);
   grid('WASOOLI', J.W, J.w);
   out.push(sm(amtR(WB, '+ Sale', J.s)), sm(amtR(WB, '+ Wasooli', J.w)), sm(amtR(WB, '+ Kal ka change', J.o)));
-  out.push(sm(amtR(WB, '- Akhrajat', J.x)), sm(amtR(WB, '- Aaj ka change', J.c)), sm(amtR(WB, '- Closing cash', J.ca)));
-  if (!J.ok) out.push(sm('  (kal ka change nahi mila — closing mein likhein)'));
+  out.push(sm(amtR(WB, '- Akhrajat', J.x)), sm(amtR(WB, '- Aaj ka change', J.c)));
+  if (!J.nc) out.push(sm(amtR(WB, '- Closing cash', J.ca)));
+  if (!J.ok) out.push(sm(J.nc ? '  (kal ka change nahi mila — Sale ke neeche likhein)' : '  (kal ka change nahi mila — closing mein likhein)'));
   out.push(hrB); farq(); out.push('');
   out.push(GS + 'V\x42\x00');   // kaghaz kaato
   return out.join('\r\n');

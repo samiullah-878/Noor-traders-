@@ -8577,3 +8577,50 @@ html body #dialogBody .nt-r.y>small{color:#a16207}
 html body .bt-ch .bt-alsel{display:block;margin-top:4px;max-width:100%;height:30px;min-height:30px!important;padding:0 8px!important;border-radius:999px!important;border:1px solid #c7d2e3!important;background:linear-gradient(180deg,#fff,#eef3fa)!important;font-size:12px!important;color:#1e3a8a!important}
 html body .bt-alias{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin:6px 0;font-size:12px;color:#475569}
 html body .bt-alias .bt-alx{height:28px;min-height:28px!important;padding:0 10px!important;border-radius:999px!important;border:1px solid #c7d2e3!important;background:linear-gradient(180deg,#fff,#eef3fa)!important;color:#1e3a8a!important;font-size:12px!important;font-weight:700!important;white-space:nowrap}
+
+/* ===== v2.317.0: 📒 Daily Sale — closing cash + 💸 payment dabba HATA · Kal / Aaj ka change Sale ke NEECHE · Sirf khata = upar chip + neeche list (malik) ===== */
+@media(min-width:701px){html body .cash-sheet.cs3{grid-template-columns:repeat(3,minmax(0,1fr))!important}}
+@media(max-width:700px){html body .cash-sheet.cs3{grid-template-columns:repeat(3,minmax(225px,1fr))!important}}
+html body .dy-chg{margin-top:14px;display:grid;gap:6px;min-width:0}
+html body .dy-chg-s{border:1px solid #e3e8f1;border-radius:12px;background:#fff;padding:0;overflow:hidden;min-width:0}
+html body .dy-chg-s>summary{list-style:none;display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 10px;cursor:pointer;font-weight:800;font-size:13px;color:#13213f;-webkit-tap-highlight-color:transparent}
+html body .dy-chg-s>summary::-webkit-details-marker{display:none}
+html body .dy-chg-s>summary b{margin-left:auto;font-size:14px;color:#166534;white-space:nowrap}
+html body .dy-chg-s>summary i{font-style:normal;font-size:11px;color:#64748b;transition:transform .15s}
+html body .dy-chg-s[open]>summary i{transform:rotate(180deg)}
+html body .dy-chg-s>form[data-count]{margin:0 8px 8px}
+html body .dy-chg-s>form[data-count]>small:first-child{display:none}
+html body .dy-chg-s.lk{display:flex;align-items:center;gap:8px;min-height:36px;padding:6px 10px;font-weight:800;font-size:13px;color:#13213f;background:#f7f9fc}
+html body .dy-chg-s.lk small{font-size:10.5px;color:#64748b;font-weight:600;white-space:nowrap}
+html body .dy-chg-s.lk b{margin-left:auto;font-size:14px;color:#166534;white-space:nowrap}
+html.dk body .dy-chg-s{background:var(--glass2,rgba(255,255,255,.08))!important;border-color:var(--line,rgba(255,255,255,.14))!important}
+html.dk body .dy-chg-s>summary,html.dk body .dy-chg-s.lk{color:var(--ink,#e8eeff)!important}
+html.dk body .dy-chg-s.lk{background:var(--glass2,rgba(255,255,255,.06))!important}
+/* 📒 upar chip */
+html body main header #summary .dy-strip button.dy-c.dy-kc.dy-kc{background:linear-gradient(180deg,#ffffff,#eef3ff)!important;border:1px solid #c9d6ef!important;color:#223b6d!important;cursor:pointer}
+html body main header #summary .dy-strip button.dy-c.dy-kc.dy-kc b i{font-style:normal;font-size:10px;display:inline-block;transition:transform .15s}
+html body main header #summary .dy-strip button.dy-c.dy-kc.dy-kc.is-in{background:linear-gradient(180deg,#2c4f92,#1f3663)!important;border-color:#1f3663!important;color:#fff!important}
+html body main header #summary .dy-strip button.dy-c.dy-kc.dy-kc.is-in small,html body main header #summary .dy-strip button.dy-c.dy-kc.dy-kc.is-in b{color:#fff!important}
+html body main header #summary .dy-strip button.dy-c.dy-kc.dy-kc.is-in b i{transform:rotate(180deg)}
+/* 📒 neeche khulne wali list (Purchase supplier chip jaisi) */
+html body .dy-kdrop{display:none}
+html body main header #summary.summary>.dy-kdrop.dy-kdrop.is-in{display:block!important}
+html body main header #summary .dy-kdrop{margin:6px 0 0;max-height:58vh;overflow:auto;border:1px solid #c9d6ef;border-radius:14px;background:#fff;color:#10192b;box-shadow:0 10px 26px rgba(20,40,80,.16);padding:0 8px 6px;overscroll-behavior:contain;text-align:left}
+html body main header #summary .dy-kdrop .dy-kd-h{position:sticky;top:0;z-index:1;background:#fff;display:flex;align-items:baseline;gap:8px;padding:8px 2px 6px;border-bottom:1px solid #eef1f6}
+html body main header #summary .dy-kdrop .dy-kd-h b{font-size:13px;color:#13213f!important}
+html body main header #summary .dy-kdrop .dy-kd-h small{margin-left:auto;font-size:10.5px;color:#64748b!important;white-space:nowrap}
+html body .dy-krows{margin-top:0!important;border:0!important}
+html body main header #summary .dy-kdrop .dy-e1 strong,html body main header #summary .dy-kdrop .dy-e1 .dy-en{color:#10192b!important}
+html body main header #summary .dy-kdrop .dy-e2{color:#64748b!important}
+html body .dy-kt{font-weight:800;color:#223b6d;background:#eef3ff;border:1px solid #d6e0f5;border-radius:999px;padding:0 6px;line-height:16px}
+html.dk body main header #summary .dy-kdrop,html.dk body main header #summary .dy-kdrop .dy-kd-h{background:#1b2540!important;border-color:rgba(255,255,255,.14)!important}
+html.dk body main header #summary .dy-kdrop .dy-e1 strong,html.dk body main header #summary .dy-kdrop .dy-e1 .dy-en,html.dk body main header #summary .dy-kdrop .dy-kd-h b{color:#e8eeff!important}
+html.dk body .dy-kt{background:rgba(255,255,255,.08);border-color:rgba(255,255,255,.16);color:#c9d6ff}
+/* purana bara hissa sirf jahan upar ki chips nazar nahi aatin (purana PC / bara hero) */
+html body .day-out{display:none}
+html[data-hero="big"] body .day-out{display:block}
+@media(min-width:1100px){html:not(.pcm) body .day-out{display:block}}
+html body .dy-chg-s.lk span,html body .dy-chg-s>summary span{white-space:nowrap;flex:none}
+html body .dy-chg-s.lk small{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis}
+html body main header #summary .dy-kdrop .dy-kd-h b{min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body main header #summary .dy-kdrop .dy-kd-h small{flex:none}

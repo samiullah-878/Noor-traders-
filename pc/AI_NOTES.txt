@@ -5046,3 +5046,11 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 - bill-clip v2.7: NETBAD (ETIMEDOUT -138 + TCP fail) = ruko, har 5 min netDiag, billClipPc.net; recording NETBAD mein band; cfg Save = NETBAD / scan reset. chFind se channel.
 - live-cam v1.6: chOf = PN.chFind. pos-sales-dekho / gate-pass / raat-report: sirf PC_DEFAULT {} (pc-names ki nayi file uthane ke liye chhue).
 - nt-print v1.33: blueAccess/ntWatch onSnapshot; har 20 s timer — ntWatch.at 3 min ke andar = report, warna 58 s se purani ho to (pehle jaisa 60 s). Counters UPD_FILES se khud lete hain.
+
+
+=== 2026-11-17 raat (app v2.317.0): pos-khata-sync x · raat-report v2.5 ===
+- Malik ne Daily Sale se closing cash HATA di ('closing cash ki ab zaroorat nahi').
+- pos-khata-sync x: daySlip — J.nc 1 (naya app) = 'Closing cash' line, KAM / ZYADA, 'CLOSING GINTI BAQI' nahi; aakhir mein
+  'GALLE MEIN HONA CHAHIYE' + Rs (Sale + Wasooli + Kal − Akhrajat − Aaj ka change) + Urdu. J.nc nahi (purana app) = pehle jaisa.
+- raat-report v2.5: khata mein change; WhatsApp Daily Sale = Aaj ka change + Galle mein hona (closing / farq lines nahi); flags se
+  'Cash farq' + 'Closing cash abhi nahi gini' hate.
