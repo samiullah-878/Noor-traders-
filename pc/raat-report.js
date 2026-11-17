@@ -23,7 +23,7 @@ const os = require('os');
 const net = require('net');
 const path = require('path');
 
-const VER = '2.3';
+const VER = '2.4';   // 2026-11-17: counter ka naam = PC ka apna naam (pc-names v1.1)
 // v1.9 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS'): POS ke dbo.Sale mein COGS ka khana HAI HI NAHI — har report isi par girti thi.
 //   Ab colOf() pehle sys.columns dekhta hai (asal naam, bari / chhoti likhai); na ho = NULL -> nafa line ke khareed rate se (pehle se bana hisaab).
 //   reportDay sirf usi dafa jab usi hukum (rdAt == reportNow) ke saath aaya ho — warna AAJ (Report screen ki purani tareekh atki rehti thi).
@@ -42,7 +42,7 @@ const LOCK_PORT = 47833;
 const DIR = __dirname;
 const LINK = 'https://samiullah-878.github.io/Noor-traders-/';
 const KEEP_DAYS = 62;
-const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
+const PC_DEFAULT = {};   // 2026-11-17 (pc-names v1.1): naam = PC ka apna (NT-PRINT se) — insaanon wale naam hata (malik: 'Abdurehman ki bajaye PC ka naam')
 const SKIP_RX = /noor\s*trader|our\s*factory|stock\s*['"]?\s*f[ae]?r?a?q/i;   // andar ka lena-dena (bikri / khareed nahi)
 const DEF = { waOn: true, waD: true, waL: true, waP: true, waH: true, waU: true, udTime: '10:00', udDays: 30, hzTime: '10:00', reportOn: true, reportTime: '18:00', alertOn: true, alertTime: '09:00', alertRed: 3, alertYellow: 7, wsNames: ['whole sale'], wsSmall: 3 };
 

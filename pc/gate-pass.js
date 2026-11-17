@@ -1,5 +1,5 @@
 // =========================================================
-//  gate-pass.js  v1.3 (2026-11-16: counter ka naam NT-PRINT se — pc-names.js) · v1.2 (2026-11-03: 🐞 shuru mein pehle ke gate pass na parh sake (internet der se) = jab tak parh na le KUCH nahi likhta — pehle sab dobara likhta
+//  gate-pass.js  v1.4 (2026-11-17: counter ka naam = PC ka apna naam, pc-names v1.1) · v1.3 (2026-11-16: counter ka naam NT-PRINT se — pc-names.js) · v1.2 (2026-11-03: 🐞 shuru mein pehle ke gate pass na parh sake (internet der se) = jab tak parh na le KUCH nahi likhta — pehle sab dobara likhta
 //                 aur posted bill ka "post ka waqt" (pt) abhi ka ho jaata) · v1.1 (2026-11-01: 🔵 UN-POSTED bhi — malik: "Bills jaisa: laal = posted (tick), neela = un-posted (baad mein laal)" · ps 1/2 ·
 //                 scan ke dauran nayi line bhi (SaleDetail ginti/jor jaanch mein)) · v1.0 (2026-11-01) — 🚪 GATE PASS KA RECORD (POS ke POSTED bill → app, ~1 second)
 //  Malik: "jitne bhi gate pass nikal rahe hain un ka record app mein · har customer alag · jo bill POST ho jaye usi ka gate pass
@@ -27,7 +27,7 @@ const r3 = v => Math.round((Number(v) || 0) * 1000) / 1000;
 const p2 = n => String(n).padStart(2, '0');
 const dayOf = d => { d = d instanceof Date ? d : new Date(d); return `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}`; };
 const isFarqName = n => /stock\s*['"]?\s*f[ae]?r?a?q/i.test(String(n || ''));   // pos-sales-dekho jaisa — ginti ka farq bill gate pass nahi
-const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
+const PC_DEFAULT = {};   // 2026-11-17 (pc-names v1.1): naam = PC ka apna (NT-PRINT se) — insaanon wale naam hata (malik: 'Abdurehman ki bajaye PC ka naam')
 const PN = require('./pc-names.js'); const pcNames = () => PN.names(DIR);   // v1.3: naam NT-PRINT se (pc-names.js)
 
 // ---------- SQL qataren → har bill ka gate pass doc ----------

@@ -1,5 +1,5 @@
 // =========================================================
-//  bill-clip.js  v2.6 (2026-11-16: counter ka naam NT-PRINT se — pc-names.js; purane naam ka channel bhi chalta) ·  v2.5 (2026-11-10) — 🎯 pehli item ka ASAL waqt counter ki POS screen se (posAdds, NT-PRINT v1.32) + clip PRINT hote hi (post ka intezar nahi)
+//  bill-clip.js  v2.7 (2026-11-17: 🌐 NVR tak rasta nahi (Windows ffmpeg 'Error number -138' = waqt khatam — 17 Nov aaj ki 628 clip ✕) = har bill par 15 s koshish NAHI: kaam ruke, har 5 min halka TCP sawal, rasta khule to wahi bill dobara (koshish nahi gini); server PC ke IP + NVR IP + isi network par camera port (554) khula kahan — app ⚙️ mein (billClipPc.net). Counter ka naam = PC ka apna naam (pc-names v1.1, chFind).) · v2.6 (2026-11-16: counter ka naam NT-PRINT se — pc-names.js; purane naam ka channel bhi chalta) ·  v2.5 (2026-11-10) — 🎯 pehli item ka ASAL waqt counter ki POS screen se (posAdds, NT-PRINT v1.32) + clip PRINT hote hi (post ka intezar nahi)
 //  v2.4 (2026-11-10) — 🔗 recording wali line ki COPY PC ke andar (udp 127.0.0.1:48500+ch) → live-cam v1.2 (NVR live ko doosra rabta nahi deta tha: "error -138"); copy se recording gire = khud purana tareeqa.
 //  v2.3 (2026-11-10) — 🎬 video AAKHRI ITEM tak (`lt`, pos-sales-dekho v2.7): POS ka 'Created & Printed' waqt bill khatam hone se pehle ka hota hai → 18 item ke bill ki sirf 2 min video, 6 item ke baad app shuru se chala deti (malik). Ab t1 = max(print, aakhri item) + post. haal (billClipPc) mein `pcs` = setting ke counter naam (Live camera bina bill ke bhi).
 //  v2.2 (2026-11-09) — 🎯 clip PEHLI ITEM se: `pre` 0 = bill ki pehli scan (`ft`, pos-sales-dekho v2.5) se 15 s pehle → print + post s; ft na ho = 120 s pehle. ⚙️ chips: Pehli item · 1 · 2 · 3 · 5 min.
@@ -48,7 +48,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.6';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.7';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -73,14 +73,14 @@ let ON0 = 0;   // v1.2: camera kab ON hua (app `onAt`, purani setting = aakhri s
 let AUTHBAD = 0, cfSig = '', TEST = null;   // v1.3: 401 aaya = ruko jab tak user / password / IP / port na badle
 biz.collection('blueAccess').doc('billClip').onSnapshot(s => { const d0 = s.exists ? s.data() : null; cfApply(d0);
   // v1.5: sig mein cfg.at = har Save naya Rabta test
-  const sig = [CF.on, CF.kind, CF.ip, CF.port, CF.user, CF.pw, CF.sub, Number(d0 && d0.at) || 0].join('|'); if (sig !== cfSig) { const first = !cfSig; cfSig = sig; AUTHBAD = 0; for (const [k, v] of known) if (v.st === 'err') known.set(k, { st: 'err', tries: 0, at: 0 }); if (CF.on && CF.ip) setTimeout(() => rabta().catch(e => log('⚠️ rabta: ' + e.message)), first ? 20000 : 1500); recStopAll('setting badli'); } recSync(); ON0 = CF.on ? (Number(d0 && (d0.onAt || d0.at)) || Date.now()) : 0; log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre === 0 ? 'pehli item' : CF.pre + ' s'}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
+  const sig = [CF.on, CF.kind, CF.ip, CF.port, CF.user, CF.pw, CF.sub, Number(d0 && d0.at) || 0].join('|'); if (sig !== cfSig) { const first = !cfSig; cfSig = sig; AUTHBAD = 0; NETBAD = 0; netScanAt = 0; for (const [k, v] of known) if (v.st === 'err') known.set(k, { st: 'err', tries: 0, at: 0 }); if (CF.on && CF.ip) setTimeout(() => rabta().catch(e => log('⚠️ rabta: ' + e.message)), first ? 20000 : 1500); recStopAll('setting badli'); } recSync(); ON0 = CF.on ? (Number(d0 && (d0.onAt || d0.at)) || Date.now()) : 0; log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre === 0 ? 'pehli item' : CF.pre + ' s'}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
 
 // ---------- haal (app ke liye) ----------
 let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0 }, stAt = 0;
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0).slice(0, 12), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState(), net: NET || null }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -132,11 +132,48 @@ function hint(err) {   // malik ko samajh aane wali wajah
   if (/\b401\b|unauthori[sz]ed/i.test(e)) return 'NVR ka user / password ghalat (401) — ya ghalat koshishon se NVR ne admin 30 min ke liye band kiya';
   if (/\b404\b|not found|no such/i.test(e)) return 'NVR par ye channel / waqt ki recording nahi (404) — channel number ya recording dekhein';
   if (/\b453\b|forbidden|\b403\b/i.test(e)) return 'NVR user ko Playback ki ijazat nahi (NVR → User → Playback ✓)';
-  if (/timed? ?out|connection refused|no route|network is unreachable|ehostunreach/i.test(e)) return 'NVR tak rasta nahi (IP / LAN dekhein)';
+  if (netErr(e)) return 'NVR tak rasta nahi (waqt khatam) — server PC aur NVR ek network par? IP / LAN dekhein';
   if (/ffmpeg nahi/.test(e)) return 'ffmpeg abhi install nahi hua';
   if (/invalid data found/i.test(e)) return 'NVR ne video nahi di (NVR restart ho raha / RTSP band / port 554 ghalat) — 2 min baad ⚙️ Save';
   return e.slice(0, 140);
 }
+
+// v2.7: 🌐 NVR TAK RASTA — Windows par ffmpeg ka 'Error number -138 occurred' = ETIMEDOUT (rabta waqt par nahi bana). Pehle har bill 15 s + main stream
+//   dobara = 628 bill sab ✕ aur 3 koshish ke baad hamesha ke liye chhoot gaye. Ab: rasta band = NETBAD (kaam ruka, recording band), har 5 min halka
+//   TCP sawal (NVR:port) — khule to wahi bill dobara (koshish nahi gini). netDiag: server PC ke LAN IP, NVR ka IP, ek network (pehle 3 hisse) ya nahi,
+//   aur isi network par camera port kahan khula (30 min mein ek dafa, sirf apne /24 par) -> app ⚙️ Camera setup (billClipPc.net). Setting khud nahi badalti.
+const netErr = e => /error number -138\b|-10060|-10061|timed? ?out|connection refused|no route|network is unreachable|ehostunreach|etimedout|econnrefused/i.test(String(e || ''));
+let NETBAD = 0, NET = null, netScanAt = 0;
+function tcp(ip, port, ms) {
+  return new Promise(res => { let s, done = false; const end = ok => { if (done) return; done = true; try { s && s.destroy(); } catch {} res(ok); };
+    try { s = require('net').connect({ host: ip, port }); } catch { return end(false); }
+    s.setTimeout(ms, () => end(false)); s.on('connect', () => end(true)); s.on('error', () => end(false)); });
+}
+function myIps() {
+  const out = [];
+  for (const L of Object.values(os.networkInterfaces() || {})) for (const a of L || []) {
+    if (!a || a.internal || !(a.family === 'IPv4' || a.family === 4)) continue;
+    if (/^(10\.|192\.168\.|172\.(1[6-9]|2\d|3[01])\.)/.test(a.address)) out.push(a.address);
+  }
+  return [...new Set(out)].slice(0, 4);
+}
+async function netDiag(scan) {
+  const my = myIps(), ip = CF.ip, pre = x => String(x || '').split('.').slice(0, 3).join('.');
+  const pOk = ip ? await tcp(ip, CF.port, 3000) : false, wOk = ip ? await tcp(ip, 80, 3000) : false;
+  let found = (NET && NET.found) || [];
+  if (scan && ip && !pOk && my.length && Date.now() - netScanAt > 30 * 60000) {
+    netScanAt = Date.now(); found = [];
+    for (const m of my) {
+      const hs = []; for (let i = 1; i < 255; i++) { const h = pre(m) + '.' + i; if (h !== m) hs.push(h); }
+      for (let i = 0; i < hs.length; i += 48) { const rs = await Promise.all(hs.slice(i, i + 48).map(h => tcp(h, CF.port, 700).then(ok => ok ? h : ''))); for (const h of rs) if (h) found.push(h); }
+    }
+    found = found.slice(0, 8);
+    log(`🌐 NVR dhoondo (server ${my.join(', ')}): port ${CF.port} khula — ${found.join(', ') || 'kahin nahi'}`);
+  }
+  NET = { at: Date.now(), my, ip, port: CF.port, p554: pOk ? 1 : 0, p80: wOk ? 1 : 0, same: my.some(m => pre(m) === pre(ip)) ? 1 : 0, found };
+  return pOk;
+}
+const netMsg = () => `NVR (${CF.ip}) tak rasta nahi — server PC ${(NET && NET.my && NET.my.join(', ')) || ''} ${NET && !NET.same ? '(alag network) ' : ''}· clips ruki hain, rasta khulte hi khud banengi`;
 
 // v1.4: ffmpeg RTSP auth "user:pass" ko %-decode nahi karta — jaisa likha waisa bhejo (av_url_split aakhri @ leta hai, pehla : user/pass alag)
 const credOf = x => String(x || '').replace(/[\s/?#]/g, c => encodeURIComponent(c));
@@ -169,7 +206,8 @@ async function rabta() {
   const r = await ffCut(url, 2, out); try { fs.unlinkSync(out); } catch {}
   TEST = { at: Date.now(), ch, ok: r.ok ? 1 : 0, web: wtxt, err: r.ok ? '' : hint(r.err), raw: r.ok ? wtxt : (wtxt + ' · ' + String(r.err || '').replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@')).slice(0, 260) };
   if (!r.ok && /401/.test(TEST.err)) AUTHBAD = Date.now();
-  if (r.ok) recSync();
+  if (!r.ok && netErr(r.err)) { try { await netDiag(true); } catch {} }   // v2.7: 🌐 rasta nahi = server / NVR ka network app mein
+  if (r.ok) { NETBAD = 0; recSync(); }
   log(`🔎 rabta test ch ${ch}: ${r.ok ? '✓ NVR se live video mili (password theek)' : '✕ ' + TEST.err + ' — ' + TEST.raw}`);
   pushSt(true); kick();
 }
@@ -187,7 +225,7 @@ function segList(ch) {   // [{f, t0, t1}] waqt ke mutabiq (file ke naam se — P
   return out;
 }
 function recStart(ch) {
-  if (recs.get(ch)?.p) return; const ff = ffPath(); if (!ff || !CF.on || !CF.ip || AUTHBAD) return;
+  if (recs.get(ch)?.p) return; const ff = ffPath(); if (!ff || !CF.on || !CF.ip || AUTHBAD || NETBAD) return;
   const dir = recDir(ch); fs.mkdirSync(dir, { recursive: true });
   const st = recs.get(ch) || { errs: 0, restarts: 0 }; recs.set(ch, st);
   // v2.4 🔗: isi rabte ki copy PC ke andar (udp 127.0.0.1:48500+ch, mpegts) — live-cam v1.2 wahi leti hai, NVR par doosra rabta nahi (NVR doosra nahi deta: live "error -138").
@@ -214,7 +252,7 @@ function recStart(ch) {
 function recStopAll(why) { for (const [ch, st] of recs) if (st.p) { try { st.p.kill(); } catch {} st.p = null; } if (why && recs.size) log(`🎞 recording band (${why})`); }
 function recSync() {   // jo channel setting mein hain wahi chalein; baqi band
   if (!cfReady) return;
-  const want = CF.on && CF.ip && !AUTHBAD && ffPath() ? recChannels() : [];
+  const want = CF.on && CF.ip && !AUTHBAD && !NETBAD && ffPath() ? recChannels() : [];
   for (const [ch, st] of recs) if (!want.includes(ch) && st.p) { try { st.p.kill(); } catch {} st.p = null; }
   for (const ch of want) recStart(ch);
 }
@@ -276,7 +314,6 @@ async function loadKnown() {   // aaj + kal ke clip docs (dobara na banein)
 // v2.5: 🎯 PEHLI ITEM ka asal waqt — counter NT-PRINT v1.32 POS screen par har item judne ka waqt posAdds/<HOST> mein likhta hai.
 //   Bill ki pehli item = us counter ke pichhle bill ke baad se is bill ke print tak ke ADD (beech mein 4 min se bara waqfa = pichhla kaam, wahan ruk).
 //   Counter ki ghari alag ho sakti hai -> off = (server ko mila − counter ka now) ka sab se chhota namoona.
-const PC_DEFAULT = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
 const PN = require('./pc-names.js'); PN.start(biz); const pcNames = () => PN.names(__dirname);   // v2.6: naam NT-PRINT se (pc-names.js)
 const ADDS = new Map(); let addsFirst = true;
 biz.collection('posAdds').onSnapshot(s => { const names = pcNames(), now = Date.now();
@@ -301,8 +338,8 @@ function pick() {
     const id = String(b.id), k = known.get(id), rq = reqs.has(id);   // v2.0: rq = app ka hukum (un-posted bhi)
     const posted = Number(b.ps) === 2 && Number(b.pt) > 0, printed = Number(b.ct) > 0;   // v2.5: PRINT hote hi clip — post ka intezar nahi
     if (!rq && (!(posted || printed) || !(Number(b.n) > 0))) continue;
-    if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000))) { if (rq && k.st === 'ok') reqDone(id, 'ok'); continue; }
-    const ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()] ?? CF.ch[PN.oldName(b.pc)]) || 0;
+    if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000) || (k.st === 'net' && NETBAD))) { if (rq && k.st === 'ok') reqDone(id, 'ok'); continue; }
+    const ch = PN.chFind(CF.ch, b.pc);
     const rec = ch && recs.get(ch)?.p ? 20 : 90;   // v2.0: apni recording = 20 s baad hi; NVR playback 1-2 min peeche likhta — 90 s
     const lt = Number(b.lt) || 0, endAt = Math.max(anchorOf(b), lt > anchorOf(b) && lt - anchorOf(b) < 20 * 60000 ? lt : 0, 0);   // v2.3: aakhri item ke baad hi
     if (now - endAt < (CF.post + rec) * 1000) continue;
@@ -321,17 +358,23 @@ async function work() {
     if (!CF.on) { ST.err = CF.ip ? 'band (⚙️ se ON karein)' : 'NVR ka IP nahi — app ⚙️ Bill tally setup'; recStopAll(''); pushSt(); return; }
     if (!ffPath()) { ffInstall(); return; }
     if (AUTHBAD) { ST.err = 'NVR ka user / password ghalat (401) — ruka hua; ⚙️ mein theek kar ke Save karein (ghalat koshishon se NVR admin band kar deta)'; pushSt(); return; }
+    if (NETBAD) {   // v2.7: 🌐 rasta band — har 5 min ek halka sawal, tab tak koi bill nahi
+      if (Date.now() - NETBAD < 5 * 60000) { ST.err = netMsg(); pushSt(); return; }
+      let ok = false; try { ok = await netDiag(true); } catch {}
+      if (!ok) { NETBAD = Date.now(); ST.err = netMsg(); pushSt(true); return; }
+      NETBAD = 0; log('🌐 NVR ka rasta khul gaya — ruki clips ab banengi'); recSync();
+    }
     ST.err = '';
     for (const b of q) {
-      if (!cfReady || !CF.on || AUTHBAD) break;
+      if (!cfReady || !CF.on || AUTHBAD || NETBAD) break;
       await one(b);
       pushSt(true);
     }
     pushSt();
-  } finally { busy = false; if (!AUTHBAD && pick().length && CF.on && ffPath()) kick(); }
+  } finally { busy = false; if (!AUTHBAD && !NETBAD && pick().length && CF.on && ffPath()) kick(); }
 }
 async function one(b) {
-  const id = String(b.id), ch = Number(CF.ch[b.pc] ?? CF.ch[String(b.pc || '').toLowerCase()] ?? CF.ch[PN.oldName(b.pc)]) || 0;
+  const id = String(b.id), ch = PN.chFind(CF.ch, b.pc);
   const k = known.get(id) || { tries: 0 }; const tries = (k.tries || 0) + 1;
   const base = { no: String(b.no || ''), day: billsDay || dayOf(b.pt || b.ct), pt: Number(b.pt) || 0, tm: Number(b.tm) || 0, ct: Number(b.ct) || 0, an: anchorOf(b), pc: String(b.pc || ''), p: String(b.p || ''), t: Number(b.t) || 0, by: String(b.by || ''), nl: Number(b.n) || 0, at: Date.now(), tries, ver: VER };
   if (!ch) {   // counter ka camera lagaya hi nahi — skip (malik ⚙️ mein chip lagaye)
@@ -358,6 +401,14 @@ async function one(b) {
     src = 'nvr'; url = playUrl(ch, t0, t1); const IN = u => ['-rtsp_transport', 'tcp', '-timeout', '15000000', '-i', u];
     const r1 = await ffSegs(IN(url), 0, dur, outDir); r = r1;
     if (!r.ok && CF.kind === 'dahua' && CF.sub && !/\b401\b|unauthori/i.test(r.err)) { rmDir(outDir); const r2 = await ffSegs(IN(url.replace('subtype=1', 'subtype=0')), 0, dur, outDir); if (r2.ok) r = r2; else r.err = r.err + ' | main: ' + r2.err; }   // sub stream record na ho to main
+  }
+  if (!r.ok && netErr(r.err) && !(await tcp(CF.ip, CF.port, 3000))) {   // v2.7: 🌐 NVR tak rasta hi nahi — bill ki ghalti nahi, koshish nahi gini
+    NETBAD = Date.now(); known.set(id, { st: 'net', tries: k.tries || 0, at: Date.now() });
+    try { await netDiag(true); } catch {}
+    const why = netMsg();
+    await CLIP.doc(id).set({ ...base, st: 'err', err: why, raw: String(r.err || '').slice(0, 300), rq }, { merge: true });
+    ST.last = `#${b.no} ⏸ NVR tak rasta nahi`; ST.err = why; log(`⏸ bill #${b.no} (ch ${ch}, ${src}): ${why} — ${String(r.err || '').slice(0, 120)}`);
+    recStopAll('net'); rmDir(outDir); return;
   }
   if (!r.ok) {
     known.set(id, { st: 'err', tries, at: Date.now() });

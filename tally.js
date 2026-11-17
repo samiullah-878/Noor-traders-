@@ -246,7 +246,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.315.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.316.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
@@ -350,23 +350,29 @@ function openUnposted() {
 async function openSetup() {
   if (!isOwner()) return;
   const d = dlg(); delete d.dataset.unp; delete d.dataset.list; d.innerHTML = '<div class="bt-dbody">⏳</div>'; if (!d.open) d.showModal();
+  // v2.316.0: sab TAZA server se (purani yaad nahi — malik: list purani dikhti thi)
   let cf = {}; try { cf = await cloud.getBillClipCfg(); } catch (e) { cf = {}; }
-  // v2.302.0: counter ke naam NT-PRINT se (printPCs) + har counter ka haal; purana channel purane naam se bhi bhar jata hai
-  const NT_DEF = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
-  let nts = [];
-  try { nts = await new Promise(res => { let done = false, u = null; const fin = L => { if (done) return; done = true; res(L || []); setTimeout(() => { try { u && u(); } catch {} }, 0); };
-    setTimeout(() => fin([]), 4000); u = cloud.listenPrintPCs ? cloud.listenPrintPCs(fin) : (fin([]), null); }); } catch { nts = []; }
-  const ch0 = cf.ch || {}, rows = new Map(), alias = new Set(), srvH = String((pcSt || {}).host || '').toUpperCase();
+  // v2.302.0 / v2.316.0: counter ka naam = PC ka APNA naam (NT-PRINT se) — malik 17 Nov: "Abdurehman ki bajaye PC ka naam". Qaida PC pc-names v1.1 disp() HUBAHU:
+  //   NT-PRINT setting ka naam host se alag ho to wohi, warna host (DESKTOP- hata kar). LEG = purane insaanon wale naam — sirf purana channel dhoondne ke liye.
+  //   🔗 POS par PC ka naam NT-PRINT se alag ho (ek PC do dafa) = ⚪ qatar par "Yeh kaun sa PC?" → blueAccess/pcAlias (PC scripts bhi wahi naam).
+  const LEG = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
+  const bareH = h => String(h || '').trim().replace(/^DESKTOP-/i, ''), disp = x => { const h = String(x.host || '').toUpperCase().trim(), n = String(x.name || '').trim().slice(0, 40); return n && n.toUpperCase() !== h ? n : bareH(h); };
+  let nts = [], al = {};
+  try { nts = cloud.getPrintPCsFresh ? await cloud.getPrintPCsFresh() : []; } catch { nts = []; }
+  try { al = cloud.getPcAlias ? await cloud.getPcAlias() : {}; } catch { al = {}; }
+  const ch0 = cf.ch || {}, rows = new Map(), alias = new Set(Object.keys(al)), srvH = String((pcSt || {}).host || '').toUpperCase();
   for (const x of nts) {
-    const h = String(x.host || '').toUpperCase(), nm = String(x.name || '').trim().slice(0, 40) || h; if (!nm) continue;
-    const bare = h.replace(/^[A-Z]+-/, ''), m = Math.max(0, Math.round((Date.now() - (Number(x.at) || 0)) / 60000));
-    [NT_DEF[h], h, bare].forEach(a => a && a !== nm && alias.add(a));
-    rows.set(nm, { v: ch0[nm] ?? ch0[nm.toLowerCase()] ?? ch0[NT_DEF[h]] ?? ch0[h] ?? ch0[bare] ?? '', srv: !!srvH && srvH === h,
-      st: m <= 5 ? `🟢 NT-PRINT v${x.ver || '?'}` : `🔴 NT-PRINT band ${m > 120 ? Math.round(m / 60) + ' ghante' : m + ' min'}` });
+    const h = String(x.host || '').toUpperCase(), nm = disp(x); if (!nm) continue;
+    const bare = bareH(h), raw = String(x.name || '').trim(), m = Math.max(0, Math.round((Date.now() - (Number(x.at) || 0)) / 60000));
+    const froms = Object.keys(al).filter(f => al[f] === nm);
+    [LEG[h], h, bare, raw].forEach(a => a && a !== nm && alias.add(a));
+    rows.set(nm, { v: ch0[nm] ?? ch0[nm.toLowerCase()] ?? ch0[LEG[h]] ?? ch0[h] ?? ch0[bare] ?? ch0[raw] ?? froms.map(f => ch0[f] ?? ch0[LEG['DESKTOP-' + f.toUpperCase()]]).find(v => v != null) ?? '', srv: !!srvH && srvH === h, nt: 1,
+      st: (m <= 5 ? `🟢 NT-PRINT v${x.ver || '?'}` : `🔴 NT-PRINT band ${m > 120 ? Math.round(m / 60) + ' ghante' : m + ' min'}`) + (h && h !== nm.toUpperCase() ? ' · ' + h : '') });
   }
   if (!nts.length) for (const k of Object.keys(ch0)) rows.set(k, { v: ch0[k], st: '' });
-  for (const b of bills.values()) { const p = String(b.pc || ''); if (p && !rows.has(p) && !alias.has(p)) rows.set(p, { v: ch0[p] ?? '', st: '⚪ NT-PRINT nahi laga' }); }
-  const pcs = new Set(rows.keys());
+  for (const b of bills.values()) { const p = String(b.pc || ''); if (p && !rows.has(p) && !alias.has(p)) rows.set(p, { v: ch0[p] ?? '', st: '⚪ NT-PRINT nahi laga', link: 1 }); }
+  const pcs = new Set(rows.keys()), ntNames = [...rows.keys()].filter(k => rows.get(k).nt).sort();
+  const alHTML = Object.keys(al).length ? `<div class="bt-alias">🔗 Jore hue (ek hi PC): ${Object.entries(al).map(([f, t]) => `<button type="button" class="bt-alx" data-al-x="${esc(f)}">${esc(f)} → ${esc(t)} ✕</button>`).join('')}</div>` : '';
   const st = pcSt || {};
   const inp = (k, ph, v, type) => `<label class="bt-f"><span>${ph}</span><input type="${type || 'text'}" data-cf="${k}" value="${esc(v ?? '')}" autocomplete="off"></label>`;
   d.innerHTML = `<div class="bt-dhead"><b>⚙️ Camera setup (malik)</b><button type="button" class="bt-x" data-x="1">×</button></div>
@@ -381,16 +387,31 @@ async function openSetup() {
       <div class="bt-grid">${inp('ip', 'NVR ka IP (LAN)', cf.ip)}${inp('port', 'RTSP port', cf.port || 554, 'number')}${inp('user', 'NVR user', cf.user || 'admin')}${inp('pw', 'NVR password', cf.pw, 'password')}
         ${inp('post', 'Print ke BAAD (s)', cf.post || 20, 'number')}${inp('keep', 'Clip rakho (din)', cf.keep || 2, 'number')}${inp('rk', 'PC par live recording rakho (min)', cf.rk || 180, 'number')}${inp('rep', 'Shaam ka paigham (HH:MM)', cf.rep || '20:30')}</div>
       <div class="bt-ihead">🖥 Counter ↔ camera channel (NVR ka channel number)</div>
-      <div class="bt-chlist">${[...pcs].sort().map(p => { const r = rows.get(p) || {}; return `<label class="bt-ch"><span class="bt-chn"><b>${esc(p)}</b><small>${esc(r.st || '')}${r.srv ? ' · 🖥 server' : ''}</small></span><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc(r.v ?? '')}" placeholder="ch"></label>`; }).join('') || '<small>Koi counter nahi mila — counter PC par NT-PRINT chalu ho to naam yahan khud aayega</small>'}</div>
-      <p class="bt-sub">🖥 Naam har counter ke NT-PRINT ki setting se khud aate hain. 🟢 = NT-PRINT chal raha · 🔴 = band · ⚪ = us PC par NT-PRINT nahi.</p>
+      <div class="bt-chlist">${[...pcs].sort().map(p => { const r = rows.get(p) || {}; const tg = r.link && ntNames.length ? 'div' : 'label'; return `<${tg} class="bt-ch" data-chrow="${esc(p)}"><span class="bt-chn"><b>${esc(p)}</b><small>${esc(r.st || '')}${r.srv ? ' · 🖥 server' : ''}</small>${r.link && ntNames.length ? `<select class="bt-alsel" data-al="${esc(p)}"><option value="">🔗 Yeh kaun sa PC hai?</option>${ntNames.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>` : ''}</span><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc(r.v ?? '')}" placeholder="ch"></${tg}>`; }).join('') || '<small>Koi counter nahi mila — counter PC par NT-PRINT chalu ho to naam yahan khud aayega</small>'}</div>
+      ${alHTML}
+      <p class="bt-sub">🖥 Naam = har PC ka apna naam (NT-PRINT se). 🟢 = NT-PRINT chal raha · 🔴 = band · ⚪ = bill is naam se aaye magar NT-PRINT nahi mila — wohi PC ho to 🔗 se jor dein.</p>
       <p class="bt-sub">🖥 PC: ${st.at ? (Date.now() - st.at < 5 * 60000 ? '🟢 chalu' : '⚫ chup ' + ago(st.at)) + ' · v' + esc(st.ver || '?') + (st.ff ? ' · ffmpeg ✓' : ' · ffmpeg ⏳') + (st.today ? ` · aaj ${st.today.n} (✓ ${st.today.ok} ✕ ${st.today.err})` : '') + (st.last ? ' · ' + esc(st.last) : '') + (st.err ? ' · ⚠ ' + esc(st.err) : '') : 'abhi report nahi (PC 3-5 min mein script lagata hai)'}</p>
       ${st.rec && Object.keys(st.rec).length ? `<p class="bt-sub">🎞 Recording: ${Object.entries(st.rec).map(([ch, r]) => `ch ${esc(ch)} ${r.on ? '🟢' : '⚫'} ${r.n || 0} min${r.last ? ' · ' + tm(r.last) : ''}${r.err ? ' · ' + esc(r.err) : ''}`).join(' · ')}</p>` : ''}
+      ${st.net ? `<p class="bt-sub bt-test${st.net.p554 ? '' : ' bad'}">🌐 Network (${tm(st.net.at)}): server PC <b>${esc((st.net.my || []).join(', ') || '?')}</b> · NVR <b>${esc(st.net.ip || '?')}</b>:${esc(st.net.port || 554)} — ${st.net.p554 ? '✅ rasta hai' : '✕ rasta nahi'}${st.net.p80 ? ' · web ✓' : ''}${!st.net.same ? ' · ⚠️ dono alag network par (IP ke pehle 3 hisse alag)' : ''}${st.net.found && st.net.found.length ? `<br>🔎 Server ke network par camera port khula: <b>${st.net.found.map(esc).join(', ')}</b> — NVR shayad yahan hai: upar IP yeh likh kar 💾 Save` : (!st.net.p554 ? '<br>Server ke network par koi camera port nahi mila — NVR ki taar / Wi-Fi ya server PC ka network dekhein' : '')}</p>` : ''}
       ${st.test ? `<p class="bt-sub bt-test${st.test.ok ? '' : ' bad'}">🔎 Rabta test (${tm(st.test.at)}, ch ${esc(st.test.ch)}): ${st.test.ok ? '✅ NVR se live video mili — password / IP theek' : '✕ ' + esc(st.test.err) + (st.test.raw ? `<br><small>${esc(st.test.raw)}</small>` : '')}</p>` : ''}
       <div class="bt-row"><button type="button" class="bt-save" data-save="1">💾 Save</button></div>
     </div>`;
   let on = cf.on !== false && !!cf.ip, kind = /hik/i.test(cf.kind || '') ? 'hik' : 'dahua', sub = cf.sub === 0 ? 0 : 1, pre = cf.pre === undefined ? 0 : Number(cf.pre) || 0;
   d.querySelectorAll('[data-pre]').forEach(b => b.onclick = () => { pre = Number(b.dataset.pre) || 0; d.querySelectorAll('[data-pre]').forEach(x => x.classList.toggle('on', x === b)); });
   d.querySelector('[data-x]').onclick = () => d.close();
+  // v2.316.0: 🔗 ek hi PC ke do naam jorna / kholna (blueAccess/pcAlias — PC scripts 3-5 min mein wahi naam)
+  d.querySelectorAll('[data-al]').forEach(sl => sl.onchange = async () => {
+    const from = sl.dataset.al, to = sl.value; if (!to) return;
+    if (!confirm(`🔗 "${from}" aur "${to}" ek hi PC hain?\n\nAage se "${from}" ke bill "${to}" ke naam se aayenge (camera channel bhi wahi).`)) { sl.value = ''; return; }
+    sl.disabled = true;
+    try { await cloud.setPcAlias(from, to); notice('🔗 Jor diya — PC 3-5 min mein naya naam lagayega'); const row = sl.closest('[data-chrow]'); if (row) row.remove(); }
+    catch (e) { sl.disabled = false; sl.value = ''; notice('Nahi jura: ' + (e?.message || e)); }
+  });
+  d.querySelectorAll('[data-al-x]').forEach(b => b.onclick = async () => {
+    const from = b.dataset.alX; if (!confirm(`"${from}" ka jor hata dein? (alag PC dikhega)`)) return;
+    b.disabled = true;
+    try { await cloud.setPcAlias(from, null); notice('Jor hata diya'); b.remove(); } catch (e) { b.disabled = false; notice('Nahi hata: ' + (e?.message || e)); }
+  });
   d.querySelector('[data-tg="on"]').onclick = ev => { on = !on; ev.currentTarget.classList.toggle('on', on); ev.currentTarget.textContent = on ? '🟢 ON' : '⚫ Band'; };
   d.querySelector('[data-tg="sub"]').onclick = ev => { sub = sub ? 0 : 1; ev.currentTarget.classList.toggle('on', !!sub); ev.currentTarget.textContent = sub ? 'Sub stream (halki)' : 'Main stream'; };
   d.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { kind = b.dataset.kind; d.querySelectorAll('[data-kind]').forEach(x => x.classList.toggle('on', x === b)); });

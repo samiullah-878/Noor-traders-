@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.28 (2026-11-10: 🖥 Live camera ke saath POS ki Sale list ki tasveer posLive/<naam>__shot — sirf jab koi dekh raha ho) · v1.27 (2026-11-09: 🚚 sale rasid ke upar delivery patti — 2 English + 2 bari Urdu lines, app Settings 🖨 Print setting se ON / charges) · v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.33 (2026-11-17: 🖥 app ki PC scripts khirki khuli (blueAccess/ntWatch.at 3 min ke andar) = zinda report har 20 s, warna pehle jaisa 60 s — malik: 'NT-PRINT zinda ka data kuch second baad update ho') · v1.28 (2026-11-10: 🖥 Live camera ke saath POS ki Sale list ki tasveer posLive/<naam>__shot — sirf jab koi dekh raha ho) · v1.27 (2026-11-09: 🚚 sale rasid ke upar delivery patti — 2 English + 2 bari Urdu lines, app Settings 🖨 Print setting se ON / charges) · v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -39,7 +39,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.32';   // v1.28 (2026-11-10): 🖥 Live camera ke saath POS screen ki tasveer (nt-posui v1.13 shot) — sirf jab koi dekh raha ho
+const VER = '1.33';   // v1.28 (2026-11-10): 🖥 Live camera ke saath POS screen ki tasveer (nt-posui v1.13 shot) — sirf jab koi dekh raha ho
 // pehle: const VER 1.27   // v1.27 (2026-11-09): 🚚 sale rasid ke upar delivery patti — DELIVERY AVAILABLE HAR GAON + charges, Urdu bari (urdu-names v1.8 dlv)
 //   // v1.26 (2026-11-07): 🧾 rasid table 5 khane (Rate + Amt ek qatar, Font B)   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
 const BUSINESS_ID = 'noor-traders';
@@ -254,8 +254,10 @@ function sndState() {
 }
 const sndBump = () => { if (sndT) return; sndT = setTimeout(() => { sndT = null; beat(); }, 5000); };   // 5 sec mein ek dafa — Firestore par bojh nahi
 const keep = (arr, x, n) => { arr.unshift(x); if (arr.length > n) arr.length = n; };
+let beatAt = 0, ntWatchAt = 0;   // v1.33: app ka 🖥 PC scripts dabba khula = har 20 s
 async function beat() {
   if (!pcDoc) return;   // v1.15: awaz-only
+  beatAt = Date.now();
   if (!prAt || Date.now() - prAt > 10 * 60000) scanPrinters();
   try { await pcDoc.set({ name: PC_NAME, host: os.hostname(), printer: printerName(), printers: PR_LIST.map(n => ({ n, h: h6(n) })), at: Date.now(), ver: VER, width: W, snd: sndState(), ...(djLast ? { docJaga: djLast } : {}) }); }
   catch (e) { log('⚠ report: ' + e.message); if (unauth(e)) { log('Firebase rabta toota (UNAUTHENTICATED) — dobara shuru'); setTimeout(() => process.exit(1), 500); } }
@@ -586,7 +588,11 @@ lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   log(`💻 NT-PRINT v${VER} — PC "${PC_NAME}" (${COUNTER}) · printer: ${printerName() || 'NAHI MILA'} · ${W} harf / ${DOTS} dots`);
   try { P.warm(); } catch {}   // v1.6: print worker pehle se garam
   if (AWAZ_ONLY) log('🔔 AWAZ-ONLY: ' + (FA ? 'firebase-key.json nahi' : 'firebase-admin nahi') + ' — sirf scan / POS awaz (tik, POS error bzzz, tu-tu-tu). Print aur app status band.');
-  else { await beat(); setInterval(beat, 60000); }
+  else {
+    await beat();
+    try { base.collection('blueAccess').doc('ntWatch').onSnapshot(d => { ntWatchAt = Number(((d.exists && d.data()) || {}).at) || 0; }, () => {}); } catch {}   // v1.33
+    setInterval(() => { const now = Date.now(); if (now - ntWatchAt < 3 * 60000 || now - beatAt >= 58000) beat(); }, 20000);
+  }
   if (AWAZ_ONLY && FA && FF) setInterval(() => { try { if (fs.existsSync(KEY) && fs.statSync(KEY).size > 500) { log('🔑 firebase-key.json aa gayi — dobara shuru (app se jurne ke liye)'); process.exit(0); } } catch {} }, 30000);   // v1.31
   listen();
   setTimeout(selfUpdate, 60000); setInterval(selfUpdate, 3 * 60000);   // v1.7 · v1.16: har 3 min (pehle 5)

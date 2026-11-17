@@ -5040,3 +5040,9 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 === pos-khata-sync w6 (2026-11-17, app v2.314.0) ===
 - milanBalance (@balance): transfer ab milanSendOne se ALAG voucher nahi — sirf EK JV (khata ↔ Equity). Har app-only entry (transfer ki dono taraf bhi) par posNo + balFix (fix.mk). Malik: 'sirf ek voucher, sab entries nahi'. acct / purAc params ab is function mein istemal nahi (signature wahi).
 - milanJobs status 'stop' (app ka ✕ Rok do, rules 2.105) — runMilanJobs sirf 'new' uthata hai, is liye kuch karna nahi.
+
+=== 2026-11-17 (app v2.316.0): pc-names v1.1 · bill-clip v2.7 · live-cam v1.6 · pos-sales-dekho v2.14 · gate-pass v1.4 · raat-report v2.4 · nt-print v1.33 ===
+- pc-names v1.1: naam = NT-PRINT setting naam (host se alag ho to) warna bare host; LEGACY sirf chFind (channel); blueAccess/pcAlias.m onSnapshot (🔗 malik ka jor); names() mein pehle NT host (live ka ulta lookup sahi host), phir alias keys (KEIME1D + DESKTOP-KEIME1D). nowName(k) purani chaabi -> naya naam.
+- bill-clip v2.7: NETBAD (ETIMEDOUT -138 + TCP fail) = ruko, har 5 min netDiag, billClipPc.net; recording NETBAD mein band; cfg Save = NETBAD / scan reset. chFind se channel.
+- live-cam v1.6: chOf = PN.chFind. pos-sales-dekho / gate-pass / raat-report: sirf PC_DEFAULT {} (pc-names ki nayi file uthane ke liye chhue).
+- nt-print v1.33: blueAccess/ntWatch onSnapshot; har 20 s timer — ntWatch.at 3 min ke andar = report, warna 58 s se purani ho to (pehle jaisa 60 s). Counters UPD_FILES se khud lete hain.

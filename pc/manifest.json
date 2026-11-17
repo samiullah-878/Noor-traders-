@@ -1,6 +1,6 @@
 {
- "version": "2026-11-17.4",
- "note": "pos-khata-sync w6: ⚖️ Ek voucher (@balance) = SIRF EK JV — transfer ab alag voucher se nahi; app ka ✕ Rok do (status stop). Pichhla: nt-posui v1.15: POS screen watcher ki memory had (600 MB) — upar = 2 s mein naya (malik ke PC par 4.5 GB tha). Pichhla: a4-print v1.7 + wa-parchi v2.37: WhatsApp par A4 ka ASAL nateeja (chhap gayi / nahi + wajah), yaad wala printer foran, spooler se kam sawal. Pichhla: pc-names.js v1.0 (nayi) + bill-clip v2.6 + live-cam v1.5 + pos-sales-dekho v2.13 + gate-pass v1.3 + raat-report v2.3: counter ka naam NT-PRINT ki setting (printPCs) se, purane naam ka camera channel bhi chalta. Pichhla: raat-report v2.2 + kh-wa v1.10: reports menu 8 = maal khatam hone wala (sirf maangne par). Pichhla: hz-wa v1.1 (hazri number se) + kh-wa v1.9 (reports sab ko, nafa sirf malik, sab codes) + raat-report v2.1 + larka-stats v3 (godam ka maal larke ki sale mein nahi) + wa-out v1.25. Pichhla: raat-report v2.0: subah ki udhaar report (N din se wasooli nahi) malik ke WhatsApp par. Pichhla: doctor v3.2: server PC ka naam (blueAccess/serverPc, default DESKTOP-Q1SLV77) - doosre naam wala PC scripts band rakhe. Pichhla: hz-wa v1.0 (nayi file) + wa-out v1.22: larkon ki bahar jane ki request WhatsApp se. Pichhla: 14 Nov: raat-report v1.9 (POS Sale.COGS khana nahi = andaza, aaj ki report, app ko haal) + item-report v1.9 (nafa COGS ke baghair). Pichhla: wa-parchi v2.33: gahak ka number alag paigham mein bhi + 0371… jaise naye number. Pichhla: raat-report v1.8: report na bane / atak jaye to malik ko WhatsApp par wajah. Pichhla: 👥 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: 👤 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (⚠️ Print auto / ✅ Parchi Mubeen ko gayi / ⏰ / ▶️ — waOut pp) + \"Print auto 0344…\" reply bhi; Bu",
+ "version": "2026-11-17.5",
+ "note": "pc-names v1.1 (counter ka naam = PC ka apna naam NT-PRINT se, 🔗 pcAlias, chFind) + bill-clip v2.7 (NVR tak rasta nahi = ruko + network jaanch) + live-cam v1.6 + pos-sales-dekho v2.14 + gate-pass v1.4 + raat-report v2.4 + nt-print v1.33 (PC scripts khula = har 20 s report). Pichhla: pos-khata-sync w6: ⚖️ Ek voucher (@balance) = SIRF EK JV — transfer ab alag voucher se nahi; app ka ✕ Rok do (status stop). Pichhla: nt-posui v1.15: POS screen watcher ki memory had (600 MB) — upar = 2 s mein naya (malik ke PC par 4.5 GB tha). Pichhla: a4-print v1.7 + wa-parchi v2.37: WhatsApp par A4 ka ASAL nateeja (chhap gayi / nahi + wajah), yaad wala printer foran, spooler se kam sawal. Pichhla: pc-names.js v1.0 (nayi) + bill-clip v2.6 + live-cam v1.5 + pos-sales-dekho v2.13 + gate-pass v1.3 + raat-report v2.3: counter ka naam NT-PRINT ki setting (printPCs) se, purane naam ka camera channel bhi chalta. Pichhla: raat-report v2.2 + kh-wa v1.10: reports menu 8 = maal khatam hone wala (sirf maangne par). Pichhla: hz-wa v1.1 (hazri number se) + kh-wa v1.9 (reports sab ko, nafa sirf malik, sab codes) + raat-report v2.1 + larka-stats v3 (godam ka maal larke ki sale mein nahi) + wa-out v1.25. Pichhla: raat-report v2.0: subah ki udhaar report (N din se wasooli nahi) malik ke WhatsApp par. Pichhla: doctor v3.2: server PC ka naam (blueAccess/serverPc, default DESKTOP-Q1SLV77) - doosre naam wala PC scripts band rakhe. Pichhla: hz-wa v1.0 (nayi file) + wa-out v1.22: larkon ki bahar jane ki request WhatsApp se. Pichhla: 14 Nov: raat-report v1.9 (POS Sale.COGS khana nahi = andaza, aaj ki report, app ko haal) + item-report v1.9 (nafa COGS ke baghair). Pichhla: wa-parchi v2.33: gahak ka number alag paigham mein bhi + 0371… jaise naye number. Pichhla: raat-report v1.8: report na bane / atak jaye to malik ko WhatsApp par wajah. Pichhla: 👥 raat-report v1.7 + kh-wa v1.7 (malik 14 Nov: hazri app jor do, larkon ki report WhatsApp par): hazriIn -> subah 10 + shaam ki reports ke saath + 'hazri' likhne par; wa-out v1.21 / wa-parchi v2.32 sirf version. Pichhla: 👤 wa-parchi v2.31 + wa-out v1.20 (malik 14 Nov, screenshot: number reply kiya phir bhi \"gahak? (number nahi)\" / bill nahi gaya): gahak ka number ab har parchi wale paigham ke reply se lagta hai (⚠️ Print auto / ✅ Parchi Mubeen ko gayi / ⏰ / ▶️ — waOut pp) + \"Print auto 0344…\" reply bhi; Bu",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -37,9 +37,9 @@
   "sales-stats-auto.bat": "d3c9c311652bbc1ecc79264c4ca6fee2b88698dd59003306717926c5cf59d111",
   "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
-  "pos-sales-dekho.js": "a6bffa55d1b75a8fbdc7e9bcfec2ca27fc019cb0d1bc8bc631edd6708e7e181c",
+  "pos-sales-dekho.js": "6b4751a0ccd7fa5c3d829250bb51091b242bed8d7c47ca4014adf60d7e4b2b37",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
-  "nt-print.js": "2265bb1f2109528292ea9ffa5301d906bda84f3771f316285cefb0bbff86ef4c",
+  "nt-print.js": "3325afb8791e39ac9a00af0fc752861dc7f7990a2abb756ab5dfbf8b6aee5c46",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
   "nt-parchi.js": "732ac2752f0aa819ebc3cf6c43d58159858042ba74342037b5b8b1fb7c56bed8",
   "auto-backup.js": "9ceb8697422b590c1ba0594c2ef6925bc62af6b1addac2d6ab6ad6d73859e3c8",
@@ -49,7 +49,7 @@
   "urdu-shape.js": "ebe13a89fa07b6cc827dcc8b30d527ffb4db214e8fd06bc7934e8535deaa7441",
   "nt-posui.js": "3af4ad8c93c2632360285b10ef64d5b3cf39f40854b75f2d591a1ec697584e2c",
   "purchase-parchi.js": "2d4027987c2e96ce6cbbdec5afc8dd14dfd9afbb5d0f49727c713b41447270aa",
-  "raat-report.js": "c4e090116eae7619905df520261da50aed16967c2eaef54e511cd3d2308c2f7f",
+  "raat-report.js": "8089d2b40c553bb367700f69e900938176644e67c5206ba41f64aa333c0640aa",
   "report-auto.bat": "867f58bc2fee20409d1682975ebaa305d5cf287a3dad6e1cd3e4f08708130af8",
   "kh-wa.js": "02376e8f0b0ca1984055752ff78e0c5909c0120acff217256b625b8da3c2ba01",
   "hz-wa.js": "f63d935e849b561985bd4c559ebafcbf0cc9886a2ac815a1796442332377947a",
@@ -85,7 +85,7 @@
   "pk-auto.bat": "f854ae6e648e13b26c7d771126627c0efbb15cfc8a1fd8b10132f920c9c276b6",
   "gaari-gps.js": "70277651c7f3bfbe81f098a32121a536da5133074f12ad5e8991ebf48318c414",
   "gaari-gps-auto.bat": "073db65451adf707e390fa0344cc88d926163889076fac282c8605f80c446830",
-  "gate-pass.js": "a93d021f4c6fa5d18a79392e57eb89daed90c250da433b51d4b4a649f865dc95",
+  "gate-pass.js": "fd3cbf1a87850caf5f0ad8f27d8a2e521a9ed0ab8a4f26389993943eedd9507f",
   "gate-pass-auto.bat": "346f3aaa8be4f1923775d6d9ca364dbc12f7089ba50e90a68c750f98a0f4d751",
   "a4-print.js": "5b5a08c73e29ce77267a57c73c7da4239fdee4bf049ec318a6044c6a283164be",
   "a4-print-auto.bat": "c306dc288a3ab7390fb51fac96175893a7fae3ac93b5e2e26c296621c78ec269",
@@ -98,13 +98,13 @@
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
   "wa-out.js": "185fb873ef0be56c11273a2483ec6c3ca0652c5db9910a2a08cf990242894275",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
-  "bill-clip.js": "4c40c1990276a64c99c238e62886ad16cc9614f57add74acd3a58de145999507",
+  "bill-clip.js": "8b0f0a79c9548b1c2a2d1f8c4c88e95e71cf468af387410eb324a423dbee9f47",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
-  "live-cam.js": "2ac74ac7a8a88816aa42614a3e1127a2a9fd0795da826f88d087d5212edd25d6",
+  "live-cam.js": "1337d68c9ae882a248ddf4e9d5beae8bef4ce5f833c93cfbd06af948e54be1c2",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
   "pc-vault.js": "6c27772a3b21166eecabdf7079615a394b1a9831a11e3622330809d5ecdf3abd",
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",
-  "pc-names.js": "5659b7d38cb71f626ea09ddf7d31e7707199b1982a92eea6ebb996799aea209a"
+  "pc-names.js": "927a9d5c344705f4397c6de058c4df2e950985eba1c813edccbee5522ce6424a"
  },
  "services": [
   {
