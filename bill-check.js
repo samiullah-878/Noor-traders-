@@ -1,4 +1,4 @@
-// bill-check.js — v1.1 (2026-10-27, app v2.128.0: bcGo export + ntBcNav ‹ › list) · v1.0 (2026-10-26, app v2.122.0) ✅ BILL CHECK — POS ke purchase bills ki check-list.
+// bill-check.js — v1.2 (2026-11-17, app v2.309.0: window.ntBcSet) · v1.1 (2026-10-27, app v2.128.0: bcGo export + ntBcNav ‹ › list) · v1.0 (2026-10-26, app v2.122.0) ✅ BILL CHECK — POS ke purchase bills ki check-list.
 // Malik: "bill check karne ka checkbox chahiye aur ek screen jis mein POS ka bill check aur jo check nahi hua wo bhi aaye —
 //   aaj / 7 din / 15 din / mahina ke jo check nahi hue saamne lao; bill check + bill post ek hi click."
 // Data: billChecks/<pos-id> {at, by, n, billNo, date, pid, amt, ts} (rules 2.73) — app.js listen karta hai, yahan sirf UI. AI nahi.
@@ -33,7 +33,7 @@ export function bcTickHTML(id, cls = '') {   // khate ke card / bill khirki ke l
   if (!C || !C.can('pur.check')) return '';
   const e = bills().find(x => x.id === id); if (!e) return '';
   const c = chk(e), busy = st.busy.has(id);
-  return `<label class="bc-tick ${c ? 'on' : ''} ${cls}" data-bc-tickbox="${esc(id)}" data-bc-cls="${esc(cls)}"><input type="checkbox" data-bc-tick="${esc(id)}"${c ? ' checked' : ''}${busy ? ' disabled' : ''}> ${c ? `✅ Check kiya · ${esc(c.n || '')} ${esc(tm(c.at))}` : '☐ Bill check kiya'}</label>`;
+  return `<label class="bc-tick ${c ? 'on' : ''} ${cls}" data-bc-tickbox="${esc(id)}" data-bc-cls="${esc(cls)}"><input type="checkbox" data-bc-tick="${esc(id)}"${c ? ' checked' : ''}${busy ? ' disabled' : ''}> ${c ? `✅ Check kiya · ${esc(c.n || '')} ${esc(tm(c.at))}` : 'Bill check kiya'}</label>`;   // v2.309.0: ☐ dohra nahi (asal checkbox saath hai)
 }
 function rowHTML(e) {
   const p = C.party(e.partyId), c = chk(e), posted = C.isPosted(e), busy = st.busy.has(e.id), canPost = C.can('pur.post');
@@ -111,6 +111,7 @@ export async function bcGoWait(id) {   // v2.149.0: ✓ Check + 📌 Post — PO
   const r = await C.postWait([ent]);
   return r.ok ? { ok: true, posted: true } : { ok: true, posted: false, why: (r.errors || [])[0] || 'post nahi hua' };
 }
+try { window.ntBcSet = (id, on) => setCheck(id, on); } catch {}   // v2.309.0: POS Purchase ka ☐ check = check + agla bill (purchase.js tickNext)
 function bcSetNav(id) {   // v2.128.0: list se bill khola = ‹ › isi list (Baqi, chuna hua din) ke bills — purchase.js ppOpenFromKhata parhta hai
   const L = list().filter(e => !chk(e) || e.id === id).map(e => ({ id: e.id, partyId: e.partyId, label: `${C.party(e.partyId)?.name || 'Supplier'} · Bill ${billNo(e)} · ${money(e.amount)}` }));
   try { window.ntBcNav = L.some(n => n.id === id) ? { list: L, at: Date.now() } : null; } catch {}
