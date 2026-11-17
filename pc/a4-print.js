@@ -1,5 +1,9 @@
 // =========================================================
-//  a4-print.js  v1.2 (2026-11-03 bug safai: 🧾 thermal A4 ke peeche nahi rukti (HP na mile tab bhi) · A4 jo 30 min printer na mile = 'old' (app par 🖨 Dobara) ·
+//  a4-print.js  v1.7 (2026-11-17 malik: 'abhi tak print nahi hua — taiz treen kar do · spooler ka issue na aaye'): aakhri chalne wala printer
+//                 a4-last.json mein yaad + app ka chuna IP (cfg.prIp) bhi dhoondne mein · printer na mile aur A4 baqi ho = har 30 s SIRF yaad wale IP par
+//                 seedha IPP sawal (Windows / spooler ko KABHI nahi chhoota — Get-Printer / Add-Printer purane waqt par hi) · shuru mein pehle yaad wala IP (poore
+//                 WiFi ki talaash ka intezar nahi).
+//              · v1.2 (2026-11-03 bug safai: 🧾 thermal A4 ke peeche nahi rukti (HP na mile tab bhi) · A4 jo 30 min printer na mile = 'old' (app par 🖨 Dobara) ·
 //                 restart par 🧪 test page dobara nahi · chhapte waqt printer badle to bhi wahi printer (cur ki jagah pr))
 //              · v1.1 (2026-11-03 raat: malik — "ALEHDA screen · sirf us screen ki tasveer · phone number tasveer par · THERMAL par bhi option":
 //                 job.to 'th' = TM-T88IV parchi (NOOR TRADERS + tasveer (photo-print) + number BARA + waqt) · 'a4' = pehle jaisa (number app tasveer ki neeche patti mein likhti hai))
@@ -25,7 +29,7 @@ const http = require('http');
 const https = require('https');
 const path = require('path');
 const { execFile } = require('child_process');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.6';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47839, VER = '1.7';
 const TH_PRINTER = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })();   // dukan ka thermal (pos-khata-sync wala naam)
 const OLD_MS = 30 * 60000, KEEP_MS = 7 * 864e5, SCAN_EVERY = 10 * 60000, ST_EVERY = 60000, BEAT = 5 * 60000;
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
@@ -475,6 +479,11 @@ function pick(cfg, L) {
   const ipp = L.filter(p => p.how === 'ipp');
   return ipp.find(hp) || L.find(p => p.how === 'win' && hp(p)) || (ipp.length === 1 ? ipp[0] : null);
 }
+// v1.7: aakhri chalne wala IPP printer yaad (sirf is PC par, a4-last.json) — agli dafa / restart par poore WiFi ki talaash se pehle seedha wohi
+const LAST_F = path.join(DIR, 'a4-last.json');
+const okIp = x => /^\d{1,3}(\.\d{1,3}){3}$/.test(String(x || '').trim());
+function lastGet() { try { const d = JSON.parse(fs.readFileSync(LAST_F, 'utf8')); return d && okIp(d.ip) ? d : null; } catch { return null; } }
+function lastPut(p) { if (!p || p.how !== 'ipp' || !okIp(p.ip)) return; const o = lastGet(); if (o && o.ip === p.ip && o.port === (p.port || 631) && o.path === p.path) return; try { fs.writeFileSync(LAST_F, JSON.stringify({ ip: p.ip, port: p.port || 631, path: p.path || '/ipp/print', name: p.name || '', id: p.id || '', at: Date.now() })); } catch {} }
 const pubOf = p => ({ id: p.id, how: p.how, name: p.name, ip: p.ip || '', ...(p.how === 'ipp' ? { fmt: (p.fmt || []).filter(f => /jpeg|pdf|urf|pwg|pclm/i.test(f)).slice(0, 6).join(' '), win: p.win || '' } : { drv: p.drv || '', wst: p.wst || '' }) });
 
 if (require.main === module) main();
@@ -492,6 +501,24 @@ function main() {
   const cap = () => Math.max(5, Math.min(500, Number(cfg.max) || 40));
   const over = () => { const h = Date.now() - 3600000; recent = recent.filter(t => t > h); return recent.length >= cap(); };
 
+  const knownIps = () => [...new Set([(lastGet() || {}).ip, cfg.prIp, ...String(cfg.ip || '').split(/[\s,]+/)].map(x => String(x || '').trim()).filter(okIp))];   // v1.7
+  let lastQuick = 0, quicking = null;
+  async function quick(why) {   // v1.7: SIRF yaad / chune hue IP par IPP sawal (network) — Windows / spooler bilkul nahi; mile to foran kaam
+    if (quicking) return quicking;
+    quicking = (async () => {
+      lastQuick = Date.now(); const ips = knownIps(); if (!ips.length || cur) return false;
+      const found = [];
+      for (const ip of ips) { if (!(await probe(ip, 631, 900))) continue; const L0 = lastGet(), p = await describeIpp(ip, L0 && L0.ip === ip ? L0.port || 631 : 631).catch(() => null); if (p) found.push(p); }
+      if (!found.length) return false;
+      for (const p of found) { const k = list.findIndex(x => x.id === p.id); if (k >= 0) list[k] = { ...list[k], ...p }; else list.unshift(p); }
+      cur = pick(cfg, list); if (!cur) return false;
+      err = ''; log(`⚡ ${why || 'jaldi'}: yaad wala printer mil gaya — ${cur.name} (${cur.ip})`);
+      await status().catch(() => {}); await publish(true);
+      if (queue.length && !busy) work().catch(() => {});
+      return true;
+    })().finally(() => { quicking = null; });
+    return quicking;
+  }
   async function publish(force) {
     const doc = { host: os.hostname(), ver: VER, list: list.map(pubOf).slice(0, 20), use: cur ? pubOf(cur) : null, st: st || null, err: err || '', scanAt: lastScan, testAt: lastTest, pi: LAST_PI };
     const h = JSON.stringify(doc);
@@ -503,7 +530,7 @@ function main() {
     if (scanning) return scanning;
     scanning = (async () => {
       try {
-        const extra = String(cfg.ip || '').split(/[\s,]+/).filter(Boolean);
+        const extra = knownIps();   // v1.7: yaad wala + app ka chuna IP bhi (pehle sirf cfg.ip)
         const [ipp, win] = await Promise.all([scanIpp(extra).catch(e => { log('⚠️ WiFi dhoondna: ' + e.message); return []; }), winList().catch(() => [])]);
         for (const p of ipp) { const w = win.find(x => x.ip && x.ip === p.ip) || win.find(x => /^Blue Khata A4/i.test(x.name) && x.name.includes(p.name.slice(0, 20))); if (w) p.win = w.name; }
         const old = cur; list = [...ipp, ...win]; lastScan = Date.now();
@@ -594,7 +621,7 @@ function main() {
           catch (e) { const m = String(e.message || e).slice(0, 160); await JOBS.doc(j.id).update({ status: 'failed', err: m, pcAt: Date.now() }).catch(() => {}); log(`🧾 ✕ ${j.t || j.id}: ${m}`); }
           continue;
         }
-        if (!cur) { await scan('job aaya'); if (!cur) { noPr = true; continue; } }
+        if (!cur) { await quick('job aaya'); if (!cur && Date.now() - lastScan > 120000) await scan('job aaya'); if (!cur) { noPr = true; continue; } }   // v1.7: pehle yaad wala IP (1-2 s); poori talaash (Windows ki list bhi) 2 min mein ek dafa — pehle har 20 s spooler se poochhti thi
         const pr = cur;   // v1.2: is chhapai ka printer pakka
         const first = await claim(queue.shift()).catch(e => { log('⚠️ claim: ' + e.message); return null; }); if (!first) continue;
         const jobs = [first];
@@ -607,6 +634,7 @@ function main() {
         try {
           const how = await printSet(jobs, null, pr);
           for (const j of jobs) { recent.push(Date.now()); await JOBS.doc(j.id).update({ status: 'done', doneAt: Date.now(), pr: pr.name.slice(0, 60), how, err: '' }).catch(() => {}); }
+          if (/^ipp/.test(how)) lastPut(pr);   // v1.7: agli dafa seedha yahi
           log(`✅ ${jobs.map(j => j.t || j.id).join(' + ')} → ${pr.name} (${how}, ${Date.now() - t0} ms)`);
           if (err) { err = ''; await publish(true); }
         } catch (e) {
@@ -650,6 +678,7 @@ function main() {
     }, e => log('⚠️ a4 setting: ' + e.message));
     await new Promise(r => setTimeout(r, 1500));
     lastTest = Math.max(lastTest, Number(cfg.testAt) || 0); lastScanReq = Math.max(lastScanReq, Number(cfg.scanAt) || 0);
+    await quick('shuru').catch(() => {});   // v1.7: yaad wala printer foran — poori talaash peeche
     await scan('shuru').catch(e => log('⚠️ ' + e.message));
     JOBS.where('status', '==', 'new').onSnapshot(s => {
       const ids = new Set(s.docs.map(d => d.id)); for (const k of [...meta.keys()]) if (!ids.has(k)) meta.delete(k);
@@ -657,7 +686,8 @@ function main() {
       work().catch(e => log('⚠️ ' + e.message));
     }, e => { log('⚠️ a4Jobs: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); });
     const tick = async () => {
-      if (Date.now() - lastScan > (cur ? SCAN_EVERY * 3 : SCAN_EVERY) || (queue.length && !cur && Date.now() - lastScan > 120000)) await scan('waqt').catch(() => {});
+      if (queue.length && !cur && Date.now() - lastQuick > 30000 && await quick('intezar').catch(() => false)) { /* v1.7: 30 s mein yaad wala IP */ }
+      else if (Date.now() - lastScan > (cur ? SCAN_EVERY * 3 : SCAN_EVERY) || (queue.length && !cur && Date.now() - lastScan > 120000)) await scan('waqt').catch(() => {});
       else if (cur && Date.now() - stAt > ST_EVERY) await status().catch(() => {});
       await publish(false);
       if (queue.length && !busy) work().catch(() => {});

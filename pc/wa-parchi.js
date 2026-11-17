@@ -1,4 +1,7 @@
 // =========================================================
+// 2.37 (17 Nov, malik: 'Parchi A4 ko gayi likha, abhi tak print nahi hua'): WhatsApp ka jawab ab ASAL nateeja — pehle '⏳ A4 printer ko bheji',
+//   phir a4Jobs ka haal dekh kar '✅ Chhap gayi (printer · N s)' ya '✕ Nahi chhapi — wajah'; 90 s tak na chhape to ek dafa '⏳ abhi nahi chhapi — wajah'
+//   (blueAccess/a4Pc: printer nahi mila / PC chup / kaghaz). a4Tell — printOne / printSelf / printIncoming teeno. Printer / spooler ko yeh file nahi chhooti.
 // 2.35 (15 Nov): kh-wa v1.9 (reports menu har jure number ko, nafa sirf malik · 7 Sab codes) — sirf dobara shuru hone ke liye chhua
 // v2.33 (14 Nov, malik ki screenshot: tasveer -> '03711439200' alag paigham -> 'Print auto' = 'gahak? (number nahi)'): (1) PH_RE sirf 030–035 maanta tha — 0371… (naya series) number hi nahi samjha;
 //        ab 036–039 bhi (0 / 92 ke saath). (2) number ALAG chhote paigham mein ho (tasveer / Print se pehle ya baad, 10 min) = bzNum / gahakSet.
@@ -94,7 +97,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.36';   // v2.34: kh-wa v1.8 (tafseel lazmi) — is file mein sirf version (doctor dobara chalaye)
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.37';   // v2.34: kh-wa v1.8 (tafseel lazmi) — is file mein sirf version (doctor dobara chalaye)
 const TH_PRINTER = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })(), W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
 const TMP = path.join(DIR, 'wa-tmp'), PS1 = path.join(DIR, 'wa-a4.ps1');
@@ -1213,6 +1216,29 @@ async function start(ZINDA) {
     const e = await getParchi().sendJobs([toJob(text, rasters)], S.thp || TH_PRINTER);
     if (e) throw e;
   }
+  // v2.37: 🖨 A4 ka ASAL nateeja WhatsApp par (pehle sirf 'gayi' likhte the — chhapi ya nahi pata nahi chalta tha)
+  const a4Tells = new Set();
+  async function a4Why() {   // a4-print PC ka haal — kyun nahi chhapi
+    try { const p = await BA.doc('a4Pc').get(); const d = (p.exists && p.data()) || {};
+      if (!d.at || Date.now() - Number(d.at) > 8 * 60000) return 'A4 wali script PC par chup' + (d.at ? ' (' + Math.round((Date.now() - Number(d.at)) / 60000) + ' min se)' : '');
+      if (!d.use) return String(d.err || 'A4 printer nahi mila').slice(0, 100);
+      return (d.st && d.st.k === 'bad' ? String(d.st.t || '') : d.err ? String(d.err) : 'printer ' + String(d.use.name || '') + ' ka intezar').slice(0, 100);
+    } catch { return 'printer ka intezar'; }
+  }
+  function a4Tell(aids, note) {
+    aids = (aids || []).filter(Boolean); const key = aids.join(','); if (!aids.length || a4Tells.has(key)) return;
+    a4Tells.add(key); const t0 = Date.now(), st = {}, D = {}, un = []; let said = false, slowT = null, endT = null;
+    const stop = () => { un.forEach(u => { try { u(); } catch {} }); clearTimeout(slowT); clearTimeout(endT); a4Tells.delete(key); };
+    const many = aids.length > 1 ? aids.length + ' tasveer ' : '';
+    slowT = setTimeout(async () => { if (said) return; const w = await a4Why(); if (!said) note(`⏳ ${many}Abhi nahi chhapi (1½ min) — ${w} · 30 min tak koshish jaari`); }, 90000);
+    endT = setTimeout(stop, 35 * 60000);
+    for (const aid of aids) un.push(A4J.doc(aid).onSnapshot(s => {
+      const d = (s.exists && s.data()) || {}; st[aid] = s.exists ? String(d.status || '') : 'gone'; D[aid] = d;
+      const bad = aids.find(a => /^(failed|old|hold|gone)$/.test(st[a] || ''));
+      if (bad) { said = true; const b = st[bad], d2 = D[bad] || {}; note(`✕ ${many}Nahi chhapi — ${b === 'hold' ? 'ghante ki hadd (app ki A4 screen mein ✓)' : b === 'gone' ? 'A4 job mit gaya' : String(d2.err || b).slice(0, 110)} · app ☰ → 🖨 A4 Print se 🖨 Dobara`); stop(); }
+      else if (aids.every(a => st[a] === 'done')) { said = true; const sec = Math.max(1, Math.round((Math.max(...aids.map(a => Number((D[a] || {}).doneAt) || Date.now())) - t0) / 1000)); note(`✅ ${many}Chhap gayi — ${String(d.pr || 'A4').slice(0, 40)} · ${sec} s`); stop(); }
+    }, () => {}));
+  }
   const a4Watch = new Map();
   function watchA4(id, aids) {
     if (!aids.length || a4Watch.has(id)) return;
@@ -1580,17 +1606,18 @@ async function start(ZINDA) {
     return 'Gahak: ' + [nm, ph ? phPretty(ph) : ''].filter(Boolean).join(' · ');
   }
   async function printSelf(list, n, to, me, cx = CX1) {
-    let ok = 0, pdf = 0, bad = '';
+    let ok = 0, pdf = 0, bad = ''; const aids = [];
     for (const x of list) {
       if (x.pdf) { pdf++; continue; }
       if (Number(x.im.fileLength) > 15 * 1024 * 1024) { bad = 'tasveer 15 MB se bari'; continue; }
       try {
         const buf = await within(B.downloadMediaMessage(x.m, 'buffer', {}), 60000, 'tasveer download'), g = await prepImage(buf, String(x.im.mimetype || 'image/jpeg'));
         const hd = gahakHd(x.m && x.m.key && x.m.key.id, x.cap, true);
-        await a4Send(g && g.jpg, n > 0 ? n : S.a4c, { t: cx.tag + ' → ' + cx.who(to, me) + (stripPrint(x.cap) ? ' · ' + stripPrint(x.cap) : ''), hd }, null); ok++;
+        aids.push(await a4Send(g && g.jpg, n > 0 ? n : S.a4c, { t: cx.tag + ' → ' + cx.who(to, me) + (stripPrint(x.cap) ? ' · ' + stripPrint(x.cap) : ''), hd }, null)); ok++;
       } catch (e) { bad = String((e && e.message) || e).slice(0, 80); }
     }
-    cx.note(`${ok ? '✅ ' + ok + ' tasveer A4 ko gayi' + ((n > 0 ? n : S.a4c) > 1 ? ' (' + (n > 0 ? n : S.a4c) + ' copy)' : '') : '✕ kuch nahi chhapa'}${pdf ? ' · PDF ' + pdf + ' abhi nahi chhapti' : ''}${bad ? ' · ' + bad : ''} — ${cx.who(to, me)}`);
+    cx.note(`${ok ? '⏳ ' + ok + ' tasveer A4 printer ko bheji' + ((n > 0 ? n : S.a4c) > 1 ? ' (' + (n > 0 ? n : S.a4c) + ' copy)' : '') : '✕ kuch nahi chhapa'}${pdf ? ' · PDF ' + pdf + ' abhi nahi chhapti' : ''}${bad ? ' · ' + bad : ''} — ${cx.who(to, me)}`);
+    if (aids.length) a4Tell(aids, cx.note);   // v2.37: chhapi / nahi — asal nateeja
   }
   async function selfPrint(m, s, cx = CX1) {
     const jid = m.key.remoteJid || '', wid = m.key.id || '', jk = cx.k + ':' + jid;
@@ -1621,11 +1648,12 @@ async function start(ZINDA) {
   async function printIncoming(from, n, ts) {
     const list = (inImgs.get(from) || []).filter(x => ts - x.ts < WIN); inImgs.delete(from);
     if (!list.length) { inPend.set(from, { n, until: ts + PEND }); prNote(`"print" mila (${phPretty(from)}) — 2 min mein tasveer aaye to chhapegi`); return; }
-    let ok = 0;
+    let ok = 0; const aids = [];
     for (const x of list) {
-      try { const im = await IMG.doc(x.id).get(), u = im.exists ? String(im.data().img || '') : '', mm = u.match(/^data:image\/jpe?g;base64,(.+)$/i); if (!mm) continue; await a4Send(Buffer.from(mm[1], 'base64'), n > 0 ? n : S.a4c, { t: 'WA ' + phPretty(from) + ' #' + shortNo(x.id) }, { id: x.id }); ok++; } catch {}
+      try { const im = await IMG.doc(x.id).get(), u = im.exists ? String(im.data().img || '') : '', mm = u.match(/^data:image\/jpe?g;base64,(.+)$/i); if (!mm) continue; aids.push(await a4Send(Buffer.from(mm[1], 'base64'), n > 0 ? n : S.a4c, { t: 'WA ' + phPretty(from) + ' #' + shortNo(x.id) }, { id: x.id })); ok++; } catch {}
     }
-    prNote(`${ok ? '✅ ' + ok + ' tasveer A4 ko gayi' : '✕ tasveer nahi mili'} — ${phPretty(from)}`);
+    prNote(`${ok ? '⏳ ' + ok + ' tasveer A4 printer ko bheji' : '✕ tasveer nahi mili'} — ${phPretty(from)}`);
+    if (aids.length) a4Tell(aids, prNote);   // v2.37
   }
   // =========================================================
   //  📋 v2.6 (2026-11-07): MUBEEN KI PARCHIYON KA PEECHA (malik: "gahak meri personal number par parchi bhejta hai, main Mubeen ko
@@ -2047,8 +2075,9 @@ async function start(ZINDA) {
     try {
       const buf = await dlBuf(msg, s, 'tasveer download');
       const g = await prepImage(buf, String(im.mimetype || 'image/jpeg'));
-      await a4Send(g && g.jpg, cp, { t: (why === 'reply' ? 'Reply print' : why === 'biz' ? 'Business number' : 'Gahak print') + ' · ' + (pn ? phPretty(pn) : 'WhatsApp'), hd }, null);
-      note(`✅ Parchi A4 ko gayi${cp > 1 ? ' (' + cp + ' copy)' : ''} — ${hd || 'WhatsApp'} · ${why === 'reply' ? 'reply' : why === 'biz' ? 'Business number se' : 'gahak ne print likha'}`);
+      const aid = await a4Send(g && g.jpg, cp, { t: (why === 'reply' ? 'Reply print' : why === 'biz' ? 'Business number' : 'Gahak print') + ' · ' + (pn ? phPretty(pn) : 'WhatsApp'), hd }, null);
+      note(`⏳ Parchi A4 printer ko bheji${cp > 1 ? ' (' + cp + ' copy)' : ''} — ${hd || 'WhatsApp'} · chhapte hi bataunga`);   // v2.37: pehle '✅ gayi' (jhoota — chhapi nahi thi)
+      a4Tell([aid], note);
     } catch (e) { note('✕ parchi nahi chhapi: ' + String((e && e.message) || e).slice(0, 90)); }
   }
   async function ready(m, wid, note) {   // dohra nahi · 30 min purana nahi · band nahi → true = chhapo
