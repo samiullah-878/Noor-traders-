@@ -10,6 +10,10 @@ const ago = t => { const m = Math.round((Date.now() - t) / 60000); return m < 1 
 let C = null, R = null, K = {}, stopR = null, stopK = null, jobs = {};
 const st = { days: Number(LS('sam-rc-days')) || 30, dir: LS('sam-rc-dir') || 'all', sup: '', q: '', open: '' };
 export function rcSetup(ctx) { C = ctx; }
+// v2.318.0 (malik: 'rate change wali screen ghalat rate bata rahi hai'): W / R = item screen jaisa — W pcs = SaleRateSize (wp) warna SaleRate3 (w),
+//   R pcs = SaleRate2 (rp) warna SaleRate (rr). PC rate-change v1.2 yeh rates dukan (ItemBranchRate) se bhejti hai (pehle dbo.Items — purane).
+const fixWR = d => { if (!d || !Array.isArray(d.list)) return d; for (const x of d.list) { x.w = Number(x.wp) || Number(x.w) || 0; x.rp = Number(x.rp) || Number(x.rr) || 0; } return d; };
+const STALE = 15 * 60000;   // PC ka data is se purana = ⚠️ (rates purane ho sakte)
 const pct = x => { const o = Number(x.o) || 0; return o ? Math.round((x.r - o) / o * 100) : 0; };
 function rows(all) {
   const cut = new Date(); cut.setDate(cut.getDate() - st.days); const ck = cut.toISOString().slice(0, 10), q = st.q.trim().toLowerCase();
@@ -30,13 +34,13 @@ export function rcOpen() {
   if (!C.can('pur.ratechg')) { C.notice('📈 Rate change ki ijazat nahi — malik se kahein'); return; }
   C.modal('📈 Rate change', html(), true);
   try { $('dialog').classList.add('rc-dialog'); } catch {}
-  if (!stopR && C.cloud?.listenRateChg) stopR = C.cloud.listenRateChg(d => { R = d; paint(); });
+  if (!stopR && C.cloud?.listenRateChg) stopR = C.cloud.listenRateChg(d => { R = fixWR(d); paint(); });
   if (!stopK && C.cloud?.listenRateChk) stopK = C.cloud.listenRateChk(m => { K = m || {}; paint(); });
   setTimeout(() => { try { window.ntDlgMenu?.(); } catch {} lbPaint(); }, 30);
 }
 function html() {
   const L = rows(false), n = L.length, nk = Object.keys(K).length;
-  const head = `<div class="rc-mini" data-mn-sheet><span>📈 <b>${n}</b> ka rate badla · ${st.days} din${st.dir !== 'all' ? (st.dir === 'up' ? ' · ↑ barhe' : ' · ↓ ghate') : ''}${st.sup ? ' · 🏭 ' + esc(sups().find(s => s[0] === st.sup)?.[1] || '') : ''}</span><small>${R ? (R.err ? '⚠️ PC: ' + esc(R.err) : '🖥 ' + ago(R.at)) : '⏳ PC ka data…'}</small></div>
+  const head = `<div class="rc-mini" data-mn-sheet><span>📈 <b>${n}</b> ka rate badla · ${st.days} din${st.dir !== 'all' ? (st.dir === 'up' ? ' · ↑ barhe' : ' · ↓ ghate') : ''}${st.sup ? ' · 🏭 ' + esc(sups().find(s => s[0] === st.sup)?.[1] || '') : ''}</span><small${R && (R.err || Date.now() - (Number(R.at) || 0) > STALE) ? ' class="rc-stale"' : ''}>${R ? (R.err ? '⚠️ PC: ' + esc(R.err) : Date.now() - (Number(R.at) || 0) > STALE ? '⚠️ PC ne ' + ago(R.at).replace(' pehle', '') + ' se taza nahi kiya — rates purane ho sakte' : '🖥 ' + ago(R.at)) : '⏳ PC ka data…'}</small></div>
   <div class="rc-top"><input type="search" class="rc-q" data-rc-q placeholder="🔍 Item / supplier" value="${esc(st.q)}" autocomplete="off">
     <button type="button" class="rc-chip" data-rc-chk-list data-mn="rc.chk" data-mn-i="✅" data-mn-t="Check hue" data-mn-s="${nk} items — ✓ ho chuke" data-mn-n="${nk || ''}" data-mn-g="📈 Rate change">✅ ${nk} check hue</button>
     <button type="button" class="rc-chip" data-rc-refresh data-mn="rc.ref" data-mn-i="🔄" data-mn-t="Taza karo" data-mn-s="PC se dobara list" data-mn-g="📈 Rate change">🔄 Taza</button></div>`;

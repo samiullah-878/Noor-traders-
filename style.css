@@ -8624,3 +8624,5 @@ html body .dy-chg-s.lk span,html body .dy-chg-s>summary span{white-space:nowrap;
 html body .dy-chg-s.lk small{min-width:0;flex:1 1 auto;overflow:hidden;text-overflow:ellipsis}
 html body main header #summary .dy-kdrop .dy-kd-h b{min-width:0;flex:1 1 auto;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 html body main header #summary .dy-kdrop .dy-kd-h small{flex:none}
+/* v2.318.0: 📈 Rate change — PC ka data purana = laal likhai (usi patti mein, nayi qatar nahi) */
+html body .rc-mini small.rc-stale{color:#b42332!important;font-weight:800;white-space:normal;text-align:right;line-height:1.25}

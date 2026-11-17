@@ -8730,3 +8730,19 @@ Malik (screenshots): "Sirf khata ki entries chips jaise HBL bank / purchase · n
   gini' / 'Cash farq' flags HATE. App ki report (report.js) khata card bhi wahi.
 - Test: naye hisson ki HUBAHU copy + stubs -> Playwright 390px (chip band / khula / entry ke chips / bahar tap band / Sale ke neeche change).
   Asal app / asal data par nahi chalaya. AI nahi.
+
+
+=== v2.318.0 (2026-11-17 raat): 📈 RATE CHANGE — sahi W / R (dukan ke rates) + list FORAN (PC rate-change v1.2) ===
+Malik (3 screenshots, akhroot gree kg): item screen W 1850 / R 2250, Rate change screen 'W 1,751 · R 2,100' — "ghalat kyun bata raha hai" ·
+phir "is ki script ko bhi aisa banao jaise rate badla item us list mein seedha".
+- Wajah: PC rate-change.js W / R dbo.Items (SaleRate*) se parhti thi — POS screen se rate badlo to sirf dbo.ItemBranchRate (branch) badalta hai,
+  Items purana reh jata hai. Item screen (sync-stock) ItemBranchRate se parhti hai. Ghalat W se '✨ Nisbat se' bhi ghalat.
+- PC rate-change v1.2: `shopBranch()` = dukan (NOOR TRADERS) NAAM se (INFORMATION_SCHEMA wala tareeqa sync-stock jaisa; na mile = pehli ghair-godam,
+  phir MIN BranchID); build() W / R / khareed = ItemBranchRate (us branch ki) — 0 ho to Items wala. Doc `v: 2` (purana v 1 = pehli dafa khud dobara), `br`.
+- Foran: POLL 30 s -> 10 s; stamp = khareed (60 din) MAX / COUNT / CHECKSUM_AGG(id, item, rate, DocStatus, tareekh) + dukan rates ka CHECKSUM ->
+  naya bill, bill ka rate badla, cancel, POS mein rate laga = 10 s mein list dobara. POS mein kuch na badle = Firestore se sawal bhi nahi
+  (pehle har tick 2 reads) — sirf minute mein ek dafa (app ka 🔄 / 5 min wala). `module.exports._t` sirf test.
+- App rate-chg.js: `fixWR` — W = wp (SaleRateSize) || w, R = rp (SaleRate2) || rr = item screen (pos-stock itemForm) jaisa; PC data 15 min se purana
+  = usi patti mein laal '⚠️ PC ne N se taza nahi kiya — rates purane ho sakte' (`.rc-stale`). Screenshot mein '🖥 5 ghante pehle' tha — PC script
+  us waqt list taza nahi kar rahi thi (PC band / script ruki) — v1.2 aate hi taza.
+- Test: fake mssql (Items 1751/2100, Branch NOOR TRADERS 1850/2250, Godam 1) -> list mein W 1850 · R 2250, br 1. Asal POS par nahi chalaya. AI nahi.

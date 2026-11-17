@@ -5054,3 +5054,9 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
   'GALLE MEIN HONA CHAHIYE' + Rs (Sale + Wasooli + Kal − Akhrajat − Aaj ka change) + Urdu. J.nc nahi (purana app) = pehle jaisa.
 - raat-report v2.5: khata mein change; WhatsApp Daily Sale = Aaj ka change + Galle mein hona (closing / farq lines nahi); flags se
   'Cash farq' + 'Closing cash abhi nahi gini' hate.
+
+
+=== 2026-11-17 raat (app v2.318.0): rate-change v1.2 ===
+- W / R / khareed ab dbo.ItemBranchRate (dukan NOOR TRADERS, naam se — shopBranch) se; dbo.Items ke SaleRate* purane reh jate the (POS screen sirf branch rate badalti).
+- POLL 10 s; stamp = khareed 60 din ka CHECKSUM (rate / cancel bhi) + dukan rates ka CHECKSUM — kuch badla = foran list. Kuch na badla = Firestore sawal nahi (minute mein ek).
+- Sirf parhti hai (POS mein kuch nahi likhti) — pehle jaisa.
