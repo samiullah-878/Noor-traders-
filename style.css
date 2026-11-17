@@ -8514,3 +8514,16 @@ html body #dialogBody .bk-am-b{min-height:32px!important;height:32px!important;p
 html body #dialogBody .bk-am-ch button{min-height:32px!important;height:32px!important;padding:3px 11px!important;border-radius:999px!important;font-size:12px!important;white-space:nowrap;width:auto!important;border:1px solid var(--line,#dfe5f0)!important;background:linear-gradient(180deg,#fff,#f2f5fb)!important;color:#172b52!important}
 html body #dialogBody .bk-am-ch button.is-in{background:linear-gradient(135deg,#0f7a4a,#16a061)!important;color:#fff!important;border-color:transparent!important}
 html body .bkp-ic.mv{background:linear-gradient(135deg,#f59e0b,#ea7a0b)!important;color:#fff!important;border-color:transparent!important;font-weight:800!important}
+/* v2.312.0 (malik: "bank ka naam aisa chip — neeche list · chhota, zyada jagah na le" — POS Purchase supplier chip jaisa) */
+.bkp-acc{display:grid;justify-items:start;gap:6px;margin:0 0 8px;min-width:0}
+html body .bkp-acc .bkp-accchip{display:inline-flex!important;align-items:center;gap:7px;max-width:100%!important;width:auto!important;min-height:34px!important;height:34px!important;padding:2px 12px 2px 3px!important;border-radius:999px!important;border:1px solid var(--line,#dfe5f0)!important;background:linear-gradient(180deg,#fff,#eef2fa)!important;color:#172b52!important;box-shadow:0 2px 8px rgba(23,43,82,.10)!important;font-size:13px!important;white-space:nowrap}
+html body .bkp-acc .bkp-accchip.is-in{border-color:#2e5194!important;box-shadow:0 0 0 2px rgba(46,81,148,.18)!important}
+.bkp-acci{display:inline-grid;place-items:center;width:28px;height:28px;border-radius:999px;background:linear-gradient(135deg,#2e5194,#172b52);font-size:14px;flex:none}
+.bkp-accchip b{min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+.bkp-accchip i,.bkp-accdrop i{font-style:normal;display:inline-grid;place-items:center;min-width:18px;height:18px;padding:0 4px;border-radius:999px;background:#f59e0b;color:#fff;font-size:10px;font-weight:800;flex:none}
+.bkp-accchip em{font-style:normal;font-size:11px;color:#4b5bdc;flex:none}
+.bkp-accdrop{display:grid;gap:6px;width:min(320px,100%);padding:8px;border-radius:16px;background:#fff;border:1px solid #cfdaf3;box-shadow:0 10px 28px rgba(23,43,82,.18)}
+html body .bkp-accdrop button{display:flex!important;align-items:center;gap:8px;width:100%!important;min-height:36px!important;height:36px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #dbe3f3!important;background:linear-gradient(180deg,#fff,#f3f6fc)!important;color:#172b52!important;font-size:13px!important;text-align:left;white-space:nowrap}
+html body .bkp-accdrop button b{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;font-weight:800}
+html body .bkp-accdrop button em{font-style:normal;font-weight:900}
+html body .bkp-accdrop button.is-in{background:linear-gradient(135deg,#2f6bea,#1d4fd0)!important;color:#fff!important;border-color:transparent!important}

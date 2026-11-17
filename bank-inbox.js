@@ -2,7 +2,7 @@
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.311.0';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.312.0';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -554,7 +554,7 @@ document.addEventListener('click', e => {
   const t = e.target.closest?.('[data-bk-tab],[data-bk-ok],[data-bk-skip],[data-bk-chg],[data-bk-pick],[data-bk-copy],[data-bk-newkey],[data-bk-test],[data-bk-acmap],[data-bk-bill],[data-bk-billchg],[data-bk-cur],[data-bk-newacct],[data-bk-cmap],[data-bk-mto],[data-bk-mchg],[data-bk-lim]'); if (!t || !live()) return;
   const d = t.dataset;
   // v2.99.75: kai account / card
-  if (d.bkCur) { curId = d.bkCur; try { localStorage.setItem('sam-bank-cur', curId); } catch {} if (onScreen()) renderHbl(); else paint(); return; }
+  if (d.bkCur) { accOpen = false; curId = d.bkCur; try { localStorage.setItem('sam-bank-cur', curId); } catch {} if (onScreen()) renderHbl(); else paint(); return; }
   if (d.bkCmap) { const [c, pid] = d.bkCmap.split('|'); setAlias('@c:' + c, pid, `💳 Card …${c} = ${O.party?.(pid)?.name || ''} (yaad)`); return; }
   if (d.bkMto) { const i = d.bkMto.indexOf('|'), mk = d.bkMto.slice(0, i), v0 = d.bkMto.slice(i + 1); qOpen = ''; t.disabled = true; kResolve(v0).then(v => setAlias('@m:' + mk, v, `🧾 Is dukan ka kharcha ab khud: ${kNm(v)}`)).catch(er => { t.disabled = false; O.notice?.('✕ ' + (er?.message || er)); }); return; }
   if (d.bkMchg) { qOpen = 'm:' + d.bkMchg; paint(); return; }
@@ -812,12 +812,24 @@ let curId = (() => { try { return localStorage.getItem('sam-bank-cur') || ''; } 
 function curAcct() { const ids = capOk('hbl.alf') ? ownIds() : []; if (curId && ids.includes(curId) && O.party) { const p = O.party(curId); if (p) return p; } return hbl(); }
 const pendFor = (x, H) => { const B = bankOf(x.r); if (!B) return true; if (!H) return false; return B.id === H.id || (x.self && bankOf(x.self.r)?.id === H.id); };
 const fmtR = v => (Math.round(v / 100)).toLocaleString('en-US');
+// v2.312.0 (malik 17 Nov, POS Purchase ke supplier chip ki tasveer: "bank ka naam aisa chip — us par neeche list aaye · chhota, zyada jagah na le"):
+//   saare accounts ki chips ki qatar nahi — EK chhota chip (chuna account ▾), dabao = neeche list (wahi data-bk-cur), bahar tap = band
+let accOpen = false;
 function acctChips(H, R) {
   if (!capOk('hbl.alf')) return '';
   const ids = ownIds(); if (ids.length < 2) return '';
-  return `<div class="bkp-accts">${ids.map(id => { const p = O.party(id), c = cardOf(id), n = R.pend.filter(x => bankOf(x.r)?.id === id).length;
-    return `<button type="button" class="${H && H.id === id ? 'on' : ''}" data-bk-cur="${esc(id)}">${c ? '💳' : '🏦'} ${esc(c ? 'Card ' + c : p.name)}${n ? ` <b>${n}</b>` : ''}</button>`; }).join('')}</div>`;
+  const nOf = id => R.pend.filter(x => bankOf(x.r)?.id === id).length, nm = id => { const c = cardOf(id); return c ? 'Card ' + c : (O.party(id)?.name || ''); };
+  const other = ids.reduce((n, id) => n + (H && H.id === id ? 0 : nOf(id)), 0), hc = H && cardOf(H.id);
+  return `<div class="bkp-acc"><button type="button" class="bkp-accchip${accOpen ? ' is-in' : ''}" data-bk-accdd="1"><span class="bkp-acci">${hc ? '💳' : '🏦'}</span><b>${esc(H ? nm(H.id) : 'Account chunein')}</b>${other ? `<i title="Doosre accounts mein baqi">${other}</i>` : ''}<em>${accOpen ? '▴' : '▾'}</em></button>`
+    + (accOpen ? `<div class="bkp-accdrop">${ids.map(id => `<button type="button" class="${H && H.id === id ? 'is-in' : ''}" data-bk-cur="${esc(id)}"><span>${cardOf(id) ? '💳' : '🏦'}</span><b>${esc(nm(id))}</b>${nOf(id) ? `<i>${nOf(id)}</i>` : ''}${H && H.id === id ? '<em>✓</em>' : ''}</button>`).join('')}</div>` : '') + '</div>';
 }
+document.addEventListener('click', e => {
+  if (e.target.closest?.('[data-bk-accdd]')) { accOpen = !accOpen; if (onScreen()) renderHbl(); return; }
+  if (accOpen && !e.composedPath().some(n => n && n.classList && n.classList.contains('bkp-acc'))) {   // bahar tap = band (list dobara paint nahi)
+    accOpen = false; document.querySelectorAll('.bkp-accdrop').forEach(x => x.remove());
+    document.querySelectorAll('.bkp-accchip').forEach(x => { x.classList.remove('is-in'); const m = x.querySelector('em'); if (m) m.textContent = '▾'; });
+  }
+}, true);
 // 💳 card ka hisaab: limit · istemal (khate ka dena) · bachi limit · SMS ki Avl Limit · statement (Amt Due / Min / Due date)
 function cardBox(H, R) {
   const c = cardOf(H && H.id); if (!c) return '';
