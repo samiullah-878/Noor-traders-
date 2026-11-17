@@ -1,5 +1,6 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-17 (w6): ⚖️ Ek voucher (@balance) = SIRF EK JV (khata ↔ Equity) — transfer pehle milanSendOne se alag voucher jate the, ab nahi (malik: "aik hi voucher · sab entries nahi"); transfer ki dono taraf posNo + balFix. App ka ✕ Rok do = status 'stop' (yeh script sirf 'new' uthati hai).
 //  2026-11-17 (w5): 🚫 app v2.313.0 'POS mein na bhejo' (entry posNo + posX) — voucher pehle se nahi banta (posNo); ab milanDiffPc bhi posX ko gin-ta nahi, taake ⚖️ Barabar (@balance) / 🤖 autoMilan us ki raqam POS mein na daalein.
 //  2026-11-16 (w4): ↩ 🤖 PC ke KHUD barabar (autoMilan, dir 'auto') wale kaam bhi wapas — har voucher ki taraf log se (app mein likh diya = POS ka asal + app copy; baqi = [app: wala POS voucher / opening JV). Bill jaanch wale 'auto' kabhi nahi.
 //  2026-11-16 (w3): ↩ WAPAS SIRF TICK WALE (app 🗑 Din ki entries -> ⚖️ Barabar se bani): milanJobs ['@undo-job', job, ...codes] = sirf wohi voucher (isi job ke bane); asal job par `undone` list, sab ho jayein to undoneAt.
@@ -1225,8 +1226,8 @@ async function milanImportOne(acctIds, importVoucher, v, c, say) {
   try { await importVoucher(v, true); say(`${c}: app mein likh diya`); return 'done'; } catch (e) { say(`${c}: ${e.message || e}`); return 'fail'; }
 }
 // 2026-11-11 (t): ⚖️ EK VOUCHER SE BARABAR (malik: "ek hi voucher daalein aur app jaisa baqaya POS mein aa jaye · koi bhi khata ho" — HBL app Rs 10,306 · POS Rs 933,115).
-//   milanJobs {dir:'pos', ids:['@balance'] | ['@balance','dry']}: (1) is khate ke jo TRANSFER POS mein nahi — pehle un ka asal voucher (doosra khata bhi sahi rahe)
-//   (2) baqi app-only entries par posNo + balFix (is voucher mein shamil — baad mein alag se POS mein na jayein, warna farq dobara)
+//   milanJobs {dir:'pos', ids:['@balance'] | ['@balance','dry']}: (1) [w6 se HATA — transfer bhi alag voucher nahi, malik: "sirf ek voucher"]
+//   (2) har app-only entry (transfer ki dono taraf bhi) par posNo + balFix (is voucher mein shamil — baad mein alag se POS mein na jayein, warna farq dobara)
 //   (3) EK JV: khata vs Equity = app baqaya - POS baqaya (us waqt SQL se taza). 'dry' = sirf raqam batao, kuch na likho. Bank / HBL bhi. ↩ = ['@undo-balance', job]. AI nahi.
 async function milanBalance(pool, acct, acctIds, j, say, purAc, jid) {
   const appId = String(j.partyId || ''), p = app.get(appId), dry = DRY || (Array.isArray(j.ids) && j.ids[1] === 'dry');
@@ -1240,21 +1241,19 @@ async function milanBalance(pool, acct, acctIds, j, say, purAc, jid) {
       FROM dbo.VoucherDetail vd JOIN dbo.Voucher v ON v.VoucherID = vd.VoucherID WHERE vd.AccountID = @ac AND v.VoucherDate < @from AND ISNULL(v.VoucherStatusID, 1) <> 3`)).recordset[0];
     return milanDiffPc(appId, rows.map(lineOfPc), Math.round((Number(pre?.Bal) || 0) * 100));
   };
-  let D = await load();
-  const trs = []; const seenT = new Set();
-  for (const a of D.appOnly) { const e = a.e; if (!e.transferId || seenT.has(String(e.transferId))) continue; seenT.add(String(e.transferId)); trs.push(e); }
-  const marks = D.appOnly.map(a => a.e).filter(e => !e.transferId && sendElig(e));
+  const D = await load();
+  // (w6) 2026-11-17 malik: "pos mein aik hi voucher bana kar pos ko apps jaisa — sab entries nahi": transfer bhi ALAG voucher se NAHI jata (pehle milanSendOne).
+  //   Is khate ki har app-only entry (transfer ki dono taraf bhi) par posNo + balFix — baad mein khud POS mein na jaye (warna farq dobara); doosra khata apne ⚖️ se.
+  const tOk = e => e.transferId && !String(e.transferId).startsWith('posv') && !String(e.posVoucher || '').trim() && !String(e.posCode || '').trim() && e.posNo !== true;
+  const markIds = () => { const s = new Set(); for (const a of D.appOnly) { const e = a.e; if (e.transferId ? !tOk(e) : !sendElig(e)) continue; if (e.transferId) { for (const id of [`transfer-${e.transferId}-out`, `transfer-${e.transferId}-in`]) if (app.get(id)) s.add(id); } else s.add(String(e.id)); } return [...s]; };
+  const fix = D.appBal - D.posBal, nT = new Set(D.appOnly.filter(a => a.e.transferId).map(a => String(a.e.transferId))).size;
   if (dry) {
-    const fix0 = D.appBal - D.posBal;
-    say(`JAANCH ${p.name}: app ${sideRs(D.appBal)} · POS ${sideRs(D.posBal)} · farq Rs ${rsTxt(Math.abs(fix0))} · ${trs.length} transfer pehle apne voucher se jayenge · ${marks.length} purani entries is voucher mein shamil (alag nahi jayengi) · phir bacha farq EK JV (kuch likha nahi)`);
-    j._fix = { dry: 1, app: D.appBal, pos: D.posBal, tr: trs.length, mk: marks.length }; return 'skip';
+    say(`JAANCH ${p.name}: app ${sideRs(D.appBal)} · POS ${sideRs(D.posBal)} · farq Rs ${rsTxt(Math.abs(fix))} · POS mein sirf EK JV (khata ↔ Equity) · koi entry / transfer alag nahi jayega · app mein kuch nahi banega${D.appOnly.length ? ` · ${D.appOnly.length} app wali entries (${nT} transfer) is JV mein shamil` : ''} (kuch likha nahi)`);
+    j._fix = { dry: 1, app: D.appBal, pos: D.posBal, tr: nT, mk: D.appOnly.length }; return 'skip';
   }
-  for (const e of trs) { try { await milanSendOne(pool, acct, e.id, say, purAc); } catch (er) { say(`${e.id}: transfer nahi gaya — ${er.message || er}`); } }
-  if (trs.length) D = await load();
-  const fix = D.appBal - D.posBal;
   if (Math.abs(fix) <= 100) { say(`${p.name}: pehle se barabar (app ${sideRs(D.appBal)} · POS ${sideRs(D.posBal)})`); return 'skip'; }
-  const left = D.appOnly.map(a => a.e).filter(e => !e.transferId && sendElig(e)), mk = [];
-  for (const e of left) { await appWrite(e.id, { ...e, posNo: true, balFix: String(jid || '') }, e); mk.push(String(e.id)); }
+  const mk = [];
+  for (const id of markIds()) { const e = app.get(id); if (!e || e.deleted) continue; await appWrite(e.id, { ...e, posNo: true, balFix: String(jid || '') }, e); mk.push(String(e.id)); }
   const amt = rupees(Math.abs(fix)), dr = fix > 0, today = new Date(Date.now() + 5 * 3600000).toISOString().slice(0, 10);
   const r = await posWriteVoucher(pool, { voucherId: 0, type: 'JV', date: today, marker: 'balfix-' + appId + '-' + Date.now().toString(36), remarks: `Baqaya app jaisa (ek voucher) - ${p.name}`,
     lines: [{ accountId: accId, debit: dr ? amt : 0, credit: dr ? 0 : amt, desc: 'Baqaya app jaisa (Blue Khata)' },

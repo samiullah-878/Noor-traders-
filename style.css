@@ -8533,3 +8533,6 @@ html body #dialogBody form .ef-posx input{width:18px!important;height:18px!impor
 html body #dialogBody form .ef-posx:has(input:checked){background:linear-gradient(135deg,#d32f2f,#b71c1c)!important;color:#fff!important;border-color:transparent!important}
 html body #dialogBody form p.ef-posx.is-in{background:#fdecec!important;color:#8a1c1c!important;border-color:#f1c2c2!important}
 .kt-px{display:inline-block;padding:0 6px;border-radius:999px;background:#fdecec;color:#b71c1c;font-size:10px;font-weight:800;white-space:nowrap}
+/* v2.314.0: ✕ Rok do — PC ke shuru karne se pehle milan kaam rokna (patla laal chip) */
+html body #dialogBody .pm-fixst .pm-stop{display:inline-flex;align-items:center;gap:4px;margin:6px 0 0 8px;height:30px!important;min-height:30px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid rgba(239,68,68,.55)!important;background:linear-gradient(180deg,rgba(254,226,226,.95),rgba(252,165,165,.55))!important;color:#991b1b!important;font:700 12px/1 system-ui,sans-serif!important;white-space:nowrap;box-shadow:0 1px 3px rgba(185,28,28,.18)!important;cursor:pointer}
+html body #dialogBody .pm-fixst .pm-stop:disabled{opacity:.6}

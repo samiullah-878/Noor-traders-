@@ -5036,3 +5036,7 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 
 === pos-khata-sync w5 (2026-11-17, app v2.313.0) ===
 - milanDiffPc: `!e.posX` — app ki '🚫 POS mein na bhejo' entries (posNo + posX) milan / ⚖️ @balance / 🤖 autoMilan mein nahi gini jatin (warna @balance un ki raqam JV se POS mein daal deta). Voucher pehle se nahi banta tha (posNo skip). Sirf posX — posNo akela (balFix / bank kharcha / sabqa) pehle jaisa.
+
+=== pos-khata-sync w6 (2026-11-17, app v2.314.0) ===
+- milanBalance (@balance): transfer ab milanSendOne se ALAG voucher nahi — sirf EK JV (khata ↔ Equity). Har app-only entry (transfer ki dono taraf bhi) par posNo + balFix (fix.mk). Malik: 'sirf ek voucher, sab entries nahi'. acct / purAc params ab is function mein istemal nahi (signature wahi).
+- milanJobs status 'stop' (app ka ✕ Rok do, rules 2.105) — runMilanJobs sirf 'new' uthata hai, is liye kuch karna nahi.
