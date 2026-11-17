@@ -1,5 +1,7 @@
 // ============================================================
-//  nt-posui.js  v1.14 (2026-11-10: 🖥 shot tez — har 0.2 s dekh, 0.35 s gap; malik: "kuch seconds ka farq") · v1.13 (2026-11-10: 🖥 shot() — live camera ke saath POS ki Sale list ki chhoti tasveer, sirf jab koi Live dekh raha ho; neeche tafseel)
+//  nt-posui.js  v1.15 (2026-11-17: 🧠 memory chowkidar — malik ke PC par watcher 9:19 se 4.5 GB (managed UI Automation memory nahi chhorta,
+//                   ~800 MB / ghanta). Har 2 min tasklist se watcher ki memory; 600 MB (local-config posUiMem) se upar = band + 2 s mein naya (30 s
+//                   wala intezar / fails ginti nahi). POS / printer / spooler ko haath nahi.) · v1.14 (2026-11-10: 🖥 shot tez — har 0.2 s dekh, 0.35 s gap; malik: "kuch seconds ka farq") · v1.13 (2026-11-10: 🖥 shot() — live camera ke saath POS ki Sale list ki chhoti tasveer, sirf jab koi Live dekh raha ho; neeche tafseel)
 //                   · v1.12 (2026-10-08: 🔎 Abdurehman PC: Search khirki POS ke ANDAR (child form) — v1.10/1.11 us ka PARENT (Sale screen) parhta
 //                   tha -> likhai "00123402" (Sale No) / "0". Ab dabba = jo KHUD 'Search Items' hai (label ho to us ka parent); us mein khana na
 //                   mile to sirf alag root khirki · NtPosUi13.dll)
@@ -29,7 +31,7 @@
 // ============================================================
 const fs = require('fs');
 const path = require('path');
-const { spawn } = require('child_process');
+const { spawn, execFile } = require('child_process');
 
 function start({ dir, log, cfg, onAdd, onErr, onProc, onDown, onSrch, onSbox }) {
   const C = () => { try { return cfg() || {}; } catch { return {}; } };
@@ -183,7 +185,7 @@ public class NtPosUi13{
 Add-Type -Path $dll
 [NtPosUi13]::Run([string]$args[0],[string]$args[1])
 `;
-  let child = null, gridOn = false, winOn = false, fails = 0, stopped = false, swept = false;
+  let child = null, gridOn = false, winOn = false, fails = 0, stopped = false, swept = false, memKill = false;
   // v1.5: pehle ke NT-PRINT restarts se peeche reh gaye nt-posui PowerShell band karo (sirf ek dafa, apna naya chalane se pehle)
   const sweep = done => {
     const cmd = "Get-CimInstance Win32_Process -Filter \"Name='powershell.exe'\" | Where-Object { $_.CommandLine -like '*nt-posui.ps1*' } | ForEach-Object { Stop-Process -Id $_.ProcessId -Force -ErrorAction SilentlyContinue; $_.ProcessId }";
@@ -217,15 +219,28 @@ Add-Type -Path $dll
       else if (l.startsWith('SRCH ')) { const [, kind, same, n, codes] = l.split(' '); log(`🔎 POS Search khirki: ${kind === 'MULTI' ? 'barcode ' + same + ' item(s) par — chunna hai' : 'barcode POS mein NAHI'} (qataren ${n}${codes ? ': ' + codes : ''})`); try { onSrch && onSrch({ kind, same: Number(same) || 0, n: Number(n) || 0, codes: codes || '' }); } catch {} }   // v1.7
       else if (l.startsWith('ADD ')) { try { onAdd(Number(l.slice(4)) || 1); } catch {} } } });
     w.stderr.on('data', d => { err = (err + d).slice(-2000); });
-    w.on('exit', code => { if (child === w) child = null; gridOn = false; winOn = false; if (stopped) return; fails++; try { onDown && onDown(); } catch {}
+    w.on('exit', code => { if (child === w) child = null; gridOn = false; winOn = false; if (stopped) return;
+      if (memKill) { memKill = false; setTimeout(run, 2000); return; }   // v1.15: memory wala restart — foran naya, fails mein nahi
+      fails++; try { onDown && onDown(); } catch {}
       const el = err.split(/\r?\n/).filter(x => /error|CS\d{4}/i.test(x)).slice(0, 3).join(' | ') || err.trim().split(/\r?\n/).pop();
       log(`🔔 POS screen dekhna band (code ${code})${err ? ' — ' + el : ''}` + (fails < 6 ? ' — 30 sec mein dobara' : ' — chhor diya'));
       if (fails < 6) setTimeout(run, 30000); });
   };
   setTimeout(run, 5000);
+  // v1.15: 🧠 memory chowkidar — watcher (managed UIA) memory chhorta nahi; had se upar = band + 2 s mein naya. tasklist halka hai (spooler / POS nahi chhoota).
+  const memCheck = () => {
+    const w = child; if (!w || !w.pid || stopped || memKill) return;
+    execFile('tasklist', ['/FI', 'PID eq ' + w.pid, '/FO', 'CSV', '/NH'], { timeout: 10000, windowsHide: true }, (e, out) => {
+      if (e || child !== w || memKill) return;
+      const cols = (String(out || '').trim().split(/\r?\n/)[0] || '').match(/"([^"]*)"/g) || []; if (cols.length < 5) return;
+      const mb = Math.round((Number(cols[cols.length - 1].replace(/[^\d]/g, '')) || 0) / 1024), lim = Math.max(200, Number(C().posUiMem) || 600);
+      if (mb > lim) { log(`🧠 POS screen watcher ${mb} MB (had ${lim}) — naya chala raha`); memKill = true; try { w.kill(); } catch { memKill = false; } }
+    });
+  };
+  const memT = setInterval(memCheck, 120000);
   // v1.7: scan hua — agle 2.6 s POS ki Search khirki dekho (code se milao)
   const check = code => { try { if (child) child.stdin.write('CHK ' + String(code || '').replace(/\s+/g, '').slice(0, 60) + '\n'); } catch {} };
-  return { active: () => gridOn, win: () => winOn, alive: () => !!child, check, stop() { stopped = true; try { child && child.kill(); } catch {} } };
+  return { active: () => gridOn, win: () => winOn, alive: () => !!child, check, stop() { stopped = true; clearInterval(memT); try { child && child.kill(); } catch {} } };
 }
 // ============================================================
 //  v1.13 (2026-11-10) 🖥 POS SCREEN KI TASVEER (live camera ke saath) — malik: "item likho wo app mein aaye · remove = remove · print ke baad naya bill".
