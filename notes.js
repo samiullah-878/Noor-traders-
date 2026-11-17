@@ -6,8 +6,8 @@
 // - HBL: khata ka jo account naam mein "HBL" rakhta hai (ya ek dafa chuna hua) — "💸 HBL payment" = account transfer
 //   (HBL -> supplier, POS mein bhi) + order ka reminder note.
 // - Notification: FCM token pushTokens/<hash>; Cloud Function (cloud-functions/) har 10 minute waqt aaye reminder bhejti hai.
-import { saleStock } from './pos-stock.js?v=2.310.0';   // 📢 demand ke items (v2.106.0: 🛒 purchase order + po-formula hata diye)
-import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.310.0';
+import { saleStock } from './pos-stock.js?v=2.311.0';   // 📢 demand ke items (v2.106.0: 🛒 purchase order + po-formula hata diye)
+import { voiceSearch, smartSearch, partyScore, smartHit } from './smart-search.js?v=2.311.0';
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -66,12 +66,14 @@ export const isBank = id => !!id && (id === bankId() || !!partyOf(id)?.bank);
 function pickBank(then) {
   const all = (partiesOf() || []).filter(p => p && !p.deleted);
   const hbl = all.filter(p => /hbl|bank/i.test(String(p.name || '')));
-  dlgOf('🏦 HBL wala account chunein', `<p class="stat-note">Ek dafa chunein — phir yahi yaad rahega (isi phone par).</p>
+  dlgOf('🏦 Kis account se payment', `<p class="stat-note">Sirf is payment ke liye — HBL ke aaye paise kis khate mein jayen, woh HBL screen ⋮ → 🔢 se.</p>
     <label>Account dhoondein<input id="bkQ" type="search" autocomplete="off" placeholder="naam likhein…"></label><div class="nt-pick" id="bkList"></div>`);
   const paintB = () => { const q = $('bkQ')?.value || ''; const list = q ? all.map(p => [p, partyScore(p, q)]).filter(x => x[1] > 0).sort((a, b) => b[1] - a[1]).slice(0, 12).map(x => x[0]) : (hbl.length ? hbl : all.slice(0, 12));
     $('bkList').innerHTML = list.map(p => `<button type="button" data-bk="${esc(p.id)}">🏦 ${esc(p.name)}</button>`).join('') || '<small>Nahi mila</small>'; };
   paintB(); $('bkQ').oninput = paintB;
-  $('bkList').onclick = e => { const b = e.target.closest('[data-bk]'); if (!b) return; try { localStorage.setItem(BANK_KEY, b.dataset.bk); } catch {} bankShared = b.dataset.bk; try { window.dispatchEvent(new CustomEvent('sam-bank-pick', { detail: b.dataset.bk })); } catch {} notice('🏦 ' + (partyOf(b.dataset.bk)?.name || '') + ' = HBL account'); closeDlg(); then?.(b.dataset.bk); };
+  // v2.311.0 (ghalti 17 Nov): pehle yahan chuna khata poori app ka "HBL account" ban jata tha (sam-bank-pick -> bankSms/_alias @hbl) — Reminder ke "HBL se payment"
+  //   mein loan khata chuna to Raast / 6303 ke AAYE paise bhi loan khate mein lagne lage. Ab sirf ISI payment ka khata; HBL account sirf HBL screen ⋮ se.
+  $('bkList').onclick = e => { const b = e.target.closest('[data-bk]'); if (!b) return; notice('🏦 Is payment ke liye: ' + (partyOf(b.dataset.bk)?.name || '')); closeDlg(); then?.(b.dataset.bk); };
 }
 export function hblPayForm(forceBank) {
   const bid = forceBank || bankId();
@@ -102,7 +104,7 @@ export function hblPayForm(forceBank) {
   f.addEventListener('click', e => {
     const t = e.target.closest('[data-hp-sup],[data-hp-it],[data-hp-free],[data-hp-rm],[data-hp-amt],[data-hp-day],[data-bk-change]'); if (!t) return;
     const d = t.dataset;
-    if (d.bkChange) { try { localStorage.removeItem(BANK_KEY); } catch {} pickBank(id => hblPayForm(id)); return; }
+    if (d.bkChange) { pickBank(id => hblPayForm(id)); return; }
     if (d.hpSup) { sup = d.hpSup; $('hpSupPicked').innerHTML = `<span class="nt-chip big">🧾 ${esc(partyOf(sup)?.name || '')}</span>`; $('hpSupList').innerHTML = ''; $('hpSupQ').value = partyOf(sup)?.name || ''; return; }
     if (d.hpIt) { const r = (itemsOf() || []).find(x => String(x.id) === d.hpIt); if (r && !chosen.some(c => c.id === String(r.id))) chosen.push({ id: String(r.id), name: String(r.name).slice(0, 80) }); $('hpItemQ').value = ''; $('hpItemList').innerHTML = ''; paintItems(); return; }
     if (d.hpFree) { const v = $('hpItemQ').value.trim().slice(0, 80); if (v) chosen.push({ id: '', name: v }); $('hpItemQ').value = ''; $('hpItemList').innerHTML = ''; paintItems(); return; }

@@ -8500,3 +8500,17 @@ html body #summary .pp-supdrop .pp-sup-list button.is-in,html.lt body #summary .
 html.dk body #summary .pp-supdrop{background:#fff!important;color:#1a2d53!important}
 html body #list .pp-navbusy{display:block;height:32px;line-height:30px;padding:0 12px;margin:0 0 6px;border-radius:999px;background:linear-gradient(180deg,#eef2ff,#e2e8fb);border:1px solid #c7d0f0;color:#28408a;font-size:13px;font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 body[data-mnf="pp.inv"] #summary .pp-hd-off,body[data-mnf="pp.xtra"] #summary .pp-hd-off{display:block!important}
+/* v2.311.0 (malik 17 Nov: "upar bank ke chips seedha saamne — aage peeche na jaye"): side-scroll nahi — sab chips saamne, wrap, patle (32px) */
+html body .bkp-accts{flex-wrap:wrap!important;overflow:visible!important;gap:6px!important;padding:2px 0 8px!important}
+html body .bkp-accts button{min-height:32px!important;height:32px!important;padding:3px 11px!important;font-size:12px!important;white-space:nowrap!important;max-width:100%!important;overflow:hidden;text-overflow:ellipsis}
+html body .bkp-accts button b{min-width:18px;height:18px;font-size:10px}
+/* v2.311.0 🔢 Kaun sa account kis khate mein + ⇄ Sahi khate mein */
+.bk-am{display:grid;gap:6px}
+.bk-am-r{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:6px;align-items:center;padding:8px 10px;border:1px solid var(--line,#dfe5f0);border-radius:14px;background:var(--surface,#fff)}
+.bk-am-r.is-in{border-color:#2e5194;box-shadow:0 0 0 2px rgba(46,81,148,.15)}
+.bk-am-l{min-width:0;display:grid;gap:2px}.bk-am-l b{font-size:14px}.bk-am-l span{font-size:14px;opacity:.8;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .bk-am-b{min-height:32px!important;height:32px!important;padding:0 12px!important;border-radius:999px!important;font-size:13px!important;width:auto!important}
+.bk-am-ch{grid-column:1/-1;display:flex;flex-wrap:wrap;gap:6px}
+html body #dialogBody .bk-am-ch button{min-height:32px!important;height:32px!important;padding:3px 11px!important;border-radius:999px!important;font-size:12px!important;white-space:nowrap;width:auto!important;border:1px solid var(--line,#dfe5f0)!important;background:linear-gradient(180deg,#fff,#f2f5fb)!important;color:#172b52!important}
+html body #dialogBody .bk-am-ch button.is-in{background:linear-gradient(135deg,#0f7a4a,#16a061)!important;color:#fff!important;border-color:transparent!important}
+html body .bkp-ic.mv{background:linear-gradient(135deg,#f59e0b,#ea7a0b)!important;color:#fff!important;border-color:transparent!important;font-weight:800!important}
