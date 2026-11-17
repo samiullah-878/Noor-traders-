@@ -8626,3 +8626,18 @@ html body main header #summary .dy-kdrop .dy-kd-h b{min-width:0;flex:1 1 auto;wh
 html body main header #summary .dy-kdrop .dy-kd-h small{flex:none}
 /* v2.318.0: 📈 Rate change — PC ka data purana = laal likhai (usi patti mein, nayi qatar nahi) */
 html body .rc-mini small.rc-stale{color:#b42332!important;font-weight:800;white-space:normal;text-align:right;line-height:1.25}
+/* v2.319.0: 🚨 Phone alarm (dukan ki nabz) — PC scripts khirki */
+html body #dialogBody .nb-box{border:1px solid #d7deea;border-radius:16px;padding:10px 12px;margin:0 0 10px;background:linear-gradient(#fff,#f3f6fc);display:grid;gap:6px;min-width:0}
+html body #dialogBody .nb-hd{display:flex;align-items:center;gap:8px;min-width:0}
+html body #dialogBody .nb-hd b{font-size:15px;color:#b3261e;white-space:nowrap}
+html body #dialogBody .nb-hd small{flex:1;min-width:0;color:#5b6577;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+html body #dialogBody .nb-st,html body #dialogBody .nb-ln{margin:0;font-size:13.5px;line-height:1.35;color:#24324a;overflow-wrap:anywhere}
+html body #dialogBody .nb-st.g,html body #dialogBody .nb-ln.g{color:#0f6b3d}html body #dialogBody .nb-st.r,html body #dialogBody .nb-ln.r{color:#b3261e;font-weight:700}
+html body #dialogBody .nb-ln.y{color:#8a5a00}
+html body #dialogBody .nb-btns{display:flex;flex-wrap:wrap;gap:6px}
+html body #dialogBody .nb-c{min-height:34px!important;height:auto!important;padding:4px 13px!important;border-radius:999px!important;border:1px solid #cfd8e8!important;background:linear-gradient(#fff,#eef2f9)!important;color:#1d3b6e!important;font-size:13px!important;font-weight:700;white-space:nowrap;width:auto!important}
+html body #dialogBody .nb-c.pri{border-color:#e08b84!important;background:linear-gradient(#ff6b5f,#d93a2f)!important;color:#fff!important;box-shadow:0 2px 8px rgba(217,58,47,.25)}
+html body #dialogBody .nb-hd .nb-c{min-height:30px!important;padding:2px 9px!important}
+html body #dialogBody .nb-c:disabled{opacity:.6}
+html body #dialogBody .nb-note{margin:0;font-size:12px;color:#5b6577;line-height:1.4}
+html.dk body #dialogBody .nb-box{background:linear-gradient(#1c2433,#151c28);border-color:#2c3a52}html.dk body #dialogBody .nb-st,html.dk body #dialogBody .nb-ln{color:#dbe4f3}

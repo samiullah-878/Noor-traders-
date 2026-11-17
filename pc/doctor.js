@@ -1,4 +1,6 @@
 // =========================================================
+//  v3.13 (2026-11-17, app v2.319.0): 🚨 DUKAN KI NABZ — nabz.js (alag file) har 60 s dukan ka haal ek doc (pcBeat/<chaabi>) mein, malik ke phone ka
+//    MacroDroid '🚨 Dukan nigrani' parhta hai (PC / internet band, thermal phansa, WhatsApp toota, bill nahi …). Sirf server (BLOCKED nahi). AI nahi.
 //  doctor.js  v3.1 (2026-11-10: 🔥 CPU list ab WMI Win32_Process se — SQL Server / antivirus jaise SYSTEM program bhi; ek jaise program jama (×N); 'baqi' line.)
 //  v3.3 (2026-11-16: 🖨 is PC par lage printers ke naam + haalat har 2 min app ko (blueAccess/pcPrinters) + scripts ko jo naam chahiye (thermal TM-T88IV, label label-settings.json) mila ya nahi — malik: 'script wali screen mein jo printer add ho jayein un ka naam'. Sirf parhna.)
 //  v3.0 (2026-11-10: 🔥 PC ka CPU / RAM + sab se zyada CPU wale 5 program har 1 min app ko (blueAccess/pcCpu) — malik: "CPU 100% · data app mein aa jaye". Async, doctor nahi rukta.)
@@ -31,7 +33,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.12';
+const VER = '3.13';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -588,6 +590,7 @@ lock.on('listening', async () => {
   setTimeout(cpuTick, 20000); setInterval(cpuTick, 60000);
   setInterval(() => { seenBeat().catch(() => {}); }, 20000);
   setTimeout(prnTick, 35000); setInterval(prnTick, 120000);   // v3.3: 🖨 printers app mein   // v3.0: 🔥 CPU app mein
+  try { require('./nabz.js')({ fb, log, dir: DIR, blocked: () => BLOCKED, thermal: () => { let off = false; try { off = fs.existsSync(thOffFile()); } catch {} return { off, q: Number(SPL.qPrev) || 0 }; } }); } catch (e) { log('⚠ nabz: ' + String(e && e.message || e).slice(0, 80)); }   // v3.13: 🚨 phone ke liye dukan ki nabz
   setInterval(() => cycle('30 minute'), EVERY);
   setInterval(() => cycle('2 minute', false), QUICK);
   // v2.7: har 3 min sirf manifest ka version — naya ho to foran update (30 min ka intezar nahi)

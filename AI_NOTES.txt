@@ -8746,3 +8746,24 @@ phir "is ki script ko bhi aisa banao jaise rate badla item us list mein seedha".
   = usi patti mein laal '⚠️ PC ne N se taza nahi kiya — rates purane ho sakte' (`.rc-stale`). Screenshot mein '🖥 5 ghante pehle' tha — PC script
   us waqt list taza nahi kar rahi thi (PC band / script ruki) — v1.2 aate hi taza.
 - Test: fake mssql (Items 1751/2100, Branch NOOR TRADERS 1850/2250, Godam 1) -> list mein W 1850 · R 2250, br 1. Asal POS par nahi chalaya. AI nahi.
+
+=== v2.319.0 (2026-11-18) — 🚨 DUKAN NIGRANI (phone alarm) ===
+Malik (17 Nov): 'phone par kya kar sakte ho' -> #2 chuna: dukan ka system ruke to phone bataye · 'deep socho' · 'baqi notifications jaisa screen par pop' · OK.
+- PC pc/nabz.js v1.0 (doctor v3.13 chalata hai, sirf server PC — BLOCKED nahi): har 60 s jaanch, har 2 min (ya badla to foran) EK doc
+  businesses/noor-traders/pcBeat/<chaabi> {v, d, at, act, hz, r, rk, y, yk, host, ver}. Sirf HAAL ki likhai — paisa / khata / gahak KABHI nahi.
+  🔴 r: thermal mein 5+ parchi phansi (doctor SPL.qPrev, thermal-off nahi) · WhatsApp Business (waLinkOut st != open) 10 min · dukan ke waqt
+     (10:00–20:30) 45 min se koi POS bill nahi (Jumma 12:30–14:45 = 90 min) — sirf jab aaj bill bane hon (posSales/<din> select at + sum.n).
+  🟡 y: thermal ruka (malik ka ▶ baqi) · counter NT-PRINT aaj chala tha ab 10 min chup (printPCs) · camera recording band (billClipPc on + taza) ·
+     ijazat 30 min se (approvals status new) · 11 baje tak aaj koi bill nahi. Hazri app ki chhutti (hazri-day.json closed) = sab khali.
+  Firestore ~6 parhai / 5 min. Kuch parh na sake = us hissay ki khabar nahi (andaze se alarm nahi).
+- Rules v2.106: pcBeat/{k} — get sirf jab k 24+ harf (chaabi = doc id, list nahi), list / write = malik (PC admin).
+- cloud.js: getPcBeatKey / setPcBeatKey (blueAccess/pcBeatKey, sirf malik — awazKey jaisa) + getPcBeat(k).
+- App nabz-ui.js: Settings -> 🖥️ PC scripts mein '🚨 Phone alarm' dabba (#pcNabz): abhi ka haal (🟢 / 🔴 PC chup + r / y lines), button
+  '🚨 Phone alarm jorein' = chaabi bana kar Falcon wale webhook (getFxCfg().wh) par `nt_nabz?nbU=<Firestore REST link>`; '🔔 Test alarm' = `nbT=1`.
+  Patti tap = #nabz -> app.js nbHash PC scripts khirki khud kholta hai (#ij jaisa).
+- Phone md/tools/nabz.py '🚨 Dukan nigrani' (pkg v55): har 3 min (alarm, trigger par 9:25–21:05) + webhook. Java (HttpURLConnection + org.json,
+  magicText / variableSetter): window 9:30–21:00 · doc 10 min purana + aaj bill bane + 10:00–20:30 = 🔴 'PC / internet band', warna 🟡 · 11 baje tak
+  PC ka aaj ka doc nahi = 🟡. 🔴 = heads-up (showAsOverlayOption 2, priority 2, awaaz) id nbr, wohi masla 30 min baad dobara, 3 dafa tak;
+  khatam = wahi patti khamoshi se '✅ theek'. 🟡 = khamosh id nby, ek baat din mein ek dafa; khatam = '🟢 theek'. Phone ka apna net na ho = kuch nahi.
+  State global nbS 'rk~rn~rt~yk~yd'. Test: javac harness (org.json stub + local server) 15 haalat theek; MCP validator VALID. Asal phone / PC par
+  nahi chalaya. AI nahi.

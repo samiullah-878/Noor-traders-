@@ -5060,3 +5060,10 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 - W / R / khareed ab dbo.ItemBranchRate (dukan NOOR TRADERS, naam se — shopBranch) se; dbo.Items ke SaleRate* purane reh jate the (POS screen sirf branch rate badalti).
 - POLL 10 s; stamp = khareed 60 din ka CHECKSUM (rate / cancel bhi) + dukan rates ka CHECKSUM — kuch badla = foran list. Kuch na badla = Firestore sawal nahi (minute mein ek).
 - Sirf parhti hai (POS mein kuch nahi likhti) — pehle jaisa.
+
+=== 2026-11-18 (app v2.319.0): doctor v3.13 + nabz.js v1.0 (nayi file, service nahi) ===
+- doctor.js shuru mein `require('./nabz.js')({fb, log, dir, blocked: () => BLOCKED, thermal: () => ({off: thermal-off.txt, q: SPL.qPrev})})` — try/catch,
+  file na ho = sirf log. Sirf server par kaam (BLOCKED = kuch nahi).
+- nabz.js: blueAccess/pcBeatKey se chaabi (10 min yaad); na ho = kuch nahi likhta. Har 60 s: posSales/<aaj> (select at, sum.n — poori list nahi), waLinkOut,
+  printPCs, billClipPc, approvals(status new, select at) — har ek apni raftar par (2–5 min). Likhai pcBeat/<chaabi> sirf badla ho ya 2 min guzre.
+  Sab async + 8–10 s hadd. Phone (MacroDroid) isi doc ka `at` dekh kar 'PC / internet band' batata hai — doc likhna band = phone ka alarm.
