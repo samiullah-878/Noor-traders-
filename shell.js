@@ -14,9 +14,9 @@
 //  🔠 Apni marzi: likhai size (main zoom) · headings size · likhai rang · headings rang — har phone (localStorage sam-marzi);
 //     malik "👑 Sab mulazimon par" = blueAccess/look {marzi, mAt} (cloud.setMarzi). AI nahi.
 // =====================================================================================================
-import { recentList } from './recent.js?v=2.314.0';
-import { agentRegister } from './agent.js?v=2.314.0';
-import { smartHit, hlName } from './smart-search.js?v=2.314.0';
+import { recentList } from './recent.js?v=2.315.0';
+import { agentRegister } from './agent.js?v=2.315.0';
+import { smartHit, hlName } from './smart-search.js?v=2.315.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -373,7 +373,7 @@ function dlgBtnSetup() {
   let setT = 0; new MutationObserver(() => { clearTimeout(setT); setT = setTimeout(dhLearnSettings, 250); }).observe(body, { childList: true });   // v2.113.0: 🔍 Settings ki cheezein yaad
 }
 export function shellSetup(h = {}) {
-  H = h; mApply(); navBtnSetup(); lockX(); dlgBtnSetup(); dhBtnSetup();
+  H = h; mApply(); navBtnSetup(); lockX(); dlgBtnSetup(); dhBtnSetup(); rtBtnSetup();
   const st = $('settings');
   if (st && !st.dataset.mn0) { st.dataset.mn0 = '1'; const old = st.onclick; H.openSettings = H.openSettings || (() => old?.call(st)); st.onclick = () => { if (isOpen()) close(); else open(); }; st.setAttribute('aria-label', 'Is screen ke kaam'); st.title = 'Is screen ke kaam'; }
   // header ka ‹ — focus ho to pehle focus se wapas
@@ -397,7 +397,7 @@ const dhWr = (k, o) => { try { localStorage.setItem(k, JSON.stringify(o)); } cat
 const dhCan = () => { try { return !!H.owner?.() || H.can?.('app.dhoondo') !== false; } catch { return true; } };
 const dhKey = x => String(x.k).startsWith('ft.') ? 'ft:' + x.t : x.k;   // neeche ki patti ke kaam: naam se pehchan (index badal sakta)
 let DHS = null;
-async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.314.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
+async function dhStatic() { if (DHS) return DHS; try { DHS = (await import('./dh-cat.js?v=2.315.0')).DH_CAT || {}; } catch { DHS = {}; } return DHS; }
 // is screen ke chips yaad — jo kabhi dikhe sab (haalat ke hisaab se aate jate hain), 21 din na dikhe to bhool jao
 const dhSig = new Map();   // view → pichhli dafa ke chips (wahi hon to localStorage chhoo bhi nahi — tez)
 function dhLearn() {
@@ -533,7 +533,16 @@ function dhBtnSetup() {
   top.insertBefore(b, st); b.addEventListener('click', () => { if (isOpen() && root?.dataset.mode === 'dh') close(); else dhOpen(); });
   dhPaintBtn();
 }
-function dhPaintBtn() { const b = $('dhBtn'); if (!b) return; const on = dhCan(); if (b.hidden === on) b.hidden = !on; }
+function dhPaintBtn() { const b = $('dhBtn'); if (!b) return; const on = dhCan(); if (b.hidden === on) b.hidden = !on; rtPaintBtn(); }
+// v2.315.0: 🗂 HAAL HI MEIN (malik: "recents tab jaisa · usi jagah se open") — 🔍 ke saath gol button; khirki / yaad recent.js (window.ntRtOpen). CAP app.recent.
+function rtBtnSetup() {
+  const top = document.querySelector('main>header .top'), st = $('settings'); if (!top || !st || $('rtBtn')) return;
+  const b = document.createElement('button'); b.type = 'button'; b.id = 'rtBtn'; b.className = 'round rt-btn'; b.textContent = '🗂'; b.title = 'Haal hi mein — pichhli screen / khata (2 dafa = foran pichhli)'; b.setAttribute('aria-label', 'Haal hi mein');
+  top.insertBefore(b, $('dhBtn') || st); b.addEventListener('click', () => { if (isOpen()) close(); try { window.ntRtOpen?.(); } catch (er) { console.warn('rt', er); } });
+  rtPaintBtn();
+}
+function rtPaintBtn() { const b = $('rtBtn'); if (!b) return; let on = true; try { on = !!H.owner?.() || H.can?.('app.recent') !== false; } catch {} if (b.hidden === on) b.hidden = !on; }
+window.ntShellSel = () => { try { return H.selected?.() || ''; } catch { return ''; } }; window.ntShellNotice = m => { try { H.notice?.(m); } catch {} };
 window.ntDhOpen = dhOpen; window.ntShellView = () => vw(); window.ntShellItems = () => items(mainEl()).map(x => ({ k: x.k, y: x.type, i: x.i, t: x.t, s: x.s, g: x.g }));
 
 // ---------------- 🤖 Agent ----------------

@@ -8536,3 +8536,29 @@ html body #dialogBody form p.ef-posx.is-in{background:#fdecec!important;color:#8
 /* v2.314.0: ✕ Rok do — PC ke shuru karne se pehle milan kaam rokna (patla laal chip) */
 html body #dialogBody .pm-fixst .pm-stop{display:inline-flex;align-items:center;gap:4px;margin:6px 0 0 8px;height:30px!important;min-height:30px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid rgba(239,68,68,.55)!important;background:linear-gradient(180deg,rgba(254,226,226,.95),rgba(252,165,165,.55))!important;color:#991b1b!important;font:700 12px/1 system-ui,sans-serif!important;white-space:nowrap;box-shadow:0 1px 3px rgba(185,28,28,.18)!important;cursor:pointer}
 html body #dialogBody .pm-fixst .pm-stop:disabled{opacity:.6}
+/* v2.315.0: 🗂 Haal hi mein (recent.js) — header ka gol button + neeche se sheet, 2 card fi qatar (ek screen par 12) */
+html body main>header .top .rt-btn{font-size:16px!important;padding:0!important}
+html body main>header .top .rt-btn[hidden]{display:none!important}
+html body dialog.rt-dlg{margin:auto 0 0!important;width:100%!important;max-width:100%!important;max-height:86vh;padding:0!important;border:0!important;background:transparent!important;box-shadow:none!important;overflow:visible}
+html body dialog.rt-dlg::backdrop{background:rgba(15,23,42,.45);backdrop-filter:none}
+html body .rt-dlg .rt-sh{max-width:620px;margin:0 auto;max-height:86vh;overflow:auto;background:linear-gradient(180deg,#ffffff,#f3f6fb);border-radius:20px 20px 0 0;padding:10px 12px calc(12px + env(safe-area-inset-bottom));box-shadow:0 -10px 30px rgba(15,23,42,.25)}
+html body .rt-dlg .rt-hd{display:flex;align-items:center;gap:8px;padding:2px 2px 10px}
+html body .rt-dlg .rt-hd b{font-size:16px;color:#0f172a;white-space:nowrap}
+html body .rt-dlg .rt-hd small{flex:1;min-width:0;font-size:11.5px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .rt-dlg .rt-x{flex:0 0 auto;width:32px!important;height:32px!important;min-height:32px!important;padding:0!important;border-radius:999px!important;border:1px solid #d6dde8!important;background:linear-gradient(180deg,#fff,#eef2f7)!important;color:#334155!important;font-size:13px!important}
+html body .rt-dlg .rt-g{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(150px,100%),1fr));gap:8px}
+html body .rt-dlg .rt-c{position:relative;min-width:0}
+html body .rt-dlg .rt-go{display:flex!important;align-items:center;gap:8px;width:100%!important;min-height:56px!important;height:auto!important;padding:8px 26px 8px 9px!important;margin:0!important;border-radius:14px!important;border:1px solid #dbe3ee!important;background:linear-gradient(180deg,#ffffff,#f1f5fb)!important;color:#0f172a!important;text-align:left!important;box-shadow:0 1px 3px rgba(15,23,42,.08)!important}
+html body .rt-dlg .rt-go>i{flex:0 0 auto;width:34px;height:34px;display:grid;place-items:center;border-radius:11px;background:linear-gradient(180deg,#e0ecff,#c7dbff);font-style:normal;font-size:18px}
+html body .rt-dlg .rt-go>span{min-width:0;display:flex;flex-direction:column;gap:2px}
+html body .rt-dlg .rt-go b{font-size:13.5px;line-height:1.2;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .rt-dlg .rt-go small{font-size:11px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body .rt-dlg .rt-c.is-cur .rt-go{border-color:#22c55e!important;background:linear-gradient(180deg,#f0fdf4,#dcfce7)!important}
+html body .rt-dlg .rt-c.is-prev .rt-go{border-color:#2563eb!important;background:linear-gradient(180deg,#eff6ff,#dbeafe)!important}
+html body .rt-dlg .rt-c.is-prev .rt-go small{color:#1d4ed8;font-weight:700}
+html body .rt-dlg .rt-del{position:absolute;top:5px;right:5px;width:20px!important;height:20px!important;min-height:20px!important;padding:0!important;border-radius:999px!important;border:0!important;background:rgba(100,116,139,.14)!important;color:#475569!important;font-size:10px!important;line-height:1!important}
+html body .rt-dlg .rt-ft{display:flex;justify-content:center;padding-top:10px}
+html body .rt-dlg .rt-clr{height:32px!important;min-height:32px!important;padding:0 14px!important;border-radius:999px!important;border:1px solid #f1c4c4!important;background:linear-gradient(180deg,#fff5f5,#fde2e2)!important;color:#b91c1c!important;font-size:12px!important;font-weight:700!important;white-space:nowrap}
+html body .rt-dlg .rt-none{margin:14px 4px;color:#64748b;font-size:13px;text-align:center}
+html.dk body .rt-dlg .rt-sh,html[data-theme*="dark"] body .rt-dlg .rt-sh{background:linear-gradient(180deg,#1e293b,#0f172a)}
+html body .rt-dlg .rt-sh:focus{outline:none}
