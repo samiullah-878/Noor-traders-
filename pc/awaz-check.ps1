@@ -46,11 +46,11 @@ try {
 try { $as = Get-Service Audiosrv; Write-Host ("Windows Audio service: " + $as.Status); if ($as.Status -ne 'Running') { try { Start-Service Audiosrv; Write-Host "  -> Audio service chalu kar di" -ForegroundColor Yellow } catch { Write-Host "  -> Audio service band hai (chalane ke liye admin chahiye)" -ForegroundColor Red } } } catch {}
 $sc = @(Get-CimInstance Win32_Process -Filter "Name='powershell.exe'" | Where-Object { $_.CommandLine -like '*nt-scan.ps1*' })
 if ($sc.Count) { Write-Host "Scan awaz program (nt-scan): CHALU ($($sc.Count))" -ForegroundColor Green } else { Write-Host "Scan awaz program (nt-scan): BAND - NT-PRINT chal raha hai?" -ForegroundColor Red }
-$K = 'C:\khata-sync'
+$K = if (Test-Path 'C:\nt-print\nt-print.js') { 'C:\nt-print' } else { 'C:\khata-sync' }   # 2026-11-18: purane server par NT-PRINT C:\nt-print mein
 if (Test-Path (Join-Path $K 'firebase-key.json')) { Write-Host "Chaabi (firebase-key): HAI - barcode list se foran bzzz" -ForegroundColor Green }
 else { Write-Host "Chaabi (firebase-key): NAHI - AWAZ-ONLY (ghalat barcode ki bzzz POS ki Search khirki se). AnyDesk se file Desktop/Downloads mein rakh dein - NT-PRINT 20 sec mein khud utha lega" -ForegroundColor Yellow }
 if (Test-Path (Join-Path $K 'node_modules\firebase-admin')) { Write-Host "firebase-admin: HAI" } else { Write-Host "firebase-admin: NAHI (chaabi aate hi NT-PRINT khud install karega)" -ForegroundColor Yellow }
-$lg = 'C:\khata-sync\nt-print-log.txt'
+$lg = Join-Path $K 'nt-print-log.txt'
 if (Test-Path $lg) {
   $all = Get-Content $lg -Tail 1500 -Encoding UTF8
   $v = $all | Select-String -Pattern 'NT-PRINT v[0-9.]+' | Select-Object -Last 1; if ($v) { Write-Host ("Version: " + $v.Matches[0].Value) -ForegroundColor Cyan }

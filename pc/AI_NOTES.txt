@@ -5067,3 +5067,11 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 - nabz.js: blueAccess/pcBeatKey se chaabi (10 min yaad); na ho = kuch nahi likhta. Har 60 s: posSales/<aaj> (select at, sum.n — poori list nahi), waLinkOut,
   printPCs, billClipPc, approvals(status new, select at) — har ek apni raftar par (2–5 min). Likhai pcBeat/<chaabi> sirf badla ho ya 2 min guzre.
   Sab async + 8–10 s hadd. Phone (MacroDroid) isi doc ka `at` dekh kar 'PC / internet band' batata hai — doc likhna band = phone ka alarm.
+
+=== 2026-11-18 (manifest 2026-11-18.2): nt-print v1.34 + nt-scan v1.5 + nt-print-setup v3 / nt-fix v2 (purana server = counter) ===
+- Purana server (C:\khata-sync mein server scripts + chaabi .BAND / doosra naam) par NT-PRINT C:\nt-print mein — purane folder mein kabhi kuch nahi likhna
+  (chaabi wapas = purane scripts jaag kar entries hata sakte). Purana folder malik ke 'h' par startup se hata kar rename (mitaya nahi).
+- nt-print godamNames: cfg().sql na ho = sql-config nahi (process.exit + purani sync.js se local-config likhna band).
+- nt-scan: 6+ harf / 5+ hindse har fasla <= scanGap2 (90) = scan bhi (dheema scanner); purana 4+ harf <= scanGap (45) wahi. DLL naya naam NtScan4 (purana
+  cache NtScan3.dll naye logic ko rok deta).
+- nt-print-auto.bat (repo) NAHI badli: chalti bat file badalna = cmd purane byte offset se agli line parhta hai (loop toot sakta) — C:\nt-print ki bat setup khud likhta hai.

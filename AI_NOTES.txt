@@ -8779,3 +8779,23 @@ Malik (screenshot Sab suppliers): 'carton ke ilawa pieces mein bhi order banta h
 - purchase.js: `ppMob` (localStorage sam-pp-mob, sirf is PC) — posMode() = PC chaurai && !ppMob; viewNow ppMob = 'rows'. ⋮ chip data-pp-mob / data-mn pp.mob
   (sirf PC chaurai par): '📱 Mobile jaisa' ⇄ '🖥 POS jaisa'. Default POS jaisa. Phone par chip nahi. Save / POS raasta wahi.
 - Test: node render (rings + odTxt 5 haalat). Asal phone / PC par nahi dekha. AI nahi.
+
+=== 2026-11-18 (PC manifest 2026-11-18.2, app nahi badli) — 🖨 NT-PRINT purane server par (ab sirf counter) + dheema scanner ===
+Malik: old-server (Dell OptiPlex, pehle humara server tha, ab sirf client) par NT-PRINT 'auto chalna chahiye, off nahi hona chahiye' + 'khata-sync wala
+sab delete kar dein?'. Log (C:\khata-sync\nt-print-log.txt) 15 Nov 18:16 ke baad khali tha = wahan NT-PRINT 3 din se band.
+- nt-print-setup.ps1 v3: PURANA SERVER pehchan = C:\khata-sync mein server scripts (doctor / sync / pos-khata-sync / transfer-sync / sale-post /
+  KHATA-DOCTOR.bat) AUR (PC ka naam DESKTOP-Q1SLV77 nahi YA wahan firebase-key.json nahi). Tab NT-PRINT ALAG folder C:\nt-print:
+  purane folder mein KUCH nahi likhta; chaabi purani firebase-key*.BAND (asli service_account jaanch kar) se SIRF C:\nt-print mein; local-config
+  purani se sirf printer / awaz cheezein (sql / pcName / pcId / pass|key|token NAHI — naam = PC ka apna); apni bat (cd /d C:\nt-print) — GitHub
+  wali bat C:\nt-print mein KABHI nahi; Startup NT-PRINT.vbs -> C:\nt-print; powercfg sleep / hibernate (bijli par) 0; faisla sirf NAYI log lines se.
+  Phir purane folder ki khud chalne wali cheezein (Startup .vbs/.bat/.lnk, Run, Task, chalte node / cmd / wscript — sirf file naam) aur malik ke 'h' par:
+  band karo + Startup files _startup-hataya mein + Run hata (run-hataye.txt) + Task Disable + Rename C:\khata-sync -> C:\khata-sync-PURANA-yyyyMMdd.
+  MITAYA KUCH NAHI (malik ne delete poochha tha — naam badalna = koi script nahi chal sakti, wapsi bhi mumkin).
+- nt-fix.ps1 v2: purana server = seedha setup; C:\nt-print ho to wahi folder (bat update nahi); doosre folder ka NT-PRINT loop band; 'CHAL GAYA' sirf
+  nayi log line se (pehle purani line dekh kar jhoota 'Chal raha v1.33' dikhta tha); scan test bhi sirf nayi lines. awaz-check.ps1: C:\nt-print bhi.
+- nt-print v1.34: godamNames — local-config mein sql nahi = sql-config KABHI require nahi (us ka process.exit poora NT-PRINT gira deta tha + purane
+  server ki sync.js se local-config likh deti thi); log mein folder; chaabi wala paigham DIR.
+- nt-scan v1.5 (NtScan4.dll, Run(gap, gap2)): log '🔔 bzzz … scan NAHI pakra (scanner ki raftar?)' — beech ka ek dheema harf buffer tor deta tha.
+  Ab: purana qaida (4+ harf, har fasla <= scanGap 45 ki aakhri dum) WAHI + naya: 6+ harf, 5+ hindse, har fasla <= scanGap2 (90, local-config) = scan.
+  Test: JS port 10 haalat (13 hindse 60 ms / jhatka 70 ms pakre; naam 80–150 ms, 4 hindse 120 ms, 120 ms scanner nahi). C# compile / asal PC nahi.
+- PowerShell yahan nahi chali (parse test nahi) — asal PC par pehli dafa malik ke saamne. AI nahi.
