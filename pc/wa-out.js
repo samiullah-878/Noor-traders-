@@ -1,4 +1,7 @@
 // =========================================================
+// v1.27 (18 Nov, malik: 'bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se'): 🎥 waOut `vf` = isi PC ki file wa-media\bv-<id>.mp4
+//        (bill-clip v2.8 banata hai) → WhatsApp VIDEO (caption = txt). Sirf `bv-…mp4` naam, sirf wa-media folder (koi aur file kabhi nahi). Bhej kar `rid` wale
+//        billClipWa/<rid>.s.<naam> = ok / ✕ wajah (app chip). Malik / Mubeen = tez line (isFast) — gahak ki line / faasla nahi badla.
 // v1.24 (14 Nov, malik: 'koi bhi report mujhe aaye, us ke reply mein print likhoon to print aa jaye — thermal par'): 🖨 `repPrint` — malik (apne phone ya Business phone se) kisi REPORT paigham (waOut id 'rp-…') par reply `print`
 //        -> khataPrints/wr-<id> {j: {k:'txt'}} -> pos-khata-sync (v) thermal par chhapta hai aur nateeja malik ko. Sirf malik, sirf report wale paigham; baqi 'print' pehle jaisa (wa-parchi).
 // v1.23 (14 Nov): kh-wa v1.8 — 📝 tafseel lazmi: tafseel ka jawab (aam likhai) kh-wa tak pohanchane ka darwaza (KHW.waits).
@@ -38,7 +41,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.26';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.27';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -506,12 +509,12 @@ async function main() {
       loop: while (pend.size) {
         busyAt = Date.now();   // v1.3: har job par taza — lambi queue 'atki' na lage
         const [id, d] = [...pend.entries()].sort((a, b) => (isFast(b[1]) - isFast(a[1])) || ((Number(a[1].at) || 0) - (Number(b[1].at) || 0)))[0]; const fast = isFast(d);
-        const done = async (st, why, extra) => { pend.delete(id); if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(d.doc ? { doc: FieldValue.delete(), hadDoc: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
+        const done = async (st, why, extra) => { pend.delete(id); if (d.rid && /^bv-/.test(id)) { try { await biz.collection('billClipWa').doc(String(d.rid)).set({ s: { [String(d.nm || 'x').replace(/[^A-Za-z0-9]/g, '').slice(0, 20) || 'x']: st === 'sent' ? 'ok' : '✕ ' + String(why || st).slice(0, 80) }, sAt: Date.now() }, { merge: true });   /* set + merge = naqsha (map) mein jorna; '.' wala naam set mein seedha naam ban jata */ } catch (e) { log('⚠️ billClipWa: ' + e.message); } } if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(d.doc ? { doc: FieldValue.delete(), hadDoc: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
         const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
         const to = normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
         if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }
         if (Number(d.at) && Date.now() - Number(d.at) > 6 * 3600000) { await done('skip', 'purana (6 ghante+)'); continue; }
-        if (!okPh(to) || (!txt && !d.au && !d.loc && !d.doc)) { await done('err', !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
+        if (!okPh(to) || (!txt && !d.au && !d.loc && !d.doc && !d.vf)) { await done('err', !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
         if (!fast && L.n >= cfg.lim) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }   // queue mein rahe (st new)
         if (!sock || L.st !== 'open') { break; }   // jur jaye to kick()
         if (fast) { const g2 = 600 - (Date.now() - lastFast); if (g2 > 0) await sleep(g2); }
@@ -525,13 +528,15 @@ async function main() {
           const im = d.im && (Buffer.isBuffer(d.im) ? d.im : d.im.toUint8Array ? Buffer.from(d.im.toUint8Array()) : null);   // v1.0: bill ki tasveer (Bytes) ho to tasveer + caption
           const au = d.au && (Buffer.isBuffer(d.au) ? d.au : d.au.toUint8Array ? Buffer.from(d.au.toUint8Array()) : null);   // 🔊 awaz (mp3) — Urdu TTS
           const dc = d.doc && (Buffer.isBuffer(d.doc) ? d.doc : d.doc.toUint8Array ? Buffer.from(d.doc.toUint8Array()) : null);
+          let vb = null;   // v1.27: 🎥 bill ki video — sirf wa-media ki bv-*.mp4 (bill-clip v2.8)
+          if (d.vf) { const vn = String(d.vf); if (!/^bv-[A-Za-z0-9_-]{4,60}\.mp4$/.test(vn)) { await done('err', 'video ka naam ghalat'); continue; } try { vb = fs.readFileSync(path.join(DIR, 'wa-media', vn)); } catch { vb = null; } if (!vb || !vb.length) { await done('err', 'video file PC par nahi mili'); continue; } }
           let quoted = null;
           if (d.rq) {   // v1.4: reply mein — pehle yaad se, warna asal doc ka wid
             quoted = sentM.get(String(d.rq)) || null;
             if (!quoted) { try { const ps0 = await within(Q.doc(String(d.rq)).get(), 10000, 'reply ka asal'); const pd = ps0.exists ? ps0.data() : null; if (pd && pd.st === 'sent' && pd.wid) quoted = { key: { remoteJid: jid, fromMe: true, id: String(pd.wid) }, message: { conversation: String(pd.txt || '').slice(0, 300) } }; } catch {} }
           }
           const lc = d.loc && Number.isFinite(Number(d.loc.lat)) && Number.isFinite(Number(d.loc.lng)) ? { location: { degreesLatitude: Number(d.loc.lat), degreesLongitude: Number(d.loc.lng), name: String(d.loc.name || '').slice(0, 80), address: String(d.loc.adr || '').slice(0, 120) } } : null;   // v1.5: delivery boy ko location
-          const r = await within(sock.sendMessage(jid, lc || (dc && dc.length ? { document: dc, mimetype: 'application/pdf', fileName: String(d.fn || 'Khata.pdf').slice(0, 60), caption: txt } : im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {}), 60000, 'bhejna');
+          const r = await within(sock.sendMessage(jid, lc || (vb ? { video: vb, caption: txt, mimetype: 'video/mp4' } : dc && dc.length ? { document: dc, mimetype: 'application/pdf', fileName: String(d.fn || 'Khata.pdf').slice(0, 60), caption: txt } : im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {}), vb ? 180000 : 60000, 'bhejna');
           if (fast) { lastFast = Date.now(); jidOk.set(to, jid); } else lastSent = Date.now();
           L.n++;
           if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); if (r.key.id) { ownSent.add(String(r.key.id)); if (ownSent.size > 400) ownSent.delete(ownSent.values().next().value); } }
@@ -539,7 +544,7 @@ async function main() {
           await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
           await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });
           setLink({ n: L.n, day, last: { at: Date.now(), to: phPretty(to), nm }, err: '' });
-          log(`📤 ${phPretty(to)} ${nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : au ? ' 🔊' : ''} (aaj ${L.n}/${cfg.lim})`);
+          log(`📤 ${phPretty(to)} ${nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : au ? ' 🔊' : vb ? ' 🎥 ' + Math.round(vb.length / 1024) + ' KB' : ''} (aaj ${L.n}/${cfg.lim})`);
         } catch (e) {
           const why = String(e.message || e).slice(0, 120); log(`✕ ${phPretty(to)}: ${why}`);
           const tries = (Number(d.tries) || 0) + 1;

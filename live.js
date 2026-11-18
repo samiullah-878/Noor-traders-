@@ -24,12 +24,13 @@ export function openLive(o) {
   if (!d) { d = document.createElement('dialog'); d.id = 'lvDlg'; d.className = 'lv-dlg'; document.body.append(d); d.addEventListener('cancel', ev => { ev.preventDefault(); closeLive(); }); }
   d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}">🖥 ${esc(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
     <div class="lv-body"><video id="lvVid" playsinline muted autoplay></video><div class="lv-st" id="lvSt">⏳ jor raha…</div><div class="lv-shot" id="lvShot" hidden></div><div class="lv-bill" id="lvBill" ${bOn() ? '' : 'hidden'}></div>
-      <div class="lv-tools"><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
+      <div class="lv-tools"><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
   d.onclick = ev => {
     const t = ev.target;
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
     const c = t.closest('[data-lv-pc]'); if (c) { cur = c.dataset.lvPc; d.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x === c)); start(); return; }
     if (t.closest('[data-lv-re]')) { start(); return; }
+    const qb = t.closest('[data-lv-q]'); if (qb) { notice(qb.dataset.why || ''); return; }   // v2.322.0: 🩺 poori baat
     if (Date.now() - SPM < 450) return;   // v2.321.0: khiskane ke foran baad wala click (bara / chhota nahi)
     if (t.closest('[data-lvs-re]')) { spReset(); return; }
     if (t.closest('#lvShot .lvs-h, #lvShot .lvs-rz')) return;   // patti / kona = khiskana
@@ -56,7 +57,7 @@ let RES = false;   // v2.226.0: app peeche ja kar wapas aaye (popup / call) = KH
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (S) { stop(true); RES = true; stat('⏸ App peeche gayi — wapas aate hi khud jur jayega'); } } else if (RES && $('lvDlg')?.open && cur) { RES = false; start(); } });
 
 async function start() {
-  stop(true); billStart();
+  stop(true); billStart(); { const qe = $('lvQ'); if (qe) qe.hidden = true; }   // v2.322.0: naya rabta = 🩺 nayi ginti
   if (!cloud?.liveStart) { stat('✕ App update karein', true); return; }
   if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + cur + ' ka camera jor raha…');
   const s = S = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pc: new RTCPeerConnection({ iceServers: STUN }), ok: 0 };
@@ -81,7 +82,7 @@ async function start() {
   } catch (e) { if (S === s) stat('✕ Shuru nahi hua: ' + (e?.message || e), true); return; }
   let answered = false;
   s.unsub = cloud.liveWatch(s.id, async r => {
-    if (S !== s || !r) return; s.r = r;
+    if (S !== s || !r) return; s.r = r; qPaint(s);
     if (r.warn && r.st !== 'err' && !r.rtp) stat('⚠ ' + r.warn, true);   // v2.223.0: PC ki asal wajah
     if (r.st === 'err') { stat('✕ ' + (r.err || 'PC ne mana kiya'), true); return; }
     if (r.st === 'ok' && r.ans && !answered) { answered = true; clearTimeout(s.to); stat('⏳ Video aa rahi…'); try { await s.pc.setRemoteDescription({ type: 'answer', sdp: r.ans }); } catch (e) { stat('✕ ' + (e?.message || e), true); } }
@@ -92,7 +93,8 @@ async function start() {
   s.fr = setInterval(async () => {   // jura hua par tasveer nahi = saaf batao
     if (S !== s || !s.ok) return;
     try {
-      const st = await s.pc.getStats(); let f = 0; st.forEach(x => { if (x.type === 'inbound-rtp' && x.kind === 'video') f = x.framesDecoded || 0; });
+      const st = await s.pc.getStats(); let f = 0, lo = 0, rc = 0; st.forEach(x => { if (x.type === 'inbound-rtp' && x.kind === 'video') { f = x.framesDecoded || 0; lo = Math.max(0, x.packetsLost || 0); rc = x.packetsReceived || 0; } });
+      { const dl = lo - (s.pl ?? lo), dr = rc - (s.pr ?? rc); s.pl = lo; s.pr = rc; (s.lh = s.lh || []).push([dl, dr]); if (s.lh.length > 3) s.lh.shift(); const L = s.lh.reduce((a, x) => a + x[0], 0), R = s.lh.reduce((a, x) => a + x[1], 0); s.loss = L + R > 0 ? L * 100 / (L + R) : 0; s.f = f; qPaint(s); }   // v2.322.0: 📱 phone tak tukre gum (12 s)
       if (f) { if (s.bad) { s.bad = 0; $('lvSt').hidden = true; } return; }
       if (Date.now() - (s.okAt || (s.okAt = Date.now())) < 16000) return;   // v2.224.0: recording ki line se video 6-8 s mein shuru hoti hai
       s.bad = 1;
@@ -102,6 +104,19 @@ async function start() {
       } else stat('⚠ ' + (s.r?.warn || 'Juda hai par PC ko camera se video nahi mil rahi — wajah aa rahi hai… (PC update 3-5 min)'), true);
     } catch {}
   }, 4000);
+}
+
+// ---------- 🩺 v2.322.0: video kahan toot rahi hai (malik: "video blur aa raha") ----------
+// PC (live-cam v1.7) har 10 s liveReq.q {d: NVR→PC decode ghaltiyan, g: PC ke andar gire tukre, r: RTP gire, at}; phone apne getStats se tukre gum %.
+function qPaint(s) {
+  const e = $('lvQ'); if (!e || S !== s) return;
+  const q = s.r && s.r.q, fr = q && Date.now() - (Number(q.at) || 0) < 35000;
+  let t = '', k = '', why = '';
+  if (fr && Number(q.d) >= 2) { k = 'bad'; t = '🩺 NVR→PC toot'; why = 'Camera (NVR) se server PC tak video ke tukre gum ho rahe hain — is liye grey / dhundli. Ilaaj: server PC aur NVR ek hi network par (LAN taar).'; }
+  else if (fr && (Number(q.g) > 0 || Number(q.r) > 0)) { k = 'bad'; t = '🩺 PC ke andar toot'; why = 'Server PC ke andar video ke tukre gire (PC us waqt bohat busy) — Settings → 🖥️ PC scripts ka 🔥 CPU dabba dekhein.'; }
+  else if ((s.loss || 0) >= 2) { k = 'warn'; t = `📱 Net kamzor ${Math.round(s.loss)}%`; why = `PC se video saaf ja rahi hai — aap ke phone ke internet par ${Math.round(s.loss)}% tukre gum ho rahe hain. Wi-Fi / doosra internet try karein.`; }
+  else if (s.f) { k = 'ok'; t = '🩺 Saaf'; why = fr ? 'Camera → PC → phone: kahin tukre gum nahi ho rahe.' : 'Phone tak video saaf aa rahi hai (PC ka haal: live-cam update 3-5 min mein).'; }
+  e.hidden = !t; e.textContent = t; e.className = 'lv-q' + (k ? ' ' + k : ''); e.dataset.why = why;
 }
 
 // ---------- 🧾 live bill patti (posLive) ----------

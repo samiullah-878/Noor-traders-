@@ -8827,3 +8827,24 @@ aur 'DESKTOP-' sab ka ek hai, is liye naam ka ASAL hissa.
    SPM se roka); tasveer par tap = bara / poora pehle jaisa.
 - Test: snippet node (stNorm / bad card / click handler), headless Chrome (nakli cloud): khiskana, naap, dobara kholne par wahi jagah, patti tap = kuch
   nahi, tasveer tap = fit, ↺, portrait saaf, landscape wapas. Asal phone / PC par nahi dekha. AI nahi.
+
+
+=== v2.322.0 (2026-11-18, rules 2.107, PC manifest 2026-11-18.4) — 📲 bill ki video WhatsApp par + 🩺 Live video saaf ===
+1) Malik (Live photo RN6QU6D: 'video blur aa raha hai'): video grey / dhabbe = tukre gum. PC live-cam v1.7: recording ki line (udp 48500+ch) aur RTP socket
+   ka dabba 8 MB (setRecvBufferSize, bind ke baad — createSocket option se nahi: Node bind par throw kar sakta); ffmpeg `-fflags nobuffer+discardcorrupt`
+   (gira tukra = grey dhabba nahi, pichhli saaf tasveer ruki rahe jab tak naya keyframe — test: 0.4% TS loss par 47 bure frame -> 0); 🩺 liveReq.q
+   {d: ffmpeg h264 ghalti lines (NVR->PC), g: mpegts continuity gaps + stdin drop (PC ke andar), r: RTP seq gaps, at} har 10 s, sirf badle / kharab ho to,
+   shuru ke 8 s nahi gintay. App live.js `qPaint` chip (.lv-tools, Dobara ke saath): 🩺 NVR→PC toot (d >= 2) · PC ke andar toot · 📱 Net kamzor N%
+   (phone getStats packetsLost, 12 s) · 🩺 Saaf; tap = poori baat (notice). Asal ilaaj network: server PC 192.168.1.x / NVR 192.168.10.x (alag) — LAN.
+2) Malik: 'bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se — customer ko wait na karna pare' (NVR se mangwana: 'us ko
+   rehne do'). billClipWa/<id> {st new, at, by, no, sid, pc, day} (rules 2.107: malik / Full / Nigrani sirf naya, apna by, id ^ap…) — app: tally ⋮
+   '📲 Video WhatsApp' (CAP nz.wa) -> khirki: bill number (aaj / kal ke bills ka mashwara, Enter / 📲) + aaj ki list (⏳ / ✅ Malik + Mubeen / ✕ wajah,
+   cloud.listenBillWa). WhatsApp: Business number par 'video 138841' (kh-wa v1.11, sirf malik / Mubeen) -> billClipWa wv<paigham> {src wa, from, byN}.
+   PC bill-clip v2.8: claim (transaction st new -> run) -> bill dhoondo (posSales aaj / kal / parson, number EXACT) -> (a) bani clip (billClip ok) ke hisse
+   + ffmpeg concat COPY (re-encode nahi) ya (b) PC ki recording ke tukre (recCover, 10 fps 640) — abhi bana bill = aakhri tukre ka intezar (t1 + 20 s, 4 min
+   tak) -> wa-media\bv-<id>.mp4 -> waOut bv-<id>-1/2 {vf, rid, txt caption} -> wa-out v1.27 WhatsApp VIDEO (sirf bv-*.mp4 naam, sirf wa-media folder)
+   -> billClipWa.s.<Malik|Mubeen> = ok / ✕. Kis ko = blueAccess/waParchi prFrom[0] (Malik) + prTo[0] (Mubeen) — gahak ko KABHI nahi, repo mein number nahi.
+   winOf(b) = one() ka clip waqt (ek hisaab). wa-media 3 ghante baad saaf, billClipWa 3 din. wa-parchi v2.38 sirf version (kh-wa reload).
+- Test: ffmpeg packet-loss (TS drop / slice adhoora) PSNR; tsGaps + DEC_ERR + RTP seq ginti; bill-clip asal file nakli Firestore ke saath (recording
+  se 135 s video 7 s mein, bani clip se 0 s, bill nahi mila, purana hukum, WhatsApp wala ka jawab waOut); headless Chrome (tally khirki, chip). Asal NVR /
+  WhatsApp video bhejna / phone par NAHI dekha. AI nahi.

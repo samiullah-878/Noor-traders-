@@ -17,7 +17,7 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.10';   // v1.10 (15 Nov): reports menu 8 = 📦 Maal khatam hone wala (sirf maangne par, raat-report v2.2 khSend)   // v1.9 (15 Nov, malik: 'jitne bhi code hain reports mein shamil karein — number dabane par sab code aayein · reports mein nafa ke ilawa sab (jure number bhi) · nafa sirf mujhe'): 'reports' / 'hazri' ab har jure number ko (report usi ko — reportConfig.waFor, raat-report v2.1), 3 Profit / 4 Teeno SIRF malik; 6 Udhaar · 7 Sab codes (codesTxt)   // v1.8 (14 Nov, malik: 'tafseel ke baghair entry nahi banni chahiye — WhatsApp wali par tafseel nahi aa rahi'): kharcha / payment li / di mein tafseel na ho to entry se PEHLE sawal (khPend stg 'f', 10 min) — jawab = tafseel, phir entry. Transfer par nahi.
+const VER = '1.11';   // v1.11 (18 Nov, malik: 'bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se'): 🎥 'video 138841' (sirf malik / Mubeen) -> billClipWa wv-<paigham> {src wa} -> bill-clip v2.8 video bana kar dono ko (wa-out v1.27)     // v1.10 (15 Nov): reports menu 8 = 📦 Maal khatam hone wala (sirf maangne par, raat-report v2.2 khSend)   // v1.9 (15 Nov, malik: 'jitne bhi code hain reports mein shamil karein — number dabane par sab code aayein · reports mein nafa ke ilawa sab (jure number bhi) · nafa sirf mujhe'): 'reports' / 'hazri' ab har jure number ko (report usi ko — reportConfig.waFor, raat-report v2.1), 3 Profit / 4 Teeno SIRF malik; 6 Udhaar · 7 Sab codes (codesTxt)   // v1.8 (14 Nov, malik: 'tafseel ke baghair entry nahi banni chahiye — WhatsApp wali par tafseel nahi aa rahi'): kharcha / payment li / di mein tafseel na ho to entry se PEHLE sawal (khPend stg 'f', 10 min) — jawab = tafseel, phir entry. Transfer par nahi.
 // v1.7:   // v1.7 (14 Nov): 👥 'hazri' (sirf malik) -> reportConfig {reportNow, waOnly 'h'} -> raat-report v1.7; 'reports' menu mein 5 Hazri   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
 // v1.5:   // v1.5 (13 Nov): 🔔 WhatsApp reminder — 'reminder <likhai> / kal se' · 'all reminder show' · '3 off' · 'reminder off'; roz 11 baje, jab tak off na ho; har number ka apna (malik, Mubeen)
 // v1.4:   // v1.4 (13 Nov, malik: 'WhatsApp wali entry ke print par narration mein party ka naam nahi aata'): note = '<khata naam> - <likhai> - WhatsApp <kis ne>' (parchi Tafseel, POS voucher, khata / Daily ki line — sab jagah naam)   // v1.1: who() bahar (Business inbox ki ijazat isi list se)
@@ -32,12 +32,13 @@ function normPh(x) {
 const CANCEL_RE = /^\s*(cancel|wapas|hatao|hata do)\s*[.!]*\s*$/i;
 const PICK_RE = /^\s*(\d{1,2})(?:[\s,\-]+(\d{1,2}))?\s*$/, P2_RE = /^\s*([123])(?!\d)[\s:.\-]+(\S.*)$/;
 const HZ_RE = /^\s*ha[zj]i?r[iy]\s*(report)?\s*$/i;
+const VID_RE = /^\s*(?:video|vedio|vidio|vidyo|vdo|vid)\s*(?:bill)?\s*#?\s*(\d{3,12})\s*$/i;   // v1.11: 🎥 bill ki video
 const REP_RE = /^\s*reports?\s*$/i, STG_RE = /^\s*([1-5])(?!\d)(?:[\s:.\-]+(.*))?$/;
 const STOP = new Set('start,started,shuru,print,printauto,autoprint,auto,cancel,wapas,hatao,ok,okay,okey,yes,no,nahi,ji,jee,han,haan,hello,hi,hey,salam,slam,aoa,theek,thek,thik,thanks,thank,shukria,shukriya,done,test,acha,achha,bill,parchi,report,reports,kal,aaj,abhi,bhej,bhejo,kya,kia,hai,ha,g'.split(','));
 // sirf naam jaisa chhota paigham (Business number ki chat): 1-4 lafz, hindsa nahi, aam lafz nahi
 const looksName = t => { t = String(t || '').trim(); if (t.length < 3 || t.length > 40 || /[0-9?!@#:\/\\\n]/.test(t)) return false; const w = t.toLowerCase().split(/\s+/); return w.length <= 4 && !w.some(x => STOP.has(x.replace(/[^a-z]/g, ''))) && /[a-z\u0600-\u06ff]{3}/i.test(t); };
 const REM_RE = /^\s*(all\s+)?(reminders?|remainders?)(?![a-z])/i, OFF_RE = /^\s*(\d{1,3})\s+off\s*[.!]*\s*$/i;
-const looks = t => { t = String(t || ''); return /^\s*\d{3}(?!\d)/.test(t) || REM_RE.test(t) || OFF_RE.test(t) || CANCEL_RE.test(t) || PICK_RE.test(t) || REP_RE.test(t) || (P2_RE.test(t) && !/print/i.test(t)); };
+const looks = t => { t = String(t || ''); return /^\s*\d{3}(?!\d)/.test(t) || VID_RE.test(t) || REM_RE.test(t) || OFF_RE.test(t) || CANCEL_RE.test(t) || PICK_RE.test(t) || REP_RE.test(t) || (P2_RE.test(t) && !/print/i.test(t)); };
 // '1 Imran chokar 5000 [no]' · '3 Imran 5000 Aslam' -> { k, a, b, amt, daily, note }
 function parse2(text) {
   let t = String(text || '').replace(/\s+/g, ' ').trim(); const m = P2_RE.exec(t); if (!m || /print/i.test(t)) return null;
@@ -107,6 +108,7 @@ function make({ biz, log = () => {} }) {
       '💵 *Payment / transfer*: khate ka naam likhein -> list se number -> 1 li · 2 di · 3 transfer · 4 PDF · 5 print',
       '🔔 *Reminder*: reminder <baat>  ·  all reminder  ·  3 off',
       '📊 *Reports*: reports  ·  hazri',
+      '🎥 *Bill ki video* (malik / Mubeen): video 138841  — counter ki video dono ke WhatsApp par',
       '🖨 *Print*: kisi report par reply mein  print'];
     if (mk) L.push('↩ *Cancel* (sirf malik): entry ke jawab wale paigham par reply  cancel');
     try { const sn = await BA.doc('hzCodes').get(), d = sn.exists ? sn.data() || {} : {}, m = d.m || {}, nm = d.nm || {};
@@ -341,6 +343,12 @@ function make({ biz, log = () => {} }) {
       await say(ph, 'kc-' + w, `↩ Wapas ho gaya: ${rsT(e.amount / 100)}${e.note ? ' — ' + String(e.note).slice(0, 80) : ''}`); return true;
     }
     const fresh = !ts || Date.now() - ts <= 10 * 60000;
+    const vm = VID_RE.exec(text);
+    if (vm) { if (!fresh) return true;   // v1.11: 🎥 sirf malik / Mubeen (video dono ko jati hai)
+      if (!isMalik(ph) && !base.prTo.includes(ph)) { await say(ph, 'kv-' + w, '✕ Bill ki video sirf malik / Mubeen mangwa sakte hain.'); return true; }
+      try { await biz.collection('billClipWa').doc('wv' + w.slice(0, 30)).create({ st: 'new', at: Date.now(), by: 'wa', no: vm[1], sid: '', pc: '', day: today(), src: 'wa', from: ph, byN: name }); }
+      catch (e) { if (/already exists/i.test(String(e.message || e))) return true; throw e; }
+      await say(ph, 'kv-' + w, `⏳ Bill #${vm[1]} ki video ban rahi hai — aap aur Mubeen dono ko aa jayegi (10-30 s).`); return true; }
     if (HZ_RE.test(text)) { if (!fresh) return true;
       await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: 'h', waFor: isMalik(ph) ? '' : ph }, { merge: true }); await say(ph, 'kw-' + w, '⏳ Hazri ki report aa rahi hai (1 minute).'); return true; }
     if (REP_RE.test(text)) { if (!fresh) return true;
