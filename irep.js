@@ -114,6 +114,9 @@ function perDay(a, b, only) {
   return out;
 }
 const numQ = n => new Intl.NumberFormat('en-PK', { maximumFractionDigits: 3 }).format(Math.round((Number(n) || 0) * 1000) / 1000);   // v2.103.3: 0.25 kg = 0 na dikhe
+// v2.320.0 (malik: 'carton ke ilawa pieces mein bhi order banta hai to likha aaye'): 🛒 chip = poore ctn + (asal zaroorat ctn + pcs) jab dono alag hon
+const exQty = (q, pk) => { q = Math.round(q * 1000) / 1000; if (pk > 1 && q >= pk) { const c = Math.trunc(q / pk), p = Math.round((q - c * pk) * 1000) / 1000; return `${num(c)} ctn${p ? ' + ' + numQ(p) + ' pcs' : ''}`; } return numQ(q) + ' pcs'; };
+const odTxt = r => '🛒 ' + fmtQty(r.od, r.pk) + (r.ex > 1e-6 && Math.abs(r.ex - r.od) > 1e-6 ? ` · (${exQty(r.ex, r.pk)})` : '');
 const fmtQty = (q, pk) => { q = Math.round(q * 1000) / 1000; if (pk > 1 && Math.abs(q) >= pk) { const c = Math.trunc(q / pk), p = Math.round((q - c * pk) * 1000) / 1000; return `${num(c)} ctn${p ? ' + ' + numQ(p) : ''}`; } return numQ(q) + ' pcs'; };
 
 // ---------- chart (SVG, bina library) ----------
@@ -186,7 +189,17 @@ function pkLine(it) {
 }
 // v2.144.0: 🧾 PATLI CHIP (malik: "item list ki chips bhi Supplier wali jaisi · ek screen mein kam az kam 10 items") — 2 line: naam · Rs (nafa chhota) /
 //   bika · 🏬 · 🏪 · 📦 ek line (lambi ho to … — poori tafseel tap par item khirki mein). Patli bar neeche. Purani bari card (stockLine / pkLine alag dabbe) wapas mat lao.
-const stkRing = it => { const e = stkMap().get?.(String(it.i)); if (!e) return ''; const pk = Number(it.pk) || Number(e.pack) || 0, f = q => q ? fmtQty(q, pk) : '0'; return ` <span class="ir-ring">🏬 ${esc(f(e.gd))}</span><span class="ir-ring nt">🏪 ${esc(f(e.nt))}</span>`; };   // v2.249.0 (malik: 'item report par godam aur Noor Traders par gol circle')
+// v2.320.0 (malik 18 Nov: 'godam par 1 likha ho, Noor Traders par Noor Traders gol daire ke saath'): har godam ALAG — number sunehri gol mein + tadad;
+//   stock kisi godam mein nahi = 'Godam 0'; 🏪 = 'Noor Traders' gol pill + tadad. Data wahi stockOf().at (branch NAAM, /noor/i = Noor Traders — irepSetup jaisa).
+const gdNo = n => { const m = String(n || '').match(/\d+/); return m ? m[0] : (String(n || '').trim().slice(0, 4) || 'G'); };
+function stkRingsHTML(e, pk) {
+  if (!e) return '';
+  const f = q => q ? fmtQty(q, pk) : '0';
+  const G = (e.at || []).filter(([bn, q]) => !/noor/i.test(String(bn)) && Number(q)).sort((x, y) => String(x[0]).localeCompare(String(y[0]), 'en', { numeric: true }));
+  const g = G.length ? G.map(([bn, q]) => `<span class="ir-ring gd" title="${esc(bn)}"><span class="ir-gn">${esc(gdNo(bn))}</span>${esc(f(Number(q)))}</span>`).join('') : '<span class="ir-ring gd z"><span class="ir-gn">Godam</span>0</span>';
+  return ` ${g}<span class="ir-ring nt"><span class="ir-gn">Noor Traders</span>${esc(f(Number(e.nt) || 0))}</span>`;
+}
+const stkRing = it => { const e = stkMap().get?.(String(it.i)); if (!e) return ''; return stkRingsHTML(e, Number(it.pk) || Number(e.pack) || 0); };   // v2.249.0 gol circle -> v2.320.0 har godam ka number
 const stkShort = it => { const e = stkMap().get?.(String(it.i)); if (!e) return ''; const pk = Number(it.pk) || Number(e.pack) || 0, f = q => q ? fmtQty(q, pk) : '0'; return `🏬 ${f(e.gd)} · 🏪 ${f(e.nt)}`; };
 function pkShort(it) {
   if (!pkOn() || !pkR?.by) return ''; const r = pkCalc(it); if (!r) return '';
@@ -195,7 +208,7 @@ function pkShort(it) {
 function chipHTML(r, rank, w, metric) {
   const loss = NF() && !r.noCost && r.pf < 0, l2h = esc(`bika ${fmtQty(r.q, r.it.pk)}`) + stkRing(r.it), pk = pkShort(r.it);   // 📦 alag teesri patli line (sirf packet wale item)
   const nf = NF() ? `<small class="ir-chp ${r.noCost ? '' : r.pf < 0 ? 'neg' : 'pos'}">${r.noCost ? 'nafa —' : `nafa ${num(r.pf)} · ${pct(r.pf, r.rs)}%`}</small>` : '';
-  return `<button type="button" class="ir-ch${loss ? ' loss' : ''}" data-ir-item="${esc(String(r.it.i))}"><span class="ir-chn">${rank != null && rank !== '' ? `<i>${rank}</i>` : ''}<b>${esc(r.it.n)}</b></span><b class="ir-cha">Rs ${num(r.rs)}</b><small class="ir-chs">${l2h}</small>${nf}${pk ? `<small class="ir-chk">${esc(pk)}</small>` : ''}<i class="ir-chb${metric === 'pf' ? ' pf' : ''}" style="width:${w}%"></i></button>`;
+  return `<button type="button" class="ir-ch${loss ? ' loss' : ''}" data-ir-item="${esc(String(r.it.i))}"><span class="ir-chn">${rank != null && rank !== '' ? `<i>${rank}</i>` : ''}<b>${esc(r.it.n)}</b></span><b class="ir-cha">Rs ${num(r.rs)}</b><small class="ir-chs stk">${l2h}</small>${nf}${pk ? `<small class="ir-chk">${esc(pk)}</small>` : ''}<i class="ir-chb${metric === 'pf' ? ' pf' : ''}" style="width:${w}%"></i></button>`;
 }
 function itemLine(r, rank, max, metric) {
   const v = metric === 'pf' ? Math.max(0, r.pf) : metric === 'q' ? r.q : r.rs, w = Math.max(2, v / Math.max(1, max) * 100);
@@ -633,9 +646,9 @@ function supItems(S) {   // ek supplier ke items — is waqt ki bikri (nafa nahi
     const it = byId.get(String(id)), sm = stk.get?.(String(id)), s0 = it ? sumItem(it, a, b) : { q: 0, rs: 0 }, pk = Number(it?.pk) || Number(sm?.pack) || 0, c = Number(it?.c) || 0;
     let pr = Number(rate) || 0; if (pk > 1 && pr > 0 && c > 0 && Math.abs(Math.log(pr / pk / c)) < Math.abs(Math.log(pr / c))) pr = pr / pk;   // carton ka rate = fi piece
     const gd = Number(sm?.gd) || 0, nt = Number(sm?.nt) || 0, sk = Math.max(0, gd) + Math.max(0, nt);   // v2.143.0: 🏬 godam + 🏪 Noor Traders (minus stock = 0)
-    let od = Math.max(0, s0.q - sk); if (od > 1e-6 && irs.oc && pk > 1) od = Math.ceil(od / pk - 1e-9) * pk;   // 🛒 Order = bika − stock (malik) · poore ctn upar
+    let od = Math.max(0, s0.q - sk); const ex = od; if (od > 1e-6 && irs.oc && pk > 1) od = Math.ceil(od / pk - 1e-9) * pk;   // 🛒 Order = bika − stock (malik) · poore ctn upar · ex = asal zaroorat (v2.320.0)
     const D = dmMap().get(String(id)) || null; if (D && !(od > 1e-6)) od = pk > 1 ? pk : 1;   // v2.147.0: 📢 khuli demand = order mein zaroor (kam az kam 1 ctn)
-    return { id: String(id), dm: D, name: it?.n || sm?.name || ('Item #' + id), q: s0.q, rs: s0.rs, pk, sr: s0.q > 0 ? s0.rs / s0.q : 0, pr, d: String(d || ''), n: Number(n) || 1, gd, nt, sk, hasSk: !!sm, od: od > 1e-6 ? Math.round(od * 1000) / 1000 : 0 };
+    return { id: String(id), dm: D, name: it?.n || sm?.name || ('Item #' + id), q: s0.q, rs: s0.rs, pk, sr: s0.q > 0 ? s0.rs / s0.q : 0, pr, d: String(d || ''), n: Number(n) || 1, gd, nt, sk, hasSk: !!sm, at: sm?.at || [], od: od > 1e-6 ? Math.round(od * 1000) / 1000 : 0, ex: ex > 1e-6 ? Math.round(ex * 1000) / 1000 : 0 };
   }).sort((x, y) => y.rs - x.rs || x.name.localeCompare(y.name));
   const noStk = !(stk && (stk.size || 0) > 0);   // stock abhi load nahi = Order nahi (warna poora bika hi order lagta)
   return { rows, a, b, T: rows.reduce((t, r) => t + r.rs, 0), sold: rows.filter(r => r.q > 0).length, ord: rows.filter(r => r.od > 0 && (!noStk || r.dm)), noStk };
@@ -663,8 +676,8 @@ function supHTML() {
 // v2.144.0: supplier ke items bhi PATLI CHIP (malik: "item list ki chips bhi aisi · 10 items ek screen") — naam · Rs / bika · rate · 🏬 · 🏪 (☑ khane ⋮ wale), daayein 🛒 order. PDF mein table wahi.
 function supChips(R) {
   return `<div class="irs-chl">${R.rows.map((r, i) => {
-    const l2 = [r.q > 0 ? 'bika ' + fmtQty(r.q, r.pk) : 'is waqt nahi bika', irs.sr && r.sr ? 'rate ' + num(r.sr) : '', irs.pr && r.pr ? 'khareed ' + num(r.pr) : '', irs.sk && r.hasSk ? `🏬 ${r.gd ? fmtQty(r.gd, r.pk) : '0'} · 🏪 ${r.nt ? fmtQty(r.nt, r.pk) : '0'}` : ''].filter(Boolean).join(' · ');
-    return `<div class="ir-ch irs-ch${r.q > 0 ? '' : ' irs-0'}"><span class="ir-chn"><i>${i + 1}</i><b>${esc(r.name)}</b></span><b class="ir-cha">${r.rs ? 'Rs ' + num(r.rs) : '—'}</b><small class="ir-chs">${esc(l2)}</small>${r.od > 0 && ordOk() && (!R.noStk || r.dm) ? `<small class="ir-chp irs-odc">🛒 ${esc(fmtQty(r.od, r.pk))}</small>` : ''}${r.dm ? `<small class="sa-dmt${r.dm.lvl === 'out' ? ' out' : ''}">${esc(dmTag(r.dm))}</small>` : ''}</div>`;
+    const l2 = [r.q > 0 ? 'bika ' + fmtQty(r.q, r.pk) : 'is waqt nahi bika', irs.sr && r.sr ? 'rate ' + num(r.sr) : '', irs.pr && r.pr ? 'khareed ' + num(r.pr) : ''].filter(Boolean).join(' · '), sk = irs.sk && r.hasSk ? stkRingsHTML({ at: r.at, nt: r.nt }, r.pk) : '';
+    return `<div class="ir-ch irs-ch${r.q > 0 ? '' : ' irs-0'}"><span class="ir-chn"><i>${i + 1}</i><b>${esc(r.name)}</b></span><b class="ir-cha">${r.rs ? 'Rs ' + num(r.rs) : '—'}</b><small class="ir-chs${sk ? ' stk' : ''}">${esc(l2)}${sk}</small>${r.od > 0 && ordOk() && (!R.noStk || r.dm) ? `<small class="ir-chp irs-odc">${esc(odTxt(r))}</small>` : ''}${r.dm ? `<small class="sa-dmt${r.dm.lvl === 'out' ? ' out' : ''}">${esc(dmTag(r.dm))}</small>` : ''}</div>`;
   }).join('')}</div>`;
 }
 // v2.143.0: 🛒 ORDER (malik: "jo stock maujood ho us ko sale wale se minus · saath ek table · naam Order") — Order = is waqt ka bika − (🏬 godam + 🏪 Noor Traders),
@@ -835,9 +848,9 @@ function saData() {
   const own = new Map();
   for (const [name, L] of sup?.s || []) for (const [id, rate, d, n] of L || []) { const k = String(id), dd = String(d || ''), nn = Number(n) || 0, c = own.get(k); if (!c || dd > c.d || (dd === c.d && nn > c.n)) own.set(k, { sup: name, d: dd, n: nn }); }
   const mk = id => { const it = byId.get(id), sm = stk.get?.(id), s0 = it ? sumItem(it, a, b) : { q: 0, rs: 0 }, pk = Number(it?.pk) || Number(sm?.pack) || 0, gd = Number(sm?.gd) || 0, nt = Number(sm?.nt) || 0, sk = Math.max(0, gd) + Math.max(0, nt), D = dm.get(id);
-    let od = noStk ? 0 : Math.max(0, s0.q - sk); if (od > 1e-6 && irs.oc && pk > 1) od = Math.ceil(od / pk - 1e-9) * pk;
+    let od = noStk ? 0 : Math.max(0, s0.q - sk); const ex = od; if (od > 1e-6 && irs.oc && pk > 1) od = Math.ceil(od / pk - 1e-9) * pk;
     if (D && !(od > 1e-6)) od = pk > 1 ? pk : 1;   // 📢 khuli demand = order mein zaroor (kam az kam 1 ctn)
-    return { id, name: it?.n || sm?.name || D?.n || ('Item #' + id), it, q: s0.q, rs: s0.rs, pk, gd, nt, sk, hasSk: !!sm, od: od > 1e-6 ? Math.round(od * 1000) / 1000 : 0, dm: D || null }; };
+    return { id, name: it?.n || sm?.name || D?.n || ('Item #' + id), it, q: s0.q, rs: s0.rs, pk, gd, nt, sk, hasSk: !!sm, at: sm?.at || [], od: od > 1e-6 ? Math.round(od * 1000) / 1000 : 0, ex: ex > 1e-6 ? Math.round(ex * 1000) / 1000 : 0, dm: D || null }; };
   const G = new Map();
   for (const [id, o] of own) { if (!G.has(o.sup)) G.set(o.sup, []); G.get(o.sup).push(mk(id)); }
   const none = []; const seen = new Set(own.keys());
@@ -860,8 +873,8 @@ function saView() {
   return { D, G };
 }
 function saChip(r, i) {
-  const l2 = [r.q > 0 ? 'bika ' + fmtQty(r.q, r.pk) : 'is waqt nahi bika', r.hasSk ? `🏬 ${r.gd ? fmtQty(r.gd, r.pk) : '0'} · 🏪 ${r.nt ? fmtQty(r.nt, r.pk) : '0'}` : ''].filter(Boolean).join(' · '), pk = r.it ? pkShort(r.it) : '';
-  return `<div class="ir-ch sa-ch${r.q > 0 ? '' : ' irs-0'}${r.dm ? ' sa-dm' : ''}"><span class="ir-chn"><i>${i + 1}</i><b>${esc(r.name)}</b></span><b class="ir-cha">${r.rs ? 'Rs ' + num(r.rs) : '—'}</b><small class="ir-chs">${esc(l2)}</small>${r.od > 0 ? `<small class="ir-chp irs-odc">🛒 ${esc(fmtQty(r.od, r.pk))}</small>` : ''}${pk ? `<small class="ir-chk">${esc(pk)}</small>` : ''}${r.dm ? `<small class="sa-dmt${r.dm.lvl === 'out' ? ' out' : ''}">${esc(dmTag(r.dm))}</small>` : ''}</div>`;
+  const l2 = r.q > 0 ? 'bika ' + fmtQty(r.q, r.pk) : 'is waqt nahi bika', sk = r.hasSk ? stkRingsHTML({ at: r.at, nt: r.nt }, r.pk) : '', pk = r.it ? pkShort(r.it) : '';
+  return `<div class="ir-ch sa-ch${r.q > 0 ? '' : ' irs-0'}${r.dm ? ' sa-dm' : ''}"><span class="ir-chn"><i>${i + 1}</i><b>${esc(r.name)}</b></span><b class="ir-cha">${r.rs ? 'Rs ' + num(r.rs) : '—'}</b><small class="ir-chs${sk ? ' stk' : ''}">${esc(l2)}${sk}</small>${r.od > 0 ? `<small class="ir-chp irs-odc">${esc(odTxt(r))}</small>` : ''}${pk ? `<small class="ir-chk">${esc(pk)}</small>` : ''}${r.dm ? `<small class="sa-dmt${r.dm.lvl === 'out' ? ' out' : ''}">${esc(dmTag(r.dm))}</small>` : ''}</div>`;
 }
 function saHTML() {
   if (!sup) { supLoad().then(() => { saMemo = null; if (st.rep === 'supall' && document.getElementById('irRoot')) paint(); }).catch(() => {}); return '<section class="ir-sec"><div class="nt-empty">⏳<b>Suppliers aa rahe hain…</b></div></section>'; }
@@ -952,7 +965,7 @@ document.addEventListener('input', e => {   // v2.101.1: search par sirf neeche 
 export const _irTest = { pkSet: d => { pkR = d; pkIdx = null; pkMemo.clear(); }, pkLine, pkKeys, ordTable, phAgg, setStock: f => { stockOf = f; }, nfBills, nfSum, nfHTML, nfC, nfSetT: t => { tdoc = t; }, nfSetFull: f => { full = f; }, mergeToday, ageText, setFull: (f, t) => { full = f; tdoc = t; remerge(); }, fmtQty, topHTML, nafaHTML, wsSplit, setRows: r => { lastRows = { sorted: r, srt: () => 0 }; }, agg, range, patterns, partRange, setData: d => { data = d; loaded = true; ix = null; }, st, pdfHTML, commAgg, setComm: c => { commCfg = c; } };
 
 // v2.103.48: 🤖 agent actions — item report (nafa / sale)
-import { agentRegister } from './agent.js?v=2.319.0';
+import { agentRegister } from './agent.js?v=2.320.0';
 agentRegister([
   { name: 'nafa_report', read: true, desc: 'Item report: muddat (from/to YYYY-MM-DD, default aaj) ki sale, nafa (andaza), top items nafa ke hisaab se; wholesale ke saath/baghair.', params: { type: 'OBJECT', properties: { from: { type: 'STRING' }, to: { type: 'STRING' }, top: { type: 'INTEGER' }, wholesale: { type: 'BOOLEAN' } } },
     run({ from, to, top, wholesale }) { if (!data?.meta) throw Error('Report abhi PC se nahi aayi'); const ws0 = st.ws; if (wholesale != null) st.ws = !!wholesale; try { const X = index(), a = /^\d{4}-\d\d-\d\d$/.test(from || '') ? from : X.days[X.days.length - 1], b = /^\d{4}-\d\d-\d\d$/.test(to || '') ? to : a, { rows, T } = agg(a, b), L = rows.filter(r => !r.noCost).sort((x, y) => y.pf - x.pf);

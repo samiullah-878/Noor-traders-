@@ -8767,3 +8767,15 @@ Malik (17 Nov): 'phone par kya kar sakte ho' -> #2 chuna: dukan ka system ruke t
   khatam = wahi patti khamoshi se '✅ theek'. 🟡 = khamosh id nby, ek baat din mein ek dafa; khatam = '🟢 theek'. Phone ka apna net na ho = kuch nahi.
   State global nbS 'rk~rn~rt~yk~yd'. Test: javac harness (org.json stub + local server) 15 haalat theek; MCP validator VALID. Asal phone / PC par
   nahi chalaya. AI nahi.
+
+=== v2.320.0 (2026-11-18) — 📊 Item report: order mein pieces + godam number / Noor Traders gol · 🧾 PC Purchase: 📱 Mobile jaisa ===
+Malik (screenshot Sab suppliers): 'carton ke ilawa pieces mein bhi order banta hai to likha aaye · godam par 1 likha ho, Noor Traders par Noor Traders gol daire ke saath'
++ (PC POS Purchase screenshot): 'yahan mobile jaisa ka option bhi three dots mein'. OK diya.
+- irep.js: 🛒 chip = `odTxt(r)` — poore ctn + asal zaroorat jab alag (exQty: '12 ctn + 1 pcs'): '🛒 13 ctn · (12 ctn + 1 pcs)', '🛒 1 ctn · (1 pcs)';
+  barabar ho (3 ctn) ya khula mode / bina carton = sirf ek. supItems + saData rows mein `ex` (ceil se pehle) + `at` (stockOf().at). Order ka hisaab / table / PDF WAHI.
+- Stock = `stkRingsHTML(e, pk)`: har godam (branch naam, /noor/i nahi) ALAG — sunehri `.ir-ring.gd` + andar number `.ir-gn` (naam ka hindsa, na ho = pehle 4 harf)
+  + tadad; koi godam stock nahi = 'Godam 0' (halka); 🏪 = `.ir-ring.nt` + andar 'Noor Traders' laal pill + tadad. Item report (stkRing), Supplier-wise (supChips),
+  Sab suppliers (saChip) teeno. Line `.ir-chs.stk` wrap (Noor Traders kat-ne na paye).
+- purchase.js: `ppMob` (localStorage sam-pp-mob, sirf is PC) — posMode() = PC chaurai && !ppMob; viewNow ppMob = 'rows'. ⋮ chip data-pp-mob / data-mn pp.mob
+  (sirf PC chaurai par): '📱 Mobile jaisa' ⇄ '🖥 POS jaisa'. Default POS jaisa. Phone par chip nahi. Save / POS raasta wahi.
+- Test: node render (rings + odTxt 5 haalat). Asal phone / PC par nahi dekha. AI nahi.

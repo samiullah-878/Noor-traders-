@@ -8641,3 +8641,9 @@ html body #dialogBody .nb-hd .nb-c{min-height:30px!important;padding:2px 9px!imp
 html body #dialogBody .nb-c:disabled{opacity:.6}
 html body #dialogBody .nb-note{margin:0;font-size:12px;color:#5b6577;line-height:1.4}
 html.dk body #dialogBody .nb-box{background:linear-gradient(#1c2433,#151c28);border-color:#2c3a52}html.dk body #dialogBody .nb-st,html.dk body #dialogBody .nb-ln{color:#dbe4f3}
+/* v2.320.0: 📊 Item report / Supplier-wise / Sab suppliers — har godam ka number sunehri gol mein + 'Noor Traders' gol pill (malik 18 Nov); line wrap (Noor Traders kat-ne na paye) */
+html body :is(#summary,#dialogBody) .ir-chs.stk{white-space:normal;overflow:visible;text-overflow:clip}
+html body .ir-ring.gd{border-color:#d4a017;color:#6b4a00;background:linear-gradient(180deg,#fff9e6,#ffefb8);box-shadow:0 0 0 1px rgba(212,160,23,.18)}
+html body .ir-ring .ir-gn{display:inline-block;margin:0 5px 0 -7px;padding:0 6px;border-radius:999px;background:#b8860b;color:#fff;font-weight:800;font-size:.9em;line-height:1.45;white-space:nowrap}
+html body .ir-ring.nt .ir-gn{background:#c62828}
+html body .ir-ring.gd.z{opacity:.72}
