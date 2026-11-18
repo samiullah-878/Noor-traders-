@@ -8799,3 +8799,17 @@ sab delete kar dein?'. Log (C:\khata-sync\nt-print-log.txt) 15 Nov 18:16 ke baad
   Ab: purana qaida (4+ harf, har fasla <= scanGap 45 ki aakhri dum) WAHI + naya: 6+ harf, 5+ hindse, har fasla <= scanGap2 (90, local-config) = scan.
   Test: JS port 10 haalat (13 hindse 60 ms / jhatka 70 ms pakre; naam 80–150 ms, 4 hindse 120 ms, 120 ms scanner nahi). C# compile / asal PC nahi.
 - PowerShell yahan nahi chali (parse test nahi) — asal PC par pehli dafa malik ke saamne. AI nahi.
+
+=== 2026-11-18 dopahar (manifest 2026-11-18.3, app nahi badli) — 🆔 NT-PRINT: har PC ka ALAG number + server par parchi band ===
+Malik: 'Q1S server par NT-PRINT chal raha hai magar nishan red' + 'printer ko na chherna behtar'. Wajah (code): PC_ID = naam ke pehle 8 harf —
+DESKTOP-Q1SLV77 (server) aur DESKTOP-RN6QU6D (counter) dono 'desktop-' -> ek hi printPCs/desktop- doc (pcDoc.set = ek doosre ka haal mitate, server
+red) + counter 'pc:desktop-' ka bill DONO NT-PRINT utha sakte the (server par printer na mile to default = Epson par RAW — 16 Nov ki 10 atki parchiyan
+shayad isi se; PAKKA NAHI). Malik ne 'poora naam' kaha — poora naam app ki hadd (appSales.counter <= 20: 'pc:<id>:<printer6>') mein nahi aata,
+aur 'DESKTOP-' sab ka ek hai, is liye naam ka ASAL hissa.
+- nt-print v1.35: PC_ID = 'DESKTOP-' / 'LAPTOP-' hata kar 10 harf (q1slv77, rn6qu6d, old-server); local-config pcId ho to purana hi. LEG = purana
+  8 harf number: us wale bill / liveCarts beep SIRF counter (server nahi) aur sirf jab chuna printer (hash) usi PC ki list mein ho. Shuru par purana
+  saanjha doc (printPCs/LEG) sirf wohi PC mitata hai jis ka host us mein aakhri likha ho. IS_SRV (DIR mein doctor.js + KHATA-DOCTOR.bat) = parchi
+  KABHI nahi: bill par pcError 'Server PC par NT-PRINT parchi nahi chhapta (printer mehfooz) - counter ka printer chunein'. Scan awaz / POS screen /
+  Live / posAdds wahi.
+- Test: node (6 haalat: server / counter / purana number / ghair printer). Asal PC par nahi. Agar koi counter bill na chhape = Sale mein printer chip
+  ek dafa dobara chunein. AI nahi.

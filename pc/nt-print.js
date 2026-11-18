@@ -1,5 +1,5 @@
 // ============================================================
-//  nt-print.js  v1.34 (2026-11-18: 🧱 jis PC par SQL ki setting nahi (counter / purana server) wahan godam ke naam ke liye sql-config KABHI nahi (us ka process.exit poora NT-PRINT gira deta tha + purane server ki sync.js se local-config likh deti thi) · log mein apna folder (C:\nt-print bhi ho sakta hai) · nt-scan v1.5 dheema scanner) · v1.33 (2026-11-17: 🖥 app ki PC scripts khirki khuli (blueAccess/ntWatch.at 3 min ke andar) = zinda report har 20 s, warna pehle jaisa 60 s — malik: 'NT-PRINT zinda ka data kuch second baad update ho') · v1.28 (2026-11-10: 🖥 Live camera ke saath POS ki Sale list ki tasveer posLive/<naam>__shot — sirf jab koi dekh raha ho) · v1.27 (2026-11-09: 🚚 sale rasid ke upar delivery patti — 2 English + 2 bari Urdu lines, app Settings 🖨 Print setting se ON / charges) · v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
+//  nt-print.js  v1.35 (2026-11-18: 🆔 har PC ka ALAG number — pehle naam ke pehle 8 harf = 'DESKTOP-Q1SLV77' / 'DESKTOP-RN6QU6D' dono 'desktop-' (ek hi printPCs doc, ek doosre ka haal mitate, server red; counter ka bill dono utha sakte) -> ab 'DESKTOP-' / 'LAPTOP-' hata kar naam ka asal hissa (10 harf tak: q1slv77, rn6qu6d) · purane number wale bill sirf counter (server nahi) aur sirf jab chuna printer usi PC mein ho · purana saanjha doc jis ne aakhri likha wohi mitata hai · 🛑 SERVER PC (doctor.js + KHATA-DOCTOR.bat) par NT-PRINT parchi KABHI nahi chhapta (malik 18 Nov: 'printer ko na chherna behtar') — scan awaz / POS screen / Live / pehli item wahi) · v1.34 (2026-11-18: 🧱 jis PC par SQL ki setting nahi (counter / purana server) wahan godam ke naam ke liye sql-config KABHI nahi (us ka process.exit poora NT-PRINT gira deta tha + purane server ki sync.js se local-config likh deti thi) · log mein apna folder (C:\nt-print bhi ho sakta hai) · nt-scan v1.5 dheema scanner) · v1.33 (2026-11-17: 🖥 app ki PC scripts khirki khuli (blueAccess/ntWatch.at 3 min ke andar) = zinda report har 20 s, warna pehle jaisa 60 s — malik: 'NT-PRINT zinda ka data kuch second baad update ho') · v1.28 (2026-11-10: 🖥 Live camera ke saath POS ki Sale list ki tasveer posLive/<naam>__shot — sirf jab koi dekh raha ho) · v1.27 (2026-11-09: 🚚 sale rasid ke upar delivery patti — 2 English + 2 bari Urdu lines, app Settings 🖨 Print setting se ON / charges) · v1.25 (2026-11-06: 🔤 gate pass par item ka Urdu naam na ho to bina AI Urdu (urdu-names v1.7 item) — line kabhi gayab nahi) · v1.24 (2026-11-04: 🚪 app ka gate pass switch ON (d.gate) = NOOR TRADERS / bill ki branch wali lines ki bhi alag gate pass parchi — 'Yehi device' jaisi) · v1.23 (2026-10-27: 🧻 nt-parchi v1.2 — har parchi chhoti (Urdu 20% chhoti, kaatne se pehle 1 khali line); yeh file badli taake doctor dobara shuru kare) · v1.22 (2026-10-22: 🚑 DOCTOR JAGAO — sirf doctor wale (server) PC par: KHATA-DOCTOR 15 min chup = taza doctor.js + atka doctor (port 47830, netstat) band + KHATA-DOCTOR.bat chupke; 30 min mein ek dafa · counter PCs par kuch nahi) · v1.21 (2026-10-20: 📅 rasid + gate pass par Urdu tareekh; urdu-names.js bhi khud-update) · v1.20 (2026-10-14: 🔤 GATE PASS par har item ke neeche URDU naam — urdu-names.js) · v1.19 (2026-10-14: 🚪 GATE PASS sirf item + quantity, bara gehra font) · v1.18 (2026-10-08: 🔎 SEARCH KHIRKI KI LIKHAI — nt-posui v1.9 'SBOX': khirki ke search khane mein BARCODE jaisi likhai
 //                   (6+ harf, beech mein space nahi, 5+ hindse) aur grid mein wohi code nahi = bzzz — scan pakra gaya ho ya NAHI (server par scan
 //                   pakra hi nahi ja raha tha: log mein koi 'GHALAT scan' / '🔎' nahi tha). Naam se talaash = awaz nahi. Log mein 'scan pakra / NAHI')
 //                   · v1.17 (2026-10-08: 🔑 CHAABI KHUD UTHAO — awaz-only PC par firebase-key.json Desktop / Downloads / Documents (AnyDesk se)
@@ -39,7 +39,7 @@ let FA = null, FF = null; try { FA = require('firebase-admin/app'); FF = require
 const { initializeApp, cert, getApps } = FA || {};
 const { getFirestore, FieldValue } = FF || {};
 
-const VER = '1.34';   // v1.28 (2026-11-10): 🖥 Live camera ke saath POS screen ki tasveer (nt-posui v1.13 shot) — sirf jab koi dekh raha ho
+const VER = '1.35';   // v1.28 (2026-11-10): 🖥 Live camera ke saath POS screen ki tasveer (nt-posui v1.13 shot) — sirf jab koi dekh raha ho
 // pehle: const VER 1.27   // v1.27 (2026-11-09): 🚚 sale rasid ke upar delivery patti — DELIVERY AVAILABLE HAR GAON + charges, Urdu bari (urdu-names v1.8 dlv)
 //   // v1.26 (2026-11-07): 🧾 rasid table 5 khane (Rate + Amt ek qatar, Font B)   // v1.23 (2026-10-26): 🧾 rasid ki items table dabbe (side lines) mein — boxTable
 const BUSINESS_ID = 'noor-traders';
@@ -48,10 +48,12 @@ const DIR = __dirname;
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, { sql: false }); } catch (e) { const f = require('path').join(__dirname, require('path').basename(__filename, '.js') + '.alive'), w = () => { try { require('fs').writeFileSync(f, String(Date.now())); } catch {} }; w(); setInterval(w, 30000).unref(); return { beat: w, guard: fn => fn }; } })();   // 2026-10-11: 💓 sachi dhadkan (zinda.js) — purani 30-sec khud-likhne wali hatayi
 const log = (...a) => console.log(`[${new Date().toLocaleString('en-GB')}]`, ...a);
 const cfg = () => { try { return JSON.parse(fs.readFileSync(path.join(DIR, 'local-config.json'), 'utf8')) || {}; } catch { return {}; } };
-const slug = s => String(s || 'pc').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 8) || 'pc';   // v1.2: 8 harf (counter 'pc:<id>:<printer6>' <= 20)
+const slug = (s, n = 8) => String(s || 'pc').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, n).replace(/-+$/, '') || 'pc';   // v1.2: 8 harf (counter 'pc:<id>:<printer6>' <= 20)
 const h6 = s => require('crypto').createHash('sha1').update(String(s || '')).digest('hex').slice(0, 6);
 const C0 = cfg();
-const PC_ID = slug(C0.pcId || os.hostname());
+const LEG = String(C0.pcId || os.hostname()).toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 8) || 'pc';   // v1.34 tak ka number (DESKTOP-* sab ka 'desktop-')
+const PC_ID = C0.pcId ? LEG : slug(String(os.hostname()).replace(/^(desktop|laptop)-/i, ''), 10);   // v1.35: naam ka asal hissa (app ki hadd: 'pc:<id>:<printer6>' <= 20 = id 10 harf); pcId likha ho to wahi purana
+const IS_SRV = fs.existsSync(path.join(DIR, 'doctor.js')) && fs.existsSync(path.join(DIR, 'KHATA-DOCTOR.bat'));   // v1.35: server PC = parchi nahi
 const PC_NAME = String(C0.pcName || os.hostname()).trim().slice(0, 40);
 const COUNTER = 'pc:' + PC_ID;
 const W = Math.max(24, Math.min(64, Number(C0.printWidth) || 32));
@@ -70,7 +72,8 @@ function scanPrinters() {
   prAt = Date.now();
 }
 const printerName = (hash) => { if (hash) { const p = PR_LIST.find(x => h6(x) === hash); if (p) return p; } return String(cfg().ntPrinter || PR_DEF || '').trim(); };   // v1.2: app ne printer chuna ho (hash) to wahi, warna default
-const mine = c => c === COUNTER || String(c || '').startsWith(COUNTER + ':');
+const isId = (c, id) => c === 'pc:' + id || String(c || '').startsWith('pc:' + id + ':');
+const mine = c => isId(c, PC_ID) || (!IS_SRV && LEG !== PC_ID && isId(c, LEG) && (() => { const h = hashOf(c); return !h || PR_LIST.some(x => h6(x) === h); })());   // v1.35: purana number sirf counter par, sirf apna printer
 const hashOf = c => (String(c || '').split(':')[2] || '');
 
 // ---------------- ESC/POS parchi ----------------
@@ -278,6 +281,10 @@ async function onDoc(doc) {
   if (!fresh && !again) return;
   busy.add(id);
   try {
+    if (IS_SRV) {   // v1.35: server PC ka printer mehfooz (16 Nov Spooler) — parchi nahi, app ko wajah
+      await doc.ref.update({ pcError: 'Server PC par NT-PRINT parchi nahi chhapta (printer mehfooz) - counter ka printer chunein', pcPrintedAt: Date.now(), printReq: FieldValue.delete() }).catch(() => {});
+      log(`🛑 ${d.saleNo}: server PC par parchi nahi chhapi (printer mehfooz)`); return;
+    }
     const pr = printerName(hashOf(d.counter));
     if (!pr) throw new Error('printer nahi mila — Windows mein default printer set karein');
     const cp = Math.min(3, Math.max(1, Number(d.copies) || 1));
@@ -306,7 +313,7 @@ function beepFor(counter) {
   const c = cfg(); if (c.beep === false) return false;
   const list = c.beepCounters; if (list === 'all') return true;
   if (Array.isArray(list) && list.map(x => String(x).toLowerCase()).includes(String(counter).toLowerCase())) return true;
-  return String(counter).startsWith(COUNTER);
+  return String(counter).startsWith(COUNTER) || (!IS_SRV && LEG !== PC_ID && String(counter).startsWith('pc:' + LEG));   // v1.35: purana number
 }
 function listenBeep() {
   base.collection('liveCarts').onSnapshot(s => {
@@ -586,11 +593,12 @@ const lock = net.createServer();
 lock.once('error', () => { console.log('nt-print pehle se chal raha hai.'); process.exit(3); });
 lock.listen(LOCK_PORT, '127.0.0.1', async () => {
   scanPrinters();
-  log(`💻 NT-PRINT v${VER} — PC "${PC_NAME}" (${COUNTER}) · printer: ${printerName() || 'NAHI MILA'} · ${W} harf / ${DOTS} dots · ${DIR}`);
+  log(`💻 NT-PRINT v${VER} — PC "${PC_NAME}" (${COUNTER}) · printer: ${printerName() || 'NAHI MILA'} · ${W} harf / ${DOTS} dots · ${DIR}${IS_SRV ? ' · 🛑 server PC: parchi band' : ''}`);
   try { P.warm(); } catch {}   // v1.6: print worker pehle se garam
   if (AWAZ_ONLY) log('🔔 AWAZ-ONLY: ' + (FA ? 'firebase-key.json nahi' : 'firebase-admin nahi') + ' — sirf scan / POS awaz (tik, POS error bzzz, tu-tu-tu). Print aur app status band.');
   else {
     await beat();
+    if (LEG !== PC_ID && !C0.pcId) base.collection('printPCs').doc(LEG).get().then(g => { if (g.exists && String((g.data() || {}).host || '').toLowerCase() === os.hostname().toLowerCase()) return g.ref.delete().then(() => log(`🆔 purana saanjha number '${LEG}' hata diya — ab apna '${PC_ID}'`)); }).catch(() => {});   // v1.35
     try { base.collection('blueAccess').doc('ntWatch').onSnapshot(d => { ntWatchAt = Number(((d.exists && d.data()) || {}).at) || 0; }, () => {}); } catch {}   // v1.33
     setInterval(() => { const now = Date.now(); if (now - ntWatchAt < 3 * 60000 || now - beatAt >= 58000) beat(); }, 20000);
   }

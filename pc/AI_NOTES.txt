@@ -5075,3 +5075,7 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 - nt-scan: 6+ harf / 5+ hindse har fasla <= scanGap2 (90) = scan bhi (dheema scanner); purana 4+ harf <= scanGap (45) wahi. DLL naya naam NtScan4 (purana
   cache NtScan3.dll naye logic ko rok deta).
 - nt-print-auto.bat (repo) NAHI badli: chalti bat file badalna = cmd purane byte offset se agli line parhta hai (loop toot sakta) — C:\nt-print ki bat setup khud likhta hai.
+
+=== 2026-11-18 (manifest 2026-11-18.3): nt-print v1.35 — har PC ka alag printPCs number + server par parchi band ===
+- PC_ID = hostname se 'DESKTOP-' / 'LAPTOP-' hata kar 10 harf (pehle 8 harf = sab DESKTOP-* 'desktop-' = ek doc, ek doosre ka haal mitate, bill dono uthate).
+- Purana number (LEG) wale bill sirf ghair-server PC, sirf apna printer hash. Server (doctor.js + KHATA-DOCTOR.bat) = parchi kabhi nahi (pcError).
