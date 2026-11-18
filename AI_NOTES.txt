@@ -8813,3 +8813,17 @@ aur 'DESKTOP-' sab ka ek hai, is liye naam ka ASAL hissa.
   Live / posAdds wahi.
 - Test: node (6 haalat: server / counter / purana number / ghair printer). Asal PC par nahi. Agar koi counter bill na chhape = Sale mein printer chip
   ek dafa dobara chunein. AI nahi.
+
+=== v2.321.0 (2026-11-18) — 👥 Mulazim screen khamosh nahi + 🖐 Live mein POS screen dabba khiskao / chhota-bara ===
+1) Malik (Settings screenshot): 'Mulazim click karne se kuch nahi ho raha'. Code mein seedhi ghalti NAHI mili (row / handler / modal theek) — andaza:
+   kisi ek blueStaff doc ki ajeeb shakal (naam number, ijazat list ke bajaye kuch aur) se stHTML phat-ta tha aur async click handler ki ghalti
+   chup-chaap gum (unhandledrejection sirf permission-denied dikhata hai). Ab: listener har doc `stNorm` (name / phone string, perms / deny / allow
+   = stArr: list, akela lafz -> [lafz], {x:true} -> keys); stMatch / stCard har card try/catch -> `stBadCard` (⚠ naam + ghalti + ✏️); click handler:
+   owner nahi = notice, stHTML phate = khirki khule aur ghalti likhi, modal phate = notice. Asal wajah agli dafa screen par nazar aayegi. PAKKA NAHI.
+2) Malik (Live screenshot, PC): 'POS screen ka dabba background (camera) chhupa deta hai — movable, hum khud aage peeche karein'. live.js spWire:
+   landscape / PC par dabbe ki upar wali patti (ya note) pakar kar ghaseeto, ◢ kone se chhota / bara; jagah lv-body ke hisse % mein (html zoom se
+   farq nahi) localStorage sam-lv-shotpos (har phone / PC apna), ↺ = pehli jagah, phone seedha (portrait) = pehle jaisa (video ke neeche, inline
+   style saaf), resize par dobara. Patti / kone ka tap ab bara-chhota NAHI karta (pointer capture ke baad click ka target poora dabba hota tha —
+   SPM se roka); tasveer par tap = bara / poora pehle jaisa.
+- Test: snippet node (stNorm / bad card / click handler), headless Chrome (nakli cloud): khiskana, naap, dobara kholne par wahi jagah, patti tap = kuch
+  nahi, tasveer tap = fit, ↺, portrait saaf, landscape wapas. Asal phone / PC par nahi dekha. AI nahi.

@@ -8,6 +8,9 @@
 // v2.219.0: 🧾 LIVE BILL PATTI — malik: "camera ke upar transparent patti, ek side par item ke naam — jis waqt NT print par item aaye usi waqt camera par bhi".
 //   PC pos-sales-dekho v2.6 dekhe ja rahe counter ka aakhri bill har 1 s posLive/<counter> mein → yahan daayein taraf patti: naya item hara chamke,
 //   hataya laal kata (12 s), tadad badli peeli; upar #bill + ⏳ ban raha / 🖨 Print ✓ / 📌 Post ✓; neeche items + Kul. 🧾 chip = patti chhupao / dikhao (phone yaad).
+// v2.321.0: 🖐 POS screen ka dabba KHISKAO + chhota / bara (malik 18 Nov: 'background nazar nahi aa raha — movable, hum khud aage peeche karein'):
+//   landscape / PC par dabbe ki upar wali patti pakar kar ghaseeto, neeche daayein kone (◢) se naap; jagah + naap har phone / PC par yaad (sam-lv-shotpos,
+//   lv-body ke hisse % mein — html zoom se farq nahi). ↺ = pehli jagah. Phone seedha (portrait) = pehle jaisa (dabba video ke neeche). AI nahi.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
@@ -27,11 +30,15 @@ export function openLive(o) {
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
     const c = t.closest('[data-lv-pc]'); if (c) { cur = c.dataset.lvPc; d.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x === c)); start(); return; }
     if (t.closest('[data-lv-re]')) { start(); return; }
+    if (Date.now() - SPM < 450) return;   // v2.321.0: khiskane ke foran baad wala click (bara / chhota nahi)
+    if (t.closest('[data-lvs-re]')) { spReset(); return; }
+    if (t.closest('#lvShot .lvs-h, #lvShot .lvs-rz')) return;   // patti / kona = khiskana
     if (t.closest('#lvShot')) { const e = $('lvShot'); e.classList.toggle('is-fit'); SH.touch = 0; setTimeout(() => shotFollow(e.querySelector('img')), 60); try { localStorage.setItem('sam-lv-shotfit', e.classList.contains('is-fit') ? '1' : '0'); } catch {} return; }
     const bt = t.closest('[data-lv-bt]'); if (bt) { const on = !bOn(); try { localStorage.setItem('sam-lv-bill', on ? '1' : '0'); } catch {} bt.classList.toggle('is-in', on); const e = $('lvBill'); if (e) e.hidden = !on; return; }
     if (t.closest('[data-lv-full]')) { const v = $('lvVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (d.querySelector('.lv-body') || v).requestFullscreen?.(); } catch {} return; }
   };
   if (!d.open) d.showModal();
+  spWire(d); setTimeout(spApply, 0);   // v2.321.0
   if (!pcStop && cloud.listenLiveCamPc) pcStop = cloud.listenLiveCamPc(s => { pcSt = s; });
   if (cur) start(); else stat('✕ Koi counter nahi', true);
 }
@@ -152,13 +159,13 @@ function ntpSay(host) {
 function shotPaint(fresh) {
   const e = $('lvShot'); if (!e) return;
   const d = SH.d, now = Date.now(), live = d && Number(d.on) === 1 && d.im && now - SH.recv < 45000;
-  const note = t => { e.hidden = false; e.classList.add('is-note'); e.innerHTML = `<div class="lvs-n">🖥 ${escB(t)}</div>`; };
+  const note = t => { e.hidden = false; e.classList.add('is-note'); e.innerHTML = `<div class="lvs-n">🖥 ${escB(t)}</div>`; spApply(); };
   if (live) {
     if (fresh) { const u = URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })); let img = e.querySelector('img');
-      if (!img) { e.classList.remove('is-note'); e.innerHTML = '<div class="lvs-h"><b>🖥 POS screen · live</b><small>tap = bara / poora</small></div><div class="lvs-b"><img alt=""></div>'; img = e.querySelector('img'); const bx = e.querySelector('.lvs-b'); if (bx) bx.addEventListener('pointerdown', () => { SH.touch = Date.now(); }, { passive: true }); }
+      if (!img) { e.classList.remove('is-note'); e.innerHTML = '<div class="lvs-h"><b>🖥 POS screen · live</b><small class="lvs-tip"><span class="lvs-tl">patti pakar kar khiskao · </span>tap = bara / poora</small><button type="button" class="lvs-re" data-lvs-re="1" title="Pehli jagah" aria-label="Pehli jagah">↺</button></div><div class="lvs-b"><img alt=""></div><span class="lvs-rz" title="Chhota / bara" aria-hidden="true"></span>'; img = e.querySelector('img'); const bx = e.querySelector('.lvs-b'); if (bx) bx.addEventListener('pointerdown', () => { SH.touch = Date.now(); }, { passive: true }); }
       img.onload = () => shotFollow(img); img.src = u; try { SH.url && URL.revokeObjectURL(SH.url); } catch {} SH.url = u;
       const h = e.querySelector('.lvs-h'); if (h) { h.classList.remove('is-new'); void h.offsetWidth; h.classList.add('is-new'); } }
-    e.hidden = false; return;
+    e.hidden = false; spApply(); return;
   }
   if (d && Number(d.on) === 0 && now - SH.recv < 60000) { note('POS screen: ' + (d.why || 'nahi mili') + (d.err ? ' (counter PC ki ghalti)' : '')); return; }
   if (d && SH.recv && now - SH.recv >= 45000) { note('POS screen ki tasveer ruk gayi — counter PC / NT-PRINT dekhein'); return; }
@@ -190,4 +197,50 @@ function billPaint(scroll) {
   const tot = (d.pr || Number(d.st) === 2) && Number(d.t) > 0 ? Number(d.t) : sum;
   e.innerHTML = `<div class="lvb-h"><b>${d.sid ? '#' + escB(d.no || d.sid) : '🧾 Aaj koi bill nahi'}</b>${d.sid && d.src === 'aakhri' && (Number(d.st) === 2 || (d.pr && !(now - (Number(d.la) || 0) < 90000))) ? '<small class="lvb-old">pichhla · naya bill shuru hote hi yahan</small>' : d.src === 'andaza' ? '<small class="lvb-old">⏳ ban raha (andaza — counter pakka nahi)</small>' : ''}${st}</div>${stale}<div class="lvb-l">${rows || (d.sid ? '<div class="lvb-e">pehli item ka intezar…</div>' : '')}</div>${d.sid ? `<div class="lvb-f"><span>${L.length} items</span><b>Rs ${nf(tot)}</b></div>` : ''}${d.dg && d.src !== 'chalu' ? `<div class="lvb-dg">🩺 ${escB(d.dg)}</div>` : ''}`;
   if (scroll) { const l = e.querySelector('.lvb-l'); if (l) l.scrollTop = 0; }
+}
+
+// ---------- 🖐 v2.321.0: POS screen dabba khiskao / chhota-bara (sirf landscape / PC) ----------
+const SP_K = 'sam-lv-shotpos';
+let SPM = 0;   // aakhri khiskane ka waqt (us ke baad ka click = kuch nahi)
+const spPort = () => { try { return matchMedia('(orientation:portrait)').matches; } catch { return false; } };
+const spCl = (v, a, b) => Math.min(b, Math.max(a, v));
+function spGet() { try { const o = JSON.parse(localStorage.getItem(SP_K) || 'null'); return o && [o.x, o.y, o.w, o.h].every(n => Number.isFinite(n)) ? o : null; } catch { return null; } }
+function spPut(e, o) { Object.assign(e.style, { left: (o.x * 100).toFixed(2) + '%', top: (o.y * 100).toFixed(2) + '%', width: (o.w * 100).toFixed(2) + '%', height: (o.h * 100).toFixed(2) + '%', right: 'auto', bottom: 'auto', maxHeight: 'none' }); }
+function spClear(e) { ['left', 'top', 'width', 'height', 'right', 'bottom', 'maxHeight'].forEach(k => { e.style[k] = ''; }); }
+function spApply() {
+  const e = $('lvShot'); if (!e) return;
+  const o = spGet(); if (!o || spPort()) { spClear(e); return; }
+  const w = spCl(o.w, 0.2, 1), h = spCl(o.h, 0.15, 1);
+  spPut(e, { w, h, x: spCl(o.x, 0, 1 - w), y: spCl(o.y, 0, 1 - h) });
+}
+function spReset() { try { localStorage.removeItem(SP_K); } catch {} spApply(); }
+function spWire(d) {
+  if (d.dataset.spw) return; d.dataset.spw = '1';
+  let g = null;
+  d.addEventListener('pointerdown', ev => {
+    if (spPort()) return;
+    const e = $('lvShot'); if (!e || e.hidden || !e.contains(ev.target) || ev.target.closest?.('[data-lvs-re]')) return;
+    const rz = !!ev.target.closest?.('.lvs-rz'); if (!rz && !ev.target.closest?.('.lvs-h, .lvs-n')) return;
+    const br = (e.offsetParent || e.parentElement).getBoundingClientRect(), r = e.getBoundingClientRect(); if (!br.width || !br.height) return;
+    g = { id: ev.pointerId, rz, sx: ev.clientX, sy: ev.clientY, x: (r.left - br.left) / br.width, y: (r.top - br.top) / br.height, w: r.width / br.width, h: r.height / br.height, W: br.width, H: br.height, e, mv: false, o: null };
+    try { e.setPointerCapture(ev.pointerId); } catch {}
+    ev.preventDefault();
+  });
+  d.addEventListener('pointermove', ev => {
+    if (!g || ev.pointerId !== g.id) return;
+    const dx = (ev.clientX - g.sx) / g.W, dy = (ev.clientY - g.sy) / g.H;
+    if (!g.mv && Math.abs(ev.clientX - g.sx) + Math.abs(ev.clientY - g.sy) < 5) return;
+    g.mv = true; g.e.classList.add('is-drag');
+    g.o = g.rz ? { x: g.x, y: g.y, w: spCl(g.w + dx, 0.2, 1 - g.x), h: spCl(g.h + dy, 0.15, 1 - g.y) }
+      : { x: spCl(g.x + dx, 0, 1 - g.w), y: spCl(g.y + dy, 0, 1 - g.h), w: g.w, h: g.h };
+    spPut(g.e, g.o);
+  });
+  const end = ev => {
+    if (!g || ev.pointerId !== g.id) return;
+    const x = g; g = null; x.e.classList.remove('is-drag'); try { x.e.releasePointerCapture(ev.pointerId); } catch {}
+    SPM = Date.now();   // patti / kone ka tap (khiska ho ya nahi) = bara / chhota nahi (capture ke baad click ka target poora dabba hota hai)
+    if (x.mv && x.o) { try { localStorage.setItem(SP_K, JSON.stringify(x.o)); } catch {} }
+  };
+  d.addEventListener('pointerup', end); d.addEventListener('pointercancel', end);
+  window.addEventListener('resize', () => { if ($('lvDlg')?.open) spApply(); });
 }
