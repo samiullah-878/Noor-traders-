@@ -1,5 +1,5 @@
 // =========================================================
-//  bank-parchi.js  v2.7 (2026-11-09: apne naam (Sami Ullah / Noor Traders) se AAYA paisa — 5 min mein doosri taraf GAYE na mile = khud lagao) · v2.6 (2026-11-08: aaye paise bank ki VALUE DATE (Sunday = agla din) par bhi khud, entry aaj) · v2.5 (2026-10-20: chhoti parchi par Urdu sar-khi + bari Urdu tareekh) · v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
+//  bank-parchi.js  v2.8 (2026-11-19: 🔔 Alfa app ki NOTIFICATION bhi — malik: "aisa pop aaye to add kar do, SMS aaye to double na ho": BAF A/C wali notif = Alfalah parser, wahi Tx ID / waqt = SMS ka jurwan, sirf ek lagta) · v2.7 (2026-11-09: apne naam (Sami Ullah / Noor Traders) se AAYA paisa — 5 min mein doosri taraf GAYE na mile = khud lagao) · v2.6 (2026-11-08: aaye paise bank ki VALUE DATE (Sunday = agla din) par bhi khud, entry aaj) · v2.5 (2026-10-20: chhoti parchi par Urdu sar-khi + bari Urdu tareekh) · v2.4 (2026-10-14: ✉️ Alfalah EMAIL bhi parhna (ibanking: naam · email.notification: account + charges) + wahi Ref / TXN do docs mein = EK, doosra post nahi) · v2.3 (2026-10-14: 🏦 BANK ALFALAH SMS (8287) parhna — aaye / 💳 card / fee / statement; Alfalah NT (@pcin) mein aaye
 //                     paise khud; apne naam (Noor Traders / Samiullah) se aaye = khud nahi, app EK transfer banati hai) · v2.2 (2026-10-13: 🔔 HBL Mobile app ki NOTIFICATION (src 'notif') bhi parhta hai + notification / SMS / email jurwan = ek) · v2.1 (2026-10-12) — 🏦 sirf apne HBL account ke (A/C ke aakhri 4 number app mein yaad) · v2.0 (2026-10-12) — 🤖 aaye paise khud HBL khate mein (neeche) · v1.0 — 💰 PAISE AAYE ki parchi (Server PC, TM-T88IV)
 //  Malik: "jaise hi koi paisa aya usi time computer se print bi nikl aiya".
 //  📩 HBL Inbox (Firestore bankSms) mein naya SMS / email aate hi -> parchi: raqam (bara), kis se, bank, via, waqt, TXN.
@@ -42,7 +42,8 @@ function parseBank(text, src = 'sms', subj = '') {
   if (via) out.via = via[1].replace(/\s+ID$/i, '').trim();
   // ---- v2.99.74 🔔 HBL Mobile app ki LIVE NOTIFICATION (MacroDroid: "{not_title} — {notification}") — email / SMS se pehle ----
   //  "Transaction Alert: Fund Transfer — PKR 10,000 sent to HASEEB CORPORAT HBL from your HBL A/C *6303 on 13-Oct-2026 23:21 via HBL Mobile,Tx ID 1300557247. UAN: …"
-  if (src === 'notif' || /^\s*Transaction Alert/i.test(t)) {
+  const baf = /BAF\s*A\/C|Bank\s*Alfalah/i.test(t);   // v2.8 (19 Nov, malik: "aisa pop aaye to add kar do"): Alfa app ki notification = Alfalah wala parser (tareekh '19-11-26 at 17:01', account, Tx ID — SMS se jurwan)
+  if (!baf && (src === 'notif' || /^\s*Transaction Alert/i.test(t))) {
     out.src = 'notif'; out.amt = amtOf(t);
     out.txn = (t.match(/\bT(?:x|XN|rx)\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || t.match(/Transaction\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || '';
     out.acct = (t.match(/A\/C\s*(?:No\.?\s*)?\*?\s*([0-9*]{4,})/i) || [])[1] || '';
@@ -96,7 +97,7 @@ function parseBank(text, src = 'sms', subj = '') {
   //  "Your Bank Alfalah card (54917) used for PKR 6,000.00 on 13/10/2026 at 11:19 at JINN-BEGA P/S KHARIAN PK. Avl Limit: 4,429.70"
   //  "SMS Alerts Monthly Fee PKR 250.00 & Tax 40.00 Debited from A/C: 5797-5***5826 on 12-Oct-2026"
   //  "Your Bank Alfalah Card Stmt.Summary. Amt Due: 1,453,960.50 Min Pmt: 21,285.00 Due Date: 26/10/2026."
-  if (src !== 'email' && src !== 'notif' && /BAF\s*A\/C|Bank\s*Alfalah|021111225111|Stmt\.?\s*Summary|Avl\s*Limit/i.test(t)) {
+  if (src !== 'email' && (src !== 'notif' || baf) && /BAF\s*A\/C|Bank\s*Alfalah|021111225111|Stmt\.?\s*Summary|Avl\s*Limit/i.test(t)) {
     out.bankAc = 'alfalah';
     const n2 = s => Math.round(Number(String(s || '0').replace(/,/g, '')) * 100);
     let m = t.match(/Stmt\.?\s*Summary\.?\s*Amt\s*Due:?\s*([\d,]+(?:\.\d+)?)\s*Min\s*Pmt:?\s*([\d,]+(?:\.\d+)?)\s*Due\s*Date:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
@@ -246,6 +247,8 @@ function createBankWatcher({ biz, log, sendRaw, head, stateFile, cfgRef, now = (
   async function handle(doc) {
     const d = doc.data ? doc.data() : doc; if (!d || !d.text || doc.id === '_alias') return 'skip';
     const r = parseBank(d.text, d.src, d.subj); if (!r.ok) return 'samajh-nahi';
+    // v2.8: notification (live) mein tareekh kat gayi ho to aane ka waqt hi len-den ka waqt — SMS se jurwan bhi isi waqt se (±30 min)
+    if (d.src === 'notif' && !r.day) { const c0 = doc.createTime && doc.createTime.toMillis ? doc.createTime.toMillis() : Number(d.at) || 0; if (c0 && now() - c0 < 6 * 3600000) { r.day = pktDay(c0); r.time = new Date(c0 + 5 * 3600000).toISOString().slice(11, 16); } }
     // v2.2: 🔔 notification + usi len-den ka SMS / email = jurwan (aaye/gaye + raqam + 30 min, zariya alag) — doosra na post, na parchi
     const zc = r.day && r.time ? Math.round(Date.parse(r.day + 'T' + r.time + ':00+05:00') / 60000) : 0, cls = d.src === 'notif' ? 'n' : 's', pre = 'Z' + (r.bankAc === 'alfalah' ? 'A' : '') + r.dir + r.amt + '|';
     const twin = zc ? Object.keys(seen).find(k => { if (!k.startsWith(pre)) return false; const [, m, c, id] = k.split('|'); return c !== cls && id !== doc.id && !seen['P' + id] && Math.abs(Number(m) - zc) <= 30; }) : '';   // P = pehle hi jor ban chuka

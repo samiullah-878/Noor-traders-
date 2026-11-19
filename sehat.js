@@ -5,6 +5,8 @@
 //  → 🤖 Gemini (app ki AI key, A.aiImage) cheez dekhe → sahi = phone ko webhook `nt_sehat?shOk=<nonce>` (Falcon wala fxCfg.wh) → lock khatam.
 //  🚨 = `nt_sehat?shZ=1` (phone khud din mein 1 dafa hi maanta hai). Tasveer kahin save NAHI hoti. Aaj ki ginti sirf isi phone par (localStorage).
 //  AI: sirf photo jaanch. Waqt / lock = phone ka macro (md/tools/sehat.py), AI nahi.
+//  v1.1 (2026-11-19, app v2.325.0 — malik: "Chrome mein khulta hai, speed se nahi"): camera FORAN — login / data ka intezar sirf 📸 ke baad
+//  (A.ready() = app ka session + malik → { cloud, aiImage }). Phone ab installed app (WebAPK) kholta hai, Chrome sirf jab app na mile.
 // =========================================================
 const K = {
   paani: { i: '💧', t: 'Paani ka glass', d: 'a glass, cup or bottle with drinking water in it' },
@@ -50,6 +52,13 @@ function tallyHTML() {
   const t = tally();
   return Object.entries(K).map(([k, v]) => `<span class="${(Number(t[k]) || 0) > 0 ? 'is-in' : ''}">${v.i} ${Number(t[k]) || 0}</span>`).join('');
 }
+// v1.1: app abhi login kar rahi ho to 📸 ke baad intezar (camera pehle hi khula)
+async function need() {
+  if (A.cloud && A.aiImage) return;
+  if (!A.ready) throw Error('App tayyar nahi — dobara kholein');
+  st('', '⏳ App login ho rahi hai…');
+  Object.assign(A, await withT(A.ready(), 60000, 'Login nahi hua — app dobara kholein'));
+}
 function st(cls, txt) { const b = $('shSt'); if (b) { b.className = 'sh-st' + (cls ? ' ' + cls : ''); b.textContent = txt; } }
 
 export async function open(deps) {
@@ -91,6 +100,7 @@ function stop() { try { S?.stream?.getTracks().forEach(t => t.stop()); } catch {
 function close() { const d = $('shDlg'); if (d) { try { d.close(); } catch { d.remove(); } } stop(); if (window.ntShClose) window.ntShClose = null; }
 
 async function hook() {
+  await need();
   const C = (await A.cloud?.getFxCfg?.()) || {}, m = String(C.wh || '').trim().match(/^(https:\/\/trigger\.macrodroid\.com\/[A-Za-z0-9_-]{6,})\//);
   if (!m) throw Error('Phone ka webhook link nahi mila — Gaari → ⚙️ Falcon setup mein MacroDroid ka link lagayein');
   return m[1];
@@ -119,6 +129,7 @@ async function go() {
   st('', '⏳ 🤖 AI dekh raha hai…');
   let r = null;
   try {
+    await need(); st('', '⏳ 🤖 AI dekh raha hai…');
     if (!A.aiImage) throw Error('AI tayyar nahi');
     const out = await withT(A.aiImage(url.split(',')[1], prompt(S.kind)), 30000, 'AI ne 30 sec mein jawab nahi diya');
     const m = String(out || '').match(/\{[\s\S]*\}/); r = m ? JSON.parse(m[0]) : null;

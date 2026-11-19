@@ -1,5 +1,5 @@
 // =========================================================
-//  label-print.js  v5.0 (2026-11-09: 🏷 job.x = zyada label (Godam 2 default +5, app lagati hai) — copies + x chhapte, total mein bhi) · v4.9 (2026-10-27: 📅 malik — daayein kone ka number ('7J-463') HATA, us ki jagah chhapne ke din ki tareekh + mahine ka pehla harf
+//  label-print.js  v5.1 (2026-11-19: 🔤 malik — "Urdu barcode par auto aana chahiye, naya server lagne se nahi aa raha": (1) save hua Urdu naam na ho = roman2ur (bina AI, urdu-names) — Urdu line kabhi gayab nahi (parchi wala qaida) · (2) Urdu tasveer na bane to ab HAMESHA ke liye band nahi (pehle null yaad ho jata tha jab tak script dobara na chale) — 2 min baad dobara, PowerShell ka poora raasta bhi · (3) har job par `ur` = Urdu ka haal (ok / roman / naam nahi / band / ✕ wajah) → app ki label patti par dikhta hai — khamosh nahi) · v5.0 (2026-11-09: 🏷 job.x = zyada label (Godam 2 default +5, app lagati hai) — copies + x chhapte, total mein bhi) · v4.9 (2026-10-27: 📅 malik — daayein kone ka number ('7J-463') HATA, us ki jagah chhapne ke din ki tareekh + mahine ka pehla harf
 //                     '27-O' (J F M A M J J A S O N D), font 2 (bara) — Godam 2 theke ki packing: larka aaj ke packet jaldi gine, kal ka maal mix na ho. Factory batch label par batch no wahi.
 //                     labelJobs numFrom/numTo pehle jaise likhe jate hain (app ka hisaab), sirf chhapai se number gaya) · v4.6 (2026-10-18: 🖨 PRINTER RUKA — malik: rice 350 SHAEEN BADSHA 48/100 par atka. Agla hissa bhejne se pehle line 30 s na
 //                     chale to Windows se printer / job ka haal (Paper khatam / Error / Offline / Ruka hua) -> labelJobs.stuck {at, why} (app mein dikhe);
@@ -48,6 +48,7 @@ const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 // Label ka naap label-settings.json mein hai (isi folder mein) â€” wahan badlein, script ko haath na lagayein.
 const BUSINESS_ID = 'noor-traders';
 const { shape: urduShape } = require('./urdu-shape.js');   // v3.9
+let UR = null; try { UR = require('./urdu-names.js'); } catch {}   // v5.1: roman2ur (bina AI) — saved Urdu naam na ho to
 const DEFAULTS = {
   printer: 'TSC TTP-244 Pro',   // Devices and Printers wala naam
   cols: 3,                      // ek qatar mein kitne labels (roll par 3)
@@ -93,14 +94,18 @@ $out1.Add([byte]($wb -band 255)); $out1.Add([byte]($wb -shr 8)); $out1.Add([byte
 for($y=0;$y -lt $h;$y++){ for($xb=0;$xb -lt $wb;$xb++){ $v=0; for($k=0;$k -lt 8;$k++){ $x=$xb*8+$k; $white=$true; if($x -lt $width){ $c=$bmp.GetPixel($x,$y); if(($c.R+$c.G+$c.B) -lt 384){ $white=$false } }; if($white){ $v=$v -bor (0x80 -shr $k) } }; $out1.Add([byte]$v) } }
 $bmp.Dispose(); [System.IO.File]::WriteAllBytes($out,$out1.ToArray())
 `;
-const urCache = new Map();
+const urCache = new Map(), urFail = new Map();   // v5.1: urFail = key -> waqt (2 min baad dobara koshish)
+let urLastErr = '';
+const PS_EXE = () => { const p = path.join(process.env.SystemRoot || 'C:\\Windows', 'System32', 'WindowsPowerShell', 'v1.0', 'powershell.exe'); try { if (fs.existsSync(p)) return p; } catch {} return 'powershell.exe'; };
 function urduRaster(text, S, widthDots) {
   const key = text + '|' + widthDots + '|' + S.urduPx + '|' + S.urduInvert + '|' + !!S.urduBold;
   if (urCache.has(key)) return urCache.get(key);
+  if (Date.now() - (urFail.get(key) || 0) < 120000) return null;
   try {
     if (!fs.existsSync(PS_UR) || fs.readFileSync(PS_UR, 'utf8') !== PS_UR_TXT) fs.writeFileSync(PS_UR, PS_UR_TXT);
     const out = path.join(DIR, 'urdu-raster.bin');
-    require('child_process').execFileSync('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS_UR, '-text', text, '-fonts', S.urduFont, '-px', String(S.urduPx), '-width', String(widthDots), '-out', out, '-bold', S.urduBold ? '1' : '0'], { timeout: 20000, windowsHide: true });
+    try { fs.unlinkSync(out); } catch {}   // v5.1: purani tasveer kabhi naye naam par na lage
+    require('child_process').execFileSync(PS_EXE(), ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS_UR, '-text', text, '-fonts', S.urduFont, '-px', String(S.urduPx), '-width', String(widthDots), '-out', out, '-bold', S.urduBold ? '1' : '0'], { timeout: 30000, windowsHide: true });
     const b = fs.readFileSync(out);
     const wb = b[0] | (b[1] << 8), h = b[2] | (b[3] << 8);
     let data = b.subarray(4);
@@ -114,8 +119,8 @@ function urduRaster(text, S, widthDots) {
         r.crop = { xb: x0, y: y0, wb: cw, h: y1 - y0 + 1, data: out.toString('latin1') }; } }
     r.data = safeBits(r.data); if (r.crop) r.crop.data = safeBits(r.crop.data);   // v4.2
     if (urCache.size > 2000) urCache.clear();
-    urCache.set(key, r); return r;
-  } catch (e) { log('Urdu raster nahi bana: ' + (e.message || e)); urCache.set(key, null); return null; }
+    urCache.set(key, r); urFail.delete(key); urLastErr = ''; return r;
+  } catch (e) { urLastErr = String((e && (e.stderr ? (String(e.stderr).split(/\r?\n/).find(x => x.trim()) || '').trim() : '') || e.message) || e).slice(0, 140); log('Urdu raster nahi bana: ' + urLastErr); urFail.set(key, Date.now()); if (urFail.size > 500) urFail.clear(); return null; }
 }
 // v4.2: TSC 'foran hukm' (ESC ! R = reset, ESC ! P = pause …) BITMAP ke andar bhi pakar leta hai -> label ka baqi hissa ghayab.
 // 0x1B -> 0x1F, 0x7E -> 0x7F (1 = safed: sirf ek pixel aur safed)
@@ -373,7 +378,12 @@ async function handle(doc) {
     const S = settings();
     const copies2 = copiesOf(j);
     const nums = nextNums(j.code || j.itemId, copies2);            // v3.3: har BARCODE (sub-barcode) ka apna silsila — surf 1kg alag, 2kg alag
-    const ur = S.urdu ? (await urduNames())[String(j.itemId)] || '' : '';   // v3.4: Urdu naam (ho to)
+    const umap = S.urdu ? await urduNames() : {}, urSaved = S.urdu ? String(umap[String(j.itemId)] || '') : '';   // v3.4: Urdu naam (ho to)
+    // v5.1: save hua naam na ho = roman2ur (bina AI) — parchi jaisa, Urdu line kabhi gayab nahi. PC (transfer-sync fillItems) har 10 min AI se asal naam bhi bana deta hai.
+    let urRoman = ''; if (S.urdu && !urSaved && UR && UR.roman2ur) { const t0 = String(j.name || '').replace(/\s+/g, ' ').trim(); if (/[a-z]/i.test(t0)) { try { urRoman = String(UR.roman2ur(t0.slice(0, 60)) || ''); } catch {} } }
+    const ur = urSaved || urRoman;
+    let urState = !S.urdu ? 'band (label-settings)' : !ur ? 'naam nahi' + (Object.keys(umap).length ? '' : ' (Urdu list khali)') : urRoman ? 'roman' : 'ok';
+    if (ur && S.urduMode !== 'ttf' && !urduRaster(String(ur), S, urW(S))) urState = '✕ tasveer nahi bani: ' + (urLastErr || '?');   // v5.1: pehle hi bana kar dekho (cache) — na bane to wajah app ko
     let err = (S.urdu && ur) ? await ensureFont(S) : null;   // v3.9
     // v3.8: chhote jobs ek ke baad ek · v4.0: har hisse se pehle cancel dekho, line khali hone tak ruko (ginti = asal chhapai), ginti likho
     const SX = (ur && S.urduMode !== 'ttf') || copies2 >= 100 ? { ...S, rowsPerJob: Math.min(rowsPer(S), 4), rowsMax: Math.min(Number(S.rowsMax) || 8, 4) } : S;   // v4.6: Urdu tasveer = chhote hisse · v4.7: bara order bhi
@@ -395,7 +405,7 @@ async function handle(doc) {
       log(`✕ Cancel: ${j.name} — ~${done0} / ${copies2} chhapne ke baad, printer ki line saaf`); return;
     }
     if (err) { if (sent > 0) await purgeQueue(S.printer).catch(() => {}); await ref.update({ status: 'failed', error: String(err.message).slice(0, 300), sent: Math.max(0, sent - perPart), total: copies2, stuck: FieldValue.delete(), doneAt: Date.now() }); /* v4.6: sent = asal chhape (app: ▶ Baqi chhapo) */ log(`Label NAHI chhapa: ${j.name} â€” ${err.message}`); }
-    else { await ref.update({ status: 'done', sent: copies2, total: copies2, doneAt: Date.now(), error: FieldValue.delete(), numFrom: nums.from, numTo: nums.to, numCode: nums.code, day: dayKey() }); log(`Label chhapa: ${j.name}${Number(j.qty) !== 1 ? ' - ' + num(j.qty) : ''} x ${copies2} -> ${nums.code}-${nums.from}${copies2>1?' se '+nums.code+'-'+nums.to:''}`); }
+    else { await ref.update({ status: 'done', sent: copies2, total: copies2, doneAt: Date.now(), error: FieldValue.delete(), numFrom: nums.from, numTo: nums.to, numCode: nums.code, day: dayKey(), ur: String(urState).slice(0, 160) }); log(`Label chhapa: ${j.name}${Number(j.qty) !== 1 ? ' - ' + num(j.qty) : ''} x ${copies2} -> ${nums.code}-${nums.from}${copies2>1?' se '+nums.code+'-'+nums.to:''}`); }
   } finally { busy.delete(doc.id); live.delete(doc.id); if (beat) clearInterval(beat); }
 }
 

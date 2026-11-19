@@ -34,7 +34,24 @@ def ft(text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "optio
     "corners": 14, "alignment": 0, "moveOption": 0, "variableWidth": True, "widthPercentage": 90, "showOverStatusBar": False, "enableShadow": True}
 FTHIDE = {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 1, "identifier": "ntsh"}
 def patti(t): return [ft(t), pause(3), FTHIDE]
-OPEN = {"m_classType": "OpenWebPageAction", "m_SIGUID": 0, "m_urlToOpen": APP + "{v=shK}.{v=shN}", "m_httpGet": False, "m_disableUrlEncode": True}
+# v57 (19 Nov, malik: "Chrome mein khulta hai, installed app mein nahi — do tab ka paigham aata hai"): pehle installed Blue Khata (Chrome ki WebAPK —
+#   wohi link jo app khud kholti hai, package naam mein "webapk"), na mile tab hi purana OpenWebPage (Chrome). Jawab global shOp (app / web).
+OPENJ = "\n".join([
+ "try {",
+ "  String u = \"" + APP + "\" + magicText.evaluateString(\"{\" + \"v=shK}\").trim() + \".\" + magicText.evaluateString(\"{\" + \"v=shN}\").trim();",
+ "  android.content.Intent i = new android.content.Intent(\"android.intent.action.VIEW\", android.net.Uri.parse(u));",
+ "  java.util.List l = appContext.getPackageManager().queryIntentActivities(i, 131072);",
+ "  for (int j = 0; j < l.size(); j++) {",
+ "    android.content.pm.ResolveInfo r = (android.content.pm.ResolveInfo) l.get(j);",
+ "    String p = r.activityInfo.packageName;",
+ "    if (p != null && p.indexOf(\"webapk\") >= 0) { i.setClassName(p, r.activityInfo.name); i.addFlags(268435456 | 536870912); appContext.startActivity(i); return \"app\"; }",
+ "  }",
+ "  return \"web\";",
+ "} catch (Throwable t) { return \"web\"; }"])
+OPEN = [{"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": OPENJ, "blockNextAction": True, "responseVariableName": "shOp", "runInBackgroundThread": False},
+        {"m_classType": "IfConditionAction", "m_SIGUID": 0, "m_constraintList": [{"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": {"m_name": "shOp", "m_type": 2, "isLocalVar": False}, "m_stringValue": "app", "m_stringComparisonType": 0, "m_stringEqual": False}]},
+        {"m_classType": "OpenWebPageAction", "m_SIGUID": 0, "m_urlToOpen": APP + "{v=shK}.{v=shN}", "m_httpGet": False, "m_disableUrlEncode": True},
+        END]
 def dlg(title, text, yes, no, sec=120):
     return {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": title, "text": text, "positiveText": yes, "negativeText": no,
             "cancelAfterTimeout": True, "timeoutSeconds": sec, "htmlFormat": True, "useCustomColors": True, "textColor": -1, "bgColor": -15788246}
@@ -60,12 +77,12 @@ _dl = _a[_d]; _dl['positiveText'] = '📸 Photo do'; _dl['negativeText'] = '⏰ 
 _dl['text'] = _dl['text'].replace('{v=qoul}<br><br>', '{v=qoul}<br><br>📸 <b>10 min mein paani ke glass ki photo</b> — warna apps band.<br>')
 _e = next(i for i in range(_d, len(_a)) if _a[i]['m_classType'] == 'ElseAction'); _end = next(i for i in range(_e, len(_a)) if _a[i]['m_classType'] == 'EndIfAction')
 assert _a[_d + 1].get('m_intValueIncrement') and _a[_d + 1]['m_variable']['m_name'] == 'pnCount'
-_yes = [OPEN, expr("pnDue", NOW + "+" + str(GAP_PAANI)), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "pnSnz", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False}]
+_yes = [*OPEN, expr("pnDue", NOW + "+" + str(GAP_PAANI)), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "pnSnz", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False}]
 _no = [expr("pnDue", NOW + "+" + str(GAP_PAANI)), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "pnSnz", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False},
        toast("⏳ 10 min mein photo — warna apps band")]
 _a[_d - 1:_end] = pending("paani", "💧 Paani") + [_a[_d - 1], _dl] + _yes + [_a[_e]] + _no   # pnCount ab sirf sahi photo par (lock macro, webhook)
 PA['macro']['m_description'] = "💧 Har 40 min paani (11 am – 12 raat). Popup ka 📸 = Blue Khata ka live camera + AI. 10 min mein photo nahi = 📸 Sehat lock. Glass ki ginti sirf sahi photo par."
-PA['globalVariables'] += [var("shDue"), var("shN"), var("shK", 2), var("shAsk")]
+PA['globalVariables'] += [var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shOp", 2)]
 
 # ---------------------------------------------------------------- 2) ☕ Coffee · 🍎 Fruit · 🥜 Nuts
 K1, K2, K3, K4, K5 = 112233445566751, 112233445566752, 112233445566753, 112233445566754, 112233445566755
@@ -88,7 +105,7 @@ ka += [
       {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False},
       *[x for x in pending("{v=kpK}", "{v=kpT}")],
       iff([never()]), dlg("{v=kpT}", "{v=kpM}<br><br>📸 <b>10 min mein photo</b> — warna apps band (10 → 30 → 60 min).", "📸 Photo do", "⏰ Baad mein"),
-        OPEN,
+        *OPEN,
       ELSE, toast("⏳ 10 min mein photo — warna apps band"), END,
     END,
 ]
@@ -101,11 +118,11 @@ KH = {"macroExportVersion": 1, "macro": {
                      + [{"m_classType": "RegularIntervalTrigger", "m_SIGUID": K4, "m_seconds": 60, "m_useAlarm": True},
                         {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": K5}],
     "m_actionList": ka, "m_constraintList": []},
-    "globalVariables": [var("kpK", 2), var("kpT", 2), var("kpM", 2), var("kpPend", 0), var("kpSetAt"), var("kpAge"), var("shDue"), var("shN"), var("shK", 2), var("shAsk")],
+    "globalVariables": [var("kpK", 2), var("kpT", 2), var("kpM", 2), var("kpPend", 0), var("kpSetAt"), var("kpAge"), var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shOp", 2)],
     "userIcons": None}
 
 # ---------------------------------------------------------------- 3) 📸 Sehat lock
-T1, T2, T3 = 112233445566761, 112233445566762, 112233445566763
+T1, T2, T3, T4 = 112233445566761, 112233445566762, 112233445566763, 112233445566764
 WH = {"m_classType": "WebHookTrigger", "m_SIGUID": T3, "identifier": "nt_sehat", "variableWhiteListEnabled": True, "variableWhiteList": ["shOk", "shZ"]}
 OKDONE = [sint("shDue", 0), sint("shLock", 0), sint("shLv", 0), sint("shN", 0), FTHIDE,
           iff([streq("shK", "paani")]), inc("pnCount"), END,
@@ -117,14 +134,15 @@ LOCKNOW = [
     iff([gt("shLv", 1)]), expr("shLock", NOW + "+" + str(LOCKS[2])), END,
     expr("shDue", "{v=shLock}+" + str(PHOTO_SEC)),                 # lock ke baad phir 10 min ka mauqa — phir bhi nahi = agla (lamba) lock
     iff([lt("shLv", 2)]), inc("shLv"), END,
+    sint("shLkA", 1),                                              # v57: lock lagte hi photo ka sawal (abhi ya agli dafa phone kholte hi)
     expr("lMin", "({v=shLock}-" + NOW + ")/60", True),
     bell("⛔ Apps band — {lv=lMin} min", "Photo nahi di. 📸 Photo do to abhi khul jayega (Blue Khata)."),
     *patti("⛔ Apps {lv=lMin} min band — 📸 photo do to khulega"),
 ]
 ASK = [   # band app khuli: popup — "📸 Photo do" (camera + 🚨 zaroori wahi Blue Khata mein). Timeout / Theek hai = kuch nahi.
-    expr("shAsk", NOW),
+    expr("shAsk", NOW), sint("shLkA", 0),
     iff([never()]), dlg("⛔ Sehat lock — {lv=lMin} min baqi", "{v=shK} ki photo nahi di.<br>📸 <b>Photo do</b> = abhi khul jayega.<br>🚨 Zaroori kaam ho to Blue Khata mein 10 min ka button.", "📸 Photo do", "Theek hai", 15),
-      OPEN,
+      *OPEN,
     ELSE, END,
 ]
 la = [
@@ -151,6 +169,11 @@ la = [
             END,
           END,
         END,
+        # v57 (malik: "lock on hone par bhi picture ka option de dein"): lock shuru hote hi popup — phone band ho to agli dafa kholte hi (shLkA, ek dafa)
+        expr("askAge", NOW + "-{v=shAsk}", True),
+        iff([gt("lLeft", 0, True), gt("shLkA", 0), lt("emL", 1, True), gt("askAge", 20, True)] + copy.deepcopy(SHOWOK)),
+          expr("lMin", "({v=shLock}-" + NOW + ")/60", True), *ASK,
+        END,
       END,
     END,
 ]
@@ -161,9 +184,9 @@ SL = {"macroExportVersion": 1, "macro": {
     "localVariables": [lvar("dAge"), lvar("lLeft"), lvar("emL"), lvar("askAge"), lvar("lMin"), lvar("never", 0)],
     "m_triggerList": [{"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 30, "m_useAlarm": False},
                       {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "isAllApps": False, "m_packageNameList": PK, "m_applicationNameList": NM},
-                      WH],
+                      WH, {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T4}],
     "m_actionList": la, "m_constraintList": []},
-    "globalVariables": [var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shLock"), var("shLv"), var("shOk", 2), var("shZ", 2), var("shEm"), var("shEmDay", 2), var("pnCount")],
+    "globalVariables": [var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shLock"), var("shLv"), var("shOk", 2), var("shZ", 2), var("shEm"), var("shEmDay", 2), var("pnCount"), var("shOp", 2), var("shLkA")],
     "userIcons": None}
 
 if __name__ == '__main__':

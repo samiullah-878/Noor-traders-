@@ -6,7 +6,7 @@
 //          'printing' jis ki dhadkan (beatAt, label-print v4.1) 3 min se nahi = "⚠ atka hua" (Cancel = PC foran saaf karta hai).
 // Screen: din ke hisaab se -> item -> har barcode (packet size) ki ginti. Chips: Aaj · Kal · 7 din · 30 din · status · search.
 // PDF: app ka openReportPreview (poori screen + WhatsApp / share).
-import { smartHit } from './smart-search.js?v=2.324.1';   // v2.98: 🔎 spelling-maafi list search
+import { smartHit } from './smart-search.js?v=2.325.0';   // v2.98: 🔎 spelling-maafi list search
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = n => new Intl.NumberFormat('en-PK').format(Math.round((Number(n) || 0) * 100) / 100);
@@ -170,7 +170,7 @@ export function liveLabelsHTML(list, opts = {}) {   // v2.97: pos-stock bhi iste
   if (!act.length && !fin.length) return '';
   let n = 0;
   const row = j => { const tot = Number(j.total) || Number(j.copies) || 1, sent = Math.min(tot, Number(j.sent) || 0), pr = j.status === 'printing', cx = isCx(j), st = isStuck(j, now), sk = pr && j.stuck && j.stuck.why ? j.stuck : null, bq = canBaqi() && !baqiDone.has(j.id) ? baqiOf(j) : 0;
-    return `<div class="lv-row ${j.status}${cx ? ' cx' : ''}${st ? ' stuck' : ''}" data-lv-id="${esc(j.id)}"><div class="lv-t"><b>${esc(j.name || 'Item')}</b><small>${esc(j.code || '')}${Number(j.qty) > 1 ? ' · ' + num(j.qty) + ' wala' : ''}</small></div>
+    return `<div class="lv-row ${j.status}${cx ? ' cx' : ''}${st ? ' stuck' : ''}" data-lv-id="${esc(j.id)}"><div class="lv-t"><b>${esc(j.name || 'Item')}</b><small>${esc(j.code || '')}${Number(j.qty) > 1 ? ' · ' + num(j.qty) + ' wala' : ''}</small>${j.status === 'done' && j.ur && !/^(ok|roman)$/.test(j.ur) ? `<small class="lv-ur">🔤 Urdu nahi chhapi — ${esc(String(j.ur).slice(0, 120))}</small>` : ''}</div>
       <div class="lv-s">${cx && (pr || j.status === 'new') ? '<em class="cx">✕ cancel ho raha…</em>' : st ? `<em class="stk">⚠ atka hua · ${num(sent)} / ${num(tot)}</em>` : sk ? `<em class="stk">⚠️ Printer ruk gaya — ${esc(sk.why)} · ${num(sent)} / ${num(tot)}</em><small class="lv-hint">Printer par FEED dabayein — chal pare to khud aage chhapega</small>` : pr ? `<em class="pr">🖨 ${num(sent)} / ${num(tot)}</em>` : j.status === 'new' ? `<em>⏳ line mein #${++n} · ${num(tot)}</em>` : j.status === 'done' ? `<em class="ok">✓ ${num(tot)} chhap gaye</em>` : j.status === 'cancelled' ? `<em class="cx">✕ cancel${Number(j.sent) ? ' · ~' + num(j.sent) + ' chhape' : ''}</em>` : `<em class="bad">⚠ ${esc(j.error || j.status)}</em>`}
       ${pr && !st ? `<i class="lv-bar"><u style="width:${Math.round(sent / tot * 100)}%"></u></i>` : ''}</div>
       ${(pr || j.status === 'new') && !cx ? `<button type="button" class="lv-x" data-lv-cancel="${esc(j.id)}">✕ Cancel</button>` : ''}${j.status === 'done' && ag ? againHTML(j) : ''}${bq ? `<button type="button" class="lv-bq" data-lv-baqi="${esc(j.id)}">▶ Baqi chhapo (${num(Math.min(200, bq))})</button>` : ''}</div>`; };

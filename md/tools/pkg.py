@@ -90,17 +90,19 @@ import raatband as RBM
 mrb, vrb = fix(json.loads(json.dumps(RBM.RB)), h64('claude|raatband'), '🌙 Raat 12-11 band')   # v53 (17 Nov): purana ⛔ Subah 11 tak band, yeh naya — sirf package list, koi OR / variable nahi
 import nabz as NBM
 mnb, vnb = fix(json.loads(json.dumps(NBM.NB)), h64('claude|nabz'), '🚨 Dukan nigrani')   # v55 (17 Nov): dukan ka system ruke to awaaz + screen par patti (PC pcBeat/<chaabi>, chaabi app se webhook)
+import alfa as ALM
+mal, val = fix(json.loads(json.dumps(ALM.AL)), h64('claude|alfa'), '🏦 Alfa notification')   # v57 (19 Nov): Alfa app ki BAF A/C notification -> bankSms (chaabi app se webhook nt_bank)
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb + vsl:
+for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb + vsl + val:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📸 Sehat lock: paani (40 min) · coffee 2:00 · fruit 2:30 · nuts 4:00 — 10 min mein photo, warna apps band 10 → 30 → 60 min.",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl],   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "🏦 Alfa notification se bank entry · 📸 photo ab installed Blue Khata mein · lock lagte hi photo ka sawal.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl, mal],   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
@@ -121,7 +123,7 @@ assert not re.search(r'(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{30,}', chk), 'lambi 
 open(os.path.join(REPO, 'pkg.json'), 'w').write(s)
 open(os.path.join(REPO, 'ver.txt'), 'w').write(ver + '\n')
 # validator ke liye har macro alag .macro shakal mein bhi
-for nm, m in (('p', mp), ('k', mk), ('s', msl)):
+for nm, m in (('p', mp), ('k', mk), ('s', msl), ('a', mal)):
     json.dump({"macroExportVersion": 1, "macro": m, "globalVariables": vars_, "userIcons": None},
               open(os.path.join(D, f'pkg_{nm}.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('pkg', len(s), [m['m_name'] for m in pkg['macros']])

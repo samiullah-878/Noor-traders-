@@ -8890,3 +8890,26 @@ listenKhWa settings khulne par). PIN ka khana ab default malik ka number. QR ki 
 v2.324.0 ki patti par likha tha 'Settings → 📲 WhatsApp Business' — aisa koi row hai hi nahi; malik ko nahi mila ('jahan tum ne bola tha wahan nahi chal raha').
 Asal jagah: Settings → 🔌 POS aur AI → '📲 Gahak ko WhatsApp parchi (naya number)' (#waOutBtn, wa-out.js). Ab patti mein yehi naam ka button (data-ws-wo)
 -> window.ntWaOutOpen() seedha wahi khirki. Sabaq: malik ko kisi setting ki jagah batao to naam CODE se dekh kar (setRow ka asal label), andaze ka naam nahi.
+
+=== v2.325.0 (2026-11-19) — 🏦 Alfa notification · 📸 Sehat photo installed app mein · ⛔ lock par photo · 🔤 label Urdu (md pkg v57) ===
+1) 🏦 Malik: 'aisa pop (Alfa · PKR 12990 received … BAF A/C *0294 … Tx ID FT…) aaye to add kar do · SMS aaye to double na ho'.
+   Phone: naya macro '🏦 Alfa notification' (md/tools/alfa.py): NotificationTrigger com.base.bankalfalah + message mein 'BAF' -> Java (OTP / PIN /
+   password wali nahi, BAF + PKR zaroori) -> POST bankSms {k, src 'notif', from 'Alfa', text '{not_title} — {notification}'} (wahi rules, koi naya rule nahi).
+   Net na ho = text global bkQ (20 tak), har 5 min (sirf jab bkQ ho) + agli notification par khud. Chaabi / link REPO MEIN NAHI: app (malik, bank-phone.js,
+   din mein 1 dafa, 8 s baad) webhook nt_bank?bkU=<bankSms REST link>&bkK=<blueAccess/bankKey> — phone par khamosh (koi paigham nahi). bankKey na ho = kuch nahi.
+   PC bank-parchi v2.8 + app bank-sms.js (dono EK jaisa): 'BAF A/C' wali notif ab Alfalah parser se (tareekh 19-11-26 at 17:01, account 0294, Tx ID) —
+   pehle HBL wale notif parser mein jati thi (tareekh nahi = khud nahi lagti, note 'HBL aaye'). Notif mein tareekh kati ho = aane ka waqt (6 ghante).
+   DOUBLE NAHI: handle() ka jurwan (ZA+dir+amt, ±30 min, notif ≠ sms) + Tx ID (R+txn) — jo pehle aaye wohi lagta, doosra bankSms kind 'dup'; app twinKeys
+   (alfalah + txn) bhi ek dikhati. Test: node simulate — notif laga, SMS 'jurwan', khata mein ek hi bk…a.
+2) 📸 Malik: 'Chrome mein khulta hai, speed se nahi, installed app ki bajaye · do tab ka notification aata hai'. Phone (sehat.py OPEN): pehle Java —
+   queryIntentActivities(VIEW link, MATCH_ALL) mein package 'webapk' (Chrome ki installed Blue Khata) -> setClassName + NEW_TASK|SINGLE_TOP -> 'app';
+   na mile = purana OpenWebPage (Chrome). Global shOp. App: #sehat par camera FORAN (pehle session ka intezar tha) — sehat.js v1.1 need(): login / malik /
+   AI sirf 📸 ke baad (A.ready). 'Doosre tab' wala paigham (BroadcastChannel sam-tabs) installed app mein khulne se khatam; purane Chrome tabs malik khud band kare.
+3) ⛔ Malik: 'lock on hone par bhi picture ka option de dein'. Sehat lock: LOCKNOW = shLkA 1; har 30 s + 🔓 unlock (naya DeviceUnlockedTrigger T4) par
+   lock baqi + shLkA + phone khula (SHOWOK) + askAge > 20 = WAHI popup '📸 Photo do / Theek hai' (ASK, shLkA 0). Phone band tha = agli dafa kholte hi ek dafa.
+4) 🔤 Malik: 'Urdu barcode par auto aana chahiye — naya server lagne se nahi aa raha' (label par 'dal chana - 0.5', Urdu nahi). Asal wajah PC log ke
+   baghair pakki NAHI (server PC bridge se nahi jura tha). label-print v5.1: (a) save hua Urdu naam na ho = urdu-names roman2ur (bina AI) — parchi wala
+   qaida; (b) PowerShell Urdu tasveer fail = pehle HAMESHA ke liye null yaad (script restart tak Urdu gayab) — ab 2 min baad dobara, PowerShell poore raaste
+   se, timeout 30 s; (c) har job par ur = ok / roman / 'naam nahi' / 'band (label-settings)' / '✕ tasveer nahi bani: <PowerShell ki wajah>' -> app ki
+   label patti (barcode.js liveLabelsHTML) par narangi line '🔤 Urdu nahi chhapi — …'. Agla qadam: malik label chhape, patti ki photo — wajah pakki.
+AI: sirf 📸 photo jaanch (pehle jaisa). Bank notification, lock, label Urdu mein AI nahi.

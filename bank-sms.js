@@ -39,7 +39,8 @@ export function parseBank(text, src = 'sms', subj = '') {
   if (via) out.via = via[1].replace(/\s+ID$/i, '').trim();
   // ---- v2.99.74 🔔 HBL Mobile app ki LIVE NOTIFICATION (MacroDroid: "{not_title} — {notification}") — email / SMS se pehle ----
   //  "Transaction Alert: Fund Transfer — PKR 10,000 sent to HASEEB CORPORAT HBL from your HBL A/C *6303 on 13-Oct-2026 23:21 via HBL Mobile,Tx ID 1300557247. UAN: …"
-  if (src === 'notif' || /^\s*Transaction Alert/i.test(t)) {
+  const baf = /BAF\s*A\/C|Bank\s*Alfalah/i.test(t);   // v2.8 (19 Nov, malik: "aisa pop aaye to add kar do"): Alfa app ki notification = Alfalah wala parser (tareekh '19-11-26 at 17:01', account, Tx ID — SMS se jurwan)
+  if (!baf && (src === 'notif' || /^\s*Transaction Alert/i.test(t))) {
     out.src = 'notif'; out.amt = amtOf(t);
     out.txn = (t.match(/\bT(?:x|XN|rx)\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || t.match(/Transaction\s*(?:ID|No\.?|#)\s*[:\-]?\s*([A-Z0-9]{4,})/i) || [])[1] || '';
     out.acct = (t.match(/A\/C\s*(?:No\.?\s*)?\*?\s*([0-9*]{4,})/i) || [])[1] || '';
@@ -93,7 +94,7 @@ export function parseBank(text, src = 'sms', subj = '') {
   //  "Your Bank Alfalah card (54917) used for PKR 6,000.00 on 13/10/2026 at 11:19 at JINN-BEGA P/S KHARIAN PK. Avl Limit: 4,429.70"
   //  "SMS Alerts Monthly Fee PKR 250.00 & Tax 40.00 Debited from A/C: 5797-5***5826 on 12-Oct-2026"
   //  "Your Bank Alfalah Card Stmt.Summary. Amt Due: 1,453,960.50 Min Pmt: 21,285.00 Due Date: 26/10/2026."
-  if (src !== 'email' && src !== 'notif' && /BAF\s*A\/C|Bank\s*Alfalah|021111225111|Stmt\.?\s*Summary|Avl\s*Limit/i.test(t)) {
+  if (src !== 'email' && (src !== 'notif' || baf) && /BAF\s*A\/C|Bank\s*Alfalah|021111225111|Stmt\.?\s*Summary|Avl\s*Limit/i.test(t)) {
     out.bankAc = 'alfalah';
     const n2 = s => Math.round(Number(String(s || '0').replace(/,/g, '')) * 100);
     let m = t.match(/Stmt\.?\s*Summary\.?\s*Amt\s*Due:?\s*([\d,]+(?:\.\d+)?)\s*Min\s*Pmt:?\s*([\d,]+(?:\.\d+)?)\s*Due\s*Date:?\s*(\d{1,2})\/(\d{1,2})\/(\d{4})/i);
