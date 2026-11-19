@@ -47,10 +47,13 @@ rem = json.loads(json.dumps(RM.REMOTE))
 OLD_PAANI_BREAK = -6917313488054668512          # purane "💧 Paani break" ka GUID — usi jagah naya aa jayega
 import brk as BRM
 # v41 (14 Nov): paani ke popup ke foran baad "10 minute ka break?" — dialog ke EndIf ke baad jorna
-_pa = paani['macro']['m_actionList']; _i = next(i for i, x in enumerate(_pa) if x.get('m_classType') == 'ToastAction' and '10 minute baad dobara yaad' in str(x.get('m_messageText')))
-assert _pa[_i + 1]['m_classType'] == 'EndIfAction'   # v48 (16 Nov, malik: '10 minute wala band karna tha'): break ka sawal HATA — BRM.ask() mat jodo jab tak malik na kahe
+# v48 (16 Nov, malik: '10 minute wala band karna tha'): break ka sawal HATA — BRM.ask() mat jodo jab tak malik na kahe
+# v56 (19 Nov): 📸 Sehat lock — paani har 40 min + popup '📸 Photo do' (sehat.PA = paani3 badla), khana ki jagah ☕ Coffee · Fruit · Nuts (WAHI GUID), naya lock macro
+import sehat as SH
+paani = SH.PA
 mp, vp = fix(paani, OLD_PAANI_BREAK, '💧 Paani')
-mk, vk = fix(khana, h64('claude|khana'), '🍽 Khana-peena')
+mk, vk = fix(SH.KH, h64('claude|khana'), '☕ Coffee · Fruit · Nuts')
+msl, vsl = fix(SH.SL, h64('claude|sehatlock'), '📸 Sehat lock')
 ma, va = fix(acc, h64('claude|acc'), '🛠 Accessibility khud ON')
 mr, vr = fix(rem, h64('claude|remote5'), '🤖 Claude Remote 5')
 mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
@@ -92,12 +95,12 @@ vars_, seen = [], set()
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb:
+for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb + vsl:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🚨 Dukan nigrani: dukan ka system ruke to awaaz + screen par patti (9:30 am - 9 pm).",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb],   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "📸 Sehat lock: paani (40 min) · coffee 2:00 · fruit 2:30 · nuts 4:00 — 10 min mein photo, warna apps band 10 → 30 → 60 min.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl],   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
@@ -118,7 +121,7 @@ assert not re.search(r'(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{30,}', chk), 'lambi 
 open(os.path.join(REPO, 'pkg.json'), 'w').write(s)
 open(os.path.join(REPO, 'ver.txt'), 'w').write(ver + '\n')
 # validator ke liye har macro alag .macro shakal mein bhi
-for nm, m in (('p', mp), ('k', mk)):
+for nm, m in (('p', mp), ('k', mk), ('s', msl)):
     json.dump({"macroExportVersion": 1, "macro": m, "globalVariables": vars_, "userIcons": None},
               open(os.path.join(D, f'pkg_{nm}.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('pkg', len(s), [m['m_name'] for m in pkg['macros']])

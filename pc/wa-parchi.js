@@ -97,7 +97,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.38';   // v2.38 (18 Nov): kh-wa v1.11 (🎥 'video 138841' malik ki apni chat se bhi) — is file mein sirf version (doctor dobara chalaye)
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.39';   // v2.39 (19 Nov): 🔢 malik ka apna link PIN se bhi (waCmd do 'code' + ph → requestPairingCode, waLink st 'code') — QR ke saath · v2.38 (18 Nov): kh-wa v1.11 (🎥 'video 138841' malik ki apni chat se bhi) — is file mein sirf version (doctor dobara chalaye)
 //   // v2.34: kh-wa v1.8 (tafseel lazmi) — is file mein sirf version (doctor dobara chalaye)
 const TH_PRINTER = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })(), W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
@@ -1530,7 +1530,7 @@ async function start(ZINDA) {
   const seen = (() => { try { return JSON.parse(fs.readFileSync(SEEN_FILE, 'utf8')).ids || []; } catch { return []; } })(), seenSet = new Set(seen);
   let seenT = null; const markSeen = id => { if (!id || seenSet.has(id)) return; seen.push(id); seenSet.add(id); while (seen.length > 500) seenSet.delete(seen.shift()); clearTimeout(seenT); seenT = setTimeout(() => { try { fs.writeFileSync(SEEN_FILE, JSON.stringify({ ids: seen })); } catch {} }, 500); };
   const told = new Map(); const tellOnce = (k, m) => { if (Date.now() - (told.get(k) || 0) < 3600000) return; told.set(k, Date.now()); log(m); };
-  let sock = null, gen = 0, retry = 0, retryT = null, version = null;
+  let sock = null, gen = 0, retry = 0, retryT = null, version = null, pair = '', pairAsked = false;   // v2.39: pair = '92…' — malik ka apna link QR ki jagah 8 harf ke PIN se
   const wipeAuth = () => { try { fs.rmSync(AUTH_DIR, { recursive: true, force: true }); } catch (e) { log('⚠️ wa-auth nahi mita: ' + e.message); } };
   const endSock = () => { gen++; clearTimeout(retryT); const s = sock; sock = null; try { s && s.end(undefined); } catch {} };
   async function connect(why) {
@@ -1548,26 +1548,30 @@ async function start(ZINDA) {
     s.ev.on('messages.upsert', ev => { if (my === gen) for (const m of (ev && ev.messages) || []) intake(m, s); });
   }
   async function onConn(u, s, state) {
-    if (u.qr) { setLink({ st: 'qr', qr: u.qr, err: '' }); log('🔳 naya QR — app mein dukan ke phone se scan karein'); }
-    if (u.connection === 'open') { retry = 0; const me = normPh((s.user && s.user.id) || ''); setLink({ st: 'open', qr: '', me, err: '' }); log(`🟢 WhatsApp jur gaya — ${phPretty(me)}`); }
+    if (u.qr && pair) {   // v2.39: 🔢 PIN se jorna — QR nahi dikhana (print phone wala tareeqa)
+      if (!pairAsked) { pairAsked = true; try { const c = String(await within(s.requestPairingCode(pair), 20000, 'pairing code') || '').toUpperCase(); setLink({ st: 'code', qr: '', code: c.length === 8 ? c.slice(0, 4) + '-' + c.slice(4) : c, codeFor: '0' + pair.slice(2), err: '' }); log('🔢 malik ke link ka PIN bana — ' + phPretty('0' + pair.slice(2))); } catch (e) { pair = ''; setLink({ st: 'error', qr: '', code: '', err: 'PIN nahi bana: ' + String(e.message).slice(0, 100) }); } }
+    } else if (u.qr) { setLink({ st: 'qr', qr: u.qr, code: '', err: '' }); log('🔳 naya QR — app mein dukan ke phone se scan karein'); }
+    if (u.connection === 'open') { retry = 0; pair = ''; const me = normPh((s.user && s.user.id) || ''); setLink({ st: 'open', qr: '', code: '', me, err: '' }); log(`🟢 WhatsApp jur gaya — ${phPretty(me)}`); }
     if (u.connection !== 'close') return;
     const code = Number(u.lastDisconnect && u.lastDisconnect.error && u.lastDisconnect.error.output && u.lastDisconnect.error.output.statusCode) || 0, R = B.DisconnectReason;
     endSock();
     if (code === R.loggedOut) { log('🔴 WhatsApp se link hat gaya (logout) — naya QR'); wipeAuth(); setLink({ st: 'closed', qr: '', me: '', err: 'Link hat gaya — naya QR scan karein' }); retryT = setTimeout(() => connect('logout ke baad').catch(e => log('⚠️ ' + e.message)), 3000); return; }
     if (code === R.restartRequired) { connect('jorne ke baad').catch(e => log('⚠️ ' + e.message)); return; }
-    if (!state.creds.registered) { setLink({ st: 'off', qr: '', err: 'QR ka waqt khatam — app mein 🔗 Jorein dabayein' }); log('⏸ QR scan nahi hua — app ke 🔗 ka intezar'); return; }
+    if (!state.creds.registered) { const wasPin = !!pair; pair = ''; setLink({ st: 'off', qr: '', code: '', err: (wasPin ? 'PIN' : 'QR') + ' ka waqt khatam — app mein 🔄 Naya QR ya 🔢 Pin dobara dabayein' }); log('⏸ ' + (wasPin ? 'PIN' : 'QR') + ' se nahi jura — app ke hukum ka intezar'); return; }
     if (code === R.connectionReplaced) { setLink({ st: 'error', qr: '', err: 'Yahi link kisi aur jagah bhi chal raha hai — 10 min baad dobara' }); retryT = setTimeout(() => connect('replaced').catch(() => {}), 10 * 60000); return; }
     const wait = [2, 5, 10, 30, 60, 120, 300][Math.min(retry++, 6)];
     setLink({ st: 'closed', qr: '', err: `Rabta toota (${code || '?'}) — ${wait} sec mein dobara` }); log(`🟠 WhatsApp rabta toota (${code || '?'}) — ${wait} sec`);
     retryT = setTimeout(() => connect('dobara').catch(e => log('⚠️ ' + e.message)), wait * 1000);
   }
-  async function doCmd(c) {
+  async function doCmd(c, ph) {
     log('🔗 app ka hukum: ' + c);
+    if (c === 'code' && !/^03\d{9}$/.test(ph || '')) { setLink({ st: 'error', err: 'Number ghalat — 03xx-xxxxxxx' }); return; }
     if (sock) { try { await within(sock.logout(), 15000, 'logout'); } catch {} }
     endSock(); wipeAuth();
-    setLink({ st: 'off', qr: '', me: '', out: c === 'logout' ? Date.now() : 0, err: c === 'logout' ? '' : 'Naya QR ban raha hai…' });   // v2.3: out = malik ne khud alag kiya
+    pair = c === 'code' ? '92' + ph.slice(1) : ''; pairAsked = false;   // v2.39: 🔢 PIN — WhatsApp → Linked devices → "Link with phone number instead"
+    setLink({ st: 'off', qr: '', code: '', me: '', out: c === 'logout' ? Date.now() : 0, err: c === 'logout' ? '' : c === 'code' ? 'PIN ban raha hai…' : 'Naya QR ban raha hai…' });   // v2.3: out = malik ne khud alag kiya
     if (c === 'logout') return;
-    await connect('app: naya link');
+    await connect(c === 'code' ? 'app: PIN' : 'app: naya link');
   }
   // ---------- 📨 paigham ----------
   let msgQ = Promise.resolve();
@@ -2311,13 +2315,13 @@ async function start(ZINDA) {
   // ---------- 🔗 app ke hukum (relink / logout) — ek dafa, sirf taza (server waqt) ----------
   BA.doc('waCmd').onSnapshot(s => {
     if (!s.exists) return; const d = s.data() || {}, at = Number(d.at) || 0, c = String(d.do || '');
-    if (!at || at === L.cmd || !/^(relink|logout|link)$/.test(c)) return;
+    if (!at || at === L.cmd || !/^(relink|logout|link|code)$/.test(c)) return;
     const age = Date.now() - (s.updateTime ? s.updateTime.toMillis() : at);
     L.cmd = at;
     if (age > 10 * 60000) { setLink({}); return; }
     setLink({});
     if (c === 'link') L.out = 0;
-    (c === 'link' && !(sock && L.st === 'open') ? connect('app: jorein') : c === 'link' ? Promise.resolve() : doCmd(c)).catch(e => { log('⚠️ hukum: ' + e.message); setLink({ st: 'error', err: String(e.message).slice(0, 140) }); });
+    (c === 'link' && !(sock && L.st === 'open') ? connect('app: jorein') : c === 'link' ? Promise.resolve() : doCmd(c, normPh(d.ph || ''))).catch(e => { log('⚠️ hukum: ' + e.message); setLink({ st: 'error', err: String(e.message).slice(0, 140) }); });
   }, authErr);
 
   setInterval(() => { if (Date.now() - lastLinkW > 5 * 60000) setLink({}); }, 60000);   // app ko pata rahe PC zinda

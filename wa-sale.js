@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.322.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.322.0';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.322.0';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.322.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.323.0';
+import { smartSearch, noteHit } from './smart-search.js?v=2.323.0';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.323.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.323.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -751,6 +751,7 @@ async function sendPic(file) {
 // ---------- ⚙️ WhatsApp setting (sirf malik): link / QR · numbers · print ----------
 let wl = null, wlErr = '', wlStop = null, wc = null, wcErr = '', wcStop = null, qrLib = null, qrLast = '', a4pc = null, a4pcStop = null, wl2 = null, wl2Err = '', wl2Stop = null, qrLast2 = '';   // v2.186.0: wl2 = 🖨 print wala doosra phone (blueAccess/waLink2)   // v2.185.0: a4pc = HP printer ki haalat (blueAccess/a4Pc)
 const wst = {};
+let pinOpen = false;   // v2.323.0: 🔢 Pin ka number wala khana khula
 function setAlive() { if (document.querySelector('#dialog[open] #dialogBody [data-ws-setroot]')) return true; setUnlisten(); return false; }
 function setUnlisten() { for (const f of [wlStop, wcStop, a4pcStop, wl2Stop]) { try { f?.(); } catch {} } wlStop = wcStop = a4pcStop = wl2Stop = null; qrLast = qrLast2 = ''; }
 function setOpen() {
@@ -771,16 +772,26 @@ function linkHTML() {
   const [cl, t, sub] = !at ? ['w', '🖥 PC ne abhi jawab nahi diya', 'PC ki nayi script (wa-parchi) 3–5 min mein khud lagti hai — PC ON hai?']
     : st === 'open' ? ['ok', '🟢 WhatsApp juda hua', L.me ? '📱 ' + L.me : '']
     : st === 'qr' ? ['warn', '🟡 QR scan karein', 'Dukan wale phone mein WhatsApp kholein → ⋮ (upar daayein) → Linked devices → Link a device → neeche wala QR scan karein.']
-    : st === 'closed' ? ['bad', '🔴 WhatsApp toot gaya', '🔄 Naya QR dabayein, phir scan karein.']
-    : st === 'off' && L.out ? ['w', '⚪ Aap ka WhatsApp PC se alag hai', 'Aap ne ⛔ Unlink kiya — aap ki chats PC par nahi. Print ab neeche wale "🖨 Print wala phone" se. Dobara jorna ho to 🔄 Naya QR.']
-    : st === 'off' ? ['w', '⚪ PC par band', 'Neeche ✅ Chalu karein.'] : st === 'error' ? ['bad', '⚠️ Ghalti', String(L.err || '')] : ['w', '⏳ ' + (st || 'intezar'), ''];
+    : st === 'code' ? ['warn', '🔢 Yeh PIN apne phone mein likhein', 'Apna WhatsApp → ⋮ (upar daayein) → Linked devices → Link a device → neeche "Link with phone number instead" → yeh 8 harf.']
+    : st === 'closed' ? ['bad', '🔴 WhatsApp toot gaya', '🔄 Naya QR ya 🔢 Pin dabayein.']
+    : st === 'off' && L.out ? ['w', '⚪ Aap ka WhatsApp PC se alag hai', 'Aap ne ⛔ Unlink kiya — aap ki chats PC par nahi. Print ab neeche wale "🖨 Print wala phone" se. Dobara jorna ho to 🔄 Naya QR ya 🔢 Pin.']
+    : st === 'off' ? ['w', '⚪ WhatsApp juda nahi', L.err ? String(L.err) : 'Neeche 🔄 Naya QR ya 🔢 Pin se jorein.'] : st === 'error' ? ['bad', '⚠️ Ghalti', String(L.err || '')] : ['w', '⏳ ' + (st || 'intezar'), ''];
   const pcl = at ? `🖥 ${esc(L.host || 'PC')}${L.ver ? ' · v' + esc(L.ver) : ''} · ${ago(at) === 'abhi' ? 'abhi' : ago(at) + ' pehle'}${quiet ? ' · ⚠️ PC chup?' : ''}` : '';
   const qr = st === 'qr' && L.qr ? `<div class="wps-qr" data-ws-qr="1">⏳ QR ban raha…</div>${at && Date.now() - at > 60000 ? '<p class="wps-err">⚠️ QR purana ho sakta hai — 🔄 Naya QR dabayein</p>' : ''}` : '';
   const prl = L.pr && L.pr.t && Date.now() - tms(L.pr.at) < 864e5 ? `<small class="wps-mut">🖨 Aakhri print: ${esc(L.pr.t)} · ${ago(tms(L.pr.at)) === 'abhi' ? 'abhi' : ago(tms(L.pr.at)) + ' pehle'}</small>` : '';   // v2.185.1: PC ka jawab — khamosh nahi
-  return `<div class="wps-lk ${cl}"><b>${t}</b>${sub ? `<small>${esc(sub)}</small>` : ''}${pcl ? `<small class="wps-mut">${pcl}</small>` : ''}${prl}</div>${qr}
-    <div class="wps-row"><button type="button" class="wps-tc" data-ws-relink="1">🔄 Naya QR</button>${st === 'open' || st === 'qr' ? '<button type="button" class="wps-tc bad" data-ws-logout="1">⛔ Unlink</button>' : ''}<i class="wps-wst">${stTxt(wst.cmd)}</i></div>`;
+  // v2.323.0: 🔢 PIN (malik: "upar barcode ke saath pin ka option") — QR ki jagah 8 harf, PC requestPairingCode (wa-parchi v2.39)
+  const code = st === 'code' && L.code ? `<div class="wps-pcode">${esc(L.code)}</div>${L.codeFor ? `<small class="wps-mut">📱 ${esc(L.codeFor)} ke liye · 2–3 min mein likhein, warna 🔢 Naya PIN</small>` : ''}` : '';
+  const pinRow = pinOpen && st !== 'open' && st !== 'code' ? `<div class="wps-nadd"><input type="tel" inputmode="tel" data-ws-pinph="1" maxlength="20" placeholder="Apna WhatsApp number" value="${esc(L.codeFor || L.me || cfgNow().prFrom[0] || '')}" autocomplete="off" enterkeyhint="done"><button type="button" class="wps-tc pri" data-ws-pingo="1">🔢 PIN banao</button></div>` : '';
+  const pinBtn = st === 'open' ? '' : `<button type="button" class="wps-tc${st === 'code' ? '' : ' pri'}" data-ws-pin="1">${st === 'code' ? '🔢 Naya PIN' : '🔢 Pin se jorein'}</button>`;
+  return `<div class="wps-lk ${cl}"><b>${t}</b>${sub ? `<small>${esc(sub)}</small>` : ''}${pcl ? `<small class="wps-mut">${pcl}</small>` : ''}${prl}</div>${qr}${code}${pinRow}
+    <div class="wps-row"><button type="button" class="wps-tc" data-ws-relink="1">🔄 Naya QR</button>${pinBtn}${st === 'open' || st === 'qr' || st === 'code' ? `<button type="button" class="wps-tc bad" data-ws-logout="1">${st === 'open' ? '⛔ Unlink' : '✕ Rehne dein'}</button>` : ''}<i class="wps-wst">${stTxt(wst.cmd)}</i></div>`;
 }
-function linkPaint() { const b = document.querySelector('#dialogBody [data-ws-link]'); if (!b) return; b.innerHTML = linkHTML(); qrLast = ''; qrPaint(); }
+function linkPaint() {
+  const b = document.querySelector('#dialogBody [data-ws-link]'); if (!b) return;
+  const i0 = b.querySelector('[data-ws-pinph]'), v = i0 ? i0.value : null, f = !!i0 && document.activeElement === i0;   // likhte waqt number na mite
+  b.innerHTML = linkHTML(); qrLast = ''; qrPaint();
+  const i1 = b.querySelector('[data-ws-pinph]'); if (i1 && v != null) { i1.value = v; if (f) i1.focus(); }
+}
 function qrLoad() {   // vendor/qrcode.js (qrcode-generator 1.4.4, MIT) — sirf zaroorat par
   if (!qrLib) qrLib = new Promise((ok, no) => {
     if (window.qrcode) { ok(window.qrcode); return; }
@@ -916,10 +927,13 @@ function numAdd() {
 }
 async function waCmd(cmd) {
   if (!C.owner() || !C.cloud?.sendWaCmd) return;
-  if (cmd === 'relink' && wl?.st === 'open' && !confirm('Abhi WhatsApp juda hua hai — naya QR banane se purana link toot jayega. Theek?')) return;
-  if (cmd === 'logout' && !confirm('WhatsApp ko PC se ALAG (unlink) karein?\nPhir parchiyan nahi aayengi jab tak naya QR scan na karein.')) return;
+  let ph = '';
+  if (cmd === 'code') { const inp = document.querySelector('#dialogBody [data-ws-pinph]'); ph = phNorm(inp ? inp.value : (wl?.codeFor || '')); if (!/^03\d{9}$/.test(ph)) { C.notice('Apna WhatsApp number likhein: 0300-1234567'); inp?.focus(); return; } }
+  if ((cmd === 'relink' || cmd === 'code') && wl?.st === 'open' && !confirm('Abhi WhatsApp juda hua hai — naya ' + (cmd === 'code' ? 'PIN' : 'QR') + ' banane se purana link toot jayega. Theek?')) return;
+  if (cmd === 'logout' && wl?.st === 'open' && !confirm('WhatsApp ko PC se ALAG (unlink) karein?\nPhir parchiyan nahi aayengi jab tak naya QR / PIN se na jorein.')) return;
+  if (cmd !== 'logout') pinOpen = false;
   wst.cmd = 'w'; linkPaint();
-  try { await withT(C.cloud.sendWaCmd(cmd), 12000); wst.cmd = 'ok'; C.notice(cmd === 'relink' ? '🔄 PC ko kaha — naya QR 10–30 sec mein' : '⛔ Unlink ka hukam PC ko gaya'); }
+  try { await withT(C.cloud.sendWaCmd(cmd, ph), 12000); wst.cmd = 'ok'; C.notice(cmd === 'relink' ? '🔄 PC ko kaha — naya QR 10–30 sec mein' : cmd === 'code' ? '🔢 PC ko kaha — PIN 10–30 sec mein yahan aayega' : '⛔ Unlink ka hukam PC ko gaya'); }
   catch (e) { wst.cmd = 'bad'; C.notice('✕ ' + (perm(e) ? 'Ijazat nahi' : e?.message || e)); }
   linkPaint(); setTimeout(() => { if (wst.cmd !== 'w') { wst.cmd = ''; linkPaint(); } }, 5000);
 }
@@ -958,6 +972,7 @@ document.addEventListener('keydown', e => {
   if (t?.matches?.('#dialogBody [data-ws-numin]')) { e.preventDefault(); numAdd(); return; }
   if (t?.matches?.('#dialogBody [data-ws-prin]')) { e.preventDefault(); prAdd(); return; }
   if (t?.matches?.('#dialogBody [data-ws-pfin]')) { e.preventDefault(); pfAdd(); return; }
+  if (t?.matches?.('#dialogBody [data-ws-pinph]')) { e.preventDefault(); waCmd('code'); return; }
   if (!document.querySelector('[data-ws-root]') || !t || t.tagName !== 'INPUT') return;
   if (t.id === 'search') {   // Enter = code / ek hi milta item → line
     const v = t.value.trim(); if (!v) return; e.preventDefault();
@@ -977,9 +992,9 @@ document.addEventListener('keydown', e => {
 document.addEventListener('focusin', e => { const r = e.target?.closest?.('#list .pp-cr, #list .pp-tr'); if (r && r.dataset.wsSel) selSet(r.dataset.wsSel); });
 document.addEventListener('click', e => {
   const t = e.target; if (!t?.closest) return;
-  const set = t.closest('[data-ws-relink],[data-ws-logout],[data-ws-l2],[data-ws-pfx],[data-ws-pfadd],[data-ws-tg],[data-ws-numx],[data-ws-numadd],[data-ws-a4m],[data-ws-a4c],[data-ws-prx],[data-ws-pradd]');
+  const set = t.closest('[data-ws-relink],[data-ws-pin],[data-ws-pingo],[data-ws-logout],[data-ws-l2],[data-ws-pfx],[data-ws-pfadd],[data-ws-tg],[data-ws-numx],[data-ws-numadd],[data-ws-a4m],[data-ws-a4c],[data-ws-prx],[data-ws-pradd]');
   if (set && set.closest('#dialogBody [data-ws-setroot]')) { const d = set.dataset;
-    if (d.wsRelink) waCmd('relink'); else if (d.wsLogout) waCmd('logout'); else if (d.wsL2) waCmd2(d.wsL2); else if (d.wsPfadd) pfAdd(); else if (d.wsPfx) { if (confirm(d.wsPfx + ' hata dein? Is number se print phone par aayi tasveer phir A4 par nahi chhapegi.')) cfgSave({ prFrom: cfgNow().prFrom.filter(n => n !== d.wsPfx) }, '✓ ' + d.wsPfx + ' hata diya'); } else if (d.wsNumadd) numAdd(); else if (d.wsPradd) prAdd();
+    if (d.wsRelink) waCmd('relink'); else if (d.wsPingo) waCmd('code'); else if (d.wsPin) { if (wl?.st === 'code' && wl.codeFor) waCmd('code'); else { pinOpen = !pinOpen; linkPaint(); if (pinOpen) setTimeout(() => document.querySelector('#dialogBody [data-ws-pinph]')?.focus(), 30); } } else if (d.wsLogout) waCmd('logout'); else if (d.wsL2) waCmd2(d.wsL2); else if (d.wsPfadd) pfAdd(); else if (d.wsPfx) { if (confirm(d.wsPfx + ' hata dein? Is number se print phone par aayi tasveer phir A4 par nahi chhapegi.')) cfgSave({ prFrom: cfgNow().prFrom.filter(n => n !== d.wsPfx) }, '✓ ' + d.wsPfx + ' hata diya'); } else if (d.wsNumadd) numAdd(); else if (d.wsPradd) prAdd();
     else if (d.wsA4m) { const v = d.wsA4m; if (['print', 'all', 'off'].includes(v)) cfgSave({ a4m: v, a4: v !== 'off' }, v === 'print' ? '🖨 A4: sirf "print" likhne par' : v === 'all' ? '🖨 A4: har parchi' : '⛔ A4 band'); }
     else if (d.wsA4c) cfgSave({ a4c: Math.max(1, Math.min(3, Number(d.wsA4c) || 1)) }, '🖨 A4: ' + d.wsA4c + ' copy');
     else if (d.wsPrx) { if (confirm(d.wsPrx + ' hata dein? Is chat mein "print" phir A4 par nahi chhapega.')) cfgSave({ prTo: cfgNow().prTo.filter(n => n !== d.wsPrx) }, '✓ ' + d.wsPrx + ' hata diya'); }

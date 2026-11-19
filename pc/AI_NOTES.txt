@@ -5088,3 +5088,9 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
   recToMp4 (recCover) -> wa-media\bv-<id>.mp4 -> waOut bv-<id>-1/2 {vf, rid}. Sirf malik + Mubeen (waParchi). winOf(b) one() ke saath share.
 - wa-out v1.27: d.vf (^bv-…\.mp4$, DIR\wa-media) = video bhejo (180 s hadd), done() par billClipWa/<rid> s.<naam> (set + merge, NAQSHA — set mein
   'a.b' naam seedha field ban jata, update nahi). kh-wa v1.11: VID_RE 'video 138841' (looks() mein bhi), codesTxt line.
+
+
+=== 2026-11-19 (manifest 2026-11-19.1): wa-parchi v2.39 ===
+- 🔢 malik ke APNE link (main socket) par PIN: waCmd {do 'code', ph} -> doCmd(c, ph) (03xxxxxxxxx jaanch, logout + wipeAuth, pair = '92…', pairAsked)
+  -> onConn: u.qr + pair = requestPairingCode (20 s hadd) -> setLink {st 'code', code 'XXXX-XXXX', codeFor}; open = pair '' + code ''; registered nahi
+  (waqt khatam) = st off + err 'PIN / QR ka waqt khatam'. Print phone (pair2) wala tareeqa hubahu.

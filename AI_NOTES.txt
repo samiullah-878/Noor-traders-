@@ -8848,3 +8848,30 @@ aur 'DESKTOP-' sab ka ek hai, is liye naam ka ASAL hissa.
 - Test: ffmpeg packet-loss (TS drop / slice adhoora) PSNR; tsGaps + DEC_ERR + RTP seq ginti; bill-clip asal file nakli Firestore ke saath (recording
   se 135 s video 7 s mein, bani clip se 0 s, bill nahi mila, purana hukum, WhatsApp wala ka jawab waOut); headless Chrome (tally khirki, chip). Asal NVR /
   WhatsApp video bhejna / phone par NAHI dekha. AI nahi.
+
+
+=== v2.323.0 (2026-11-19) — 🔢 WhatsApp PIN se jorna · 📸 Sehat lock (md pkg v56) ===
+1) Malik (WhatsApp Parchi setting ki photo): 'oper barcode ke sath pin ka option bhi bana do'. Malik ke APNE link (waLink) par bhi QR ke saath
+   🔢 PIN — print phone (waCmd2 'code') wala hi tareeqa: wa-sale.js linkHTML '🔢 Pin se jorein' (pinOpen = number ka khana, default L.codeFor || L.me ||
+   prFrom[0], Enter / '🔢 PIN banao') -> cloud.sendWaCmd('code', ph) -> blueAccess/waCmd {do 'code', at, ph} (malik ka aam rule — rules nahi badle)
+   -> PC wa-parchi v2.39 doCmd(c, ph): purana link logout + wipeAuth, pair = '92…', connect -> onConn u.qr + pair = requestPairingCode -> waLink
+   {st 'code', code 'ABCD-EFGH', codeFor}. Khula = pair khali. PIN ka waqt khatam = st off + err (app ab 'off' par L.err dikhati hai — pehle 'PC par band
+   — ✅ Chalu karein' likha aata tha jab ke Chalu pehle se ON tha, asal mein QR ka waqt khatam tha). Phone par: Linked devices -> Link a device -> 'Link
+   with phone number instead' -> 8 harf.
+2) Malik: 'fruit / nuts / coffee / paani na piyun to mobile access na kar paun — pehle 10 min, phir 30, phir 1 ghanta · picture do, AI khud dekhe · LIVE
+   camera, gallery nahi · paani har 40 min · coffee 2:00 · fruit 2:30 · nuts 4:00 · khana khatam · 10 min mein photo warna block · awaaz nahi, sirf chhoti
+   si bell · lock mein bhi photo de kar khol saken'. Waqt subah 11 – raat 12 (malik ka OK, mera mashwara — raat 12-11 raatband pehle se).
+   - md/tools/sehat.py (pkg v56): (a) 💧 Paani = paani3.json badla: 2400 s, due-check mein tod 11:00–23:59, popup '📸 Photo do' / '⏰ Baad mein',
+     pnCount ab SIRF sahi photo par (lock macro). (b) ☕ Coffee · Fruit · Nuts = purane '🍽 Khana-peena' ki JAGAH (wahi GUID claude|khana) — bolna
+     (SpeakText) HATA, khana / 5:30 hata. (c) 📸 Sehat lock (naya, claude|sehatlock): popup dikhte hi shDue = +600 (pehle se ho to wahi — naya reminder
+     waqt nahi barhata), shN random nonce, shK kind, bell = NotificationAction aam channel (id ntsh). shDue guzra = SIRF raatband.PK list band
+     (Settings, Play Store, MacroDroid, Claude, social, YouTube, Netflix, games — list se bahar kuch band nahi ho sakta): 10 -> 30 -> 60 min (phir har
+     dafa 60), lock ke baad phir 10 min ka mauqa. Band app khule = Home + popup '📸 Photo do' (timeout / Theek hai = kuch nahi). shAsk = abhi+110 jab
+     reminder popup aaye (lock macro MacroDroid ki khirki 130 s tak nahi hatata). 3 ghante purani yaad = saaf (raat). Webhook nt_sehat (whitelist shOk,
+     shZ): shOk == shN = sab saaf + paani ho to pnCount++; shZ=1 = 🚨 10 min (shEm / shEmDay, din mein 1).
+   - App sehat.js: #sehat=<kind>.<nonce> (app.js hash, sirf malik) -> apni <dialog id=shDlg> poori screen, SIRF getUserMedia (file input / gallery
+     nahi) -> frame 768px JPEG -> 🤖 A.aiImage (wahi Gemini key / pickModel) JSON {ok, screen, seen} -> ok = fetch no-cors hook/nt_sehat?shOk=n
+     (hook = fxCfg.wh, nabz-ui jaisa). Tasveer kahin save nahi; aaj ki ginti localStorage sam-sehat-<din>. 🚨 10 min = shZ=1.
+   - Sabaq / hadein: AI sirf yeh dekh sakta hai ke photo mein cheez hai — khaya / piya nahi. Webhook ke liye internet chahiye; AI / net na ho to 🚨.
+- Test: headless Chrome nakli camera (sehat.js: ✕ par dobara, ✅ par webhook URL shOk, khirki band) · MacroDroid validator (lock + coffee macro VALID) ·
+  pkg.py 56 chaabi jaanch. Asal phone par lock / PIN NAHI dekha.
