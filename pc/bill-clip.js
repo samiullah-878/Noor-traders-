@@ -1,5 +1,8 @@
 // =========================================================
-//  bill-clip.js  v2.8 (2026-11-18: 🎥 malik: "bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se — customer ko wait na karna pare": billClipWa/<id>
+//  bill-clip.js  v2.9 (2026-11-19: 👥 malik: 'din mein jitni videos banein SAB WhatsApp group mein · counter-wise · video ke upar transparent
+//    items naam + tadad · background nazar aaye, blur nahi': har kamyab clip → mkVideo (patti: gol kinara + kaale kinare wali likhai, canvas 640x480) →
+//    waOut bv-g<SaleID> {grp} → wa-out v1.28 group mein; blueAccess/billWaGroup {on, g, gd, gn, lim 400, end 22:00}, 20 s faasla, billClip.wg (dobara nahi).
+//    Maangi hui video (malik + Mubeen) par bhi wohi patti.) · v2.8 (2026-11-18: 🎥 malik: "bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se — customer ko wait na karna pare": billClipWa/<id>
 //    (app ⋮ 📲 ya WhatsApp 'video 138841', kh-wa v1.11) → bill dhoondo (aaj / kal / parson) → bani clip ke hisse jor kar (copy) ya PC ki apni recording se → wa-media\bv-<id>.mp4
 //    → waOut bv-<id>-1/2 {vf, rid} → wa-out v1.27 video malik + Mubeen ko (gahak ko KABHI nahi). NVR se dobara nahi (malik: "us ko rehne do").) · v2.7 (2026-11-17: 🌐 NVR tak rasta nahi (Windows ffmpeg 'Error number -138' = waqt khatam — 17 Nov aaj ki 628 clip ✕) = har bill par 15 s koshish NAHI: kaam ruke, har 5 min halka TCP sawal, rasta khule to wahi bill dobara (koshish nahi gini); server PC ke IP + NVR IP + isi network par camera port (554) khula kahan — app ⚙️ mein (billClipPc.net). Counter ka naam = PC ka apna naam (pc-names v1.1, chFind).) · v2.6 (2026-11-16: counter ka naam NT-PRINT se — pc-names.js; purane naam ka channel bhi chalta) ·  v2.5 (2026-11-10) — 🎯 pehli item ka ASAL waqt counter ki POS screen se (posAdds, NT-PRINT v1.32) + clip PRINT hote hi (post ka intezar nahi)
 //  v2.4 (2026-11-10) — 🔗 recording wali line ki COPY PC ke andar (udp 127.0.0.1:48500+ch) → live-cam v1.2 (NVR live ko doosra rabta nahi deta tha: "error -138"); copy se recording gire = khud purana tareeqa.
@@ -50,7 +53,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.8';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.9';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -82,7 +85,7 @@ let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState(), net: NET || null }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState(), net: NET || null, wg: ST.wg || null }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -309,7 +312,7 @@ async function loadKnown() {   // aaj + kal ke clip docs (dobara na banein)
   try {
     const days = [dayOf(), dayOf(Date.now() - 86400000)];
     const s = await within(CLIP.where('day', 'in', days).get(), 30000, 'billClip parhna');
-    s.forEach(d => { const x = d.data() || {}; const pw = x.st === 'err' && /401/.test(String(x.err || '')); known.set(d.id, { st: x.st, tries: pw ? 0 : Number(x.tries) || 0, at: pw ? 0 : Number(x.at) || 0 }); });   // v1.3: 401 wale dobara (password theek hone par)
+    s.forEach(d => { const x = d.data() || {}; const pw = x.st === 'err' && /401/.test(String(x.err || '')); known.set(d.id, { st: x.st, tries: pw ? 0 : Number(x.tries) || 0, at: pw ? 0 : Number(x.at) || 0, wg: x.wg || 0 }); });   // v1.3: 401 wale dobara (password theek hone par)
     log(`📼 pehle se ${known.size} clip (aaj / kal)`);
   } catch (e) { log('⚠️ purani clips: ' + e.message); }
 }
@@ -436,6 +439,7 @@ async function one(b) {
   await CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, as, lt: Number(b.lt) || 0, t0, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true });
   known.set(id, { st: 'ok', tries, at: Date.now() });
   if (rq) reqDone(id, 'ok');
+  gwAdd(b);   // v2.9: 👥 group video
   ST.err = '';   // v2.1: kamyab clip = purana ⚠ (ek bill ki wajah) app mein foran saaf
   if (TEST && !TEST.ok) { TEST = { ...TEST, ok: 1, err: '', raw: 'clip ban gayi — rabta theek' }; }   // v1.5: asal clip ban gayi = purana ✕ test bekar
   T.n++; T.ok++; ST.last = `#${b.no} ✓ ${Math.round(sz / 1024)} KB · ${dur} s · ${segs.length} hisse (${src})`; log(`🎥 bill #${b.no} (${b.pc} ch ${ch}) ${dur} s → ${Math.round(sz / 1024)} KB, ${segs.length} hisse · ${src} · ${Math.round((Date.now() - tA) / 1000)} s`);
@@ -472,9 +476,9 @@ async function waTo() {   // malik + Mubeen (WhatsApp Parchi setting) — repo m
     return L.filter((a, i) => L.findIndex(x => x.p === a.p) === i);
   } catch (e) { log('⚠️ waParchi: ' + e.message); return []; }
 }
-function ffRun(args, ms) {
+function ffRun(args, ms, cwd) {
   return new Promise(res => { const ff = ffPath(); if (!ff) return res({ ok: false, err: 'ffmpeg nahi' });
-    let err = '', done = false; const p = spawn(ff, ['-hide_banner', '-loglevel', 'error', '-nostdin', ...args], { windowsHide: true });
+    let err = '', done = false; const p = spawn(ff, ['-hide_banner', '-loglevel', 'error', '-nostdin', ...args], { windowsHide: true, ...(cwd ? { cwd } : {}) });
     const t = setTimeout(() => { if (!done) { try { p.kill(); } catch {} err += ' (waqt khatam)'; } }, ms);
     p.stderr.on('data', d => { err += String(d); if (err.length > 3000) err = err.slice(-3000); });
     p.on('error', e => { done = true; clearTimeout(t); res({ ok: false, err: e.message }); });
@@ -495,12 +499,111 @@ async function clipToMp4(bid, meta, out) {   // bani clip (Firestore ke hisse) �
     fs.writeFileSync(out, await rd(Array.from({ length: n }, (_, i) => `${bid}_${i}`))); return { ok: true };
   } catch (e) { return { ok: false, err: e.message }; } finally { rmDir(dir); }
 }
-async function recToMp4(cov, w, out) {   // PC ki apni recording ke tukre → ek mp4 (10 fps, 640)
-  const lst = path.join(TMP, 'bv-' + Date.now().toString(36) + '.txt'); fs.mkdirSync(TMP, { recursive: true });
-  fs.writeFileSync(lst, cov.map(x => `file '${x.f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n');
-  try { return await ffRun(['-f', 'concat', '-safe', '0', '-i', lst, '-ss', String(Math.max(0, (w.t0 - cov[0].t0) / 1000)), '-t', String(w.dur), '-an',
-    '-vf', 'fps=10,scale=\'min(640,iw)\':-2', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '28', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-y', out], 5 * 60000); }
-  finally { try { fs.unlinkSync(lst); } catch {} }
+// ---------- 🪟 v2.9: video par TRANSPARENT patti (malik 19 Nov: 'video ke upar transparent items naam + tadad · background nazar aaye · blur nahi') ----------
+//   Canvas 640x480 (kam ho to kala pad). Neeche patti = sirf gol safed kinara (b.png ek dafa) — andar kuch nahi, video saaf nazar aaye; likhai par kaala
+//   kinara (borderw) taake har rang par parhi jaye. Upar: Bill # · counter · waqt / Rs (bara) / N items · larka; phir items × tadad (tadad peeli),
+//   OV.R qatar fi safha, har 5 s agla safha (chakkar). Font: Windows Segoe UI (na ho Arial) clip-font mein copy — drawtext ko C: wala raasta nahi dete
+//   (':' filter tor deta hai). drawtext / font na chale = bina patti video (ov 0) — video kabhi nahi rukti.
+const OV = { W: 640, H: 480, R: 6, PAGE: 5 }, FONT_DIR = path.join(DIR, 'clip-font');
+function ovFonts() {
+  const win = path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts');
+  const pick = (k, names) => {
+    const dst = path.join(FONT_DIR, k + '.ttf'); try { if (fs.statSync(dst).size > 10000) return dst; } catch {}
+    for (const c of [process.env['NT_FONT_' + k.toUpperCase()], ...names.map(n => path.join(win, n))].filter(Boolean)) {
+      try { if (fs.statSync(c).size > 10000) { fs.mkdirSync(FONT_DIR, { recursive: true }); fs.copyFileSync(c, dst); return dst; } } catch {}
+    }
+    return null;
+  };
+  const r = pick('r', ['segoeui.ttf', 'arial.ttf', 'tahoma.ttf']), b = pick('b', ['segoeuib.ttf', 'seguisb.ttf', 'arialbd.ttf', 'tahomabd.ttf']) || r;
+  return r ? { r, b } : null;
+}
+async function linesOf(sid) {   // posSaleLines/<SaleID> {lines:[{i,n,q,r,g}]} — pos-sales-dekho likhta hai (nayi SQL nahi)
+  try {
+    const sn = await within(biz.collection('posSaleLines').doc(String(sid)).get(), 15000, 'items');
+    if (!sn.exists) return null;   // abhi PC (pos-sales-dekho) ne nahi likha
+    const L = Array.isArray((sn.data() || {}).lines) ? sn.data().lines : [];
+    return L.map(x => ({ n: String((x && (x.n || x.i)) || '').replace(/\s+/g, ' ').trim(), q: Number(x && x.q) || 0 })).filter(x => x.n);
+  } catch (e) { log('⚠️ items parhna: ' + e.message); return null; }
+}
+const fq = q => Number.isInteger(q) ? String(q) : String(+Number(q).toFixed(3));
+const cut = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
+function ovPlan(dir, b, items, dayTag) {   // filter ka likha hissa + text files (dir mein)
+  const F = ovFonts(); if (!F) return null;
+  const { W, H, R, PAGE } = OV, nr = items && items.length ? Math.min(R, items.length) : 1, many = !!(items && items.length > R);   // kam items = chhoti patti (video zyada nazar aaye)
+  const x0 = 10, cw = W - 20, ch = 12 + 20 + 40 + 24 + 12 + nr * 25 + (many ? 24 : 8), y0 = H - 10 - ch;
+  const rel = f => path.relative(dir, f).replace(/\\/g, '/');
+  let n = 0; const tf = s => { const f = `t${n++}.txt`; fs.writeFileSync(path.join(dir, f), String(s).replace(/[\r\n]+/g, ' '), 'utf8'); return f; };
+  const dt = (font, txt, size, x, y, color, en) => `drawtext=fontfile='${rel(font)}':textfile='${tf(txt)}':expansion=none:fontsize=${size}:fontcolor=${color}:borderw=2:bordercolor=black@0.85:x=${x}:y=${y}${en ? `:enable='${en}'` : ''}`;
+  const an = anchorOf(b), rs = Math.round(Number(b.t) || 0).toLocaleString('en-US');
+  const P = [];
+  P.push(dt(F.r, `Bill #${b.no || b.id}   ${b.pc || '?'}   ${an ? hm(an) : ''}${dayTag ? '  (' + dayTag + ')' : ''}`, 16, x0 + 14, y0 + 12, 'white'));
+  P.push(dt(F.b, 'Rs ' + rs, 34, x0 + 12, y0 + 32, 'white'));
+  const nIt = items && items.length ? items.length : Number(b.n) || 0;
+  P.push(dt(F.r, `${nIt} items${b.by ? '   ' + cut(String(b.by), 28) : ''}`, 15, x0 + 14, y0 + 78, 'white'));
+  P.push(`drawbox=x=${x0 + 14}:y=${y0 + 104}:w=${cw - 28}:h=1:color=white@0.6:t=fill`);
+  if (!items || !items.length) P.push(dt(F.r, items ? 'Is bill mein items nahi mile' : 'Items abhi PC tak nahi pohanche', 15, x0 + 14, y0 + 116, 'white'));
+  else {
+    const pages = Math.ceil(items.length / R), cyc = pages * PAGE;
+    for (let p = 0; p < pages; p++) {
+      const en = pages > 1 ? `between(mod(t,${cyc}),${p * PAGE},${p * PAGE + PAGE - 0.01})` : '';
+      items.slice(p * R, (p + 1) * R).forEach((it, i) => {
+        const y = y0 + 114 + i * 25;
+        P.push(dt(F.r, cut(it.n, 44), 18, x0 + 14, y, 'white', en));
+        P.push(dt(F.b, 'x' + fq(it.q), 18, `${x0 + cw - 14}-tw`, y, '0xFFE278', en));
+      });
+      if (pages > 1) P.push(dt(F.r, `safha ${p + 1}/${pages}  -  har 5 sec agla`, 13, x0 + 14, y0 + 116 + nr * 25, 'white@0.85', en));
+    }
+  }
+  return { x0, y0, cw, ch, filt: P.join(',') };
+}
+// src = { pre: [...input se pehle args], inp: [...input args], dur }
+async function ovRender(b, items, src, out, dayTag) {
+  const dir = path.join(TMP, 'ov-' + Date.now().toString(36) + Math.random().toString(36).slice(2, 6)); rmDir(dir); fs.mkdirSync(dir, { recursive: true });
+  const { W, H } = OV, base = `fps=10,scale=${W}:${H}:force_original_aspect_ratio=decrease,pad=${W}:${H}:(ow-iw)/2:(oh-ih)/2:color=black,setsar=1`;
+  const kb = Math.max(150, Math.min(700, Math.floor(12 * 8192 / Math.max(10, Number(src.dur) || 60))));   // WhatsApp ki hadd (16 MB) se neeche: ~12 MB tak
+  const enc = ['-an', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '27', '-maxrate', kb + 'k', '-bufsize', 2 * kb + 'k', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-t', String(src.dur), '-y', out];
+  const plain = async why => { const r = await ffRun([...src.pre, ...src.inp, '-vf', base, ...enc], 5 * 60000); return r.ok ? { ok: true, ov: 0, why } : { ok: false, err: r.err }; };
+  try {
+    const pl = ovPlan(dir, b, items, dayTag);
+    if (!pl) return await plain('font nahi mila (Windows Fonts)');
+    const R0 = 22, a = `clip(1.6-abs(hypot(max(max(${R0}-X,X-(W-1-${R0})),0),max(max(${R0}-Y,Y-(H-1-${R0})),0))-(${R0}-1.2)),0,1)*210`;
+    const rb = await ffRun(['-f', 'lavfi', '-i', `color=c=black@0:s=${pl.cw}x${pl.ch}:d=1`, '-frames:v', '1', '-vf', `format=rgba,geq=r='255':g='255':b='255':a='${a}'`, '-y', path.join(dir, 'b.png')], 30000);
+    if (!rb.ok) return await plain('kinara nahi bana: ' + rb.err);
+    fs.writeFileSync(path.join(dir, 'f.txt'), `[0:v]${base}[v];[1:v]format=rgba[bd];[v][bd]overlay=${pl.x0}:${pl.y0}:shortest=1,${pl.filt}[o]`, 'utf8');
+    const r = await ffRun([...src.pre, ...src.inp, '-loop', '1', '-i', 'b.png', '-filter_complex_script', 'f.txt', '-map', '[o]', ...enc], 5 * 60000, dir);
+    if (r.ok) return { ok: true, ov: 1 };
+    log('⚠️ patti wali video nahi bani (' + String(r.err).slice(0, 140) + ') — bina patti');
+    return await plain('patti: ' + String(r.err).slice(0, 80));
+  } finally { rmDir(dir); }
+}
+// v2.9: EK raasta — maangi hui video (malik + Mubeen) aur group dono. Pehle PC ki apni recording (behtar, download nahi), na ho to bani clip; patti hamesha.
+async function mkVideo(b, out, dayTag, step) {
+  const bid = String(b.id), w = winOf(b), ch = PN.chFind(CF.ch, b.pc);
+  const covNow = () => (ch ? recCover(ch, w.t0, w.t1) : null);
+  let items = await linesOf(bid), cov = covNow(), meta = null;
+  if (!cov) { try { const cm = await within(CLIP.doc(bid).get(), 15000, 'clip'); meta = cm.exists ? cm.data() || {} : null; } catch (e) { log('⚠️ 🎥 clip parhna: ' + e.message); } }
+  if (!cov && !(meta && meta.st === 'ok')) {
+    if (!ch) return { ok: false, err: `counter "${b.pc || '?'}" ka camera channel ⚙️ mein nahi` };
+    const wt = w.t1 + 20000 - Date.now();   // abhi bana bill = aakhri tukra likhne ka intezar
+    if (wt > 4 * 60000) return { ok: false, err: 'bill abhi ban raha hai — print ke baad bhejein' };
+    if (wt > 0) { if (step) await step(`⏳ bill abhi bana — ${Math.ceil(wt / 1000)} s recording ka intezar`); await sleep(wt); }
+    cov = covNow();
+    if (!cov) return { ok: false, err: NETBAD ? 'NVR tak rasta nahi tha — us waqt PC ki recording ruki thi' : 'is waqt ki recording PC mein nahi (purana bill / recording band thi)' };
+  }
+  if ((!items || !items.length) && Date.now() - (w.an || 0) < 5 * 60000) { await sleep(8000); items = (await linesOf(bid)) || items; }   // naya bill: items PC (pos-sales-dekho) se thori der baad
+  if (step) await step('🎬 video bana raha');
+  if (cov) {
+    const lst = path.join(TMP, 'mv-' + bid + '-' + Date.now().toString(36) + '.txt'); fs.mkdirSync(TMP, { recursive: true });
+    fs.writeFileSync(lst, cov.map(x => `file '${x.f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n');
+    try { const r = await ovRender(b, items, { pre: ['-ss', String(Math.max(0, (w.t0 - cov[0].t0) / 1000))], inp: ['-f', 'concat', '-safe', '0', '-i', lst], dur: w.dur }, out, dayTag); return r.ok ? { ...r, src: 'rec', dur: w.dur } : { ok: false, err: 'video nahi bani: ' + String(r.err).slice(0, 100) }; }
+    finally { try { fs.unlinkSync(lst); } catch {} }
+  }
+  const tmp = path.join(TMP, `mvsrc-${bid}-${Date.now().toString(36)}.mp4`);
+  try {
+    const r1 = await clipToMp4(bid, meta, tmp); if (!r1.ok) return { ok: false, err: 'bani clip nahi juri: ' + String(r1.err).slice(0, 80) };
+    const dur = Number(meta.dur) || w.dur, r = await ovRender(b, items, { pre: [], inp: ['-i', tmp], dur }, out, dayTag);
+    return r.ok ? { ...r, src: 'clip', dur } : { ok: false, err: 'video nahi bani: ' + String(r.err).slice(0, 100) };
+  } finally { try { fs.unlinkSync(tmp); } catch {} }
 }
 async function waTell(ph, txt, wid, nm) { try { await biz.collection('waOut').doc(wid).create({ st: 'new', at: Date.now(), to: String(ph), nm: String(nm || '').slice(0, 30), kind: 'bv', eid: wid, txt }); } catch (e) { if (!/exists/i.test(e.message)) log('⚠️ waOut: ' + e.message); } }
 async function waClaim(id) {   // ek hukum = ek hi dafa (do PC / do chalte script ho to bhi)
@@ -517,20 +620,10 @@ async function waOne(id, r) {
   const b = f.b, bid = String(b.id), w = winOf(b), out = path.join(WAM, `bv-${id}.mp4`);
   if (!(w.an > 0)) return fail('bill abhi print / post nahi hua');
   fs.mkdirSync(WAM, { recursive: true }); try { fs.unlinkSync(out); } catch {}
-  let src = '', dur = w.dur;
-  let meta = null; try { const cm = await within(CLIP.doc(bid).get(), 15000, 'clip'); meta = cm.exists ? cm.data() || {} : null; } catch (e) { log('⚠️ 🎥 clip parhna: ' + e.message); }
-  if (meta && meta.st === 'ok') { await waSet(id, { m: '📼 bani hui clip jor raha' }); const r1 = await clipToMp4(bid, meta, out); if (r1.ok) { src = 'clip'; dur = Number(meta.dur) || dur; } else log(`⚠️ 🎥 #${b.no}: bani clip nahi juri (${r1.err}) — recording se`); }
-  if (!src) {
-    const ch = PN.chFind(CF.ch, b.pc); if (!ch) return fail(`counter "${b.pc || '?'}" ka camera channel ⚙️ mein nahi`);
-    const ready = w.t1 + 20000, wt = ready - Date.now();   // abhi bana bill = aakhri tukra likhne ka intezar
-    if (wt > 4 * 60000) return fail('bill abhi ban raha hai — print ke baad bhejein');
-    if (wt > 0) { await waSet(id, { m: `⏳ bill abhi bana — ${Math.ceil(wt / 1000)} s recording ka intezar` }); await sleep(wt); }
-    const cov = recCover(ch, w.t0, w.t1);
-    if (!cov) return fail(NETBAD ? 'NVR tak rasta nahi tha — us waqt PC ki recording ruki thi' : 'is waqt ki recording PC mein nahi (purana bill / recording band thi)');
-    await waSet(id, { m: '🎬 video bana raha' });
-    const r2 = await recToMp4(cov, w, out); if (!r2.ok) return fail('video nahi bani: ' + String(r2.err).slice(0, 100));
-    src = 'rec';
-  }
+  const dayTag = f.day !== dayOf() ? f.day.slice(8) + '/' + f.day.slice(5, 7) : '';
+  const mv = await mkVideo(b, out, dayTag, m => waSet(id, { m }));   // v2.9: patti ke saath (recording ya bani clip)
+  if (!mv.ok) return fail(mv.err);
+  const src = mv.src, dur = mv.dur;
   let sz = 0; try { sz = fs.statSync(out).size; } catch {}
   if (sz < 2000) return fail('video khali bani');
   if (sz > 15 * 1048576) return fail(`video bohat bari (${Math.round(sz / 1048576)} MB)`);
@@ -538,8 +631,69 @@ async function waOne(id, r) {
   const rs = Number(b.t) ? ' · Rs ' + Math.round(Number(b.t)).toLocaleString('en-US') : '';
   const cap = `🎥 Bill #${b.no || bid} · 🖥 ${b.pc || '?'} · ${hm(w.an)}${f.day !== dayOf() ? ' (' + f.day.slice(8) + '/' + f.day.slice(5, 7) + ')' : ''}${rs}${Number(b.n) ? ' · ' + b.n + ' items' : ''}${b.by ? ' · 👦 ' + b.by : ''}\n${dur >= 120 ? Math.round(dur / 60) + ' min' : dur + ' s'} ki video · maangi: ${r.src === 'wa' ? (r.byN || 'WhatsApp') : 'app'}`;
   for (let i = 0; i < to.length; i++) { const eid = `bv-${id}-${i + 1}`; try { await biz.collection('waOut').doc(eid).create({ st: 'new', at: Date.now(), to: to[i].p, nm: to[i].n, kind: 'bv', eid, txt: cap, vf: path.basename(out), rid: id }); } catch (e) { if (!/exists/i.test(e.message)) throw e; } }
-  await waSet(id, { st: 'q', m: '📲 WhatsApp par bhej rahe', sid: bid, no: String(b.no || ''), pc: String(b.pc || ''), src, sz, dur, to: to.map(a => a.n), doneAt: Date.now() });
+  await waSet(id, { st: 'q', m: '📲 WhatsApp par bhej rahe', sid: bid, no: String(b.no || ''), pc: String(b.pc || ''), src, sz, dur, ov: mv.ov ? 1 : 0, to: to.map(a => a.n), doneAt: Date.now() });
   log(`🎥📲 bill #${b.no} (${b.pc}) video ${Math.round(sz / 1024)} KB · ${dur} s · ${src} · ${Math.round((Date.now() - tA) / 1000)} s → ${to.map(a => a.n).join(' + ')}`);
+}
+
+// ---------- 👥 v2.9: HAR bill ki video WhatsApp GROUP mein (malik 19 Nov: 'din mein jitni videos banein SAB · group · counter-wise · patti transparent, blur nahi') ----------
+//   blueAccess/billWaGroup {on, g: {<counter naam>: groupJid}, gd: jid (baqi sab counters), gn: {jid: naam}, lim (din ki hadd, 400), end 'HH:MM' (22:00)}
+//   — malik: tally ⋮ '👥 Group videos'. Clip kamyab (one) → gwAdd → har 20 s mein EK → mkVideo (patti) → waOut bv-g<SaleID> {grp, vf, txt} → wa-out
+//   (Business number, group ki apni line — gahak ka faasla / hadd nahi khata). Bheji = billClip.wg (restart par dobara nahi). Raat `end` ke baad / din ki
+//   hadd poori = nahi bhejte (ST.wg.err app mein). SIRF malik ke chune group — gahak / kisi number ko kabhi nahi.
+const GW_GAP = 20000, GW_FILE = path.join(DIR, 'wg-day.json');
+let GW = { on: false, g: {}, gd: '', gn: {}, lim: 400, end: 22 * 60 }, gwLast = 0, gwBusy = false; const gwQ = new Map();
+let gwN = (() => { try { const x = JSON.parse(fs.readFileSync(GW_FILE, 'utf8')); return { day: String(x.day || ''), n: Number(x.n) || 0 }; } catch { return { day: '', n: 0 }; } })();
+const gwSave = () => { try { fs.writeFileSync(GW_FILE, JSON.stringify(gwN)); } catch {} };
+const isGrpJid = j => /^[0-9]{6,30}(-[0-9]{6,20})?@g\.us$/.test(String(j || ''));
+biz.collection('blueAccess').doc('billWaGroup').onSnapshot(sn => {
+  const d = (sn.exists && sn.data()) || {}, g = {};
+  for (const [k, v] of Object.entries(d.g && typeof d.g === 'object' ? d.g : {})) if (isGrpJid(v)) g[String(k)] = String(v);
+  const m = /^(\d{1,2}):(\d{2})$/.exec(String(d.end || ''));
+  GW = { on: d.on === true, g, gd: isGrpJid(d.gd) ? String(d.gd) : '', gn: d.gn && typeof d.gn === 'object' ? d.gn : {}, lim: Math.max(1, Math.min(2000, Number(d.lim) || 400)), end: m ? Math.min(1439, +m[1] * 60 + +m[2]) : 22 * 60 };
+  log(`👥 group videos ${GW.on ? 'CHALU' : 'band'} · ${Object.keys(GW.g).length} counter alag${GW.gd ? ' + baqi sab ka group' : ''} · hadd ${GW.lim}/din · band ${Math.floor(GW.end / 60)}:${two(GW.end % 60)}`);
+  if (GW.on) setTimeout(gwSweep, 3000);
+}, e => log('⚠️ billWaGroup: ' + e.message));
+function gwJid(pc) { const p = String(pc || ''); if (GW.g[p]) return GW.g[p]; const k = Object.keys(GW.g).find(x => x.toLowerCase() === p.toLowerCase()); return k ? GW.g[k] : GW.gd; }
+const pkMin = () => Math.floor(((Date.now() + PK) % 86400000) / 60000);
+function gwAdd(b) {
+  if (!GW.on || !b) return; const id = String(b.id), k = known.get(id) || {};
+  if (gwQ.has(id) || k.wg || !gwJid(b.pc)) return;
+  gwQ.set(id, b); gwKick();
+}
+function gwSweep() {   // restart / ON ke baad: pichhle 30 min ki bani clips jo group mein nahi gayin
+  if (!GW.on) return; const since = Date.now() - 30 * 60000;
+  for (const b of bills) { const k = known.get(String(b.id)); if (k && k.st === 'ok' && !k.wg && (Number(k.at) || 0) > since) gwAdd(b); }
+}
+function gwKick() {
+  if (!waOn || gwBusy || !gwQ.size) return; gwBusy = true;
+  (async () => { try { while (gwQ.size && GW.on) {
+    const [id, b] = gwQ.entries().next().value; gwQ.delete(id);
+    const wt = GW_GAP - (Date.now() - gwLast); if (wt > 0) await sleep(wt);
+    try { await gwOne(b); } catch (e) { log('✕ 👥 group video: ' + (e.stack || e.message)); ST.wg = { ...(ST.wg || {}), err: String(e.message || e).slice(0, 120) }; }
+  } } finally { gwBusy = false; } })();
+}
+async function gwOne(b) {
+  const id = String(b.id), day = dayOf(); if (gwN.day !== day) { gwN = { day, n: 0 }; gwSave(); }
+  if ((known.get(id) || {}).wg) return;
+  const jid = gwJid(b.pc); if (!jid) return;
+  const mark = async v => { known.set(id, { ...(known.get(id) || {}), wg: v }); try { await CLIP.doc(id).set({ wg: v }, { merge: true }); } catch {} };
+  const say = err => { ST.wg = { ...(ST.wg || {}), day, n: gwN.n, err }; pushSt(true); };
+  if (pkMin() >= GW.end) { say(`raat ${Math.floor(GW.end / 60)}:${two(GW.end % 60)} ke baad group mein nahi`); await mark('late'); return; }
+  if (gwN.n >= GW.lim) { say(`aaj ki hadd ${GW.lim} poori — baqi nahi bheji`); await mark('lim'); return; }
+  fs.mkdirSync(WAM, { recursive: true }); const out = path.join(WAM, `bv-g${id}.mp4`); try { fs.unlinkSync(out); } catch {}
+  const tA = Date.now(), mv = await mkVideo(b, out, '', null);
+  if (!mv.ok) { log(`✕ 👥 #${b.no}: ${mv.err}`); say(`#${b.no}: ${String(mv.err).slice(0, 100)}`); await mark('err'); return; }
+  let sz = 0; try { sz = fs.statSync(out).size; } catch {}
+  if (sz < 2000 || sz > 15 * 1048576) { say(`#${b.no}: video ${sz < 2000 ? 'khali' : 'bohat bari'}`); await mark('err'); return; }
+  const rs = Number(b.t) ? ' · Rs ' + Math.round(Number(b.t)).toLocaleString('en-US') : '';
+  const cap = `🎥 Bill #${b.no || id} · 🖥 ${b.pc || '?'} · ${hm(winOf(b).an)}${rs}${Number(b.n) ? ' · ' + b.n + ' items' : ''}${b.by ? ' · 👦 ' + b.by : ''}`;
+  const eid = `bv-g${id}`, gnm = String((GW.gn || {})[jid] || 'group').slice(0, 40);
+  try { await biz.collection('waOut').doc(eid).create({ st: 'new', at: Date.now(), grp: jid, nm: gnm, kind: 'bvg', eid, txt: cap, vf: path.basename(out) }); }
+  catch (e) { if (!/exists/i.test(e.message)) throw e; }
+  gwLast = Date.now(); gwN.n++; gwSave(); await mark(Date.now());
+  ST.wg = { day, n: gwN.n, last: `#${b.no} · ${b.pc || ''}`, at: Date.now(), err: mv.ov ? '' : 'patti nahi lagi: ' + String(mv.why || '').slice(0, 80), ov: mv.ov ? 1 : 0 };
+  pushSt(true);
+  log(`👥🎥 #${b.no} (${b.pc}) → ${gnm} · ${Math.round(sz / 1024)} KB · ${mv.dur} s · ${mv.src}${mv.ov ? '' : ' · patti NAHI (' + mv.why + ')'} · ${Math.round((Date.now() - tA) / 1000)} s (aaj ${gwN.n})`);
 }
 
 // ---------- safai: purani clips (keep din) + billTally 60 din ----------
@@ -587,6 +741,7 @@ async function main() {
   process.on('exit', () => recStopAll(''));
   setInterval(() => cleanup().catch(() => {}), 60 * 60000); setTimeout(() => cleanup().catch(() => {}), 90000);
   kick(); waOn = true; waKick();   // v2.8
+  setTimeout(gwSweep, 5000); setInterval(gwSweep, 2 * 60000);   // v2.9: 👥 restart ke baad bachi clips
 }
 const lock = net.createServer();
 lock.once('error', () => { console.log(`[${new Date().toLocaleTimeString()}] bill-clip pehle se chal raha hai (lock ${LOCK_PORT})`); process.exit(3); });

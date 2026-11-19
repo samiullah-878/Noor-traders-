@@ -1,5 +1,5 @@
 // =========================================================
-//  sehat.js v1.2 (2026-11-19, app v2.326.0; v1.0 app v2.323.0) — 📸 SEHAT LOCK ki photo (sirf malik)
+//  sehat.js v1.3 (2026-11-19, app v2.328.0; v1.0 app v2.323.0) — 📸 SEHAT LOCK ki photo (sirf malik)
 //  Malik: "fruit / nuts / coffee / paani na piyun to mobile access na kar paun — cheez ki picture do, AI khud dekhe · LIVE camera, gallery nahi".
 //  MacroDroid popup "📸 Photo do" → #sehat=<kind>.<nonce> → yeh khirki: SIRF live camera (getUserMedia — file / gallery ka koi raasta nahi)
 //  → 🤖 Gemini (app ki AI key, A.aiImage) cheez dekhe → sahi = phone ko webhook `nt_sehat?shOk=<nonce>` (Falcon wala fxCfg.wh) → lock khatam.
@@ -11,6 +11,10 @@
 //  ☰ → 📸 Sehat photo = open({mode:'app'}) — upar 4 chips (💧 ☕ 🍎 🥜, aaj ki ginti saath), wahi live camera + AI → phone ko
 //  `nt_sehat?shOk=a:<kind>&shT=<sec>` (phone sirf 3 min ke andar ka maanta hai): wahi cheez baqi / lock = foran khule · paani pehle = agli yaad 40 min baad ·
 //  coffee / fruit / nuts waqt se pehle = us din ki yaad nahi (md pkg v58).
+//  v1.3 (2026-11-19, app v2.328.0 — malik: 'picture lagate hi screen band · baqi kaam background mein AI kare · notification aaye — apps khul gayi ya
+//  dobara picture lagao · mujhe wait na karna pare'): 📸 = khirki FORAN band → photo service worker (sw.js shJob) ko: wahan 🤖 Gemini + phone ka webhook
+//  (app band ho jaye tab bhi) → notification ✅ / ✕ (✕ par tap = #sehat=app.<cheez> = dobara camera). Purana SW (jawab na de) = yahi kaam app mein.
+//  Notification ki ijazat na ho = app ke andar paigham. Ijazat 📸 dabate hi maangi jati hai (ek dafa).
 // =========================================================
 const K = {
   paani: { i: '💧', t: 'Paani ka glass', d: 'a glass, cup or bottle with drinking water in it' },
@@ -82,7 +86,7 @@ export async function open(deps) {
   const d = document.createElement('dialog'); d.id = 'shDlg';
   S = { kind, n, app, stream: null, busy: false, done: false };
   d.innerHTML = `<video class="sh-v" id="shV" playsinline muted autoplay></video><img class="sh-shot" id="shShot" alt="">
-    <div class="sh-top"><div class="sh-ttl" id="shTtl">${app ? '📸 Sehat photo' : v.i + ' ' + esc(v.t) + ' ki photo'}<small>Sirf live camera · 🤖 AI dekhega · tasveer save nahi hoti</small></div>
+    <div class="sh-top"><div class="sh-ttl" id="shTtl">${app ? '📸 Sehat photo' : v.i + ' ' + esc(v.t) + ' ki photo'}<small>Sirf live camera · 📸 ke baad khirki band — 🤖 AI ka nateeja notification mein</small></div>
       <button type="button" class="sh-c red" data-sh="zaroori">🚨 10 min</button><button type="button" class="sh-c" data-sh="x" aria-label="Band">✕</button></div>
     <div class="sh-tl" id="shTl">${tallyHTML()}</div>
     <div class="sh-bot"><div class="sh-st" id="shSt">⏳ Camera khul raha hai…</div>
@@ -117,7 +121,8 @@ async function hook() {
   if (!m) throw Error('Phone ka webhook link nahi mila — Gaari → ⚙️ Falcon setup mein MacroDroid ka link lagayein');
   return m[1];
 }
-async function tell(q) { const h = await hook(); await withT(fetch(h + '/nt_sehat?' + q + '&t=' + Date.now(), { method: 'GET', mode: 'no-cors', cache: 'no-store' }), 12000, 'Phone tak paigham nahi gaya (internet?)'); }
+const tellH = (h, q) => withT(fetch(h + '/nt_sehat?' + q + '&t=' + Date.now(), { method: 'GET', mode: 'no-cors', cache: 'no-store' }), 12000, 'Phone tak paigham nahi gaya (internet?)');
+async function tell(q) { await tellH(await hook(), q); }
 
 function frame() {
   const vd = $('shV'), w0 = vd.videoWidth, h0 = vd.videoHeight; if (!w0 || !h0) throw Error('Camera ki tasveer abhi tayyar nahi — 1 sec ruk kar dobara');
@@ -136,34 +141,51 @@ async function go() {
   if (!S || S.busy || S.done) return;
   let url;
   try { url = frame(); } catch (e) { st('bad', '✕ ' + (e?.message || e)); return; }
-  S.busy = true; $('shGo').disabled = true;
-  const sh = $('shShot'); sh.src = url; S.d.classList.add('is-frz');
-  st('', '⏳ 🤖 AI dekh raha hai…');
-  let r = null;
+  askPerm();
+  const v = K[S.kind], job = { kind: S.kind, app: !!S.app, n: S.n, b64: url.split(',')[1], prompt: prompt(S.kind), t: v.t, i: v.i };
+  S.done = true; close();   // v1.3: foran band — intezar nahi
+  A.notice?.(`⏳ ${v.i} 🤖 AI dekh raha hai — nateeja notification mein aayega`);
+  bg(job).catch(e => note(`✕ ${v.i} photo check nahi hui`, String(e?.message || e) + ' — dabayein, dobara photo', job.kind, false));
+}
+// ---------- v1.3: background — service worker (app band ho tab bhi) ya purane SW par yahin ----------
+function askPerm() { try { if (window.Notification && Notification.permission === 'default') Notification.requestPermission().catch(() => {}); } catch {} }
+const canNote = () => { try { return !!(window.Notification && Notification.permission === 'granted' && navigator.serviceWorker); } catch { return false; } };
+async function note(title, body, kind, ok) {   // ✕ par tap = dobara camera (app mode, wahi cheez)
+  try { if (canNote()) { const reg = await withT(navigator.serviceWorker.ready, 3000, 'sw'); await reg.showNotification(title, { body, tag: 'sehat', renotify: true, icon: './icon-192.png', badge: './favicon-64.png', vibrate: ok ? [120, 80, 120] : [300], data: { url: ok ? './' : './#sehat=app.' + kind } }); return; } } catch {}
+  A.notice?.(title + ' — ' + body);
+}
+let heard = false;
+function listen() {   // SW ka nateeja: ginti + (ijazat na ho to) app ke andar paigham
+  if (heard || !navigator.serviceWorker) return; heard = true;
+  navigator.serviceWorker.addEventListener('message', e => { const d = e.data || {}; if (d.type !== 'sehatR') return; if (d.ok) bump(d.kind); if (!canNote()) A.notice?.(d.title + ' — ' + d.body); });
+}
+async function viaSw(job) {
   try {
-    await need(); st('', '⏳ 🤖 AI dekh raha hai…');
+    if (!navigator.serviceWorker) return false;
+    const reg = await withT(navigator.serviceWorker.ready, 3000, 'sw'), w = reg && reg.active; if (!w) return false;
+    listen();
+    return await new Promise(ok => { const ch = new MessageChannel(), t = setTimeout(() => ok(false), 2500); ch.port1.onmessage = e => { clearTimeout(t); ok(!!(e.data && e.data.ack)); }; w.postMessage({ type: 'sehat', job }, [ch.port2]); });
+  } catch { return false; }
+}
+async function bg(j) {
+  const bad = (title, why) => note(title, String(why) + ' — dabayein, dobara photo', j.kind, false);
+  try { await need(); } catch (e) { return bad(`✕ ${j.i} photo check nahi hui`, e?.message || e); }
+  let h; try { h = await hook(); } catch (e) { return bad('✕ Phone ka link nahi mila', e?.message || e); }
+  let ai = null; try { ai = A.aiCfg ? await A.aiCfg() : null; } catch (e) { return bad('✕ AI key', e?.message || e); }
+  if (ai && ai.key && ai.model && await viaSw({ ...j, hook: h, key: ai.key, model: ai.model })) return;   // ab SW ka kaam (app band ho jaye to bhi)
+  let r = null;   // purana SW — yahin (app khuli rahe)
+  try {
     if (!A.aiImage) throw Error('AI tayyar nahi');
-    const out = await withT(A.aiImage(url.split(',')[1], prompt(S.kind)), 30000, 'AI ne 30 sec mein jawab nahi diya');
+    const out = await withT(A.aiImage(j.b64, j.prompt), 30000, 'AI ne 30 sec mein jawab nahi diya');
     const m = String(out || '').match(/\{[\s\S]*\}/); r = m ? JSON.parse(m[0]) : null;
     if (!r || typeof r.ok !== 'boolean') throw Error('AI ka jawab samajh nahi aaya');
-  } catch (e) {
-    S.busy = false; $('shGo').disabled = false; S.d.classList.remove('is-frz');
-    st('bad', '✕ ' + (e?.message || e) + ' — dobara 📸'); return;
-  }
-  const v = K[S.kind];
-  if (r.screen) { S.busy = false; $('shGo').disabled = false; S.d.classList.remove('is-frz'); st('bad', '✕ Screen / chhapi tasveer ki photo nahi chalegi — asli ' + v.t + ' ki photo lo'); return; }
-  if (!r.ok) { S.busy = false; $('shGo').disabled = false; S.d.classList.remove('is-frz'); st('bad', `✕ ${v.t} nazar nahi aaya${r.seen ? ' (AI ko dikha: ' + String(r.seen).slice(0, 60) + ')' : ''} — qareeb se, roshni mein dobara 📸`); return; }
-  S.done = true; st('ok', `✅ ${v.i} ${v.t} — sahi! Phone ko bata raha hoon…`);
-  try {
-    if (S.app) await tell('shOk=' + encodeURIComponent('a:' + S.kind) + '&shT=' + Math.floor(Date.now() / 1000));
-    else await tell('shOk=' + encodeURIComponent(S.n));
-    bump(S.kind); const tl = $('shTl'); if (tl) tl.innerHTML = tallyHTML();
-    st('ok', S.app ? `✅ Shabash! ${v.i} gin li — phone ko bata diya (lock ho to 10–20 sec mein khulega)` : '✅ Shabash! 10–20 sec mein phone ki apps khul jayengi');
-    stop(); setTimeout(close, 3500);
-  } catch (e) {
-    S.done = false; S.busy = false; $('shGo').disabled = false; S.d.classList.remove('is-frz');
-    st('bad', '✕ ' + (e?.message || e) + ' — internet dekh kar dobara 📸');
-  }
+  } catch (e) { return bad(`✕ ${j.i} photo check nahi hui`, e?.message || e); }
+  if (r.screen) return bad('✕ Screen / chhapi tasveer nahi chalegi', 'Asli ' + j.t + ' ki photo lo');
+  if (!r.ok) return bad(`✕ ${j.i} ${j.t} nazar nahi aaya`, (r.seen ? 'AI ko dikha: ' + String(r.seen).slice(0, 60) + ' · ' : '') + 'qareeb se, roshni mein');
+  try { await tellH(h, j.app ? 'shOk=' + encodeURIComponent('a:' + j.kind) + '&shT=' + Math.floor(Date.now() / 1000) : 'shOk=' + encodeURIComponent(j.n)); }
+  catch (e) { return bad('✕ Phone tak paigham nahi gaya', 'Photo sahi thi magar ' + (e?.message || e)); }
+  bump(j.kind);
+  note(`✅ ${j.i} ${j.t} — shabash!`, j.app ? 'Phone ko bata diya — lock ho to 10–20 sec mein khulega' : '10–20 sec mein phone ki apps khul jayengi', j.kind, true);
 }
 
 async function zaroori() {

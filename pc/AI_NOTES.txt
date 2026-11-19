@@ -5110,3 +5110,16 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
   r = 'صرف N روپے' · n = urdu-names get(id) || roman2ur(naam; ml = ملی لیٹر, kg = کلو, g = گرام, ltr = لیٹر). Awaaz ur-PK-AsadNeural (m) /
   ur-PK-UzmaNeural (f) — wa-parchi ka ttsMp3(text, voice) (msedge-tts wa-mods). Likhne se pehle doc dobara parho: sig badal gaya = purani mat likho.
   Nateeja {st ok, b Buffer, ur, sz, voice, doneAt} / {st err, err}. AI nahi.
+
+=== 2026-11-19 (manifest 2026-11-19.4): 👥 bill-clip v2.9 + wa-out v1.28 — har bill ki video WhatsApp GROUP mein (transparent patti) ===
+- bill-clip v2.9: blueAccess/billWaGroup onSnapshot (GW). one() kamyab -> gwAdd; gwSweep (shuru + har 2 min, pichhle 30 min, wg nahi). gwKick ek waqt ek,
+  GW_GAP 20 s. gwOne: raat end ke baad = wg 'late', din hadd = 'lim' (sirf ST.wg.err), mkVideo -> waOut bv-g<id> {grp, nm, kind bvg, txt, vf} -> wg = waqt.
+  wg-day.json din ki ginti. known mein wg (loadKnown bhi).
+- mkVideo(b, out, dayTag, step): recCover (apni recording) pehle, na ho to billClip meta st ok -> clipToMp4 temp -> ovRender. waOne (maangi hui video)
+  bhi ab isi se (recToMp4 hata). ovRender: -filter_complex_script f.txt, cwd = job dir (ffRun mein naya cwd param), fontfile relative (clip-font),
+  textfile + expansion=none, b.png kinara (geq), enable=between(mod(t,cyc)) safhe. Fail = plain (-vf base) video, ov 0. -maxrate = min(700k, 12 MB / dur).
+  Font env NT_FONT_R / NT_FONT_B sirf test ke liye (Windows par Fonts\segoeui.ttf / segoeuib.ttf copy).
+- wa-out v1.28: grpOf(d) (^digits(-digits)?@g.us$), pick rank (fast 3 · group 2 · gahak tayyar 2 · gahak faasle mein 1), limHit par sirf gahak bahar,
+  gahak ke faasle ke loop mein group aaye to continue, lastGrp 2.5 s, group = L.n / waOutLog mein nahi. grpList: groupFetchAllParticipating ->
+  blueAccess/waOutGroups (jurte hi 8 s baad + waOutGroupsReq.at naya). Doctor list nahi badli (dono purani services).
+

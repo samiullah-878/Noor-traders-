@@ -41,6 +41,7 @@ export function renderTally(host) {
           <button type="button" data-bt-unp="1" data-mn="bt.unp" data-mn-i="🔵" data-mn-t="Un-posted bills" data-mn-s="clip mangwao (hukum par)" data-mn-g="👀 Bill tally">🔵 Un-posted</button>
           <button type="button" data-bt-sum="1" data-mn="bt.sum" data-mn-i="📊" data-mn-t="Aaj ka hisaab" data-mn-s="kitne ✓ / ✕" data-mn-g="👀 Bill tally">📊 Aaj</button>
           <button type="button" data-bt-setup="1" data-mn="bt.setup" data-mn-i="⚙️" data-mn-t="Camera setup" data-mn-s="NVR + counter ka channel (malik)" data-mn-g="👀 Bill tally" hidden>⚙️ Setup</button>
+          <button type="button" data-bt-wg="1" data-mn="bt.wg" data-mn-i="👥" data-mn-t="Group videos" data-mn-s="har bill ki video WhatsApp group mein (malik)" data-mn-g="👀 Bill tally" hidden>👥 Group videos</button>
           <button type="button" data-bt-wa="1" data-mn="bt.wa" data-mn-i="📲" data-mn-t="Video WhatsApp par" data-mn-s="bill number likho → malik + Mubeen" data-mn-g="👀 Bill tally">📲 Video WhatsApp</button>
           <button type="button" data-bt-cam="1" data-mn="bt.cam" data-mn-i="🔴" data-mn-t="Live camera" data-mn-s="counter ki seedhi video" data-mn-g="👀 Bill tally">🔴 Live camera</button>
           <button type="button" data-bt-live="1" data-mn="bt.live" data-mn-i="📺" data-mn-t="Counter Nazar" data-mn-s="purani live screen" data-mn-g="👀 Bill tally">📺 Counter Nazar</button>
@@ -53,6 +54,7 @@ export function renderTally(host) {
     host.querySelector('[data-bt-setup]').hidden = !isOwner();
     host.querySelector('[data-bt-cam]').hidden = !canK('nz.live');
     host.querySelector('[data-bt-wa]').hidden = !canK('nz.wa');   // v2.322.0
+    host.querySelector('[data-bt-wg]').hidden = !isOwner();   // v2.328.0
   }
   watch(); paint();
 }
@@ -65,7 +67,7 @@ function watch() {
   for (const d of days) offs.push(cloud.listenPosSales(d, b => { if (!Array.isArray(b)) return; for (const [id, x] of [...bills]) if (x._d === d) bills.delete(id); for (const x of b) bills.set(String(x.id), { ...x, _d: d }); schedule(); }));
   offs.push(cloud.listenBillClips(days, (l, e) => { if (!l) { if (e && $('btPc')) { $('btPc').hidden = false; $('btPc').textContent = '⚠'; $('btPc').dataset.full = '⚠ ' + (e.message || 'clip nahi parh sake'); $('btPc').classList.add('bad'); } return; } clips = new Map(l.map(c => [String(c.id), c])); schedule(); }));
   offs.push(cloud.listenBillTally(days, l => { if (!l) return; tallies = new Map(l.map(t => [String(t.id), t])); schedule(); }));
-  offs.push(cloud.listenBillClipPc(s => { pcSt = s; paintPc(); }));
+  offs.push(cloud.listenBillClipPc(s => { pcSt = s; paintPc(); wgPaintSt(); }));
   offs.push(cloud.listenBillClipReq(dayKey(0), l => { if (!l) return; reqs = new Map(l.map(r => [String(r.id), r])); schedule(); if ($('btDlg')?.open && $('btDlg').dataset.unp) openUnposted(); }));
 }
 function schedule() { if (paintT) return; paintT = setTimeout(() => { paintT = null; paint(); if ($('btDlg')?.open && $('btDlg').dataset.list) openList(true); }, 120); }
@@ -248,7 +250,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.327.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.328.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
@@ -259,6 +261,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-undo]')) { if (!lastDone) { notice('Abhi koi pichla nahi'); return; } const tl = tallies.get(lastDone); if (tl && tl.by && tl.by !== uidOf() && !isOwner()) { notice('Ye kisi aur ne tally kiya'); return; } reopen = lastDone; cur = lastDone; mode = 'view'; sel = new Set(); undoUntil = 0; $('btMain').innerHTML = ''; paint(); notice('↩ Bill dobara — ✓ ya ✕ dobara dabayein'); return; }
   if (t.closest('[data-bt-sum]')) { openSum(); return; }
   if (t.closest('[data-bt-wa]')) { openWa(); return; }
+  if (t.closest('[data-bt-wg]')) { openWg(); return; }
   if (t.closest('[data-bt-setup]')) { openSetup(); return; }
   if (t.closest('[data-bt-live]')) { window.ntNazarLive?.(); return; }
 }
@@ -375,6 +378,81 @@ function openWa() {
   if (!waOff && cloud.listenBillWa) { waOff = cloud.listenBillWa(dayKey(0), l => { if (!l) return; waList = new Map(l.map(r => [String(r.id), r])); waPaint(); }); offs.push(() => { try { waOff && waOff(); } catch {} waOff = null; }); }
   if (!d.open) d.showModal();
   waPaint(); setTimeout(() => { try { inp.focus(); inp.select(); } catch {} }, 60);
+}
+
+// ---------- 👥 v2.328.0: HAR bill ki video WhatsApp GROUP mein (malik 19 Nov: 'din mein jitni videos banein SAB · counter-wise · transparent patti, blur nahi') ----------
+// blueAccess/billWaGroup {on, g: {counter: jid}, gd (baqi sab), gn: {jid: naam}, lim, end} — SIRF malik. PC bill-clip v2.9 har kamyab clip patti ke saath bana kar
+// wa-out v1.28 se group mein. Groups ki list = blueAccess/waOutGroups (wa-out, Business number jin groups mein hai). Yahan sirf setting + haal.
+let wgGr = null, wgOff = null, wgCf = null;
+const wgRows = () => { try { const a = JSON.parse(wgGr?.j || '[]'); return Array.isArray(a) ? a.filter(r => Array.isArray(r) && /@g\.us$/.test(String(r[0] || ''))) : []; } catch { return []; } };
+const verLt = (v, a, b) => { const [x, y] = String(v || '').split('.').map(Number); return !(x > a || (x === a && y >= b)); };
+function wgPcs() {
+  const td = dayKey(0), s = new Set();
+  for (const k of (Array.isArray(pcSt?.pcs) ? pcSt.pcs : [])) if (k) s.add(String(k));
+  for (const b of bills.values()) if (b._d === td && b.pc) s.add(String(b.pc));
+  for (const k of Object.keys(wgCf?.g || {})) s.add(k);
+  return [...s].sort();
+}
+function wgOpts(sel, none) {
+  const R = wgRows(), gn = wgCf?.gn || {};
+  let h = `<option value="">${esc(none)}</option>` + R.map(r => `<option value="${esc(r[0])}"${r[0] === sel ? ' selected' : ''}>${esc(r[1] || r[0])} · ${Number(r[2]) || 0} log${r[3] ? ' · 🔒 sirf admin' : ''}</option>`).join('');
+  if (sel && !R.some(r => r[0] === sel)) h += `<option value="${esc(sel)}" selected>${esc(gn[sel] || sel)} (list mein nahi)</option>`;
+  return h;
+}
+function wgPaintSt() {
+  const d = $('btDlg'), el = d?.open && d.querySelector('[data-wg-st]'); if (!el) return;
+  const w = pcSt?.wg, v = String(pcSt?.ver || '');
+  el.textContent = !pcSt ? '' : Date.now() - (Number(pcSt.at) || 0) > 5 * 60000 ? '🖥 PC chup (' + ago(pcSt.at) + ')'
+    : v && verLt(v, 2, 9) ? `⏳ PC ka bill-clip purana (v${v}) — 3-5 min mein khud update`
+    : !w ? (wgCf?.on ? '⏳ abhi koi video nahi gayi' : '')
+    : `${w.err ? '⚠ ' + w.err + ' · ' : ''}aaj ${w.n || 0} gayi${w.last ? ' · aakhri ' + w.last + (w.at ? ' (' + ago(w.at) + ')' : '') : ''}`;
+  const g = d.querySelector('[data-wg-gs]'); if (g) { const n = wgRows().length;
+    g.textContent = !wgGr ? '⏳ Groups ki list abhi PC se nahi aayi — 🔄 dabayein (Business number juda ho)' : wgGr.err ? '⚠ list: ' + wgGr.err : `${n} group mile · ${ago(wgGr.at)} pehle${n ? '' : ' — Business number ko group mein add karein, phir 🔄'}`; }
+}
+function wgPaintOpts() {   // list badli — chuna hua wahi rahe
+  const d = $('btDlg'); if (!d?.open || !d.dataset.wg) return;
+  d.querySelectorAll('select[data-wg-gd],select[data-wg-pc]').forEach(s => { const v = s.value; s.innerHTML = wgOpts(v, s.dataset.wgGd ? '— koi nahi —' : '— upar wala (sab ka) —'); });
+  wgPaintSt();
+}
+async function wgSave(btn, onNow) {
+  const d = $('btDlg'); if (!d?.open) return;
+  const gd = d.querySelector('[data-wg-gd]').value, g = {}, gn = {}, R = wgRows();
+  d.querySelectorAll('select[data-wg-pc]').forEach(s => { if (s.value) g[s.dataset.wgPc] = s.value; });
+  const on = onNow === undefined ? !!wgCf?.on : onNow;
+  if (on && !gd && !Object.keys(g).length) { notice('Pehle group chunein'); return false; }
+  for (const j of [gd, ...Object.values(g)]) if (j) { const r = R.find(x => x[0] === j); gn[j] = String((r && r[1]) || (wgCf?.gn || {})[j] || '').slice(0, 40); }
+  const lim = Math.max(1, Math.min(2000, Number(d.querySelector('[data-wg-lim]').value) || 400)), end = /^\d{1,2}:\d{2}$/.test(d.querySelector('[data-wg-end]').value) ? d.querySelector('[data-wg-end]').value : '22:00';
+  const nx = { on, g, gd, gn, lim, end }, old = btn ? btn.textContent : '';
+  if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try { await cloud.setBillWaGroup(nx); wgCf = nx; if (btn) btn.textContent = '✅'; notice(on ? '👥 Chalu — har nayi video group mein' : 'Group videos band'); return true; }
+  catch (e) { if (btn) btn.textContent = '✕'; notice('Save nahi hua: ' + (e?.message || e)); return false; }
+  finally { if (btn) setTimeout(() => { btn.disabled = false; btn.textContent = old; }, 1400); wgPaintSt(); }
+}
+async function openWg() {
+  if (!isOwner() || !cloud?.setBillWaGroup) { notice(isOwner() ? 'App update karein' : 'Sirf malik'); return; }
+  const d = dlg(); d.dataset.wg = '1'; delete d.dataset.wa; delete d.dataset.list; delete d.dataset.unp;
+  d.innerHTML = '<div class="bt-dbody">⏳</div>'; if (!d.open) d.showModal();
+  try { wgCf = await cloud.getBillWaGroup(); } catch { wgCf = wgCf || {}; }
+  if (!d.open || !d.dataset.wg) return;   // beech mein band
+  const on = !!wgCf.on, g = wgCf.g || {}, lim = Number(wgCf.lim) || 400, end = /^\d{1,2}:\d{2}$/.test(String(wgCf.end || '')) ? wgCf.end : '22:00';
+  d.innerHTML = `<div class="bt-dhead"><b>👥 Har bill ki video — group</b><button type="button" class="bt-x" data-x="1">×</button></div>
+    <div class="bt-dbody"><div class="bt-wgtop"><button type="button" class="bt-sm bt-wgon${on ? ' is-in' : ''}" data-wg-on="1">${on ? '🟢 CHALU' : '⚪ BAND'}</button><span class="bt-sub" data-wg-st></span></div>
+      <label class="bt-wgl">🖥 Sab counters ka group</label><select data-wg-gd="1">${wgOpts(String(wgCf.gd || ''), '— koi nahi —')}</select>
+      <div class="bt-sub">Kisi counter ka ALAG group (khali = upar wala):</div>
+      ${wgPcs().map(pc => `<div class="bt-wgrow"><b>🖥 ${esc(pc)}</b><select data-wg-pc="${esc(pc)}">${wgOpts(String(g[pc] || ''), '— upar wala (sab ka) —')}</select></div>`).join('') || '<p class="bt-sub">Counter abhi nahi mile (camera setup ke baad aate hain)</p>'}
+      <div class="bt-wgrow"><b>📊 Din ki hadd</b><input type="number" inputmode="numeric" min="1" max="2000" data-wg-lim value="${lim}"></div>
+      <div class="bt-wgrow"><b>🌙 Raat band</b><input type="time" data-wg-end value="${esc(end)}"></div>
+      <div class="bt-warow0"><button type="button" class="bt-sm" data-wg-ref="1">🔄 Groups ki list</button><button type="button" class="bt-sm bt-wago" data-wg-save="1">💾 Save</button></div>
+      <p class="bt-sub" data-wg-gs></p>
+      <p class="bt-sub">Video ke upar transparent patti (sirf kinara, peeche video saaf): bill #, Rs, items × tadad. Business number (gahak wala WhatsApp) ko group mein add karein. Har video ke beech 20 s · raat ke waqt / din ki hadd ke baad nahi.</p></div>`;
+  d.querySelector('[data-x]').onclick = () => { delete d.dataset.wg; d.close(); };
+  d.querySelector('[data-wg-save]').onclick = ev => wgSave(ev.currentTarget);
+  d.querySelector('[data-wg-on]').onclick = async ev => { const b = ev.currentTarget, nv = !wgCf?.on; b.classList.toggle('is-in', nv); b.textContent = nv ? '🟢 CHALU' : '⚪ BAND';
+    if (!(await wgSave(null, nv))) { b.classList.toggle('is-in', !nv); b.textContent = !nv ? '🟢 CHALU' : '⚪ BAND'; } };
+  d.querySelector('[data-wg-ref]').onclick = async ev => { const b = ev.currentTarget; b.disabled = true; b.textContent = '⏳';
+    try { await cloud.reqWaOutGroups(); b.textContent = '✅'; } catch (e) { b.textContent = '✕'; notice('Nahi hua: ' + (e?.message || e)); } setTimeout(() => { b.disabled = false; b.textContent = '🔄 Groups ki list'; }, 2500); };
+  if (!wgOff && cloud.listenWaOutGroups) { wgOff = cloud.listenWaOutGroups(s => { wgGr = s; wgPaintOpts(); }); offs.push(() => { try { wgOff && wgOff(); } catch {} wgOff = null; }); }
+  wgPaintOpts();
 }
 
 // ---------- 🔵 un-posted bills (v2.210.0) — clip sirf hukum par ----------

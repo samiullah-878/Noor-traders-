@@ -8683,6 +8683,17 @@ html body #lvDlg .lv-tools button.lv-q.bad{background:linear-gradient(180deg,#7f
 #btDlg .bt-warow.ok{border-color:#9be3b5;background:#effbf3}#btDlg .bt-warow.ok em{color:#137a3c}
 #btDlg .bt-warow.bad{border-color:#f0b4b4;background:#fff6f6}#btDlg .bt-warow.bad em{color:#b3261e}
 #btDlg .bt-warow.run em{color:#8a5a00}
+/* v2.328.0: 👥 har bill ki video WhatsApp group mein (tally ⋮, sirf malik) */
+#btDlg .bt-wgtop{display:flex;align-items:center;gap:10px;margin-bottom:8px;min-width:0}
+#btDlg .bt-wgtop .bt-sub{margin:0;flex:1;min-width:0;font-size:12px}
+#btDlg .bt-wgon{font-weight:700;flex:none}
+#btDlg .bt-wgon.is-in{background:linear-gradient(180deg,#25d366,#128c4a)!important;color:#fff!important;border-color:#0e7a3f!important}
+#btDlg .bt-wgl{display:block;font-weight:700;font-size:13px;margin:6px 0 4px}
+#btDlg .bt-wgrow{display:grid;grid-template-columns:minmax(84px,auto) minmax(0,1fr);gap:8px;align-items:center;margin:5px 0}
+#btDlg .bt-wgrow b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
+#btDlg select[data-wg-gd],#btDlg .bt-wgrow select,#btDlg .bt-wgrow input{width:100%;min-width:0;height:38px;border-radius:11px;border:1px solid #c9d3e6;padding:0 10px;font-size:14px;background:#fff;color:#14213d}
+#btDlg [data-wg-gs]{margin:6px 0 0}
+html.dk #btDlg select[data-wg-gd],html.dk #btDlg .bt-wgrow select,html.dk #btDlg .bt-wgrow input{background:#1b2436;border-color:#2a3650;color:#e6edf8}
 /* ===== 🎬 v2.327.0 FACTORY VIDEO (fac-video.js) — tasveer + 🤖 AI crop · Urdu awaaz wali video · kholo + bhejo ===== */
 .fv-root{display:flex;flex-direction:column;gap:8px;min-width:0}
 html body #dialogBody .fv-q{display:flex;align-items:center;gap:8px;min-height:40px;padding:0 12px;border-radius:999px;border:1.5px solid #C9D3E6;background:#fff}

@@ -8955,3 +8955,29 @@ HD pictures, baqi wo khud kaam kar le · upar bolne wala bhi · yeh sab tum khud
   Nateeja: ⛶ Kholo (apni <dialog> poori screen) · 📤 Bhejo (navigator.share) · ⬇️ Save; list mein '▶ Bani video'. Gaana NAHI (copyright).
 - Test (Chrome headless, fake cloud): list / AI crop / save / awaaz ka intezar / video MP4 H.264 21 s 2.8 MB — frames dekhe.
 AI: sirf crop ka dabba (Gemini). Awaaz (Microsoft Edge TTS) + video mein AI nahi. Khareed rate / nafa kabhi nahi.
+
+=== v2.328.0 (2026-11-19): 👥 HAR bill ki video WhatsApp GROUP mein (transparent patti) + 📸 Sehat photo ke baad foran band (AI background) ===
+Malik: 'din mein jitni videos banein SAB WhatsApp group mein · counter-wise · video ke upar items naam + tadad, transparent — background nazar aaye, blur nahi ·
+munshi ko bhi' (munshi group ka member) · 'paani / nuts ki picture lagate hi screen band — baqi AI background mein, notification: apps khul gayi / dobara photo'.
+- 👥 Setting: tally ⋮ '👥 Group videos' (SIRF malik, tally.js openWg) -> blueAccess/billWaGroup {on, g: {counter naam: groupJid}, gd (baqi sab), gn {jid: naam},
+  lim 400, end '22:00'} (cloud.setBillWaGroup = poora doc, merge nahi). Groups ki list = blueAccess/waOutGroups {j: JSON [[jid, naam, log, announce]]} —
+  PC wa-out v1.28 jurte hi + 🔄 (waOutGroupsReq {at}). Business number ko group mein add karna zaroori. Rules nahi badle (blueAccess = malik).
+- PC bill-clip v2.9: one() kamyab -> gwAdd (+ har 2 min gwSweep: pichhle 30 min ki bani clips jin par wg nahi) -> ek waqt ek, 20 s faasla -> mkVideo
+  (pehle PC ki apni recording, na ho to bani clip ke hisse) -> ovRender -> wa-media\bv-g<SaleID>.mp4 -> waOut bv-g<SaleID> {grp, nm, kind 'bvg', txt, vf}
+  -> billClip.wg = waqt ('late' / 'lim' / 'err' bhi — dobara nahi). Din ki ginti wg-day.json; haal billClipPc.wg {n, last, err, ov} (dialog mein).
+- 🪟 Patti (ovRender): canvas 640x480 (16:9 = kala pad), neeche gol safed kinara (b.png geq se ek dafa) — andar KUCH nahi (blur nahi, video saaf);
+  likhai drawtext borderw 2 kaala kinara: 'Bill # · counter · waqt' / Rs (bara) / 'N items · larka' / lakeer / items (naam safed, xTadad peeli daayein),
+  6 fi safha, zyada hon to har 5 s agla safha (chakkar). Kam items = chhoti patti. Items = posSaleLines (doc na ho = 'Items abhi PC tak nahi pohanche';
+  naya bill 8 s ruk kar dobara). Font: Windows Segoe UI (na ho Arial / Tahoma) -> clip-font\r.ttf / b.ttf; drawtext ko relative raasta + textfile +
+  expansion=none (C: ka ':' / % / ' masla nahi). Patti fail = bina patti video (ov 0, ST.wg.err) — video kabhi nahi rukti. -maxrate (~12 MB tak).
+  Maangi hui video (📲 / WhatsApp 'video 138841') bhi isi mkVideo se (patti ke saath).
+- wa-out v1.28: grp (jid ki shakal pakki) = number check nahi, gahak ka faasla / din ki hadd nahi (gahak ka faasla chal raha ho to group pehle;
+  hadd poori = sirf gahak ruke), group ki apni 2.5 s line, waOutLog mein nahi. Group ka paigham PARHA nahi jata.
+- 📸 sehat.js v1.3: 📸 = khirki FORAN band + '⏳ AI dekh raha hai' -> bg(): need / hook / A.aiCfg (app: key + model) -> service worker ko
+  {type 'sehat', job} (MessageChannel ack 2.5 s) -> sw.js shJob: Gemini (thinking kam, 400 = bina thinking) -> sahi = webhook nt_sehat (2 koshish)
+  -> notification ✅ / ✕ (tag sehat; ✕ par tap = ./#sehat=app.<cheez> = app mode camera, phone 3 min ke andar maanta) + sehatR (ginti bump; ijazat
+  na ho to app paigham). Purana SW (ack nahi) = yahi kaam app mein. Notification ijazat 📸 par maangi. AI key sirf us kaam ki memory mein, save nahi.
+- Test: ffmpeg patti (4 haalat + ajeeb harf ' % : \), mock Firebase e2e (recording + bani clip, wg, dobara nahi), tally dialog (Chrome), SW handler
+  (Node: ok / 400 / nahi / screen / 429 / kachra / hook fail) + Chrome fake camera (SW raasta + purana SW fallback). Asal WhatsApp group par NAHI chala.
+AI: 📸 Sehat photo ki jaanch (Gemini). Group video / patti mein AI NAHI.
+
