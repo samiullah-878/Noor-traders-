@@ -8913,3 +8913,20 @@ Asal jagah: Settings → 🔌 POS aur AI → '📲 Gahak ko WhatsApp parchi (nay
    se, timeout 30 s; (c) har job par ur = ok / roman / 'naam nahi' / 'band (label-settings)' / '✕ tasveer nahi bani: <PowerShell ki wajah>' -> app ki
    label patti (barcode.js liveLabelsHTML) par narangi line '🔤 Urdu nahi chhapi — …'. Agla qadam: malik label chhape, patti ki photo — wajah pakki.
 AI: sirf 📸 photo jaanch (pehle jaisa). Bank notification, lock, label Urdu mein AI nahi.
+
+=== v2.326.0 (2026-11-19) — 📸 Sehat lock: har unlock par popup · 2 s chowkidar · app mein 📸 Sehat photo screen (md pkg v58) ===
+Malik 21:00: 'Paani wali active ho to phone kholne par photo wala option nahi aata · apps 1-2 minute khuli rehti hain phir photo maangti hai'
++ 'app mein bhi screen bana do paani ki picture lagane ke liye' + 'shorts bhi foran band nahi ho rahi'. Wajah: v57 ka popup lock mein sirf EK dafa (shLkA);
+band app ko 'app khuli' trigger kabhi chook jata, phir 30 s ki jaanch — battery saver use 1-2 min late karta.
+- sehat.py (lock): (1) lock baqi + phone khula (T4 DeviceUnlocked) = HAR dafa ASK (iffor: shLkA YA T4 — IfCondition ka apna m_isOrCondition);
+  (2) photo baqi magar lock abhi nahi (dAge < 0) + unlock = ASKP '📸 {shK} ki photo baqi — N min' (Photo do / Baad mein, 15 s);
+  (3) lock + screen on = EK loop (shGd dil ki dhadkan, 6 s purani = naya) har 2 s: band list (raatband.PK — YouTube / Shorts bhi) foreground = Home + ASK;
+  lock khatam / 🚨 / screen band = loop band. Popup ke baad shAsk = abhi-18 (sirf 2 s ki chhoot, pehle 20 s).
+- 📸 App screen: ☰ 'Sehat photo' (sirf malik, index.html #shNav) -> sehat.js v1.2 open({mode:'app'}): upar chips 💧 Paani · ☕ Coffee · 🍎 Fruit · 🥜 Nuts
+  (aaj ki ginti, aakhri chuna yaad sam-sehat-k), wahi live camera + AI -> webhook nt_sehat?shOk=a:<kind>&shT=<sec>. Phone (APPOK): shT 3 min ke andar
+  hi; wahi cheez baqi / lock = OKDONE; paani = pnCount + agli yaad 40 min baad (pnDue); coffee / fruit / nuts = kd<kind> = Pakistan din
+  ((system_time+18000)/86400) -> us din KH ki yaad nahi (ag<kind> > 0 shart).
+- Shorts: lock ke dauran 2 s loop YouTube ko bhi pakarta hai. Hamesha wala 'NT Shorts band (YouTube)' (malik ka macro, ScreenContent view id
+  reel_…) nahi chhera — malik se poochha.
+- Sabaq: Remote ki 'NT phone macros vN' email ImportMacros ke foran baad export hoti hai — kabhi pichhli haalat dikhati hai (v57 email mein v56 ke macros).
+AI: sirf photo jaanch (Gemini). Lock / popup / ginti mein AI nahi.

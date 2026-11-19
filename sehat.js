@@ -1,5 +1,5 @@
 // =========================================================
-//  sehat.js v1.0 (2026-11-19, app v2.323.0) — 📸 SEHAT LOCK ki photo (sirf malik)
+//  sehat.js v1.2 (2026-11-19, app v2.326.0; v1.0 app v2.323.0) — 📸 SEHAT LOCK ki photo (sirf malik)
 //  Malik: "fruit / nuts / coffee / paani na piyun to mobile access na kar paun — cheez ki picture do, AI khud dekhe · LIVE camera, gallery nahi".
 //  MacroDroid popup "📸 Photo do" → #sehat=<kind>.<nonce> → yeh khirki: SIRF live camera (getUserMedia — file / gallery ka koi raasta nahi)
 //  → 🤖 Gemini (app ki AI key, A.aiImage) cheez dekhe → sahi = phone ko webhook `nt_sehat?shOk=<nonce>` (Falcon wala fxCfg.wh) → lock khatam.
@@ -7,6 +7,10 @@
 //  AI: sirf photo jaanch. Waqt / lock = phone ka macro (md/tools/sehat.py), AI nahi.
 //  v1.1 (2026-11-19, app v2.325.0 — malik: "Chrome mein khulta hai, speed se nahi"): camera FORAN — login / data ka intezar sirf 📸 ke baad
 //  (A.ready() = app ka session + malik → { cloud, aiImage }). Phone ab installed app (WebAPK) kholta hai, Chrome sirf jab app na mile.
+//  v1.2 (2026-11-19, app v2.326.0 — malik: 'app mein bhi screen bana do paani ki picture lagane ke liye — wahan par bhi lagayi ja sake'):
+//  ☰ → 📸 Sehat photo = open({mode:'app'}) — upar 4 chips (💧 ☕ 🍎 🥜, aaj ki ginti saath), wahi live camera + AI → phone ko
+//  `nt_sehat?shOk=a:<kind>&shT=<sec>` (phone sirf 3 min ke andar ka maanta hai): wahi cheez baqi / lock = foran khule · paani pehle = agli yaad 40 min baad ·
+//  coffee / fruit / nuts waqt se pehle = us din ki yaad nahi (md pkg v58).
 // =========================================================
 const K = {
   paani: { i: '💧', t: 'Paani ka glass', d: 'a glass, cup or bottle with drinking water in it' },
@@ -38,6 +42,10 @@ html body #shDlg .sh-c.red{border-color:rgba(255,120,120,.55)!important;backgrou
 #shDlg .sh-tl{position:absolute;left:0;right:0;top:64px;display:flex;justify-content:center;gap:6px;flex-wrap:wrap;padding:0 12px}
 #shDlg .sh-tl span{height:24px;padding:0 10px;border-radius:999px;display:inline-flex;align-items:center;font:700 12px/1 system-ui,sans-serif;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.18)}
 #shDlg .sh-tl span.is-in{background:rgba(52,199,89,.28);border-color:rgba(52,199,89,.6)}
+html body #shDlg .sh-k{height:34px!important;min-height:34px!important;padding:0 12px!important;border-radius:999px!important;border:1px solid rgba(255,255,255,.26)!important;background:linear-gradient(180deg,rgba(255,255,255,.16),rgba(255,255,255,.05))!important;color:#fff!important;font:700 13px/1 system-ui,sans-serif!important;white-space:nowrap;box-shadow:none!important;backdrop-filter:blur(6px)}
+html body #shDlg .sh-k.is-in{border-color:rgba(120,190,255,.9)!important;background:linear-gradient(180deg,rgba(60,140,255,.62),rgba(30,90,200,.5))!important}
+html body #shDlg .sh-k b{margin-left:5px;padding:2px 6px;border-radius:999px;background:rgba(0,0,0,.28);font:800 11px/1 system-ui,sans-serif}
+html body #shDlg .sh-k.has b{background:rgba(52,199,89,.55)}
 #shDlg .sh-bot{position:absolute;left:0;right:0;bottom:0;padding:22px 14px calc(18px + env(safe-area-inset-bottom));display:flex;flex-direction:column;align-items:center;gap:12px;background:linear-gradient(0deg,rgba(4,7,13,.92),rgba(4,7,13,0))}
 #shDlg .sh-st{min-height:34px;max-width:94%;padding:7px 14px;border-radius:14px;text-align:center;font:700 14px/1.35 system-ui,sans-serif;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2)}
 #shDlg .sh-st.ok{background:rgba(52,199,89,.3);border-color:rgba(52,199,89,.7)}#shDlg .sh-st.bad{background:rgba(255,69,58,.28);border-color:rgba(255,69,58,.7)}
@@ -50,6 +58,8 @@ html body #shDlg .sh-go:disabled{opacity:.45}
 
 function tallyHTML() {
   const t = tally();
+  // v1.2: app wali screen = yahi chips cheez chunne ke button (aaj ki ginti saath)
+  if (S && S.app) return Object.entries(K).map(([k, v]) => { const c = Number(t[k]) || 0; return `<button type="button" class="sh-k${S.kind === k ? ' is-in' : ''}${c ? ' has' : ''}" data-sh="k" data-k="${k}">${v.i} ${esc(v.t.split(' ')[0])}<b>${k === 'paani' ? c : c ? '✓' : '0'}</b></button>`; }).join('');
   return Object.entries(K).map(([k, v]) => `<span class="${(Number(t[k]) || 0) > 0 ? 'is-in' : ''}">${v.i} ${Number(t[k]) || 0}</span>`).join('');
 }
 // v1.1: app abhi login kar rahi ho to 📸 ke baad intezar (camera pehle hi khula)
@@ -63,20 +73,22 @@ function st(cls, txt) { const b = $('shSt'); if (b) { b.className = 'sh-st' + (c
 
 export async function open(deps) {
   A = deps || {}; css();
-  const kind = K[deps.kind] ? deps.kind : '', n = String(deps.n || '').replace(/\D/g, '').slice(0, 12);
-  if (!kind || !n) { A.notice?.('✕ Sehat link adhoora — phone ke popup se dobara "📸 Photo do" dabayein'); return; }
+  const app = deps.mode === 'app';
+  let last = ''; try { last = localStorage.getItem('sam-sehat-k') || ''; } catch {}
+  const kind = K[deps.kind] ? deps.kind : app ? (K[last] ? last : 'paani') : '', n = app ? '' : String(deps.n || '').replace(/\D/g, '').slice(0, 12);
+  if (!kind || (!app && !n)) { A.notice?.('✕ Sehat link adhoora — phone ke popup se dobara "📸 Photo do" dabayein'); return; }
   close();
   const v = K[kind];
   const d = document.createElement('dialog'); d.id = 'shDlg';
+  S = { kind, n, app, stream: null, busy: false, done: false };
   d.innerHTML = `<video class="sh-v" id="shV" playsinline muted autoplay></video><img class="sh-shot" id="shShot" alt="">
-    <div class="sh-top"><div class="sh-ttl">${v.i} ${esc(v.t)} ki photo<small>Sirf live camera · 🤖 AI dekhega · tasveer save nahi hoti</small></div>
+    <div class="sh-top"><div class="sh-ttl" id="shTtl">${app ? '📸 Sehat photo' : v.i + ' ' + esc(v.t) + ' ki photo'}<small>Sirf live camera · 🤖 AI dekhega · tasveer save nahi hoti</small></div>
       <button type="button" class="sh-c red" data-sh="zaroori">🚨 10 min</button><button type="button" class="sh-c" data-sh="x" aria-label="Band">✕</button></div>
     <div class="sh-tl" id="shTl">${tallyHTML()}</div>
     <div class="sh-bot"><div class="sh-st" id="shSt">⏳ Camera khul raha hai…</div>
       <div class="sh-row"><button type="button" class="sh-go" id="shGo" data-sh="go" disabled aria-label="Photo lo">📸</button></div>
-      <div class="sh-hint">${esc(v.t)} camera ke saamne saaf rakhein — phir 📸</div></div>`;
+      <div class="sh-hint" id="shHint">${esc(v.t)} camera ke saamne saaf rakhein — phir 📸</div></div>`;
   document.body.appendChild(d);
-  S = { kind, n, stream: null, busy: false, done: false };
   d.addEventListener('click', onClick);
   d.addEventListener('close', () => { stop(); d.remove(); if (S && S.d === d) S = null; });
   S.d = d;
@@ -143,9 +155,10 @@ async function go() {
   if (!r.ok) { S.busy = false; $('shGo').disabled = false; S.d.classList.remove('is-frz'); st('bad', `✕ ${v.t} nazar nahi aaya${r.seen ? ' (AI ko dikha: ' + String(r.seen).slice(0, 60) + ')' : ''} — qareeb se, roshni mein dobara 📸`); return; }
   S.done = true; st('ok', `✅ ${v.i} ${v.t} — sahi! Phone ko bata raha hoon…`);
   try {
-    await tell('shOk=' + encodeURIComponent(S.n));
+    if (S.app) await tell('shOk=' + encodeURIComponent('a:' + S.kind) + '&shT=' + Math.floor(Date.now() / 1000));
+    else await tell('shOk=' + encodeURIComponent(S.n));
     bump(S.kind); const tl = $('shTl'); if (tl) tl.innerHTML = tallyHTML();
-    st('ok', '✅ Shabash! 10–20 sec mein phone ki apps khul jayengi');
+    st('ok', S.app ? `✅ Shabash! ${v.i} gin li — phone ko bata diya (lock ho to 10–20 sec mein khulega)` : '✅ Shabash! 10–20 sec mein phone ki apps khul jayengi');
     stop(); setTimeout(close, 3500);
   } catch (e) {
     S.done = false; S.busy = false; $('shGo').disabled = false; S.d.classList.remove('is-frz');
@@ -163,5 +176,13 @@ async function zaroori() {
 function onClick(e) {
   const b = e.target.closest?.('[data-sh]'); if (!b) return;
   const k = b.dataset.sh;
-  if (k === 'go') go(); else if (k === 'x') close(); else if (k === 'zaroori') zaroori();
+  if (k === 'go') go(); else if (k === 'x') close(); else if (k === 'zaroori') zaroori(); else if (k === 'k') pick(b.dataset.k);
+}
+// v1.2: app wali screen — cheez badlo (camera chalta rahe)
+function pick(k) {
+  if (!S || !S.app || S.busy || S.done || !K[k]) return;
+  S.kind = k; try { localStorage.setItem('sam-sehat-k', k); } catch {}
+  const tl = $('shTl'); if (tl) tl.innerHTML = tallyHTML();
+  const h = $('shHint'); if (h) h.textContent = K[k].t + ' camera ke saamne saaf rakhein — phir 📸';
+  if (S.stream) st('', K[k].i + ' ' + K[k].t + ' — 📸 dabayein');
 }

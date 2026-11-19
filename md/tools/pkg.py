@@ -101,7 +101,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🏦 Alfa notification se bank entry · 📸 photo ab installed Blue Khata mein · lock lagte hi photo ka sawal.",
+       "note": "📸 Sehat lock: har dafa phone kholte hi photo ka popup · lock mein har 2 s jaanch (band app foran Home) · app ki 📸 Sehat photo screen se bhi photo.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl, mal],   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
