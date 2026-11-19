@@ -8884,3 +8884,9 @@ phone · Business number alag Settings mein); upar heading '👤 ① Aap ka apna
 '⚠️ Yahan … juda hai — yeh aap ka number nahi. ⛔ Unlink, phir neeche ②'; upar + neeche ek hi number = '2 dafa chhap sakti hai'. Neeche heading '🖨 ② Dukan / Mubeen
 ka print wala phone'. Har number chip par naam (nmOf: prFrom[0] = Malik (aap), prTo[0] = Mubeen, blueAccess/khWa.allow ka naam, waLink2.me = Print phone —
 listenKhWa settings khulne par). PIN ka khana ab default malik ka number. QR ki hidayat 'APNE (malik wale) phone mein'. AI nahi. Test: node mein HTML (stubs).
+
+
+=== v2.324.1 (2026-11-19) — GHALTI theek: Business number ki setting ka naam ===
+v2.324.0 ki patti par likha tha 'Settings → 📲 WhatsApp Business' — aisa koi row hai hi nahi; malik ko nahi mila ('jahan tum ne bola tha wahan nahi chal raha').
+Asal jagah: Settings → 🔌 POS aur AI → '📲 Gahak ko WhatsApp parchi (naya number)' (#waOutBtn, wa-out.js). Ab patti mein yehi naam ka button (data-ws-wo)
+-> window.ntWaOutOpen() seedha wahi khirki. Sabaq: malik ko kisi setting ki jagah batao to naam CODE se dekh kar (setRow ka asal label), andaze ka naam nahi.

@@ -15,10 +15,10 @@
 //   v2.179.2: 🔁 DOBARA PARHO (malik OK) — khuli parchi ⋮ 🔁 + ✕ / ⚠️ wale dabbe mein chip → {st:'new'} (rules 2.86 wahi) → PC (wa-parchi claimNew) AI se phir
 //     parhe + naya thermal / A4; bill khud dobara bhar jata hai (pendLoad). Bill bana / maal nikla / abhi parh raha = nahi.
 //   CAP sale.wsale (default khula). AI app mein NAHI — parchi PC parhta hai. Agent action NAHI (malik ka qaida v2.111.0).
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.324.0';
-import { smartSearch, noteHit } from './smart-search.js?v=2.324.0';
-import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.324.0';   // v2.180.0: 👦 larka (POS SP Man) chip
-import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.324.0';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.324.1';
+import { smartSearch, noteHit } from './smart-search.js?v=2.324.1';
+import { smWatch, smChipHTML, smForDoc, smName } from './sale-man.js?v=2.324.1';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { wlSetup, wlOpen, wlCount } from './wa-learn.js?v=2.324.1';   // v2.181.0: 📒 Naam seekho (❓ lafz → 🧠 yaad)
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -762,7 +762,7 @@ function setOpen() {
   if (!C.owner()) { C.notice('Sirf malik'); return; }
   if (!C.modal) return;
   qrLast = qrLast2 = '';
-  C.modal('📲 WhatsApp Parchi — setting', `<div class="wps-set" data-ws-setroot="1"><div class="wps-legend"><b>① Upar</b> = sirf aap ka apna WhatsApp · <b>② Neeche</b> = dukan / Mubeen ka print wala phone · gahak ko paigham wala <b>Business number</b> alag (Settings → 📲 WhatsApp Business)</div><div data-ws-link="1">${linkHTML()}</div><div data-ws-cfg="1">${cfgHTML()}</div><div data-ws-link2="1">${link2HTML()}</div></div>`, true);
+  C.modal('📲 WhatsApp Parchi — setting', `<div class="wps-set" data-ws-setroot="1"><div class="wps-legend"><b>① Upar</b> = sirf aap ka apna WhatsApp · <b>② Neeche</b> = dukan / Mubeen ka print wala phone · gahak ko paigham wala <b>Business number</b> alag jagah: <button type="button" class="wps-tc wps-wo" data-ws-wo="1">📲 Gahak ko WhatsApp parchi (naya number) ›</button></div><div data-ws-link="1">${linkHTML()}</div><div data-ws-cfg="1">${cfgHTML()}</div><div data-ws-link2="1">${link2HTML()}</div></div>`, true);
   if (!wlStop && C.cloud?.listenWaLink) wlStop = C.cloud.listenWaLink((d, e) => { if (!setAlive()) return; if (e) wlErr = perm(e) ? 'rules' : 'net'; else { wl = d || {}; wlErr = ''; } linkPaint(); });
   if (!wcStop && C.cloud?.listenWaParchi) wcStop = C.cloud.listenWaParchi((d, e) => { if (!setAlive()) return; if (e) wcErr = perm(e) ? 'rules' : 'net'; else { wc = d || null; wcErr = ''; } cfgPaint(); });   // d null = abhi save nahi hui
   if (!wl2Stop && C.cloud?.listenWaLink2) wl2Stop = C.cloud.listenWaLink2((d, e) => { if (!setAlive()) return; if (e) wl2Err = perm(e) ? 'rules' : 'net'; else { wl2 = d || {}; wl2Err = ''; } link2Paint(); });   // v2.186.0
@@ -948,6 +948,7 @@ async function waCmd(cmd) {
 }
 
 // ---------- events (sirf data-ws-* · root data-ws-root) ----------
+document.addEventListener('click', e => { if (e.target.closest?.('#dialogBody [data-ws-wo]')) { if (window.ntWaOutOpen) window.ntWaOutOpen(); else C.notice('Settings → 🔌 POS aur AI → 📲 Gahak ko WhatsApp parchi (naya number)'); } });   // v2.324.1: Business number ki asal setting seedha
 const inWS = t => !!t?.closest?.('#list,#summary,#actions') && !!document.querySelector('[data-ws-root]');
 document.addEventListener('input', e => {
   const t = e.target, d = t?.dataset; if (!d) return;
