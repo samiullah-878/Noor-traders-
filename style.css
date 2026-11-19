@@ -7077,6 +7077,11 @@ html body #dialogBody .wps-qr{box-sizing:border-box;width:100%;max-width:320px;m
 html body #dialogBody .wps-qr svg{display:block;width:100%;height:auto;max-width:300px}
 /* v2.186.0: 🔢 print wale phone ka 8 harf code (QR ki jagah — malik ghar, Mubeen dukan) */
 html body #dialogBody .wps-pcode{box-sizing:border-box;width:100%;max-width:320px;margin:4px auto 2px;padding:14px 10px;border-radius:16px;background:linear-gradient(180deg,#fff,#f3f6fc);border:1px solid #d9e1ef;text-align:center;font:800 34px/1.1 ui-monospace,Menlo,Consolas,monospace;letter-spacing:.14em;color:#1a2d53;box-shadow:0 8px 22px -14px rgba(23,43,82,.5);user-select:all;white-space:nowrap}
+/* v2.324.0: WhatsApp setting — ① / ② kaun sa number kahan (malik: 'sab ka naam likh do') */
+html body #dialogBody .wps-legend{margin:0 0 10px;padding:8px 12px;border-radius:12px;background:linear-gradient(180deg,#fffaf0,#fff3dc);border:1px solid #f0d9a8;color:#5a4310;font:600 13px/1.45 system-ui,sans-serif}
+html body #dialogBody .wps-h1{margin:2px 0 2px;font-size:16px;color:#1a2d53}
+html body #dialogBody .wps-num b{font-weight:800;color:#1a2d53}
+html.dk body #dialogBody .wps-legend{background:linear-gradient(180deg,#3a2f17,#2c2410);border-color:#6b5420;color:#f3dfae}
 html body #dialogBody .wps-row{display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-width:0}
 html body #dialogBody button.wps-tc,html body #summary button.wps-tc{min-height:36px!important;height:auto;padding:0 14px!important;border-radius:999px!important;border:1px solid #c7d4f5!important;background:linear-gradient(180deg,#fff,#f3f6fd)!important;color:#223b6d!important;font-weight:800!important;font-size:13px!important;white-space:nowrap;box-shadow:none!important;width:auto;flex:0 0 auto}
 html body #dialogBody button.wps-tc.is-in,html body :is(#dialogBody,#summary) button.wps-tc.pri{background:linear-gradient(180deg,#2c4a85,#223b6d)!important;color:#fff!important;border-color:#223b6d!important;box-shadow:0 4px 12px -7px rgba(34,59,109,.8)!important}

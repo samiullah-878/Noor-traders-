@@ -8875,3 +8875,12 @@ aur 'DESKTOP-' sab ka ek hai, is liye naam ka ASAL hissa.
    - Sabaq / hadein: AI sirf yeh dekh sakta hai ke photo mein cheez hai — khaya / piya nahi. Webhook ke liye internet chahiye; AI / net na ho to 🚨.
 - Test: headless Chrome nakli camera (sehat.js: ✕ par dobara, ✅ par webhook URL shOk, khirki band) · MacroDroid validator (lock + coffee macro VALID) ·
   pkg.py 56 chaabi jaanch. Asal phone par lock / PIN NAHI dekha.
+
+
+=== v2.324.0 (2026-11-19) — 📲 WhatsApp setting: ① / ② + har number ka NAAM ===
+Malik ne dukan / print phone ka number (0329…) UPAR (apne link ki jagah) jor diya tha — wajah: screen par likha nahi tha kaun sa dabba kis ka. Malik: 'screen par
+sab ka naam likh do, phir confusion nahi hogi'. wa-sale.js: upar patli patti .wps-legend (① Upar = sirf aap ka apna WhatsApp · ② Neeche = dukan / Mubeen ka print
+phone · Business number alag Settings mein); upar heading '👤 ① Aap ka apna WhatsApp — Malik (aap) · 0345…' (waParchi.prFrom[0]); juda number malik ka na ho = laal
+'⚠️ Yahan … juda hai — yeh aap ka number nahi. ⛔ Unlink, phir neeche ②'; upar + neeche ek hi number = '2 dafa chhap sakti hai'. Neeche heading '🖨 ② Dukan / Mubeen
+ka print wala phone'. Har number chip par naam (nmOf: prFrom[0] = Malik (aap), prTo[0] = Mubeen, blueAccess/khWa.allow ka naam, waLink2.me = Print phone —
+listenKhWa settings khulne par). PIN ka khana ab default malik ka number. QR ki hidayat 'APNE (malik wale) phone mein'. AI nahi. Test: node mein HTML (stubs).
