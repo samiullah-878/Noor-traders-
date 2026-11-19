@@ -8981,3 +8981,24 @@ munshi ko bhi' (munshi group ka member) · 'paani / nuts ki picture lagate hi sc
   (Node: ok / 400 / nahi / screen / 429 / kachra / hook fail) + Chrome fake camera (SW raasta + purana SW fallback). Asal WhatsApp group par NAHI chala.
 AI: 📸 Sehat photo ki jaanch (Gemini). Group video / patti mein AI NAHI.
 
+=== v2.329.0 (2026-11-19): 📹 LIVE WhatsApp par + mazeed cameras (counter ke ilawa) + recording chalu / band ===
+Malik: 'live WhatsApp se dekh sakte?' -> asal chalti video WhatsApp par NAHI (computer wala WhatsApp video call nahi kar sakta) -> 'Ha ok' (📸 tasveer +
+pichhle waqt ki video + app ka link) + 'live likhein to aage counter ke naam khud aa jayein · phir number · 30 sec … 30 min · tarteeb se' + 'mazeed cameras
+(7 jaise) jis ka view dekhna ho · kisi ki recording chalu karni ho to wo bhi'. Malik ka sawal: 3 min ki video kitni der mein? -> takreeban 1 minute.
+- WhatsApp (kh-wa v1.12, sirf malik / Mubeen): live -> '📹 Kaun sa camera?' (billClipPc.cams, ⏺ = recording chalu, aakhri = 📸 sab ki tasveer) -> number ->
+  1 📸 · 2-7 pichhle 30 sec / 1 / 3 / 5 / 10 / 30 min · 8 ⏺/⏹ recording (SIRF malik, sirf mazeed camera — counter ki hamesha chalu) + app link #live=<naam>.
+  Seedha: 'live 3 4'. khPend stg 'lv' / 'lw'. Hukum = billClipWa lv<msg> {kind 'live', cam, sec, from, byN}.
+- PC bill-clip v2.10 lvOne (apni line lvChain, bill ki video na ruke): SIRF maangne wale ko. 📸 = recording wale camera ke taza tukre (likha ja raha
+  fragmented mp4) ka aakhri frame (NVR par naya rabta NAHI); recording band = ek chhota RTSP rabta (us camera ka koi aur rabta nahi hota; 401 = AUTHBAD).
+  🎥 = PC ki recording (recording band = sirf tasveer + wajah) -> 5-5 min hisse (lvEnc 640 / 10 fps / maxrate), har hissa bante hi waOut bv-lv<id>-<i>
+  (tarteeb `at` se); kam recording ho to 'sirf N min mili'. billClipPc.cams [{n, c, r, on}].
+- Mazeed cameras: blueAccess/billClip.xc [{n, ch, r}] (array — merge mein poora badalta) — app Bill tally ⋮ ⚙️ Camera setup '📹 Mazeed cameras'
+  (naam + channel + ⏺ Rec + ✕, 16 tak, dohra naam / counter ka naam mana). recChannels = counter + xc.r. live-cam v1.8: naam counter na ho to xc se
+  channel; recording wale ki udp copy, band = RTSP seedha. App 🔴 Live list mein 📹 chip. WhatsApp ⏺ = kh-wa billClip.xc[].r (set merge, `at` nahi =
+  rabta test / recording dobara nahi).
+- App: #live=<camera> (WhatsApp link) = seedha live.js (malik / nz.live). 📲 dialog ki list mein live wali qatar '📹 naam · 3 min'.
+- Test (mock Firebase + nakli recorder): kh-wa menu (larka mana, malik / Mubeen, 8 sirf malik, counter par 8 nahi, live 3 4, ghalat number, 0);
+  bill-clip: sab ki tasveer (recording file + RTSP), 3 min video (1 hissa), 10 min maanga 4.5 min mila (note), recording band = tasveer, anjaan naam,
+  ghair number; tally setup (jorna / ⏺ / save / dohra naam) + live chips. Asal NVR / WhatsApp par NAHI chala.
+AI: NAHI (sirf ffmpeg + WhatsApp).
+

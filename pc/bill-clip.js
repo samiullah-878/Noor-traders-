@@ -1,5 +1,8 @@
 // =========================================================
-//  bill-clip.js  v2.9 (2026-11-19: 👥 malik: 'din mein jitni videos banein SAB WhatsApp group mein · counter-wise · video ke upar transparent
+//  bill-clip.js  v2.10 (2026-11-19: 📹 malik: 'live likhein -> camera ke naam -> number -> abhi ki tasveer / pichhle 30 sec … 30 min ki video, tarteeb se ·
+//    counter ke ilawa mazeed cameras · kisi ki recording chalu karni ho to wo bhi': CF.xc [{n, ch, r}] (mazeed cameras, r = recording), billClipWa kind 'live'
+//    (kh-wa v1.12) -> lvOne: 📸 taza tukre ka aakhri frame / RTSP (recording band ho to) · 🎥 apni recording se 5-5 min ke hisse -> SIRF maangne wale ko.
+//    billClipPc.cams [{n, c, r, on}] = app / WhatsApp ki list.) · v2.9 (2026-11-19: 👥 malik: 'din mein jitni videos banein SAB WhatsApp group mein · counter-wise · video ke upar transparent
 //    items naam + tadad · background nazar aaye, blur nahi': har kamyab clip → mkVideo (patti: gol kinara + kaale kinare wali likhai, canvas 640x480) →
 //    waOut bv-g<SaleID> {grp} → wa-out v1.28 group mein; blueAccess/billWaGroup {on, g, gd, gn, lim 400, end 22:00}, 20 s faasla, billClip.wg (dobara nahi).
 //    Maangi hui video (malik + Mubeen) par bhi wohi patti.) · v2.8 (2026-11-18: 🎥 malik: "bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se — customer ko wait na karna pare": billClipWa/<id>
@@ -53,7 +56,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.9';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.10';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -71,6 +74,7 @@ function cfApply(d) {
   CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), sub: d.sub === 0 || d.sub === '0' ? 0 : 1,
     pre: d.pre === 0 || d.pre === '0' ? 0 : Math.max(10, Math.min(600, Number(d.pre) || 300)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), rk: Math.max(30, Math.min(720, Number(d.rk) || 180)), keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
+    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v2.10: 📹 mazeed cameras
     ch: (d.ch && typeof d.ch === 'object') ? d.ch : {}, rep: /^\d{1,2}:\d{2}$/.test(String(d.rep || '')) ? String(d.rep) : '20:30', maxs: Math.max(30, Math.min(700, Number(d.maxs) || 630)) };
   cfReady = true;
 }
@@ -85,7 +89,7 @@ let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState(), net: NET || null, wg: ST.wg || null }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState(), net: NET || null, wg: ST.wg || null, cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -221,7 +225,7 @@ async function rabta() {
 // ---------- 🎞 LOCAL RECORDING (v2.0): har camera ki live sub-stream 1-1 min ke tukron mein (clip-rec\ch<N>\s-YYYYMMDD-HHMMSS.mp4) ----------
 const recs = new Map();   // ch → { p, at, errs, restarts, dead, lastErr }
 function liveUrl(ch) { const u = credOf(CF.user), p = credOf(CF.pw); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${CF.sub ? 2 : 1}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${CF.sub}`; }
-function recChannels() { const s = new Set(); for (const v of Object.values(CF.ch)) if (Number(v) > 0) s.add(Number(v)); return [...s]; }
+function recChannels() { const s = new Set(); for (const v of Object.values(CF.ch)) if (Number(v) > 0) s.add(Number(v)); for (const x of CF.xc || []) if (x.r) s.add(x.ch); return [...s]; }   // v2.10: mazeed camera sirf jab ⏺ recording chalu
 function recDir(ch) { return path.join(REC, 'ch' + ch); }
 function segList(ch) {   // [{f, t0, t1}] waqt ke mutabiq (file ke naam se — PC ka local waqt)
   let names = []; try { names = fs.readdirSync(recDir(ch)).filter(f => /^s-\d{8}-\d{6}\.mp4$/.test(f)).sort(); } catch { return []; }
@@ -459,6 +463,7 @@ function waKick() {
   (async () => { try { while (waPend.size) {
     const [id, r] = [...waPend.entries()].sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0]; waPend.delete(id);
     if (waSeen.has(id)) continue; waSeen.add(id); if (waSeen.size > 500) waSeen.clear();
+    if (r.kind === 'live') { lvChain = lvChain.then(() => lvOne(id, r)).catch(e => { log('✕ 📹 live: ' + (e.stack || e.message)); waSet(id, { st: 'err', err: 'PC: ' + String(e.message || e).slice(0, 120), doneAt: Date.now() }); }); continue; }   // v2.10: apni line (bill ki video na ruke)
     try { await waOne(id, r); } catch (e) { log('✕ 🎥 video WhatsApp: ' + (e.stack || e.message)); await waSet(id, { st: 'err', err: 'PC: ' + String(e.message || e).slice(0, 120), doneAt: Date.now() }); }
   } } finally { waBusy = false; } })();
 }
@@ -694,6 +699,103 @@ async function gwOne(b) {
   ST.wg = { day, n: gwN.n, last: `#${b.no} · ${b.pc || ''}`, at: Date.now(), err: mv.ov ? '' : 'patti nahi lagi: ' + String(mv.why || '').slice(0, 80), ov: mv.ov ? 1 : 0 };
   pushSt(true);
   log(`👥🎥 #${b.no} (${b.pc}) → ${gnm} · ${Math.round(sz / 1024)} KB · ${mv.dur} s · ${mv.src}${mv.ov ? '' : ' · patti NAHI (' + mv.why + ')'} · ${Math.round((Date.now() - tA) / 1000)} s (aaj ${gwN.n})`);
+}
+
+// ---------- 📹 v2.10: LIVE WhatsApp par + mazeed cameras (malik 19 Nov: 'live likhein -> camera ke naam -> number -> abhi ki tasveer / 30 sec … 30 min ·
+//   tarteeb se · counter ke ilawa mazeed cameras (7 jaise) · kisi ki recording chalu karni ho to wo bhi') ----------
+//   Cameras = counter (CF.ch, recording hamesha) + mazeed CF.xc [{n, ch, r}] (app ⚙️ Camera setup / WhatsApp live → 8 se r). Hukum billClipWa {kind 'live',
+//   cam (naam | '*'), sec (0 = tasveer), from, byN} (kh-wa v1.12) -> SIRF maangne wale ko (malik / Mubeen). Tasveer: recording wale camera = taza tukre ka aakhri
+//   frame (NVR par naya rabta NAHI); recording band = ek chhota RTSP rabta (sirf tab jab us camera ka koi aur rabta na ho; 401 = AUTHBAD, sab ruko).
+//   Video: PC ki apni recording (pichhle N sec, recording band = video nahi) -> 5-5 min ke hisse, har hissa bante hi WhatsApp par (tarteeb se, `at` se).
+let lvChain = Promise.resolve();
+const np = x => { let d = String(x || '').split('@')[0].replace(/\D/g, ''); if (d.startsWith('00')) d = d.slice(2); if (d.length === 12 && d.startsWith('92')) d = '0' + d.slice(2); else if (d.length === 10 && d.startsWith('3')) d = '0' + d; return d; };
+const fdur = s => (s >= 60 ? (Math.round(s / 6) / 10).toString().replace(/\.0$/, '') + ' min' : s + ' sec');
+function camList() {   // [{n, ch, c (1 = counter), r (recording chahiye)}]
+  const M = new Map();
+  for (const k of Object.keys(CF.ch || {})) { const ch = Number(CF.ch[k]); if (!(ch > 0 && ch < 1000)) continue; let n = k; try { n = PN.nowName(k) || k; } catch {}
+    if (![...M.values()].some(c => c.c && c.ch === ch) && !M.has(n)) M.set(n, { n, ch, c: 1, r: 1 }); }
+  for (const x of CF.xc || []) if (!M.has(x.n)) M.set(x.n, { n: x.n, ch: x.ch, c: 0, r: x.r ? 1 : 0 });
+  return [...M.values()].slice(0, 24);
+}
+function camFind(n) { const L = camList(), s = String(n || '').trim(); return L.find(c => c.n === s) || L.find(c => c.n.toLowerCase() === s.toLowerCase()) || null; }
+function recOn(ch) { const st = recs.get(ch), l = segList(ch), last = l[l.length - 1]; return !!(st && st.p && last && Date.now() - last.t0 < 130000); }
+async function snapOf(c) {
+  const out = path.join(TMP, `sn-${c.ch}-${Date.now().toString(36)}.jpg`), rd = () => { try { const b = fs.readFileSync(out); return b.length > 1500 ? b : null; } catch { return null; } };
+  fs.mkdirSync(TMP, { recursive: true });
+  try {
+    for (const s of segList(c.ch).slice(-2).reverse()) {   // sab se taza tukra (likha ja raha) — phir pichhla
+      let sz = 0, mt = 0; try { const st = fs.statSync(s.f); sz = st.size; mt = st.mtimeMs; } catch { continue; }
+      if (sz < 20000 || Date.now() - mt > 120000) continue;
+      await ffRun(['-i', s.f, '-an', '-vf', "fps=2,scale='min(1280,iw)':-2", '-update', '1', '-q:v', '3', '-y', out], 40000);
+      const b = rd(); if (b) return { ok: true, buf: b, at: mt };
+    }
+    if (recs.get(c.ch)?.p) return { ok: false, err: 'recording chal rahi magar taza file nahi — 1 min baad dobara' };
+    if (AUTHBAD) return { ok: false, err: 'NVR ka password ghalat (401) — ⚙️ Camera setup dekhein' };
+    if (NETBAD) return { ok: false, err: 'NVR tak rasta nahi (network)' };
+    const r = await ffRun(['-rtsp_transport', 'tcp', '-timeout', '8000000', '-i', liveUrl(c.ch), '-an', '-frames:v', '1', '-q:v', '3', '-y', out], 25000);
+    const b = rd(); if (b) return { ok: true, buf: b, at: Date.now() };
+    const e = String(r.err || '').replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@');
+    if (/\b401\b|unauthori[sz]ed/i.test(e)) { AUTHBAD = Date.now(); recStopAll('401'); ST.err = hint(e); pushSt(true); }
+    return { ok: false, err: hint(e) || 'tasveer nahi mili' };
+  } finally { try { fs.unlinkSync(out); } catch {} }
+}
+function lvEnc(lst, ss, dur, out) {
+  const kb = Math.max(150, Math.min(700, Math.floor(12 * 8192 / Math.max(10, dur))));   // WhatsApp ki hadd (16 MB) se neeche
+  return ffRun(['-ss', String(Math.max(0, ss)), '-f', 'concat', '-safe', '0', '-i', lst, '-t', String(dur), '-an', '-vf', "fps=10,scale='min(640,iw)':-2",
+    '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '27', '-maxrate', kb + 'k', '-bufsize', 2 * kb + 'k', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-movflags', '+faststart', '-y', out], 6 * 60000);
+}
+async function lvOne(id, r) {
+  const ph = np(r.from), nm = String(r.byN || '').slice(0, 30), OUT = biz.collection('waOut');
+  const put = async (eid, o) => { try { await OUT.doc(eid).create({ st: 'new', at: Date.now(), to: ph, nm, kind: 'lv', eid, rid: id, ...o }); return true; } catch (e) { if (!/exists/i.test(e.message)) log('⚠️ 📹 live waOut: ' + e.message); return false; } };
+  const tell = (txt, k) => put(`lvx-${id}-${k || 'm'}`, { txt });
+  const fail = async (why, quiet) => { await waSet(id, { st: 'err', err: why, doneAt: Date.now() }); if (!quiet) await tell('✕ ' + why, 'x'); log(`✕ 📹 live: ${why}`); };
+  if (!(await waClaim(id))) return;
+  if (!(await waTo()).some(a => np(a.p) === ph)) return fail('sirf malik / Mubeen', true);
+  if (Date.now() - (Number(r.at) || 0) > 15 * 60000) return fail('hukum purana (15 min+) — dobara live likhein');
+  if (!CF.on || !CF.ip) return fail('camera setting band / NVR ka IP nahi (app → Bill tally ⋮ ⚙️ Camera setup)');
+  const sec = Math.max(0, Math.min(1800, Number(r.sec) || 0)), cams = r.cam === '*' ? camList() : [camFind(r.cam)].filter(Boolean);
+  if (!cams.length) return fail(`"${r.cam || '?'}" naam ka camera ⚙️ setting mein nahi`);
+  fs.mkdirSync(WAM, { recursive: true }); fs.mkdirSync(TMP, { recursive: true });
+  const ic = c => (c.c ? '🖥' : '📹'), tA = Date.now();
+  if (sec === 0) {   // 📸 abhi ki tasveer (ek ya sab)
+    await waSet(id, { st: 'run', m: '📸 tasveer le raha' }); let ok = 0; const bad = [];
+    for (const c of cams) {
+      const s = await snapOf(c); if (!s.ok) { bad.push(`${c.n}: ${s.err}`); continue; }
+      if (await put(`lvs-${id}-${c.ch}`, { im: s.buf, txt: `📸 ${ic(c)} ${c.n} · ${hm(s.at)}${recOn(c.ch) ? '' : ' · ⏹ recording band'}` })) ok++;
+    }
+    if (bad.length) await tell('✕ ' + bad.join('\n'), 'b');
+    await waSet(id, { st: ok ? 'q' : 'err', m: ok ? '📲 tasveer bhej rahe' : '', err: ok ? '' : bad.join(' · ').slice(0, 160), n: ok, doneAt: Date.now() });
+    log(`📸📲 live tasveer ${ok}/${cams.length} → ${nm} · ${Math.round((Date.now() - tA) / 1000)} s${bad.length ? ' · ✕ ' + bad.join(' · ') : ''}`); return;
+  }
+  const c = cams[0];
+  if (!recOn(c.ch)) {   // recording band = pichhle waqt ki video nahi — tasveer + raasta
+    await tell(`⏹ ${c.n} ki recording band hai — pichhle waqt ki video nahi ban sakti.${c.c ? ' (Camera setup / PC dekhein)' : '\nRecording chalu karni ho: live → ' + c.n + ' → 8'}\n📸 Abhi ki tasveer bhej raha hoon.`, 'r');
+    const s = await snapOf(c); if (s.ok) await put(`lvs-${id}-${c.ch}`, { im: s.buf, txt: `📸 ${ic(c)} ${c.n} · ${hm(s.at)} · ⏹ recording band` });
+    await waSet(id, { st: 'err', err: 'recording band — sirf tasveer', doneAt: Date.now() }); return;
+  }
+  const t1 = Date.now() - 2000, want0 = t1 - sec * 1000;
+  const segs = segList(c.ch).filter(x => x.t1 > want0 - 2000 && x.t0 < t1);
+  let i0 = segs.length - 1; while (i0 > 0 && segs[i0].t0 - segs[i0 - 1].t1 <= 10000) i0--;
+  const run = segs.slice(Math.max(0, i0));
+  if (!run.length) return fail(`${c.n}: recording ki file nahi mili`);
+  const t0 = Math.max(want0, run[0].t0), tot = Math.round((t1 - t0) / 1000);
+  if (tot < 5) return fail(`${c.n}: recording abhi shuru hui hai — 1 min baad dobara`);
+  const P = Math.ceil(tot / 300), lst = path.join(TMP, `lv-${id}.txt`);
+  fs.writeFileSync(lst, run.map(x => `file '${x.f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n');
+  if (tot < sec - 20) await tell(`ℹ️ ${c.n}: sirf ${fdur(tot)} ki recording mili (poori ${fdur(sec)} nahi) — wohi bhej raha hoon.`, 'p');
+  let sent = 0;
+  try {
+    for (let i = 0; i < P; i++) {
+      const pt0 = t0 + i * 300000, pd = Math.min(300, Math.round((t1 - pt0) / 1000)); if (pd < 2) break;
+      await waSet(id, { st: 'run', m: `🎬 ${P > 1 ? `hissa ${i + 1}/${P} ` : ''}bana raha` });
+      const out = path.join(WAM, `bv-lv${id}-${i + 1}.mp4`); try { fs.unlinkSync(out); } catch {}
+      const e2 = await lvEnc(lst, (pt0 - run[0].t0) / 1000, pd, out); let sz = 0; try { sz = fs.statSync(out).size; } catch {}
+      if (!e2.ok || sz < 2000 || sz > 15 * 1048576) { await tell(`✕ ${c.n}: ${P > 1 ? `hissa ${i + 1}/${P}` : 'video'} nahi bani${e2.ok ? (sz < 2000 ? ' (khali)' : ' (bohat bari)') : ''}`, 'e' + i); continue; }
+      if (await put(`bv-lv${id}-${i + 1}`, { vf: path.basename(out), txt: `🎥 ${ic(c)} ${c.n} · ${hm(pt0)} – ${hm(pt0 + pd * 1000)} · ${fdur(pd)}${P > 1 ? ` · hissa ${i + 1}/${P}` : ''}` })) sent++;
+    }
+  } finally { try { fs.unlinkSync(lst); } catch {} }
+  await waSet(id, { st: sent ? 'q' : 'err', m: sent ? '📲 WhatsApp par bhej rahe' : '', err: sent ? '' : 'video nahi bani', n: sent, parts: P, dur: tot, doneAt: Date.now() });
+  log(`🎥📲 live ${c.n} ${fdur(tot)} · ${sent}/${P} hisse → ${nm} · ${Math.round((Date.now() - tA) / 1000)} s`);
 }
 
 // ---------- safai: purani clips (keep din) + billTally 60 din ----------

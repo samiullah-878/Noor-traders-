@@ -1,5 +1,6 @@
 // =========================================================
-//  live-cam.js  v1.7 (2026-11-18: malik ki screenshot RN6QU6D — video grey / dhundli (tukre gum): recording ki line ki UDP aur RTP socket ka dabba 8 MB
+//  live-cam.js  v1.8 (2026-11-19: 📹 mazeed cameras — billClip.xc [{n, ch, r}] (counter ke ilawa, app ⚙️ Camera setup): live ka naam counter na ho to
+//    xc se channel; recording (r) wale ki copy bhi udp se (bill-clip v2.10 bhejta), r band = RTSP seedha (pehle jaisa).) · v1.7 (2026-11-18: malik ki screenshot RN6QU6D — video grey / dhundli (tukre gum): recording ki line ki UDP aur RTP socket ka dabba 8 MB
 //    (Windows ka chhota dabba = PC thora busy ho to tukre girte), ffmpeg `discardcorrupt` (gira hua tukra = grey dhabba nahi, pichhli saaf tasveer ruki
 //    rahe jab tak naya keyframe), 🩺 liveReq.q {d: NVR→PC decode ghaltiyan, g: PC ke andar gire tukre, r: RTP gire, at} har 10 s (badle to) — app chip.)
 //  v1.3 (2026-11-10: ⚡ malik: "time bohat zyada lag raha — on karte hi aana chahiye": ICE ka intezar 4 s → 1.2 s, har 1 s keyframe (g 12), dekhne wala jaye to camera 2 min GARAM (dobara / counter badalna = foran).)
@@ -31,7 +32,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.7';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.8';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -65,7 +66,8 @@ let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', c
 biz.collection('blueAccess').doc('billClip').onSnapshot(s => {
   const d = s.exists ? s.data() || {} : {};
   CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
-    user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), ch: (d.ch && typeof d.ch === 'object') ? d.ch : {} };
+    user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), ch: (d.ch && typeof d.ch === 'object') ? d.ch : {},
+    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16) };   // v1.8
   const sig = [CF.kind, CF.ip, CF.port, CF.user, CF.pw, Number(d.at) || 0].join('|');
   if (sig !== cfSig) { cfSig = sig; AUTHBAD = 0; for (const p of pipes.values()) stopPipe(p, 'setting badli'); }
   srcSync();
@@ -75,7 +77,8 @@ const credOf = x => String(x || '').replace(/[\s/?#]/g, c => encodeURIComponent(
 function liveUrl(ch, main) { const u = credOf(CF.user), p = credOf(CF.pw); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${main ? 1 : 2}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${main ? 0 : 1}`; }
 function warnViewers(p, why) { for (const [id, v] of viewers) if (v.pipe === p && v.warn !== why) { v.warn = why; REQ.doc(id).set({ warn: why, warnAt: Date.now() }, { merge: true }).catch(() => {}); } }   // v1.1: asal wajah app ko (khamosh nahi)
 const PN = require('./pc-names.js'); PN.start(biz);   // v1.5: counter ka naam NT-PRINT se — purane naam ka channel bhi
-const chOf = pc => PN.chFind(CF.ch, pc);   // v1.6 (2026-11-17): naam = PC ka apna (pc-names v1.1) — purane naam / host / 🔗 jore hue naam ka channel bhi
+const xcOf = n => { const s = String(n || '').trim().toLowerCase(), x = (CF.xc || []).find(v => v.n.toLowerCase() === s); return x ? x.ch : 0; };   // v1.8: 📹 mazeed camera
+const chOf = pc => PN.chFind(CF.ch, pc) || xcOf(pc);   // v1.6 (2026-11-17): naam = PC ka apna (pc-names v1.1) — purane naam / host / 🔗 jore hue naam ka channel bhi
 const hint = e => { e = String(e || ''); if (/\b401\b|unauthori[sz]ed/i.test(e)) return 'NVR ka user / password ghalat (401)'; if (/\b404\b|not found/i.test(e)) return 'NVR par ye channel nahi (404)'; if (/timed? ?out|refused|unreachable/i.test(e)) return 'NVR tak rasta nahi (IP / LAN)'; if (/invalid data/i.test(e)) return 'NVR ne video nahi di (restart / RTSP band)'; return e.slice(0, 120); };
 
 // ---------- 🔗 v1.2: recording wali line ki copy (bill-clip v2.4 → udp 127.0.0.1:48500+ch, mpegts) — NVR par doosra rabta nahi ----------
@@ -93,7 +96,7 @@ function tsGaps(x, m) {   // v1.7: 🩺 recording ki line ke tukre PC ke andar g
   return g;
 }   // ch → {sock, subs:Set(ffmpeg stdin), last, pk}
 function srcSync() {
-  const want = new Set(); if (CF.on && CF.ip) for (const v of Object.values(CF.ch)) if (Number(v) > 0 && Number(v) < 1000) want.add(Number(v));
+  const want = new Set(); if (CF.on && CF.ip) { for (const v of Object.values(CF.ch)) if (Number(v) > 0 && Number(v) < 1000) want.add(Number(v)); for (const x of CF.xc || []) if (x.r) want.add(x.ch); }   // v1.8: recording wale mazeed camera ki copy bhi
   for (const [ch, x] of srcs) if (!want.has(ch)) { try { x.sock.close(); } catch {} srcs.delete(ch); }
   for (const ch of want) {
     if (srcs.has(ch)) continue;

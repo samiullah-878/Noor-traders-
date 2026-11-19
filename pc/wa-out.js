@@ -1,4 +1,5 @@
 // =========================================================
+// v1.29 (19 Nov): kh-wa v1.12 (📹 'live' -> camera list -> 📸 / pichhle 30 sec … 30 min ki video) — is file mein sirf version (doctor dobara chalaye).
 // v1.28 (19 Nov, malik: 'din mein jitni videos banein SAB WhatsApp group mein · counter-wise'): 👥 waOut `grp` = group ka jid (bill-clip v2.9 bhejta hai,
 //        sirf malik ke chune group — blueAccess/billWaGroup). Group = apni line: gahak ka faasla / din ki hadd (cfg.gap / cfg.lim) na khaye na ruke —
 //        gahak ka faasla chal raha ho to beech mein group ki video; gahak ki hadd poori ho tab bhi group chalta. Groups ki list blueAccess/waOutGroups
@@ -45,7 +46,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.28';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.29';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };

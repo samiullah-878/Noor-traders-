@@ -5123,3 +5123,12 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
   gahak ke faasle ke loop mein group aaye to continue, lastGrp 2.5 s, group = L.n / waOutLog mein nahi. grpList: groupFetchAllParticipating ->
   blueAccess/waOutGroups (jurte hi 8 s baad + waOutGroupsReq.at naya). Doctor list nahi badli (dono purani services).
 
+=== 2026-11-19 (manifest 2026-11-19.5): 📹 bill-clip v2.10 + live-cam v1.8 + kh-wa v1.12 (+ wa-out v1.29 / wa-parchi v2.41 sirf version) ===
+- bill-clip: cfApply xc [{n, ch (1-999), r}] (16 tak); recChannels += xc.r; camList (counter = CF.ch nowName, channel dohra nahi; + xc) / camFind / recOn
+  (recorder chal raha + aakhri tukra 130 s ke andar); waKick: kind 'live' -> lvChain (alag line). snapOf: taza 2 tukre (mtime 120 s) -> ffmpeg fps=2
+  -update 1 (aakhri frame) · recorder chal raha magar file nahi = mana (RTSP nahi kholte) · AUTHBAD / NETBAD = mana · warna RTSP -frames:v 1 (8 s);
+  ghalti mein rtsp://user:pw@ chhupa kar hint(). lvOne: waTo se maangne wala pakka, 15 min purana = mana, sec 0 = tasveer (cam '*' = sab), video =
+  segList ka aakhri jura hua silsila -> concat list -> 300 s hisse (lvEnc) -> waOut {to, vf, txt, rid}; recording band = tasveer + wajah.
+- live-cam: CF.xc; chOf = counter || xcOf(naam); srcSync += xc.r channels.
+- kh-wa: LIVE_RE (live / lyv / laiv / liv [+ 1-2 number]) looks() mein; lvStart / lvStage / lvReq / lvRec; codesTxt mein line.
+

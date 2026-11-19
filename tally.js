@@ -250,7 +250,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : [])])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) */ import('./live.js?v=2.328.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.329.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN() })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
@@ -267,6 +267,7 @@ async function onClick(e) {
 }
 
 // ---------- apni khirki (dialog) — phone back = band ----------
+const xcN = () => (Array.isArray(pcSt?.cams) ? pcSt.cams : []).filter(c => c && c.n && !c.c).map(c => String(c.n));   // v2.329.0: 📹 mazeed cameras (PC bill-clip v2.10)
 function dlg() {
   let d = $('btDlg');
   if (!d) { d = document.createElement('dialog'); d.id = 'btDlg'; d.className = 'bt-dlg'; document.body.append(d); d.addEventListener('click', ev => { if (ev.target === d) d.close(); }); }
@@ -353,7 +354,7 @@ function waPaint() {
   const hits = q.length >= 2 ? [...bills.values()].filter(b => inQ(b) && String(b.no || '').replace(/\D/g, '').replace(/^0+/, '').startsWith(q.replace(/^0+/, ''))).sort((a, b) => wq(b) - wq(a)).slice(0, 6) : [];
   const hEl = d.querySelector('[data-wa-hits]'); if (hEl) hEl.innerHTML = hits.map(b => `<div class="bt-badrow bt-lrow" data-wa-go="${esc(b.id)}"><b>#${esc(b.no)}</b><span>${b._d !== dayKey(0) ? 'kal · ' : ''}${tm(b.ct || b.pt)} · ${esc(b.pc || '?')} · Rs ${num(b.t)}${b.by ? ' · 👦 ' + esc(b.by) : ''}</span><em class="go">📲 Bhejo</em></div>`).join('') || (q.length >= 3 && !hits.length ? '<p class="bt-sub">Aaj / kal ke bills mein nahi — 📲 dabayein to PC parson tak dhoondega</p>' : '');
   const L = [...waList.values()].sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0)).slice(0, 12);
-  const lEl = d.querySelector('[data-wa-list]'); if (lEl) lEl.innerHTML = L.length ? '<div class="bt-sub">Aaj bheji videos</div>' + L.map(r => { const s = waSt(r); return `<div class="bt-warow ${s.k}"><b>#${esc(r.no || r.sid || '?')}</b><span>${tm(r.at)}${r.pc ? ' · ' + esc(r.pc) : ''}${r.src === 'wa' ? ' · 📲 WhatsApp se' : ''}</span><em>${esc(s.t)}</em></div>`; }).join('') : '';
+  const lEl = d.querySelector('[data-wa-list]'); if (lEl) lEl.innerHTML = L.length ? '<div class="bt-sub">Aaj bheji videos</div>' + L.map(r => { const s = waSt(r); return `<div class="bt-warow ${s.k}"><b>${r.kind === 'live' ? (r.cam === '*' ? '📸 Sab' : '📹 ' + esc(r.cam || '?')) + (r.sec ? ' · ' + (r.sec >= 60 ? Math.round(r.sec / 60) + ' min' : r.sec + ' s') : ' · 📸') : '#' + esc(r.no || r.sid || '?')}</b><span>${tm(r.at)}${r.pc ? ' · ' + esc(r.pc) : ''}${r.src === 'wa' ? ' · 📲 WhatsApp se' : ''}</span><em>${esc(s.t)}</em></div>`; }).join('') : '';
   const btn = d.querySelector('[data-wa-send]'); if (btn) btn.disabled = !nn;
 }
 async function waSend(b, no) {
@@ -496,6 +497,7 @@ async function openSetup() {
   const pcs = new Set(rows.keys()), ntNames = [...rows.keys()].filter(k => rows.get(k).nt).sort();
   const alHTML = Object.keys(al).length ? `<div class="bt-alias">🔗 Jore hue (ek hi PC): ${Object.entries(al).map(([f, t]) => `<button type="button" class="bt-alx" data-al-x="${esc(f)}">${esc(f)} → ${esc(t)} ✕</button>`).join('')}</div>` : '';
   const st = pcSt || {};
+  const xcRow = x => `<div class="bt-xc" data-xc><input data-xn maxlength="30" placeholder="Naam (jaise Godam 1)" value="${esc(x?.n || '')}" autocomplete="off"><input data-xch type="number" inputmode="numeric" min="1" max="999" placeholder="Ch" value="${esc(x?.ch || '')}"><button type="button" class="bt-tg${x?.r ? ' on' : ''}" data-xr="1">${x?.r ? '⏺ Rec' : '⏹ Rec'}</button><button type="button" class="bt-alx" data-xx="1" aria-label="Hatao">✕</button></div>`;   // v2.329.0
   const inp = (k, ph, v, type) => `<label class="bt-f"><span>${ph}</span><input type="${type || 'text'}" data-cf="${k}" value="${esc(v ?? '')}" autocomplete="off"></label>`;
   d.innerHTML = `<div class="bt-dhead"><b>⚙️ Camera setup (malik)</b><button type="button" class="bt-x" data-x="1">×</button></div>
     <div class="bt-dbody bt-setup">
@@ -511,6 +513,10 @@ async function openSetup() {
       <div class="bt-ihead">🖥 Counter ↔ camera channel (NVR ka channel number)</div>
       <div class="bt-chlist">${[...pcs].sort().map(p => { const r = rows.get(p) || {}; const tg = r.link && ntNames.length ? 'div' : 'label'; return `<${tg} class="bt-ch" data-chrow="${esc(p)}"><span class="bt-chn"><b>${esc(p)}</b><small>${esc(r.st || '')}${r.srv ? ' · 🖥 server' : ''}</small>${r.link && ntNames.length ? `<select class="bt-alsel" data-al="${esc(p)}"><option value="">🔗 Yeh kaun sa PC hai?</option>${ntNames.map(n => `<option value="${esc(n)}">${esc(n)}</option>`).join('')}</select>` : ''}</span><input type="number" min="0" max="64" data-ch="${esc(p)}" value="${esc(r.v ?? '')}" placeholder="ch"></${tg}>`; }).join('') || '<small>Koi counter nahi mila — counter PC par NT-PRINT chalu ho to naam yahan khud aayega</small>'}</div>
       ${alHTML}
+      <div class="bt-ihead">📹 Mazeed cameras (counter ke ilawa)</div>
+      <div class="bt-xcl" data-xcl>${(Array.isArray(cf.xc) ? cf.xc : []).map(xcRow).join('')}</div>
+      <div class="bt-row"><button type="button" class="bt-tg" data-xc-add="1">＋ Camera</button></div>
+      <p class="bt-sub">Godam / gate jaisa koi bhi camera: naam + NVR channel. ⏺ Rec = PC us ki recording rakhe (WhatsApp par pichhle waqt ki video sirf recording wale ki) · ⏹ = sirf live / 📸 tasveer. Live (app + WhatsApp: likhein <b>live</b>) har camera ka.</p>
       <p class="bt-sub">🖥 Naam = har PC ka apna naam (NT-PRINT se). 🟢 = NT-PRINT chal raha · 🔴 = band · ⚪ = bill is naam se aaye magar NT-PRINT nahi mila — wohi PC ho to 🔗 se jor dein.</p>
       <p class="bt-sub">🖥 PC: ${st.at ? (Date.now() - st.at < 5 * 60000 ? '🟢 chalu' : '⚫ chup ' + ago(st.at)) + ' · v' + esc(st.ver || '?') + (st.ff ? ' · ffmpeg ✓' : ' · ffmpeg ⏳') + (st.today ? ` · aaj ${st.today.n} (✓ ${st.today.ok} ✕ ${st.today.err})` : '') + (st.last ? ' · ' + esc(st.last) : '') + (st.err ? ' · ⚠ ' + esc(st.err) : '') : 'abhi report nahi (PC 3-5 min mein script lagata hai)'}</p>
       ${st.rec && Object.keys(st.rec).length ? `<p class="bt-sub">🎞 Recording: ${Object.entries(st.rec).map(([ch, r]) => `ch ${esc(ch)} ${r.on ? '🟢' : '⚫'} ${r.n || 0} min${r.last ? ' · ' + tm(r.last) : ''}${r.err ? ' · ' + esc(r.err) : ''}`).join(' · ')}</p>` : ''}
@@ -534,13 +540,20 @@ async function openSetup() {
     b.disabled = true;
     try { await cloud.setPcAlias(from, null); notice('Jor hata diya'); b.remove(); } catch (e) { b.disabled = false; notice('Nahi hata: ' + (e?.message || e)); }
   });
+  const xl = d.querySelector('[data-xcl]');   // v2.329.0: 📹 mazeed cameras — ＋ / ⏺ / ✕ (Save par jata hai)
+  d.querySelector('[data-xc-add]').onclick = () => { if (xl.children.length >= 16) { notice('16 tak camera'); return; } xl.insertAdjacentHTML('beforeend', xcRow(null)); xl.lastElementChild.querySelector('[data-xn]').focus(); };
+  xl.onclick = ev => { const r = ev.target.closest('[data-xr]'); if (r) { const on = !r.classList.contains('on'); r.classList.toggle('on', on); r.textContent = on ? '⏺ Rec' : '⏹ Rec'; return; } const x = ev.target.closest('[data-xx]'); if (x) x.closest('[data-xc]').remove(); };
   d.querySelector('[data-tg="on"]').onclick = ev => { on = !on; ev.currentTarget.classList.toggle('on', on); ev.currentTarget.textContent = on ? '🟢 ON' : '⚫ Band'; };
   d.querySelector('[data-tg="sub"]').onclick = ev => { sub = sub ? 0 : 1; ev.currentTarget.classList.toggle('on', !!sub); ev.currentTarget.textContent = sub ? 'Sub stream (halki)' : 'Main stream'; };
   d.querySelectorAll('[data-kind]').forEach(b => b.onclick = () => { kind = b.dataset.kind; d.querySelectorAll('[data-kind]').forEach(x => x.classList.toggle('on', x === b)); });
   d.querySelector('[data-save]').onclick = async ev => {
     const g = k => d.querySelector(`[data-cf="${k}"]`)?.value ?? '';
     const ch = {}; d.querySelectorAll('[data-ch]').forEach(i => { const v = Number(i.value); if (v > 0) ch[i.dataset.ch] = v; });
-    const out = { on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rk: Number(g('rk')) || 180, rep: String(g('rep')).trim() || '20:30', ch };
+    const xc = [], seenX = new Set(); let xBad = '';
+    d.querySelectorAll('[data-xc]').forEach(r => { const n = String(r.querySelector('[data-xn]').value || '').replace(/\s+/g, ' ').trim().slice(0, 30), c = Math.floor(Number(r.querySelector('[data-xch]').value) || 0);
+      if (!n && !c) return; if (!n || !(c > 0 && c < 1000)) { xBad = xBad || `"${n || '?'}" ka naam / channel adhoora`; return; } if (seenX.has(n.toLowerCase()) || pcs.has(n)) { xBad = xBad || `"${n}" naam dohra hai`; return; } seenX.add(n.toLowerCase()); xc.push({ n, ch: c, r: r.querySelector('[data-xr]').classList.contains('on') ? 1 : 0 }); });
+    if (xBad) { notice('📹 ' + xBad); return; }
+    const out = { xc, on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rk: Number(g('rk')) || 180, rep: String(g('rep')).trim() || '20:30', ch };
     ev.currentTarget.disabled = true;
     try { await cloud.setBillClipCfg(out); notice('💾 Camera setup save — PC 30 s mein uthata hai'); d.close(); }
     catch (e) { notice('Save nahi hua: ' + (e?.message || e)); ev.currentTarget.disabled = false; }
