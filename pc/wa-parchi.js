@@ -97,7 +97,7 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.39';   // v2.39 (19 Nov): 🔢 malik ka apna link PIN se bhi (waCmd do 'code' + ph → requestPairingCode, waLink st 'code') — QR ke saath · v2.38 (18 Nov): kh-wa v1.11 (🎥 'video 138841' malik ki apni chat se bhi) — is file mein sirf version (doctor dobara chalaye)
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.40';   // v2.40 (19 Nov): 🎬 fac-voice.js — factory video ki Urdu awaaz (factory/vq_*, ttsMp3 mein voice) ·   // v2.39 (19 Nov): 🔢 malik ka apna link PIN se bhi (waCmd do 'code' + ph → requestPairingCode, waLink st 'code') — QR ke saath · v2.38 (18 Nov): kh-wa v1.11 (🎥 'video 138841' malik ki apni chat se bhi) — is file mein sirf version (doctor dobara chalaye)
 //   // v2.34: kh-wa v1.8 (tafseel lazmi) — is file mein sirf version (doctor dobara chalaye)
 const TH_PRINTER = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })(), W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth'), AUTH2_DIR = path.join(DIR, 'wa-auth-print'), SEEN_FILE = path.join(DIR, 'wa-seen.json'), NPM_FILE = path.join(DIR, 'wa-npm.json');
@@ -1682,18 +1682,19 @@ async function start(ZINDA) {
     CF = { vMin: Math.max(stMin, Math.min(60, Number(d.vMin) || stMin + 1)), cMin: Math.max(stMin, Math.min(90, Number(d.cMin) || stMin + 3)), mMin: Math.max(stMin, Math.min(120, Number(d.mMin) || stMin + 7)), hook: String(d.hook || '').trim(), callTo: normPh(d.callTo || '') }; }, () => {});
   // 🤖 Urdu awaz — Microsoft Edge TTS (muft, package msedge-tts wa-mods mein; na ho to ek dafa install, tab tak awaz nahi)
   let TTSM = null, ttsTried = 0;
-  async function ttsMp3(text) {
+  async function ttsMp3(text, voice = 'ur-PK-AsadNeural') {   // v2.40: voice (🎬 factory video — mard / aurat)
     if (!TTSM) {
       try { TTSM = require(require.resolve('msedge-tts', { paths: [MODS] })); }
       catch { if (Date.now() - ttsTried > 30 * 60000) { ttsTried = Date.now(); log('📦 Urdu awaz ka package (msedge-tts) install ho raha hai…'); exec('npm install msedge-tts@1.3.4 --no-audit --no-fund --loglevel=error', { cwd: MODS, windowsHide: true, timeout: 5 * 60000, maxBuffer: 8 << 20 }, er => log(er ? '✕ msedge-tts: ' + String(er.message).split(/\r?\n/)[0].slice(0, 120) : '📦 msedge-tts aa gaya')); } throw Error('awaz ka package abhi nahi'); }
     }
     const { MsEdgeTTS, OUTPUT_FORMAT } = TTSM, tts = new MsEdgeTTS();
-    await within(tts.setMetadata('ur-PK-AsadNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3), 20000, 'awaz setup');
+    await within(tts.setMetadata(voice || 'ur-PK-AsadNeural', OUTPUT_FORMAT.AUDIO_24KHZ_48KBITRATE_MONO_MP3), 20000, 'awaz setup');
     const r = tts.toStream(text), st = r && r.audioStream ? r.audioStream : r;
     const bufs = []; await within(new Promise((ok, no) => { st.on('data', c => bufs.push(c)); st.on('end', ok); st.on('close', ok); st.on('error', no); }), 40000, 'awaz banna');
     try { tts.close && tts.close(); } catch {}
     const b = Buffer.concat(bufs); if (b.length < 2000) throw Error('awaz khali'); return b;
   }
+  try { require('./fac-voice.js').start({ biz, tts: ttsMp3, UR, log, within }); } catch (e) { log('✕ factory awaaz shuru nahi hui: ' + e.message); }   // v2.40: 🎬 factory video ki Urdu awaaz
   const hookUrl = (id, params) => CF.hook ? `https://trigger.macrodroid.com/${encodeURIComponent(CF.hook)}/${id}?` + Object.entries(params).map(([k, v]) => k + '=' + encodeURIComponent(String(v))).join('&') : '';
   async function callMubeen(t, n) {   // 📞 HBL phone ka MacroDroid: SIM se Mubeen ko call, utha le to Urdu mein bole (speaker), 25 s nahi uthai = kaat de; jawab callEvt se
     const to = CF.callTo || S.prTo[0] || ''; if (!CF.hook || !isMob(to)) { t.callSt = 'off'; return false; }

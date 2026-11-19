@@ -8930,3 +8930,28 @@ band app ko 'app khuli' trigger kabhi chook jata, phir 30 s ki jaanch — batter
   reel_…) nahi chhera — malik se poochha.
 - Sabaq: Remote ki 'NT phone macros vN' email ImportMacros ke foran baad export hoti hai — kabhi pichhli haalat dikhati hai (v57 email mein v56 ke macros).
 AI: sirf photo jaanch (Gemini). Lock / popup / ginti mein AI nahi.
+
+
+=== v2.327.0 (2026-11-19): 🎬 FACTORY VIDEO — tasveer + 🤖 AI crop · Urdu awaaz wali HD video · kholo + bhejo ===
+Malik: "factory ki all items ka video · subah pictures upload karta hoon · aik screen — pictures lagayein, AI ka crop pehle se ·
+HD pictures, baqi wo khud kaam kar le · upar bolne wala bhi · yeh sab tum khud handle karo".
+- Khulti hai: Factory ⋮ 'fc.video' (data-ek-video) ya ☰ 🎬 Factory video (#fvNav) -> factory.js fvOpen -> fac-video.js open({...phCtx(), aiImage, ph}).
+  SIRF malik (factory/* likhna malik ka; CAP nahi banayi). factorySetup ab aiImage leta hai (main app file — sehat jaisa askImage).
+- List = C.sell() (bikne wale factory items), har item: ☐ video mein (sirf tasveer wale) · chhoti tasveer · naam + rate + 🔊 (awaaz phone mein) +
+  Urdu naam (cloud.listenUrdu) · chip ✅ Aaj / ✅ 16 Nov / 📷 Lagao. Agla baqi item sunehri (is-next) + neeche '📷 Agla: …'. ⋮: awaaz 👨/👩 ·
+  rate Parchoon / Wholesale / Rate nahi · ek video mein Sab / 10-10 / 20-20 · ☑ Sab / 🆕 Aaj ke / ☐ Koi nahi. Yaad: localStorage sam-fac-video.
+- Tasveer: input file (Android khud Camera / Gallery poochta) -> crop screen (Online Dukan wala qaida, apni copy): 🤖 Gemini box_2d (768 px chhoti
+  copy, 30 s hadd) dabba khud lagata, malik kone khench sakta, ✅ Save HD = asal tasveer se kaat kar 2048 tak -> fac-photo.js saveHd (WAHI
+  factory/phIdx + ph_* data, naya data model NAHI) -> list + us item ki awaaz PC se pehle hi maango.
+- 🔊 Awaaz: factory/vq_n_<id>_<m|f> (naam) · vq_r_<rate>_<m|f> ("صرف N روپے" — ek rate ek awaaz, sab items mein) · vq_i_<vo> shuru · vq_o_<vo> aakhir.
+  Doc {k,id,nm,rs,tl,vo,sig,st new} (cloud.facVoiceAsk) -> PC wa-parchi v2.40 + fac-voice.js v1.0 mp3 {st ok, b Bytes, ur}. sig badla (naam / rate /
+  title) = nayi awaaz. Phone cache IndexedDB 'sam-fac-vc'. Screen khulte hi + tasveer save par khamosh prefetch — raat ko PC band ho tab bhi video
+  awaaz ke saath. Video ke waqt jo baqi ho: listenFacVoice (har doc ka onSnapshot) + 25 s koi nayi na aaye = bina awaaz aage (⏭ chip bhi).
+  Rules nahi badle (factory/* = malik likhe, PC admin).
+- 🎬 Video PHONE par: canvas 1080x1920 + WebAudio (MediaStreamDestination) -> MediaRecorder 4.5 Mbps, MIMES mein H.264 (+AAC, warna Opus) pehle,
+  phir mp4 / webm. Shuru (title + Urdu + 'Aaj ke rates · tareekh' + N items · Part) -> har item (safed card + sunehri kinara, tasveer halki zoom,
+  daayein se aati, naam English + Urdu, Rs pill + 'Parchoon rate', 3 / 18) -> aakhir ('Order ke liye rabta karein' + Urdu + cat().foot + Shukriya).
+  Har item ki lambai = awaaz jitni (kam az kam 2.6 s). Video ban-ne mein utna waqt jitni video; wakeLock; screen chhupi = rok kar saaf paigham.
+  Nateeja: ⛶ Kholo (apni <dialog> poori screen) · 📤 Bhejo (navigator.share) · ⬇️ Save; list mein '▶ Bani video'. Gaana NAHI (copyright).
+- Test (Chrome headless, fake cloud): list / AI crop / save / awaaz ka intezar / video MP4 H.264 21 s 2.8 MB — frames dekhe.
+AI: sirf crop ka dabba (Gemini). Awaaz (Microsoft Edge TTS) + video mein AI nahi. Khareed rate / nafa kabhi nahi.

@@ -5102,3 +5102,11 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
   Malik: naya server lagne ke baad label par Urdu nahi — asal wajah ka log nahi mila; ur haal se pakki hogi.
 - bank-parchi v2.8: 'BAF A/C' wali src 'notif' = Alfalah parser (pehle HBL notif parser). notif mein tareekh na ho = doc createTime (6 ghante).
   Alfa notif + Alfalah SMS = jurwan / Tx ID se EK entry. transfer-sync v4.15 = sirf main file chhui (doctor dobara chalaye).
+
+
+=== 2026-11-19 (manifest 2026-11-19.3): 🎬 fac-voice.js v1.0 (NAYI) + wa-parchi v2.40 ===
+- fac-voice.js wa-parchi ke ANDAR chalta (alag service / doctor list nahi): factory where st == 'new' (onSnapshot + har 60 s poll), sirf vq_* docs,
+  ek waqt ek (busy 5 min watchdog). Jumla: i = 'السلام علیکم! <title Urdu> کے آئٹمز اور ریٹ دیکھیے۔' · o = 'آرڈر کے لیے ابھی رابطہ کریں۔ شکریہ!' ·
+  r = 'صرف N روپے' · n = urdu-names get(id) || roman2ur(naam; ml = ملی لیٹر, kg = کلو, g = گرام, ltr = لیٹر). Awaaz ur-PK-AsadNeural (m) /
+  ur-PK-UzmaNeural (f) — wa-parchi ka ttsMp3(text, voice) (msedge-tts wa-mods). Likhne se pehle doc dobara parho: sig badal gaya = purani mat likho.
+  Nateeja {st ok, b Buffer, ur, sz, voice, doneAt} / {st err, err}. AI nahi.

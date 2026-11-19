@@ -108,9 +108,19 @@ async function upload(id, file, kind) {
     C.setIdx(id, { v: r.v, n: r.n, sz: x.bytes.length, w: x.w, h: x.h, t: x.thumb, nm: it?.name || '', at: r.v });
     if (ps?.id === id) { ps.busy = ''; ps.hd = hdUrlOf(id, x.blob); sheetPaint(); }
     C.notice(`✓ HD tasveer save — ${x.w} × ${x.h} · ${kb(x.bytes.length)}${kind === 'ai' ? ' · ✨ AI wali' : ''}`); C.repaint();
-    if (kind === 'cam') { try { const { blurScore } = await import('./pic-check.js?v=2.326.0'); const s = await blurScore(file, { limit: 60 }); if (s?.blur && ps?.id === id) C.notice('⚠️ Tasveer thori dhundli lag rahi hai — chahein to dobara lein (haath na hile)'); } catch {} }
+    if (kind === 'cam') { try { const { blurScore } = await import('./pic-check.js?v=2.327.0'); const s = await blurScore(file, { limit: 60 }); if (s?.blur && ps?.id === id) C.notice('⚠️ Tasveer thori dhundli lag rahi hai — chahein to dobara lein (haath na hile)'); } catch {} }
   } catch (e) { if (ps) { ps.busy = ''; sheetPaint(); } C.notice('Tasveer save nahi hui: ' + (e?.message || e)); }
 }
+// v2.327.0: 🎬 Factory video screen (fac-video.js) — wohi HD save / wohi HD tasveer (naya data nahi)
+export async function saveHd(ctx, id, file) {
+  C = ctx; id = String(id); if (!C.own) throw Error('Tasveer sirf malik lagata hai');
+  const it = C.item(id), x = await hdEncode(file);
+  const r = await C.cloud.putFacPhoto(id, { bytes: x.bytes, w: x.w, h: x.h, thumb: x.thumb, nm: it?.name || '' });
+  const key = id + '@' + r.v; cPut(key, x.blob); cSweep(id, key); hdMem.set(key, x.blob);
+  C.setIdx(id, { v: r.v, n: r.n, sz: x.bytes.length, w: x.w, h: x.h, t: x.thumb, nm: it?.name || '', at: r.v });
+  return { w: x.w, h: x.h, sz: x.bytes.length };
+}
+export async function hdOf(ctx, id) { C = ctx; return hdBlob(String(id), false); }
 async function copyText(t) { try { await navigator.clipboard.writeText(t); return true; } catch {} try { const a = document.createElement('textarea'); a.value = t; a.style.position = 'fixed'; a.style.opacity = '0'; document.body.append(a); a.select(); const ok = document.execCommand('copy'); a.remove(); return ok; } catch { return false; } }
 function download(name, blob) { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000); }
 const fileName = s => String(s || 'item').replace(/[^\w\-]+/g, '-').replace(/-+/g, '-').replace(/^-|-$/g, '').slice(0, 60) || 'item';

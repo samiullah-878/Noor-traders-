@@ -16,8 +16,8 @@
 //   ginti / 📥 maal aaya / 📤 maal diya = factoryMoves, naya item = cfg.local ('loc:<id>' — POS mein nahi), rate sirf factory (POS "lagao" band).
 //   Factory ka STOCK = app ka apna: har item ke waqia (ginti = itna hai · aaya + · diya − · batch: tayyar + / raw −) waqt ke hisaab se.
 //   cfg.posOn true = purana tareeqa (POS Adjustment, POS ginti, POS item). ⚙️ mein on / off (sirf malik).
-import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.326.0';
-import { smartSearch, fold } from './smart-search.js?v=2.326.0';
+import { stockAgentReady, stockFactoryList, stockFactoryCanRate, stockAgentItemSave, stockPickList, stockRepaint, stockIsFactoryCat, onItemJobs, stockAgentFind, stockNewItemQuick, stockCountsOn, stockCountState, stockCountInfo, stockCountSet, stockCountDel, stockOpenGinti, stockNewItemOpen, stockItemOpen, stockLabelOpen, stockIjobsOpen, stockIjCounts, stockCanItem, scanPick } from './pos-stock.js?v=2.327.0';
+import { smartSearch, fold } from './smart-search.js?v=2.327.0';
 
 const $ = id => document.getElementById(id);
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -106,7 +106,7 @@ function qt(q, it) {
   return num(q) + ' ' + u;
 }
 
-let cloud = null, notice = () => {}, pdfOf = null, pdfFileOf = null, canOf = () => true, ownerOf = () => false, whoOf = () => '', goPurchase = null, batchOf = null, aiFormula = null, uidOf = () => '';
+let cloud = null, notice = () => {}, pdfOf = null, pdfFileOf = null, canOf = () => true, ownerOf = () => false, whoOf = () => '', goPurchase = null, batchOf = null, aiFormula = null, uidOf = () => '', aiImage = null;   // v2.327.0: aiImage = 🎬 factory video ka AI crop
 let cfg = null, cfgStop = null, batches = [], bStop = null, bFrom = 0, items = [], byId = new Map(), itemsOk = false, itemsErr = '';
 const LS = 'sam-fac';
 const st = (() => { let v = {}; try { v = JSON.parse(localStorage.getItem(LS) || '{}') || {}; } catch {} return { per: v.per || 'aaj', tab: v.tab || 'batches', view: v.view === 'old' ? 'old' : 'ek' }; })();   // v2.107.0: view 'ek' = nayi ek-screen · 'old' = purani tabs (⋮ se)
@@ -117,7 +117,7 @@ let pk = null;   // ☑ picker
 let fn = null;   // ➕ naya formula chooser
 let pf = null;   // 📷 photo se formula
 
-export function factorySetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; pdfFileOf = o.pdfFile || pdfFileOf; canOf = o.can || canOf; ownerOf = o.owner || ownerOf; whoOf = o.who || whoOf; goPurchase = o.purchase || goPurchase; batchOf = o.batch || batchOf; aiFormula = o.aiFormula || aiFormula; uidOf = o.uid || uidOf; }
+export function factorySetup(o) { cloud = o.cloud || cloud; notice = o.notice || notice; pdfOf = o.pdf || pdfOf; pdfFileOf = o.pdfFile || pdfFileOf; canOf = o.can || canOf; ownerOf = o.owner || ownerOf; whoOf = o.who || whoOf; goPurchase = o.purchase || goPurchase; batchOf = o.batch || batchOf; aiFormula = o.aiFormula || aiFormula; uidOf = o.uid || uidOf; aiImage = o.aiImage || aiImage; }
 export function factoryStop() { if ($('fcBatch') || $('fcForm') || $('fcPick') || $('fcPhoto') || $('fcNew') || $('fcPkDef')) return;   // stock screen se khula batch / formula — listener zinda rahe
   if (bStop) { try { bStop(); } catch {} bStop = null; } }   // cfg (1 doc) zinda — stock screen ke ☐ 🏭 Factory ke liye
 const isOwner = () => { try { return !!ownerOf(); } catch { return false; } };
@@ -1323,7 +1323,8 @@ function ekMenu() {
     canFacBatch() ? b('fc.label', '🏷', 'Batch label: ' + (lblOn ? 'Haan' : 'Nahi'), 'Save par barcode label chhapein?', 'data-ek-lbl="1"', lblOn) : '',
     own ? b('fc.set', '⚙️', 'Settings', 'factory items ☑ · nafa % · POS on / off', 'data-fc-set="1"') : '',
     phCan() ? `<button type="button" data-mn="fc.catpdf" data-mn-i="📄" data-mn-t="Rate list PDF — tasveerein" data-mn-s="${esc(String(cfg?.cat?.title || 'ADREES SOAP FACTORY'))} · Wholesale / Parchoon · HD" data-mn-g="📷 Tasveer · PDF" data-ek-cat="1">📄 Rate list PDF</button>` : '',
-    own ? `<button type="button" data-mn="fc.aicmd" data-mn-i="📸" data-mn-t="Sab items ki AI commands" data-mn-s="har item ki tasveer ki command · 📋 copy" data-mn-g="📷 Tasveer · PDF" data-ek-cmds="1">📸 AI commands</button>` : ''].join('');
+    own ? `<button type="button" data-mn="fc.aicmd" data-mn-i="📸" data-mn-t="Sab items ki AI commands" data-mn-s="har item ki tasveer ki command · 📋 copy" data-mn-g="📷 Tasveer · PDF" data-ek-cmds="1">📸 AI commands</button>` : '',
+    own ? `<button type="button" data-mn="fc.video" data-mn-i="🎬" data-mn-t="Factory video" data-mn-s="tasveer lagao (AI crop) · Urdu awaaz ke saath video · kholo + bhejo" data-mn-g="📷 Tasveer · PDF" data-ek-video="1">🎬 Factory video</button>` : ''].join('');
 }
 function ekHTML() {
   const own = isOwner(), z = ekCalc(), errs = batches.filter(b => b.status === 'error'), dups = own ? items.filter(x => x.dup) : [];
@@ -1724,10 +1725,14 @@ function phCtx() {
     cat: () => cfg?.cat || {}, saveCat: p => { cfg = { ...(cfg || {}), cat: { ...(cfg?.cat || {}), ...p } }; return cloud.setFactoryCfg({ cat: p }); },
     dlg, pdf: pdfFileOf, repaint: phChanged };
 }
-const phLoad = () => phMod || (phMod = import('./fac-photo.js?v=2.326.0').catch(e => { phMod = null; throw e; }));
+const phLoad = () => phMod || (phMod = import('./fac-photo.js?v=2.327.0').catch(e => { phMod = null; throw e; }));
 async function phOpen(id) { if (!phCan()) { notice('🔒 Tasveer ki ijazat nahi (malik: Settings → Mulazim)'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).photoSheet(phCtx(), id); } catch (e) { notice('Tasveer nahi khuli: ' + (e?.message || e)); } }
 async function phCmds() { if (!isOwner()) { notice('AI commands sirf malik'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).commandsDlg(phCtx()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 async function phCat() { if (!phCan()) { notice('🔒 Rate list PDF ki ijazat nahi (malik: Settings → Mulazim)'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await phLoad()).catalogOpen(phCtx()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+// v2.327.0: 🎬 FACTORY VIDEO (malik: "factory ki all items ka video · subah tasveer · AI crop pehle se · HD · baqi khud") — asal kaam fac-video.js
+let fvMod = null; const fvLoad = () => fvMod || (fvMod = import('./fac-video.js?v=2.327.0').catch(e => { fvMod = null; throw e; }));
+async function fvOpen() { if (!isOwner()) { notice('🎬 Factory video sirf malik'); return; } watchCfg(); phWatch(); await ensureItems(); try { (await fvLoad()).open({ ...phCtx(), aiImage, ph: phLoad }); } catch (e) { notice('Factory video nahi khula: ' + (e?.message || e)); } }
+window.ntFacVideo = () => fvOpen();
 window.ntFacThumb = id => { phWatch(); return phThumb(id); };   // Stock / Sale list ki chhoti tasveer (pos-stock.js / sale.js)
 window.ntFacPhOpen = id => phOpen(id);
 document.addEventListener('click', e => { const t = e.target.closest?.('[data-fac-ph]'); if (!t) return; e.preventDefault(); e.stopPropagation(); phOpen(t.dataset.facPh); }, true);   // Stock / Sale ki tasveer = poori khirki
@@ -1889,11 +1894,12 @@ document.addEventListener('input', e => {
 });
 // v2.107.0: 🏭 ek-screen ke clicks / likhai (alag listener — purane data-fc-* wahi)
 document.addEventListener('click', e => {
-  const t = e.target.closest?.('[data-ek-ph],[data-ek-cmds],[data-ek-cat],[data-ek-fstock],[data-ek-old],[data-ek-back],[data-ek-lbl],[data-ek-it],[data-ek-nwmain],[data-ek-nwraw],[data-ek-nwun],[data-ek-nwx],[data-ek-nwok],[data-ek-nwuse],[data-ek-ldel],[data-ek-padd],[data-ek-perman],[data-ek-persum],[data-ek-n],[data-ek-ebx],[data-ek-ninew],[data-ek-niold],[data-ek-niit],[data-ek-niuse],[data-ek-nimat],[data-ek-pmnew],[data-ek-pmok],[data-ek-nix],[data-ek-niok],[data-ek-odel],[data-ek-save],[data-ek-hl],[data-ek-pl],[data-ek-smo],[data-ek-smat],[data-ek-sdel],[data-ek-spmnew],[data-ek-spmok],[data-ek-mhide]');
+  const t = e.target.closest?.('[data-ek-ph],[data-ek-video],[data-ek-cmds],[data-ek-cat],[data-ek-fstock],[data-ek-old],[data-ek-back],[data-ek-lbl],[data-ek-it],[data-ek-nwmain],[data-ek-nwraw],[data-ek-nwun],[data-ek-nwx],[data-ek-nwok],[data-ek-nwuse],[data-ek-ldel],[data-ek-padd],[data-ek-perman],[data-ek-persum],[data-ek-n],[data-ek-ebx],[data-ek-ninew],[data-ek-niold],[data-ek-niit],[data-ek-niuse],[data-ek-nimat],[data-ek-pmnew],[data-ek-pmok],[data-ek-nix],[data-ek-niok],[data-ek-odel],[data-ek-save],[data-ek-hl],[data-ek-pl],[data-ek-smo],[data-ek-smat],[data-ek-sdel],[data-ek-spmnew],[data-ek-spmok],[data-ek-mhide]');
   if (!t || !t.closest('.fc-root')) return; const d = t.dataset;
   if (d.ekPh != null) { phOpen(d.ekPh); return; }   // v2.108.0: 📷
   if (d.ekCmds != null) { phCmds(); return; }
   if (d.ekCat != null) { phCat(); return; }
+  if (d.ekVideo != null) { fvOpen(); return; }
   if (d.ekFstock != null) { ekFactoryStock(); return; }
   if (d.ekOld) { st.view = 'old'; st.tab = d.ekOld; keep(); paint(); return; }
   if (d.ekBack != null) { st.view = 'ek'; keep(); paint(); return; }
@@ -2009,7 +2015,7 @@ export const _fcTest = { mcCpp, mcOpen, get mc() { return mc; }, rateRows, items
   get ek() { return ek; }, ekCalc: () => ekCalc(), ekSelect, ekOn: () => ekOn(), ekView: () => ekView(), phSell: () => phSell(), phCtx: () => phCtx(), phIdx: () => phIdx, phThumb, phSize };
 
 // v2.103.48: 🤖 agent actions — factory
-import { agentRegister } from './agent.js?v=2.326.0';
+import { agentRegister } from './agent.js?v=2.327.0';
 agentRegister([
   { name: 'factory_batches', read: true, desc: 'Factory ke aaj ke (ya pichhle N din ke) batch: item, kitne batch, pcs, haal (POS mein / app / hold).', params: { type: 'OBJECT', properties: { days: { type: 'INTEGER' } } },
     run({ days }) { watch(); const from = Date.now() - Math.max(1, Math.min(60, Number(days) || 1)) * 864e5; return { list: batches.filter(b => (b.at || 0) >= from).slice(0, 40).map(b => ({ no: b.no, item: b.name || byId.get(String(b.itemId))?.name || '', batch: b.n, pcs: b.out, haal: b.status, kis_ne: b.byName || '', kab: new Date(b.at).toLocaleString('en-PK'), laagat: b.cost })) }; } },
