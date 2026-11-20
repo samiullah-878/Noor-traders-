@@ -9019,3 +9019,10 @@ Malik (Stock screen ki tasveer): 'yahan ek screen par kam az kam 8 chips aane ch
 - Test: Chromium 412x860 (asal rowSlimHTML code, stubs): band line ~51-53 px, ek screen par 11 items (chipki patti ke saath), khula item ~220 px,
   light + dark; side mein khisakna nahi. Asal phone / Firebase par NAHI chala.
 AI: NAHI.
+
+=== 2026-11-20 (code nahi badla): 🎥 NVR ka IP PAKKA (Static 192.168.10.7) ===
+Malik: 'ya har dafa IP address change kar deta hai'. Wajah: Dahua NVR par DHCP ON (Mode: DHCP) — router har dafa naya IP deta, bill-clip / live-cam
+purane IP par dhoondte (NETBAD, video / live ruk jata). Hal (malik ne NVR par khud kiya, tasveerein dekh kar): Network -> TCP/IP -> NIC1 ka Modify ✏️ ->
+DHCP band -> IP 192.168.10.7 · Subnet 255.255.255.0 · Gateway 192.168.10.1 -> Test 'IP is available' -> OK -> Apply -> 'Mode: Static'.
+Sabaq: Dahua mein TCP/IP safhe ka bahar wala DHCP switch sirf DNS ka hai — asal IP mode NIC ke Modify ✏️ ke andar. App setting 'NVR ka IP (LAN)' wahi .7.
+AI: NAHI.
