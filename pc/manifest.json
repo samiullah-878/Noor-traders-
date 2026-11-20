@@ -1,6 +1,6 @@
 {
- "version": "2026-11-20.2",
- "note": "ginti-cam v1.0 NAYI (📦 Loading ginti — godam camera ki recording se lakeer paar karne wale nag · note milan · 🚨 bina note + Gemini naam) + ginti-model.onnx + wa-out v1.30 (alarm par malik ka reply)",
+ "version": "2026-11-20.3",
+ "note": "bill-clip v2.12 (⚡ do line: naya bill pehle apni recording se, purana / NVR alag — ek atka bill sab ko nahi rokta · 🎥 billClipCam: 2-3 camera ek saath, usi waqt ki doosre camera ki recording)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -99,7 +99,7 @@
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
   "wa-out.js": "35db2cb4515c450862c8671593f37db94329600e65245562996c6da7c65c0521",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
-  "bill-clip.js": "55acc265d94776b30b4d22656617bec9696bd59ff670f4e2480e335e5e919e8f",
+  "bill-clip.js": "a0827af09bfc07be1477c9b665ffbe4621388baca3a99de39d001295ff9a3e91",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
   "live-cam.js": "ec3589ec0ab36f328159175912177102d8ab8e57e8ff75e67bd6970c612368ed",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",

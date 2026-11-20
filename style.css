@@ -8803,7 +8803,7 @@ html.dk .stock-row.sk-c .sk-q.neg{color:#ff8a8f}
 /* v2.331.0: 📦 Loading ginti (ginti.js) — apni poori-screen khirki · patli qataarein (ek screen par 10) · premium chhote chips */
 #gnDlg.gn-dlg{border:0;padding:0;margin:0;inset:0;width:auto;height:auto;max-width:none;max-height:none;overflow:auto;background:var(--surface,#fff);color:var(--ink,#14213d)}
 #gnDlg::backdrop{background:#0009}
-@media (min-width:900px){#gnDlg.gn-dlg{inset:4vh auto auto auto;margin:0 auto;width:min(720px,96vw);max-height:92vh;border-radius:18px;box-shadow:0 20px 60px #0005}}
+@media (min-width:900px){#gnDlg .gn-body{max-width:1100px;width:100%;margin:0 auto;box-sizing:border-box;padding:10px 16px 18px}#gnDlg .gn-head{padding:10px 16px}}   /* v2.332.0 (malik: 'layout sahi karo · baqi screens ki tarah poora'): PC par bhi POORI screen — beech ka chhota popup nahi */
 #gnDlg .gn-head{position:sticky;top:0;z-index:2;display:flex;align-items:center;gap:8px;padding:8px 10px;background:var(--dlg,var(--surface,#fff));border-bottom:1px solid #8883}
 #gnDlg .gn-t{flex:1;min-width:0;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #gnDlg .gn-hx{display:flex;gap:6px;align-items:center}
@@ -8881,3 +8881,34 @@ html body #gnDlg .gn-mi.is-in{background:#3d7bff22!important;color:#1d52d6!impor
 html.dk body #gnDlg :is(.gn-chip,.gn-tg){background:linear-gradient(#26324d,#1b2438)!important;border-color:#3b4a6b!important;color:#dfe8ff!important}
 html.dk body #gnDlg .gn-tg.is-in{background:linear-gradient(#1f4d36,#173b2a)!important;border-color:#2fa866!important;color:#c9f5dc!important}
 html.dk body #gnDlg .gn-no{background:linear-gradient(#35191c,#2a1517)!important;color:#ff9ea1!important}
+/* v2.332.0: 👀 Bill tally — 🪟 PC par WhatsApp jaisa view (items video ke upar DAAYEIN, transparent, kaala kinara wali likhai — group video jaisi) + 🎥 2-3 camera ek saath (counter bara, baqi chhote, sab saath chalein) */
+.bt-stage{--ar:1.333;display:grid;gap:6px;min-width:0;position:relative;grid-template-columns:minmax(0,1fr)}
+.bt-stage:not(.wa).n2,.bt-stage:not(.wa).n3{grid-template-columns:repeat(2,minmax(0,1fr))}
+.bt-stage:not(.wa) .bt-vmain{grid-column:1/-1}
+.bt-stage:not(.wa) .bt-vx{aspect-ratio:var(--ar);max-height:28vh}
+.bt-card.bt-wa1{grid-template-columns:minmax(0,1fr)!important}
+.bt-stage.wa.n1{justify-items:center}
+.bt-stage.wa.n1 .bt-vmain{aspect-ratio:var(--ar);width:min(100%,calc(var(--vh,calc(100vh - 260px)) * var(--ar)));max-height:none}
+.bt-stage.wa.n2,.bt-stage.wa.n3{grid-template-columns:minmax(0,2fr) minmax(0,1fr);grid-template-rows:repeat(2,minmax(0,1fr));aspect-ratio:calc(var(--ar) * 1.5);width:min(100%,calc(var(--vh,calc(100vh - 260px)) * var(--ar) * 1.5));margin:0 auto}
+.bt-stage.wa.n2 .bt-vwrap,.bt-stage.wa.n3 .bt-vwrap{aspect-ratio:auto;height:100%;max-height:none;width:100%}
+.bt-stage.wa.n2 .bt-vmain,.bt-stage.wa.n3 .bt-vmain{grid-row:1/-1}
+.bt-vx{position:relative;background:#000;border-radius:14px;overflow:hidden;min-width:0}
+.bt-vx video{width:100%;height:100%;object-fit:contain;display:block;background:#000;cursor:zoom-in}
+.bt-xn{position:absolute;left:8px;top:6px;max-width:calc(100% - 16px);padding:2px 9px;border-radius:999px;background:#000a;color:#fff;font-size:12px;font-weight:700;pointer-events:none;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt-xl{position:absolute;inset:0;display:grid;place-items:center;color:#fff;font-size:13px;text-align:center;padding:10px;pointer-events:none;background:#0007}.bt-xl[hidden]{display:none}
+.bt-xadd{border:1.5px dashed #9fb3d9;border-radius:14px;background:linear-gradient(#fff,#f3f6fc);color:#3b4a6b;font-size:13px;font-weight:700;min-height:0;cursor:pointer}
+.bt-stage:fullscreen{background:#000;padding:6px;width:100vw;height:100vh;max-height:none;aspect-ratio:auto;margin:0}
+.bt-stage:fullscreen .bt-vwrap{max-height:none;height:100%;aspect-ratio:auto}
+.bt-vx:fullscreen{border-radius:0}
+.bt-pat{position:absolute;top:10px;right:10px;bottom:52px;width:clamp(200px,31%,330px);display:flex;flex-direction:column;gap:4px;padding:8px 10px;border:1.5px solid rgba(255,255,255,.78);border-radius:14px;background:transparent;color:#fff;text-shadow:0 0 2px #000,0 0 3px #000,1px 1px 2px #000;z-index:2;min-height:0;box-sizing:border-box}
+.bt-ph{display:grid;gap:1px;padding-bottom:5px;border-bottom:1px solid rgba(255,255,255,.65);min-width:0}
+.bt-ph b,.bt-ph small{white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt-pno{font-size:15px}.bt-ph small{font-size:12.5px}.bt-prs{font-size:24px;font-weight:800;line-height:1.15}
+#btRoot .bt-pat .bt-items{max-height:none;flex:1;min-height:0;overflow:auto;gap:1px;align-content:start;grid-template-columns:minmax(0,1fr)!important;scrollbar-width:thin}
+#btRoot .bt-pat .bt-items li{background:transparent!important;border:0!important;box-shadow:none!important;padding:2px 0!important;font-size:15px!important;gap:6px!important;color:#fff!important}
+#btRoot .bt-pat .bt-items li b{color:#fff!important;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#btRoot .bt-pat .bt-items li .bt-q{background:transparent!important;border:0!important;color:#ffe278!important;font-size:15px!important;min-width:0!important;padding:0!important;font-weight:800}
+#btRoot .bt-pat .bt-items li.tap{cursor:pointer;background:rgba(0,0,0,.22)!important;border-radius:8px!important;padding:3px 6px!important;margin:1px 0}
+#btRoot .bt-pat .bt-items li.sel b,#btRoot .bt-pat .bt-items li.sel .bt-q{color:#ff9a9a!important;text-decoration:line-through}
+#btRoot .bt-pat .bt-items li i{color:#fff}
+#btRoot .bt-pat .bt-items li.none{color:#fff!important;font-size:13px!important}

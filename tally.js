@@ -9,6 +9,9 @@
 //   5 min ki clip 60-60 s ke HISSON mein (meta.segs, billClip/<id>_s<i>_<j>) — yahan pehla hissa aate hi chalta hai, baqi peeche load, khatam par agla khud,
 //   neeche minute ke chips (1 2 3 4 5 ▶) — aakhri minute = print ka waqt. ⋮ 🔵 Un-posted: aaj ke un-posted bill → 🎥 Mangwao (billClipReq) → clip aate hi tally mein.
 // Malik: ⋮ ⚙️ setup (NVR + counter ↔ camera channel), 📊 aaj ka hisaab. Larka: 📊 mera aaj, ↩ pichla, 💰 bare pehle. AI NAHI.
+// v2.332.0 (20 Nov, malik: 'PC par bhi WhatsApp wala view · 2-3 cameras ki ikatthi recording · clip slow'): 🪟 PC (>= 900px) par video poori chaurai, items
+//   video ke upar DAAYEIN transparent patti (group video jaisi; ⋮ se purana view) · 🎥 ⋮ Cameras = counter ke saath 1-2 aur camera (phone par yaad
+//   sam-bt-xcam) → billClipCam hukum → PC bill-clip v2.12 usi waqt ki recording → billClip/<id>~<key>; sab videos ek saath chalein / rukein / aage-peeche.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 0 });
@@ -19,7 +22,12 @@ const ago = t => { const m = Math.round((Date.now() - Number(t)) / 60000); retur
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '', canK = () => true;
 let offs = [], mounted = false, bills = new Map(), clips = new Map(), tallies = new Map(), lines = new Map(), urls = new Map(), pcSt = null, reqs = new Map(), segIdx = 0, segBusy = '';
 let fPc = '', cur = '', mode = 'view', sel = new Set(), lastDone = '', reopen = '', order = 'new', speed = 1.5, loading = '', paintT = null;
-let fDay = 'aaj', skipped = new Set(), undoUntil = 0, undoT = null, tapT = null;   // v2.224.0: 📅 din (aaj | kal | dono) · ⏭ baad mein · ↩ 5 s
+let fDay = 'aaj', skipped = new Set(), undoUntil = 0, undoT = null, tapT = null;
+let xcams = [], waPref = true; const xcReq = new Set();   // v2.332.0: 🎥 mazeed cameras (naam, max 2) · 🪟 WhatsApp jaisa view
+try { const a = JSON.parse(localStorage.getItem('sam-bt-xcam') || '[]'); if (Array.isArray(a)) xcams = a.filter(x => typeof x === 'string' && x).slice(0, 2); waPref = localStorage.getItem('sam-bt-wa') !== '0'; } catch {}
+const isWa = () => waPref && (!!window.ntPcm || window.innerWidth >= 900);
+const camKey = n => String(n || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'cam';
+function xcFor(b) { if (!b || !xcams.length) return []; const own = String(b.pc || '').toLowerCase(); return xcams.filter(n => n.toLowerCase() !== own).map(n => ({ n, k: camKey(n), id: String(b.id) + '~' + camKey(n) })); }   // v2.224.0: 📅 din (aaj | kal | dono) · ⏭ baad mein · ↩ 5 s
 try { const o = JSON.parse(localStorage.getItem('sam-bt-day') || 'null'); if (o && o.d === dayKey(0) && /^(aaj|kal|dono)$/.test(o.v)) fDay = o.v; } catch {}
 const dOk = d => fDay === 'dono' || d === dayKey(fDay === 'kal' ? 1 : 0);
 const dayLbl = () => fDay === 'kal' ? 'Kal' : fDay === 'dono' ? 'Aaj + Kal' : 'Aaj';
@@ -43,6 +51,8 @@ export function renderTally(host) {
           <button type="button" data-bt-setup="1" data-mn="bt.setup" data-mn-i="⚙️" data-mn-t="Camera setup" data-mn-s="NVR + counter ka channel (malik)" data-mn-g="👀 Bill tally" hidden>⚙️ Setup</button>
           <button type="button" data-bt-wg="1" data-mn="bt.wg" data-mn-i="👥" data-mn-t="Group videos" data-mn-s="har bill ki video WhatsApp group mein (malik)" data-mn-g="👀 Bill tally" hidden>👥 Group videos</button>
           <button type="button" data-bt-gn="1" data-mn="bt.gn" data-mn-i="📦" data-mn-t="Loading ginti" data-mn-s="godam camera — nag ginti · note milan · 🚨 bina note" data-mn-g="👀 Bill tally" hidden>📦 Loading ginti</button>
+          <button type="button" data-bt-xc="1" data-mn="bt.xc" data-mn-i="🎥" data-mn-t="Cameras (2-3 ek saath)" data-mn-s="counter ke saath godam / gate ki video bhi" data-mn-g="👀 Bill tally">🎥 Cameras</button>
+          <button type="button" data-bt-wav="1" data-mn="bt.wav" data-mn-i="🪟" data-mn-t="WhatsApp jaisa view" data-mn-s="PC: items video ke upar daayein · ya purana" data-mn-g="👀 Bill tally">🪟 View</button>
           <button type="button" data-bt-wa="1" data-mn="bt.wa" data-mn-i="📲" data-mn-t="Video WhatsApp par" data-mn-s="bill number likho → malik + Mubeen" data-mn-g="👀 Bill tally">📲 Video WhatsApp</button>
           <button type="button" data-bt-cam="1" data-mn="bt.cam" data-mn-i="🔴" data-mn-t="Live camera" data-mn-s="counter ki seedhi video" data-mn-g="👀 Bill tally">🔴 Live camera</button>
           <button type="button" data-bt-live="1" data-mn="bt.live" data-mn-i="📺" data-mn-t="Counter Nazar" data-mn-s="purani live screen" data-mn-g="👀 Bill tally">📺 Counter Nazar</button>
@@ -122,7 +132,69 @@ async function playSeg(i, keepTime) {
   const u = await segUrl(id, i).catch(() => ''); if (cur !== id || segIdx !== i) return;
   if (!u) { if (ld) ld.textContent = '✕ hissa ' + (i + 1) + ' nahi mila'; return; }
   if (ld) ld.hidden = true; v.src = u; v.playbackRate = speed; if (keepTime) v.currentTime = keepTime; v.play().catch(() => {});
+  xcPaint();   // v2.332.0: baqi cameras bhi isi minute par
 }
+
+// ---------- 🪟 v2.332.0: PC par WhatsApp jaisi patti (video ke upar daayein, transparent — group video jaisi) ----------
+// Video ki oonchai = screen mein jitni jagah (upar ki patti se neeche ke buttons tak) — zoom (html .92) ke saath bhi sahi: asal naap se
+function fitStage() {
+  const st = $('btStage'); if (!st || !st.classList.contains('wa')) return;
+  const r = st.getBoundingClientRect(), cw = parseFloat(getComputedStyle(st).width) || r.width, k = r.width && cw ? r.width / cw : 1;
+  const bt = $('btBtns'), bh = bt && !bt.classList.contains('is-empty') ? bt.getBoundingClientRect().height : 0;
+  const avail = Math.max(220, (window.innerHeight - r.top - bh - 74) / (k || 1));
+  st.style.setProperty('--vh', Math.round(avail) + 'px');
+}
+window.addEventListener('resize', () => { clearTimeout(fitStage._t); fitStage._t = setTimeout(() => { if (mounted) { fitStage(); schedule(); } }, 150); });
+function patHTML(b, t) {
+  return `<div class="bt-pat" id="btPat"><div class="bt-ph"><b class="bt-pno">Bill #${esc(b.no || b.id)}</b><small>${esc(b.pc || '?')} · ${tm(b.ct || b.pt)}${b._d !== dayKey(0) ? ' (kal)' : ''}</small><b class="bt-prs">Rs ${num(b.t)}</b><small><span id="btN"></span>${b.by ? ' · ' + esc(b.by) : ''}${t ? ` · pehle ${t.ok ? '✓' : '✕'}` : ''}</small></div><ol class="bt-items" id="btItems"><li class="none">⏳ items…</li></ol></div>`;
+}
+
+// ---------- 🎥 v2.332.0: 2-3 camera ek saath (malik: 'aik hi time par do cameras ya teen cameras ki ikatthi recording') ----------
+// Counter wali video bari (asal tally), saath 1-2 aur camera (⋮ 🎥 Cameras, phone par yaad). Har camera ki video PC (bill-clip v2.12) USI waqt ki recording se
+// banata hai (billClipCam hukum → billClip/<id>~<key>) — counter video chale / ruke / aage-peeche ho to baqi bhi (xcSync).
+function xcEnsure(b) {
+  if (!b || !cloud?.reqBillCam) return;
+  for (const x of xcFor(b)) { if (clips.has(x.id) || xcReq.has(x.id)) continue; xcReq.add(x.id); cloud.reqBillCam(String(b.id), x.n, x.k, b._d || dayKey(0)).catch(e => { xcReq.delete(x.id); notice('🎥 ' + x.n + ': ' + (e?.code === 'permission-denied' ? 'rules abhi nahi lagi (PC 5 min mein lagata hai)' : (e?.message || e))); }); }
+}
+function xcPaint() {
+  const st = $('btStage'); if (!st) return;
+  st.querySelectorAll('[data-xk]').forEach(tile => {
+    const id = tile.dataset.xk, c = clips.get(id), lb = tile.querySelector('.bt-xl'), v = tile.querySelector('video');
+    if (!c || c.st === 'wait') { if (lb) { lb.hidden = false; lb.textContent = '⏳ PC bana raha…'; } return; }
+    if (c.st !== 'ok') { if (lb) { lb.hidden = false; lb.textContent = '✕ ' + (c.err || 'nahi bani'); } return; }
+    const i = Math.min(segIdx, (segsOf(c) || [0]).length - 1);
+    if (v.dataset.seg === String(i) && v.src) { if (lb) lb.hidden = true; return; }
+    if (lb) { lb.hidden = false; lb.textContent = '⏳ video…'; }
+    segUrl(id, i).then(u => { if (!u || !tile.isConnected || segIdx !== i) return; v.dataset.seg = String(i); v.src = u; v.playbackRate = speed; if (lb) lb.hidden = true;
+      v.onloadedmetadata = () => xcSync(); }).catch(() => { if (lb) lb.textContent = '✕ video nahi aayi'; });
+  });
+}
+function xcSync() {
+  const v = $('btVid'), st = $('btStage'); if (!v || !st) return;
+  st.querySelectorAll('video.bt-xv').forEach(x => {
+    if (!x.src || x.dataset.seg !== String(segIdx) || x.readyState < 1) return;
+    if (x.playbackRate !== v.playbackRate) x.playbackRate = v.playbackRate;
+    if (Math.abs(x.currentTime - v.currentTime) > 0.6) { try { x.currentTime = Math.min(v.currentTime, Math.max(0, (x.duration || 1e9) - 0.05)); } catch {} }
+    if (v.paused || v.ended) { if (!x.paused) x.pause(); } else if (x.paused) x.play().catch(() => {});
+  });
+}
+function openXc() {
+  const d = dlg(); delete d.dataset.list; delete d.dataset.unp; delete d.dataset.wa; delete d.dataset.wg;
+  const cams = (Array.isArray(pcSt?.cams) ? pcSt.cams : []).filter(c => c && c.n);
+  const sel = new Set(xcams.filter(n => cams.some(c => c.n === n)));
+  const row = c => `<button type="button" class="bt-tg bt-xcb${sel.has(c.n) ? ' on' : ''}" data-xcn="${esc(c.n)}"${c.r ? '' : ' disabled'}>${c.c ? '🖥' : '📹'} ${esc(c.n)} <small>${c.r ? (c.on ? '⏺ 🟢' : '⏺ ⚫ ruki') : '⏹ recording band'}</small></button>`;
+  d.innerHTML = `<div class="bt-dhead"><b>🎥 Kitne camera ek saath?</b><button type="button" class="bt-x" data-x="1">×</button></div>
+    <div class="bt-dbody"><p class="bt-sub">Bill ke counter ka camera hamesha bara. Saath <b>1-2 aur</b> chunein — usi waqt ki video saath chalegi (pehli dafa PC 5-20 s leta hai). Sirf ⏺ recording wale camera; recording malik ⚙️ Camera setup se ON karta hai.</p>
+      <div class="bt-row bt-pcs">${cams.map(row).join('') || '<small>Camera ki list abhi PC se nahi aayi</small>'}</div>
+      <div class="bt-warow0"><button type="button" class="bt-sm" data-xc-none="1">✕ Sirf counter</button><button type="button" class="bt-sm bt-wago" data-xc-ok="1">✅ Lagao</button></div></div>`;
+  d.querySelector('[data-x]').onclick = () => d.close();
+  d.querySelectorAll('[data-xcn]').forEach(b => b.onclick = () => { const n = b.dataset.xcn; if (sel.has(n)) sel.delete(n); else { if (sel.size >= 2) { notice('Zyada se zyada 2 aur camera (kul 3)'); return; } sel.add(n); } b.classList.toggle('on', sel.has(n)); });
+  const done = list => { xcams = list.slice(0, 2); try { localStorage.setItem('sam-bt-xcam', JSON.stringify(xcams)); } catch {} d.close(); const mn = $('btMain'); if (mn) mn.innerHTML = ''; paint(); notice(xcams.length ? '🎥 ' + (xcams.length + 1) + ' camera ek saath' : '🎥 Sirf counter ka camera'); };
+  d.querySelector('[data-xc-none]').onclick = () => done([]);
+  d.querySelector('[data-xc-ok]').onclick = () => done([...sel]);
+  if (!d.open) d.showModal();
+}
+
 
 // ---------- paint ----------
 // v2.230.0: upar teeno counter ke chips (Live jaisa) — har chip par us counter ke baqi bill; dabao = neeche usi ke bill. Sab counter / din ⋮ mein.
@@ -141,7 +213,8 @@ function paintPc() {
   else if (!pcSt.on) s = '⚙️ camera band — ' + (pcSt.err || 'setup');
   else if (pcSt.test && !pcSt.test.ok) s = '🔎 Rabta ✕ (' + tm(pcSt.test.at) + ') ' + (pcSt.test.web ? pcSt.test.web + ' · ' : '') + (pcSt.test.err || '');
   else if (pcSt.err) s = '⚠ ' + pcSt.err;
-  else s = '🎥 PC chalu' + (c.wait ? ' · ⏳ ' + c.wait + ' clip ban rahi' : '');
+  else { const ln = pcSt.ln || {}, a = ln.a || {}, bb = ln.b || {};   // v2.332.0: PC bill-clip v2.12 ki do line
+    s = '🎥 PC chalu' + (c.wait ? ' · ⏳ ' + c.wait + ' clip ban rahi' : '') + (a.ms ? ` · ⚡ naya bill: ek clip ~${Math.max(1, Math.round(a.ms / 1000))} s` : '') + (bb.cur ? ` · 🐢 purana ${bb.cur} NVR se (asal waqt jitna)` : '') + (Number(pcSt.q) ? ` · line mein ${pcSt.q}` : ''); }
   if (c.err && !/⚠/.test(s)) s += (s ? ' · ' : '') + '✕ ' + c.err + ' clip nahi bani';
   const bad = /⚠|chup|✕|band/.test(s);   // v2.224.0: screen par sirf chhota chip — tap = poori baat
   el.hidden = !(bad || c.wait); el.textContent = /chup/.test(s) ? '⚠ PC chup' : bad ? '⚠' : '⏳ ' + c.wait; el.dataset.full = s; el.title = s; el.classList.toggle('bad', bad);
@@ -164,22 +237,27 @@ function paint() {
     paintBtns(true); return;
   }
   const b = bills.get(cur), cl = clips.get(cur) || {}, t = tallies.get(cur);
-  if (!main.querySelector(`[data-bt-bill="${cur}"]`)) {
-    main.innerHTML = `<div class="bt-card" data-bt-bill="${esc(cur)}">
-      <div class="bt-vcol"><div class="bt-vwrap"><video id="btVid" playsinline muted autoplay preload="auto"></video>
+  const wa = isWa(), xs = xcFor(b), sig = (wa ? 'w' : 'p') + xs.map(x => x.k).join(','), card0 = main.querySelector(`[data-bt-bill="${cur}"]`);   // v2.332.0: view / cameras badle = dobara banao
+  if (!card0 || card0.dataset.sig !== sig) {
+    main.innerHTML = `<div class="bt-card${wa ? ' bt-wa1' : ''}" data-bt-bill="${esc(cur)}" data-sig="${esc(sig)}">
+      <div class="bt-vcol"><div class="bt-stage n${1 + xs.length}${wa ? ' wa' : ''}" id="btStage"><div class="bt-vwrap bt-vmain"><video id="btVid" playsinline muted autoplay preload="auto"></video>
         <div class="bt-vload" id="btVload">⏳ video…</div><div class="bt-flash" id="btFlash" hidden></div><button type="button" class="bt-vend" id="btVend" data-bt-again="1" hidden>✅ Video khatam · ↺ Dobara dekho</button>
         <div class="bt-vchips"><span class="bt-segs" id="btSegs"></span><button type="button" class="bt-spd" data-bt-spc="1" title="raftar">${speed}×</button><button type="button" data-bt-full="1" title="poori screen">⛶</button></div>
+      ${wa ? patHTML(b, t) : ''}</div>${xs.map(x => `<div class="bt-vwrap bt-vx" data-xk="${esc(x.id)}"><video class="bt-xv" playsinline muted preload="auto"></video><span class="bt-xn">📹 ${esc(x.n)}</span><div class="bt-xl">⏳ PC bana raha…</div></div>`).join('')}${wa && xs.length === 1 ? '<button type="button" class="bt-xadd" data-bt-xc="1">＋ 📹 aur camera</button>' : ''}
       </div>
       <div class="bt-info"><span class="bt-inf1"><b class="bt-bno" id="btBno"></b> ${b._d !== dayKey(0) ? '<em>kal</em> ' : ''}${tm(b.ct || b.pt)}${b.ct ? '' : ' (post)'}${b.by ? ' · 👦 ' + esc(b.by) : ''}${!fPc && b.pc ? ' · 🖥 ' + esc(b.pc) : ''}${b.p ? ' · ' + esc(b.p) : ''}</span><b class="bt-rs">Rs ${num(b.t)}</b></div>
       <div class="bt-tip">👆 tap = ruk / chal · 2 dafa tap daayein / baayein = 10 s aage / peeche${cl.dur ? ' · ' + (cl.dur >= 120 ? Math.round(cl.dur / 60) + ' min' : cl.dur + ' s') : ''}</div></div>
-      <div class="bt-side"><div class="bt-ihead">🧾 Bill ki items <b id="btN"></b>${t ? `<em>pehle ${t.ok ? '✓' : '✕'} (${esc(t.n || '')})</em>` : ''}</div><ol class="bt-items" id="btItems"><li class="none">⏳ items…</li></ol></div>
+      ${wa ? '' : `<div class="bt-side"><div class="bt-ihead">🧾 Bill ki items <b id="btN"></b>${t ? `<em>pehle ${t.ok ? '✓' : '✕'} (${esc(t.n || '')})</em>` : ''}</div><ol class="bt-items" id="btItems"><li class="none">⏳ items…</li></ol></div>`}
     </div>`;
     segIdx = 0; loadCur(cur);
     const vv = main.querySelector('#btVid');   // v2.210.0: hissa khatam = agla · v2.222.0: aakhri ke baad shuru se NAHI (malik: "6 items ke baad video phir se start") — ruko + ↺ chip
     if (vv) { vv.addEventListener('ended', () => { const sg = segsOf(clips.get(cur)); if (sg && segIdx + 1 < sg.length) { playSeg(segIdx + 1); return; } const e = $('btVend'); if (e) e.hidden = false; }); vv.addEventListener('play', () => { const e = $('btVend'); if (e) e.hidden = true; const f = $('btFlash'); if (f) f.hidden = true; }); vv.addEventListener('pause', () => { if (!vv.ended) flash('⏸ ruki — tap se chalao', true); }); }
+    if (vv) ['play', 'pause', 'ratechange', 'seeked', 'timeupdate'].forEach(ev => vv.addEventListener(ev, xcSync));   // v2.332.0: 🎥 baqi cameras saath
+    if (vv) vv.addEventListener('loadedmetadata', () => { const st = $('btStage'); if (st && vv.videoWidth && vv.videoHeight) st.style.setProperty('--ar', (vv.videoWidth / vv.videoHeight).toFixed(3)); });   // v2.332.0: dabba video ki asal shakal (kale kinare nahi)
   }
   const bn = $('btBno'); if (bn && b) { const po = Number(b.ps) === 2, tx = (po ? '📌 ' : '🔵 ') + '#' + (b.no || ''); if (bn.textContent !== tx) bn.textContent = tx; bn.classList.toggle('po', po); bn.classList.toggle('un', !po); bn.title = po ? 'Posted' : 'Un-posted'; }
-  paintItems(); paintBtns();
+  paintItems(); paintBtns(); xcEnsure(b); xcPaint(); fitStage();
+  { const nx = q.find(x => String(x.id) !== cur); if (nx) xcEnsure(nx); }   // v2.332.0: agle bill ke cameras bhi pehle se maango
   for (const x of q.filter(x => String(x.id) !== cur).slice(0, 3)) { clipUrl(String(x.id)).catch(() => {}); linesOf(String(x.id)); }   // v2.212.0: aage 3 bill ki video + items pehle se (✓ par agla foran)
 }
 async function loadCur(id) {
@@ -252,16 +330,19 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.331.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN() })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.332.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN() })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
-  if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
+  if (t.tagName === 'VIDEO' && t.classList.contains('bt-xv')) { const tile = t.closest('.bt-vx'); try { if (document.fullscreenElement) document.exitFullscreen(); else tile?.requestFullscreen?.(); } catch {} return; }   // v2.332.0: doosre camera par tap = us ki poori screen
+  if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (($('btStage')?.querySelector('.bt-vx') && $('btStage')) || v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
   if (t.closest('.bt-vwrap') && t.tagName === 'VIDEO') { const v = t, side = (e.offsetX || 0) < v.offsetWidth / 2 ? -1 : 1;   // v2.224.0: 1 tap = ruk / chal · 2 tap = ±10 s
     if (tapT) { clearTimeout(tapT); tapT = null; seek(side); } else tapT = setTimeout(() => { tapT = null; if (v.paused) v.play().catch(() => {}); else v.pause(); }, 260);
     return; }
   if (t.closest('[data-bt-order]')) { order = order === 'big' ? 'new' : 'big'; try { localStorage.setItem('sam-bt-order', order); } catch {} cur = ''; paint(); return; }
   if (t.closest('[data-bt-undo]')) { if (!lastDone) { notice('Abhi koi pichla nahi'); return; } const tl = tallies.get(lastDone); if (tl && tl.by && tl.by !== uidOf() && !isOwner()) { notice('Ye kisi aur ne tally kiya'); return; } reopen = lastDone; cur = lastDone; mode = 'view'; sel = new Set(); undoUntil = 0; $('btMain').innerHTML = ''; paint(); notice('↩ Bill dobara — ✓ ya ✕ dobara dabayein'); return; }
   if (t.closest('[data-bt-sum]')) { openSum(); return; }
+  if (t.closest('[data-bt-xc]')) { openXc(); return; }   // v2.332.0
+  if (t.closest('[data-bt-wav]')) { waPref = !isWa(); try { localStorage.setItem('sam-bt-wa', waPref ? '1' : '0'); } catch {} const mn = $('btMain'); if (mn) mn.innerHTML = ''; paint(); notice(waPref ? '🪟 WhatsApp jaisa view' : '🪟 Purana view'); return; }
   if (t.closest('[data-bt-wa]')) { openWa(); return; }
   if (t.closest('[data-bt-wg]')) { openWg(); return; }
   if (t.closest('[data-bt-gn]')) { try { window.ntGinti?.(); } catch (e) { notice('Loading ginti: ' + (e?.message || e)); } return; }   // v2.331.0: 📦 godam camera ki ginti

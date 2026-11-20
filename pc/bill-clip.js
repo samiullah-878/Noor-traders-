@@ -1,5 +1,10 @@
 // =========================================================
-//  bill-clip.js  v2.11 (2026-11-20: 🪟 patti DAAYEIN patli column (malik: 'aik side par — right side') — ovPlan x0 = W-10-cw (214), 12 items fi safha.
+//  bill-clip.js  v2.12 (2026-11-20: ⚡ malik: 'en ki speed tez karo — BHT slow' (clip 2 ghante peeche) + '2-3 cameras ki ikatthi recording':
+//    DO LINE saath saath — 'taza' (naya bill PEHLE, sirf PC ki apni recording se, NVR ka intezar kabhi nahi) + 'purana' (purana pehle, NVR playback bhi);
+//    ek bill ek hi line mein (inProg). ffSegs: -ss ab -i se PEHLE (pura minute decode nahi). Har Firestore likhai par hadd (atke to aage, bill ghalti gin kar).
+//    billClipPc.ln {a, b: {n, ms, cur}} + nvr = app mein 'ek clip N s'. 🎥 billClipCam/<SaleID>~<key> {st new, cam, sid} → counter clip ka WAHI t0 + dur doosre
+//    camera ki recording se → billClip/<SaleID>~<key> (x 1, cam) — sirf recording ON camera, NVR par naya rabta nahi.)
+//  v2.11 (2026-11-20: 🪟 patti DAAYEIN patli column (malik: 'aik side par — right side') — ovPlan x0 = W-10-cw (214), 12 items fi safha.
 //  v2.10 (2026-11-19: 📹 malik: 'live likhein -> camera ke naam -> number -> abhi ki tasveer / pichhle 30 sec … 30 min ki video, tarteeb se ·
 //    counter ke ilawa mazeed cameras · kisi ki recording chalu karni ho to wo bhi': CF.xc [{n, ch, r}] (mazeed cameras, r = recording), billClipWa kind 'live'
 //    (kh-wa v1.12) -> lvOne: 📸 taza tukre ka aakhri frame / RTSP (recording band ho to) · 🎥 apni recording se 5-5 min ke hisse -> SIRF maangne wale ko.
@@ -57,7 +62,7 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.10';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.12';
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -90,7 +95,7 @@ let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, test: TEST || null, rec: recState(), net: NET || null, wg: ST.wg || null, cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, ln: ST.ln || null, test: TEST || null, rec: recState(), net: NET || null, wg: ST.wg || null, cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -288,7 +293,7 @@ function ffSegs(inArgs, ss, dur, outDir) {
   return new Promise(res => {
     const ff = ffPath(); if (!ff) return res({ ok: false, err: 'ffmpeg nahi' });
     fs.mkdirSync(outDir, { recursive: true });
-    const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', ...inArgs, ...(ss > 0 ? ['-ss', String(ss)] : []), '-t', String(dur), '-an',
+    const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', ...(ss > 0 ? ['-ss', String(ss)] : []), ...inArgs, '-t', String(dur), '-an',   // v2.12: -ss input se PEHLE (seek — poora minute decode nahi)
       '-vf', 'fps=8,scale=\'min(640,iw)\':-2', '-c:v', 'libx264', '-preset', 'veryfast', '-crf', '30', '-profile:v', 'main', '-pix_fmt', 'yuv420p', '-g', '48', '-force_key_frames', 'expr:gte(t,n_forced*60)',
       '-f', 'segment', '-segment_time', '60', '-reset_timestamps', '1', '-segment_format', 'mp4', '-segment_format_options', 'movflags=+faststart', '-y', path.join(outDir, 'p-%02d.mp4')];
     let err = '', done = false; const p = spawn(ff, args, { windowsHide: true });
@@ -340,7 +345,7 @@ function addStart(b) {
   for (let i = e.a.length - 1; i >= 0; i--) { const t = e.a[i] + (e.off || 0); if (t > hi) continue; if (t < lo) break; if (last && last - t > 4 * 60000) break; st = t; last = t; }
   return st;
 }
-function kick() { if (kickT) return; kickT = setTimeout(() => { kickT = null; work().catch(e => log('❌ ' + (e.stack || e.message))); }, 1500); }
+function kick() { kickLane('a'); kickLane('b'); }   // v2.12: dono line
 function pick() {
   const now = Date.now(), out = [];
   for (const b of bills) {
@@ -360,28 +365,97 @@ function pick() {
   }
   return out.sort((a, b) => (reqs.has(String(b.id)) - reqs.has(String(a.id))) || (Number(a.pt || a.ct) - Number(b.pt || b.ct)));   // hukum wale pehle, phir purana pehle (koi reh na jaye)
 }
-async function work() {
-  if (busy) return; busy = true;
+// ---------- ⚡ v2.12: DO LINE (malik 20 Nov: 'en ki speed tez karo — BHT slow') ----------
+//   Pehle EK line thi, purana bill pehle — ek bill NVR playback par (asal waqt jitna) atka to sab peeche; 2 ghante purane bill ⏳.
+//   Ab: 'a' TAZA = naya bill pehle, sirf PC ki apni recording wale (foran) + 🎥 doosre camera ke hukum · 'b' PURANA = purana pehle, NVR playback bhi.
+//   Ek bill ek hi line mein (inProg). Line 'a' mein recording na chale = bill line 'b' ke liye chhod do (deferA), NVR kabhi nahi.
+const inProg = new Set(), deferA = new Set();
+const LANES = { a: { busy: false, t: null, n: 0, ms: [], cur: '' }, b: { busy: false, t: null, n: 0, ms: [], cur: '' } };
+let probing = false;
+function kickLane(k) { const L = LANES[k]; if (L.t) return; L.t = setTimeout(() => { L.t = null; laneRun(k).catch(e => log('❌ line ' + k + ': ' + (e.stack || e.message))); }, 1500); }
+function fastOf(b) { const ch = PN.chFind(CF.ch, b.pc); if (!ch || !recs.get(ch)?.p) return false; const w = winOf(b); return !!recCover(ch, w.t0, w.t1); }
+function laneNext(k) {
+  const q = pick().filter(b => !inProg.has(String(b.id)));
+  if (k === 'b') return q[0] || null;   // purana pehle (hukum wale sab se pehle — pick() ki tarteeb)
+  const rq = q.filter(b => reqs.has(String(b.id)) && !deferA.has(String(b.id)) && fastOf(b));
+  if (rq.length) return rq[0];
+  const fq = q.filter(b => !deferA.has(String(b.id))).sort((a, b) => Number(b.pt || b.ct) - Number(a.pt || a.ct));   // naya pehle
+  for (const b of fq.slice(0, 40)) if (fastOf(b)) return b;
+  return null;
+}
+async function gate() {   // pehle wali work() ki jaanch — dono line ke liye
+  if (!cfReady) return false;
+  const q = pick(); ST.q = q.length; if (q.length !== lastQ) { lastQ = q.length; pushSt(true); }
+  if (!CF.on) { ST.err = CF.ip ? 'band (⚙️ se ON karein)' : 'NVR ka IP nahi — app ⚙️ Bill tally setup'; recStopAll(''); pushSt(); return false; }
+  if (!ffPath()) { ffInstall(); return false; }
+  if (AUTHBAD) { ST.err = 'NVR ka user / password ghalat (401) — ruka hua; ⚙️ mein theek kar ke Save karein (ghalat koshishon se NVR admin band kar deta)'; pushSt(); return false; }
+  if (NETBAD) {   // v2.7: 🌐 rasta band — har 5 min ek halka sawal, tab tak koi bill nahi
+    if (probing || Date.now() - NETBAD < 5 * 60000) { ST.err = netMsg(); pushSt(); return false; }
+    probing = true; let ok = false; try { ok = await netDiag(true); } catch {} finally { probing = false; }
+    if (!ok) { NETBAD = Date.now(); ST.err = netMsg(); pushSt(true); return false; }
+    NETBAD = 0; log('🌐 NVR ka rasta khul gaya — ruki clips ab banengi'); recSync();
+  }
+  return true;
+}
+function laneSt() { const o = {}; for (const k of ['a', 'b']) { const L = LANES[k], m = L.ms; o[k] = { n: L.n, ms: m.length ? Math.round(m.reduce((x, y) => x + y, 0) / m.length) : 0, cur: L.cur || '' }; } return o; }
+async function laneRun(k) {
+  const L = LANES[k]; if (L.busy) return; L.busy = true;
   try {
-    if (!cfReady) return;
-    const q = pick(); ST.q = q.length; if (q.length !== lastQ) { lastQ = q.length; pushSt(true); }
-    if (!CF.on) { ST.err = CF.ip ? 'band (⚙️ se ON karein)' : 'NVR ka IP nahi — app ⚙️ Bill tally setup'; recStopAll(''); pushSt(); return; }
-    if (!ffPath()) { ffInstall(); return; }
-    if (AUTHBAD) { ST.err = 'NVR ka user / password ghalat (401) — ruka hua; ⚙️ mein theek kar ke Save karein (ghalat koshishon se NVR admin band kar deta)'; pushSt(); return; }
-    if (NETBAD) {   // v2.7: 🌐 rasta band — har 5 min ek halka sawal, tab tak koi bill nahi
-      if (Date.now() - NETBAD < 5 * 60000) { ST.err = netMsg(); pushSt(); return; }
-      let ok = false; try { ok = await netDiag(true); } catch {}
-      if (!ok) { NETBAD = Date.now(); ST.err = netMsg(); pushSt(true); return; }
-      NETBAD = 0; log('🌐 NVR ka rasta khul gaya — ruki clips ab banengi'); recSync();
-    }
-    ST.err = '';
-    for (const b of q) {
+    if (!(await gate())) return;
+    for (let n = 0; n < 300; n++) {
       if (!cfReady || !CF.on || AUTHBAD || NETBAD) break;
-      await one(b);
-      pushSt(true);
+      if (k === 'a') { const cr = camNext(); if (cr) { await camRun(cr); continue; } }
+      const b = laneNext(k); if (!b) break;
+      const id = String(b.id); inProg.add(id); L.cur = '#' + (b.no || id); const tA = Date.now(); let res = '';
+      try { res = await one(b, k); }
+      catch (e) { const kk = known.get(id) || {}; known.set(id, { ...kk, st: 'err', tries: (kk.tries || 0) + 1, at: Date.now() }); log(`✕ line ${k} #${b.no}: ${e.message}`); }
+      finally { inProg.delete(id); L.cur = ''; }
+      if (res !== 'defer') { L.n++; L.ms.push(Date.now() - tA); if (L.ms.length > 12) L.ms.shift(); }
+      ST.ln = laneSt(); pushSt(true);
     }
-    pushSt();
-  } finally { busy = false; if (!AUTHBAD && !NETBAD && pick().length && CF.on && ffPath()) kick(); }
+    ST.ln = laneSt(); pushSt();
+  } finally { L.busy = false; if (!AUTHBAD && !NETBAD && CF.on && ffPath() && (k === 'a' ? (camNext() || laneNext('a')) : pick().some(b => !inProg.has(String(b.id))))) kickLane(k); }   // 'a' sirf jab tez wala kaam ho (khali chakkar nahi)
+}
+
+// ---------- 🎥 v2.12: 2-3 camera ek saath (malik 20 Nov: 'aik hi time par do cameras ya teen cameras ki ikatthi recording') ----------
+//   app billClipCam/<SaleID>~<key> {st new, cam (naam), sid, by, at, day} → counter clip (billClip/<SaleID>) ka WAHI t0 + dur us camera ki PC recording se →
+//   billClip/<SaleID>~<key> {st ok, x 1, cam, segs, pk, t0, dur, day} (app counter video ke saath sync chalati hai). Recording band camera = saaf ghalti; NVR par naya rabta NAHI.
+const CAMQ = biz.collection('billClipCam'), camReqs = new Map(), camTry = new Map();
+CAMQ.where('st', '==', 'new').onSnapshot(s => { s.docChanges().forEach(c => { if (c.type === 'removed') camReqs.delete(c.doc.id); else camReqs.set(c.doc.id, c.doc.data() || {}); }); if (camReqs.size) kickLane('a'); }, e => log('⚠️ billClipCam: ' + e.message));
+setInterval(() => { CAMQ.where('st', '==', 'new').limit(30).get().then(s => { s.forEach(d => { if (!camReqs.has(d.id)) camReqs.set(d.id, d.data() || {}); }); if (camReqs.size) kickLane('a'); }).catch(() => {}); }, 30000);   // qaida: onSnapshot ke saath poll
+function camNext() { const now = Date.now(); for (const [id, r] of camReqs) { if (now - (camTry.get(id) || 0) < 45000) continue; return [id, r]; } return null; }
+async function camDone(id, st, err, extra) {
+  camReqs.delete(id); camTry.delete(id);
+  try { await within(CAMQ.doc(id).set({ st, err: err || '', doneAt: Date.now() }, { merge: true }), 30000, 'cam hukum'); } catch (e) { log('⚠️ cam hukum: ' + e.message); }
+  if (st !== 'ok') { try { await within(CLIP.doc(id).set({ st: 'err', x: 1, err: String(err || '').slice(0, 160), day: (extra && extra.day) || dayOf(), at: Date.now(), cam: (extra && extra.cam) || '' }, { merge: true }), 30000, 'cam clip'); } catch {} }
+}
+async function camRun([id, r]) {
+  camTry.set(id, Date.now());
+  const sid = String(r.sid || id.split('~')[0]), camN = String(r.cam || '');
+  let meta = null; try { const sn = await within(CLIP.doc(sid).get(), 20000, 'counter clip'); meta = sn.exists ? sn.data() || {} : null; } catch (e) { log('⚠️ 🎥 cam: ' + e.message); return; }
+  const day = (meta && meta.day) || String(r.day || '') || dayOf();
+  if (!meta || meta.st !== 'ok') { if (Date.now() - (Number(r.at) || 0) > 10 * 60000) await camDone(id, 'err', 'counter ki clip abhi nahi bani', { day, cam: camN }); return; }   // abhi nahi = 45 s baad dobara
+  const c = camFind(camN); if (!c) { await camDone(id, 'err', `camera "${camN}" setting mein nahi`, { day, cam: camN }); return; }
+  let t0 = Number(meta.t0) || 0, dur = Number(meta.dur) || 0;
+  if (!t0 || !dur) { const b = bills.find(x => String(x.id) === sid); if (b) { const w = winOf(b); t0 = w.t0; dur = w.dur; } }
+  if (!t0 || !dur) { await camDone(id, 'err', 'is bill ka waqt nahi mila', { day, cam: camN }); return; }
+  const cov = recCover(c.ch, t0, t0 + dur * 1000);
+  if (!cov) { await camDone(id, 'err', recs.get(c.ch)?.p ? 'is waqt ki recording PC mein nahi (purana bill)' : `"${c.n}" ki ⏺ recording band hai — malik ⚙️ Camera setup se ON kare`, { day, cam: camN }); return; }
+  const tA = Date.now(), outDir = path.join(TMP, 'c' + id.replace(/[^\w-]/g, '_')); rmDir(outDir); fs.mkdirSync(TMP, { recursive: true });
+  const lst = outDir + '.txt'; fs.writeFileSync(lst, cov.map(x => `file '${x.f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n');
+  const rr = await ffSegs(['-f', 'concat', '-safe', '0', '-i', lst], Math.max(0, (t0 - cov[0].t0) / 1000), dur, outDir); try { fs.unlinkSync(lst); } catch {}
+  if (!rr.ok) { rmDir(outDir); await camDone(id, 'err', 'video nahi bani: ' + String(rr.err).slice(0, 100), { day, cam: camN }); return; }
+  const segs = [], pk = []; let sz = 0;
+  try {
+    for (let i = 0; i < rr.files.length; i++) {
+      const buf = fs.readFileSync(rr.files[i]); const n = Math.ceil(buf.length / CHUNK);
+      for (let j = 0; j < n; j++) { const did = `${id}_s${i}_${j}`; await within(CLIP.doc(did).set({ b: buf.subarray(j * CHUNK, (j + 1) * CHUNK), i, j, id }), 60000, 'cam hissa'); pk.push(did); }
+      segs.push({ n, sz: buf.length, d: Math.min(60, dur - i * 60) }); sz += buf.length;
+    }
+  } catch (e) { rmDir(outDir); await camDone(id, 'err', 'upload: ' + e.message, { day, cam: camN }); return; } finally { rmDir(outDir); }
+  await within(CLIP.doc(id).set({ st: 'ok', x: 1, v: 2, sid, cam: c.n, ch: c.ch, segs, pk, n: 0, sz, dur, t0, day, at: Date.now(), err: FieldValue.delete() }, { merge: true }), 30000, 'cam clip');
+  await camDone(id, 'ok', '', { day, cam: camN });
+  log(`🎥 cam ${c.n} (ch ${c.ch}) bill ${sid} ${dur} s → ${Math.round(sz / 1024)} KB · ${Math.round((Date.now() - tA) / 1000)} s`);
 }
 // v2.8: clip ka waqt [t0, t1] — one() aur 🎥 WhatsApp video EK hisaab
 function winOf(b) {
@@ -393,7 +467,7 @@ function winOf(b) {
   const dur = Math.min(CF.maxs, Math.max(20, Math.round((t1 - t0) / 1000)));
   return { an, ft, lt, t1, as, t0, dur };
 }
-async function one(b) {
+async function one(b, lane) {   // v2.12: lane 'a' = sirf apni recording (NVR ka intezar kabhi nahi)
   const id = String(b.id), ch = PN.chFind(CF.ch, b.pc);
   const k = known.get(id) || { tries: 0 }; const tries = (k.tries || 0) + 1;
   const base = { no: String(b.no || ''), day: billsDay || dayOf(b.pt || b.ct), pt: Number(b.pt) || 0, tm: Number(b.tm) || 0, ct: Number(b.ct) || 0, an: anchorOf(b), pc: String(b.pc || ''), p: String(b.p || ''), t: Number(b.t) || 0, by: String(b.by || ''), nl: Number(b.n) || 0, at: Date.now(), tries, ver: VER };
@@ -407,10 +481,12 @@ async function one(b) {
   fs.mkdirSync(TMP, { recursive: true }); const outDir = path.join(TMP, 'b' + id); rmDir(outDir);
   const tA = Date.now(); let r, src = 'rec', url = '';
   const cov = recCover(ch, t0, t1);
+  if (lane === 'a' && !cov) { deferA.add(id); return 'defer'; }   // v2.12: recording nahi = line 'b' (NVR) ke liye chhoro
   if (cov) {   // v2.0: apni recording ke tukron se — foran
     const lst = path.join(TMP, 'b' + id + '.txt'); fs.writeFileSync(lst, cov.map(x => `file '${x.f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n');
     r = await ffSegs(['-f', 'concat', '-safe', '0', '-i', lst], Math.max(0, (t0 - cov[0].t0) / 1000), dur, outDir); try { fs.unlinkSync(lst); } catch {}
     if (!r.ok) log(`⚠️ bill #${b.no}: apni recording se nahi bani (${r.err}) — NVR playback`);
+    if (!r.ok && lane === 'a') { deferA.add(id); rmDir(outDir); return 'defer'; }   // v2.12: line 'a' NVR ka intezar nahi karti
   }
   if (!r || !r.ok) {   // NVR playback (purana raasta — PC band tha / tukre nahi)
     src = 'nvr'; url = playUrl(ch, t0, t1); const IN = u => ['-rtsp_transport', 'tcp', '-timeout', '15000000', '-i', u];
@@ -435,13 +511,13 @@ async function one(b) {
   }
   // v2.0: har 60 s ka hissa alag (billClip/<id>_s<i>_<j>) — app pehla hissa aate hi chalati hai
   const segs = [], pk = []; let sz = 0;
-  for (let i = 0; i < r.files.length; i++) {
+  try { for (let i = 0; i < r.files.length; i++) {
     const buf = fs.readFileSync(r.files[i]); const n = Math.ceil(buf.length / CHUNK);
-    for (let j = 0; j < n; j++) { const did = `${id}_s${i}_${j}`; await CLIP.doc(did).set({ b: buf.subarray(j * CHUNK, (j + 1) * CHUNK), i, j, id }); pk.push(did); }
+    for (let j = 0; j < n; j++) { const did = `${id}_s${i}_${j}`; await within(CLIP.doc(did).set({ b: buf.subarray(j * CHUNK, (j + 1) * CHUNK), i, j, id }), 60000, 'clip hissa'); pk.push(did); }
     segs.push({ n, sz: buf.length, d: Math.min(60, dur - i * 60) }); sz += buf.length;
-  }
-  rmDir(outDir);
-  await CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, as, lt: Number(b.lt) || 0, t0, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true });
+  } } finally { rmDir(outDir); }
+  await within(CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, as, lt: Number(b.lt) || 0, t0, ln: lane || '', err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true }), 30000, 'clip');
+  if (src === 'nvr') T.nvr = (T.nvr || 0) + 1;
   known.set(id, { st: 'ok', tries, at: Date.now() });
   if (rq) reqDone(id, 'ok');
   gwAdd(b);   // v2.9: 👥 group video
@@ -812,6 +888,7 @@ async function cleanup() {
     for (const d of s.docs) { const x = d.data() || {}; const parts = Number(x.n) || 0; const batch = db.batch(); for (let i = 0; i < parts; i++) batch.delete(CLIP.doc(d.id + '_' + i)); for (const k of (Array.isArray(x.pk) ? x.pk : []).slice(0, 400)) batch.delete(CLIP.doc(String(k))); batch.delete(d.ref); await batch.commit(); known.delete(d.id); n++; }
     if (n) log(`🧹 ${n} purani clip hata di (${cut} se pehle)`);
     try { const s3 = await within(biz.collection('billClipReq').where('at', '<', Date.now() - 3 * 86400000).limit(100).get(), 30000, 'purane hukum'); if (s3.size) { const b3 = db.batch(); s3.forEach(d => b3.delete(d.ref)); await b3.commit(); } } catch {}
+    try { const s5 = await within(CAMQ.where('at', '<', Date.now() - 3 * 86400000).limit(100).get(), 30000, 'purane cam hukum'); if (s5.size) { const b5 = db.batch(); s5.forEach(d => b5.delete(d.ref)); await b5.commit(); } } catch {}   // v2.12
     const cut2 = dayOf(Date.now() - 60 * 86400000);
     const s2 = await within(TALLY.where('day', '<', cut2).limit(100).get(), 60000, 'purani tally'); if (s2.size) { const b2 = db.batch(); s2.forEach(d => b2.delete(d.ref)); await b2.commit(); log(`🧹 ${s2.size} purani tally (60 din)`); }
   } catch (e) { log('⚠️ safai: ' + e.message); }

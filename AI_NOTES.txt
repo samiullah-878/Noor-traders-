@@ -9070,3 +9070,35 @@ listenGintiPc / listenGintiSnap / saveGintiCam / gintiLabel / gintiDocOk. Rules 
 Test (sandbox): bus.jpg par model 4 insaan ✓ (170 ms / 2 thread) · banawati video (insaan lakeer paar) → 1 crossing ✓ · nakli Firestore + nakli Gemini:
 bina note → collage + AI + waOut + reply '2' → lab + 'Yaad kar liya' ✓ · TN milan → gintiDoc ok ✓ · Chrome mein screens (light / dark / PC) ✓.
 Asal godam camera / asal PC par NAHI chala (camera abhi laga nahi). AI: SIRF 🚨 bina note ki tasveer par naam ke liye (Gemini) — ginti PC ka model (internet nahi).
+
+=== 2026-11-20 (app v2.332.0 · rules 2.109 · PC bill-clip v2.12, manifest 2026-11-20.3): ⚡ CLIP TEZ (do line) · 🪟 PC par WhatsApp jaisa view · 🎥 2-3 camera ek saath · 📦 Loading ginti poori screen ===
+Malik (screenshots, 20 Nov): 'Aaj ke bill' list mein 12:16-12:34 ke bill 14:20 tak '⏳ clip…' — 'en ki speed tez karo BHT slow' · 'PC par bhi WhatsApp wala view' ·
+'aik hi time par do cameras ya teen cameras ki ikatthi recording' · 'Loading ginti ka layout sahi karo, baqi screens ki tarah poora chip'.
+Wajah (code se — PC ka log nahi khula, folder ki ijazat nahi mili): PC EK line mein EK clip, PURANA bill pehle. Jo bill PC ki recording mein na ho wo NVR playback
+se banta (asal waqt jitna, 12 min ki hadd, phir main stream par dobara) — wohi sab ke aage atak jata. Peeche reh gaye bill recording (rk 180 min) se bhi nikal jate
+→ aur NVR → aur dheera. Un-posted chhape bill rk-5 min ke baad kabhi nahi bante the.
+PC bill-clip v2.12:
+- DO LINE (LANES a / b, inProg = ek bill ek line): 'a' TAZA = naya bill PEHLE, sirf jis ka waqt PC ki recording dhakti hai (fastOf → recCover); recording na ho /
+  na chale = deferA (line 'b' ke liye), NVR KABHI nahi. 'b' PURANA = pick() ki purani tarteeb (hukum pehle, phir purana), NVR playback bhi. gate() = pehle wali work()
+  ki jaanch (CF.on / ffmpeg / AUTHBAD / NETBAD, probe ek waqt ek). 'a' khali chakkar nahi (sirf jab tez kaam ho dobara).
+- ffSegs: -ss ab -i se PEHLE (concat par input seek — poora minute decode nahi). Har clip hissa / meta likhai within() hadd ke saath; ghalti = laneRun catch (tries).
+- billClipPc.ln {a, b: {n, ms (aakhri 12 ka average), cur}} + today.nvr → app patti: '⚡ naya bill: ek clip ~N s · 🐢 purana #… NVR se · line mein N'.
+- 🎥 billClipCam/<SaleID>~<key> {st new, cam, sid, by, at, day} (onSnapshot + 30 s poll) → line 'a' pehle: counter clip ka WAHI t0 + dur (meta), us camera (camFind) ki
+  recording (recCover) → ffSegs → billClip/<SaleID>~<key> {st ok, x 1, cam, ch, segs, pk, t0, dur, day} (purani cleanup pk / day se khud) + hukum st ok|err;
+  counter clip abhi nahi = 45 s baad dobara (10 min baad err). Recording band camera = saaf ghalti; NVR par naya rabta NAHI.
+- Test (sandbox, nakli Firestore + nakli NVR jo kabhi khatam nahi hota): purana bill line 'b' mein atka raha, line 'a' ne 3 naye bill 3-3 s mein (naya pehle) +
+  'Godam 1' ka hukum 1 s mein (wohi t0 / 80 s) ✓; anjaan camera = err ✓. Asal PC / asal NVR par NAHI chala.
+App v2.332.0:
+- tally.js 🪟 isWa() = PC (ntPcm ya >= 900px) + ⋮ '🪟 View' (sam-bt-wa '0' = purana): card single column, video poori chaurai (dabba video ki asal shakal
+  --ar loadedmetadata se — kaale kinare nahi; oonchai fitStage(): screen mein jitni jagah, html zoom ke saath asal naap se --vh), items video ke upar DAAYEIN
+  .bt-pat (transparent, sirf safed kinara, kaale kinare wali likhai, tadad peeli — group video jaisi; Bill # · counter · waqt · Rs bara · N cheezein · larka).
+  ✕ KAM mode mein patti ki items par tap (halka kaala peecha). Phone par pehle jaisa.
+- 🎥 ⋮ 'Cameras' (openXc): pcSt.cams (sirf ⏺ recording wale) se 1-2 aur (sam-bt-xcam, max 2, bill ka apna counter khud chhoot-ta) → xcEnsure (cur + agla bill)
+  cloud.reqBillCam → clips map mein billClip/<id>~<key> aate hi xcPaint (wohi segUrl, wohi minute segIdx) + xcSync (main video ke play / pause / speed / seek ke
+  saath, 0.6 s se zyada farq = barabar). Layout: PC 2fr | 1fr (counter bara + daayein 1-2 chhote), phone par neeche. Doosre camera par tap = us ki poori screen;
+  ⛶ = sab cameras ki poori screen. card data-sig (view + cameras) badle = dobara bane.
+- 📦 Loading ginti: PC (>= 900px) par bhi POORI screen (beech ka 720px popup hata, andar ka hissa 1100px beech mein) + ☰ chip (#gnNav) ab Sirf Nigrani login mein bhi
+  (CAP nz.ginti wahi).
+- cloud.reqBillCam · rules 2.109 billClipCam (malik / Full / Nigrani sirf naya {st new, apna by}, id ^[0-9]{1,12}~[a-z0-9-]{1,24}$).
+Test: Chrome (playwright) nakli cloud + asal clip namoone: PC 1 / 2 / 3 camera + 10 items patti + phone ✓ (screenshots).
+AI: NAHI.
