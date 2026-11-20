@@ -97,7 +97,8 @@ const { execFile, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 const UR = require('./urdu-names.js');
 
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.42';   // v2.41 (19 Nov): kh-wa v1.12 (📹 live) — sirf version (doctor dobara chalaye) ·   // v2.40 (19 Nov): 🎬 fac-voice.js — factory video ki Urdu awaaz (factory/vq_*, ttsMp3 mein voice) ·   // v2.39 (19 Nov): 🔢 malik ka apna link PIN se bhi (waCmd do 'code' + ph → requestPairingCode, waLink st 'code') — QR ke saath · v2.38 (18 Nov): kh-wa v1.11 (🎥 'video 138841' malik ki apni chat se bhi) — is file mein sirf version (doctor dobara chalaye)
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47820, VER = '2.43';   // v2.41 (19 Nov): kh-wa v1.12 (📹 live) — sirf version (doctor dobara chalaye) ·   // v2.40 (19 Nov): 🎬 fac-voice.js — factory video ki Urdu awaaz (factory/vq_*, ttsMp3 mein voice) ·   // v2.39 (19 Nov): 🔢 malik ka apna link PIN se bhi (waCmd do 'code' + ph → requestPairingCode, waLink st 'code') — QR ke saath · v2.38 (18 Nov): kh-wa v1.11 (🎥 'video 138841' malik ki apni chat se bhi) — is file mein sirf version (doctor dobara chalaye)
+// v2.43 (20 Nov): sirf kh-wa v1.14 (waqt ka naya parser) ke liye dobara shuru — is file ka kaam wahi.
 // v2.42 (20 Nov): sirf kh-wa v1.13 (🕒 live mein waqt ki video) ke liye dobara shuru — is file ka kaam wahi.
 //   // v2.34: kh-wa v1.8 (tafseel lazmi) — is file mein sirf version (doctor dobara chalaye)
 const TH_PRINTER = (() => { try { return require('./thermal-name.js').name(); } catch (e) { return 'TM-T88IV'; } })(), W = 42, FALLBACK_MODEL = 'gemini-3.8-flash';   // v1.1: 2.5-flash Google ne band kiya — asal chunao list se (pickModels)

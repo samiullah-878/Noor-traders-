@@ -9157,3 +9157,24 @@ Malik: 'WhatsApp par time ka clip ka option banao — jaise live ka pehle hi opt
 Test: nakli Firestore — live → 1 → 8 → '5:30' → billClipWa f0/f1 ✓, '25:99' = madad ✓, 3 ghante purana = rk paigham ✓, 'live 1 6:10-6:20 pm' / 'live 2 6:30 5' ✓,
 camera menu par seedha '6:40' ✓; bill-clip (nakli Firestore + asli ffmpeg, 5 banawati tukre): f0 = tukra1 + 30 s, f1 = tukra2 + 30 s → 60 s video, 5 s par 'SEG 1 · 35',
 50 s par 'SEG 2 · 20' ✓; purana waqt = saaf ✕ ✓. Asal PC / WhatsApp par NAHI chala. AI: NAHI.
+
+
+=== v2.333.0 (2026-11-20) — 💾 RECORDING 2 DIN + 🕒 WAQT KA NAYA PARSER (PC bill-clip v2.15 · kh-wa v1.14 · wa-out v1.32 / wa-parchi v2.43 sirf dobara shuru) ===
+Malik: 'Recording poora do din ki rehni chahiye system mein — 750 GB ki hard already pari hui hai' + screenshot: 🕒 sawal par likha
+'11:06 SE 7 minute ki' / '11:06 SE 7 minute tak' — koi jawab hi nahi aaya.
+Wajah: (1) v1.13 ka TIME_RE 'se 7 minute ki' nahi samajhta tha, aur waits() sirf TIME_RE wale ko kh-wa tak bhejta tha = khamosh.
+(2) recording sirf 3 ghante (billClip.rk 180 min) — subah 11:06 ki recording shaam tak mit chuki thi (wapas nahi aa sakti).
+- bill-clip v2.15: recording ab GHANTON mein `billClip.rkh` (default 48 = 2 din, 1–168); purana `rk` (min) ab nahi parha jata. Safai wahi (har 30 s,
+  t0 rkh se purana = mitao). 💾 diskGuard (har 5 min): recording wali drive (clip-rec, fs.statfsSync) par 25 GB se kam = 6 ghante se purane
+  tukre sab se purane pehle mitao jab tak 35 GB na ho; haal billClipPc.dk {free, tot, cut, old} + rkh. Un-posted bill ki clip ki khirki pehle jaisi
+  3 ghante (min(rk, 180)) — warna PC 2 din ke purane un-posted bill ki clips banane lagta. mehngi-nazar (untracked, purana) nahi chheda.
+- kh-wa v1.14: TIME_RE ki jagah tParse(): '3:45' · '3.45 pm' · '15:45' · '3:45 5' · '3:45 se 7 minute (ki / tak)' (se / sy / sai / say / to,
+  min / mint / minute…) · '3:40-3:50' · '3:40 se 3:50' · 'kal 3:45' (kal = dukan ka waqt: 8–11 subah, baqi dopahar) · 'subah 11:06' /
+  'shaam 6:05' (am / pm). 'live 1 kal 4:10 5 mint' bhi. Camera chunne ke baad ('lt') jis likhai mein waqt jaisa (11:06) ho wo HAMESHA kh-wa tak
+  (looksT) — samajh na aaye = madad ka jawab, khamosh kabhi nahi. Camera menu ('lw') par sirf pakka waqt (isT). rkMin = rkh (default 2880 min),
+  'recording nahi' paigham mein '2 din' + setting ka naya naam.
+- tally.js (app) ⚙️ Camera setup: 'PC par recording rakho (ghante · 48 = 2 din)' (rkh) + 💾 line: drive khali GB / kul · kitne ghante · sab se
+  purani recording (din + waqt) · jagah kam ho to ⚠️.
+Test: nakli Firestore — '11:06 SE 7 minute ki' → f0 11:06 f1 11:13 ✓ · 'kal 3:45 se 3:50' = kal 3:45 pm ✓ · 'subah 11:06 wali' = 11:05–11:07 am ✓ ·
+'live 2 shaam 6:05 se 6:15' ✓ · '11:70 baje' = ✕ waqt ghalat + madad ✓ · 'kya haal' = kh-wa nahi uthata ✓; bill-clip harness: waqt ki video ✓,
+purana waqt = saaf ✕ ✓. Disk guard asal PC par nahi chala (sandbox mein jagah zyada). AI: NAHI.

@@ -17,7 +17,8 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.13';   // v1.13 (20 Nov, malik: 'WhatsApp par time ka clip — live ke andar · hum time likhein, us waqt ki video'): 🕒 live → camera → 8 Waqt ki video (ya seedha 3:45 · 3:45 5 · 3:40-3:50 · live 3 3:45) → billClipWa {kind live, f0, f1} → bill-clip v2.14 recording se. ⏺ recording ab 9.
+const VER = '1.14';   // v1.14 (20 Nov, malik ne '11:06 SE 7 minute ki' likha — jawab hi nahi aaya): waqt ab tParse — '11:06 se 7 minute (ki / tak)' · 'kal 3:45' · 'X se Y'; camera chunne ke baad waqt jaisa kuch bhi likha samajh na aaye = madad ka jawab (khamosh nahi); recording 2 din (billClip.rkh).
+// v1.13 (pehle):   // v1.13 (20 Nov, malik: 'WhatsApp par time ka clip — live ke andar · hum time likhein, us waqt ki video'): 🕒 live → camera → 8 Waqt ki video (ya seedha 3:45 · 3:45 5 · 3:40-3:50 · live 3 3:45) → billClipWa {kind live, f0, f1} → bill-clip v2.14 recording se. ⏺ recording ab 9.
 // v1.12 (pehle):   // v1.12 (19 Nov, malik: 'live likhein to aage camera ke naam khud aa jayein · phir number · 30 sec … 30 min · tarteeb se · mazeed cameras · recording chalu'): 📹 'live' (sirf malik / Mubeen) -> camera list (billClipPc.cams) -> number -> 📸 / 30 sec … 30 min / ⏺ recording (sirf malik) -> billClipWa lv<w> {kind 'live'} (bill-clip v2.10) · 'live 3 4' = seedha
 // v1.11 (pehle):   // v1.11 (18 Nov, malik: 'bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se'): 🎥 'video 138841' (sirf malik / Mubeen) -> billClipWa wv-<paigham> {src wa} -> bill-clip v2.8 video bana kar dono ko (wa-out v1.27)     // v1.10 (15 Nov): reports menu 8 = 📦 Maal khatam hone wala (sirf maangne par, raat-report v2.2 khSend)   // v1.9 (15 Nov, malik: 'jitne bhi code hain reports mein shamil karein — number dabane par sab code aayein · reports mein nafa ke ilawa sab (jure number bhi) · nafa sirf mujhe'): 'reports' / 'hazri' ab har jure number ko (report usi ko — reportConfig.waFor, raat-report v2.1), 3 Profit / 4 Teeno SIRF malik; 6 Udhaar · 7 Sab codes (codesTxt)   // v1.8 (14 Nov, malik: 'tafseel ke baghair entry nahi banni chahiye — WhatsApp wali par tafseel nahi aa rahi'): kharcha / payment li / di mein tafseel na ho to entry se PEHLE sawal (khPend stg 'f', 10 min) — jawab = tafseel, phir entry. Transfer par nahi.
 // v1.7:   // v1.7 (14 Nov): 👥 'hazri' (sirf malik) -> reportConfig {reportNow, waOnly 'h'} -> raat-report v1.7; 'reports' menu mein 5 Hazri   // v1.6 (13 Nov, malik: 'reminder din mein 1 baje, 3 baje, sham 5 baje aana chahiye'): REM_HOURS 13 · 15 · 17 (11 baje wala hata)
@@ -37,14 +38,27 @@ const HZ_RE = /^\s*ha[zj]i?r[iy]\s*(report)?\s*$/i;
 const VID_RE = /^\s*(?:video|vedio|vidio|vidyo|vdo|vid)\s*(?:bill)?\s*#?\s*(\d{3,12})\s*$/i;   // v1.11: 🎥 bill ki video
 const LIVE_RE = /^\s*(?:live|lyv|laiv|liv)\s*(?:(\d{1,2})(?:[\s,.\-]+(\d{1,2}))?)?\s*[.!]*\s*$/i;
 // v1.13: 🕒 waqt — '3:45' · '3.45 pm' · '15:45' · '3:45 5' (5 min) · '3:40-3:50' · 'live 3 3:45'
-const TIME_RE = /^\s*(\d{1,2})[:.](\d{2})\s*(am|pm)?\s*(?:(?:-|–|se|to)\s*(\d{1,2})[:.](\d{2})\s*(am|pm)?|(\d{1,2})\s*(?:m|min|mint|mnt|minute|minutes)?)?\s*(?:bje|baje|ki|ka|video)?\s*[.!]*\s*$/i;
-const LIVE_T_RE = /^\s*(?:live|lyv|laiv|liv)\s+(\d{1,2})\s+(\d.*)$/i;   // v1.12: 📹 live camera
+// v1.14: waqt ka parser (regex ki jagah) — '3:45' · '3.45 pm' · '15:45' · '3:45 5' · '3:45 se 5 minute (ki / tak)' · '3:40-3:50' · '3:40 se 3:50' · 'kal 3:45'
+const T_ = '(\\d{1,2})[:.](\\d{2})\\s*(am|pm)?', SE_ = '(?:-|–|se|sy|sai|say|to|from)';
+const TR2 = new RegExp('^' + T_ + '\\s*' + SE_ + '\\s*' + T_ + '$'), TRN = new RegExp('^' + T_ + '\\s*(?:' + SE_ + '\\s*)?(\\d{1,2})\\s*(?:m|mn|min|mins|mint|mnt|minat|minit|minute|minutes)?$'), TR1 = new RegExp('^' + T_ + '$');
+function tParse(text) {
+  let t = String(text || '').toLowerCase().replace(/[.!?،,]+\s*$/, '').replace(/\s+/g, ' ').trim(); if (!t || t.length > 50) return null;
+  let kal = false; if (/(^|\s)(kal|kl|kall|yesterday)(\s|$)/.test(t)) { kal = true; t = t.replace(/(^|\s)(kal|kl|kall|yesterday)(?=\s|$)/g, ' '); }
+  let dp = ''; if (/(^|\s)(subah|subha|sobah|sbh|morning)(\s|$)/.test(t)) dp = 'am'; else if (/(^|\s)(dopahar|dopehar|dupehar|shaam|sham|evening|raat|rat)(\s|$)/.test(t)) dp = 'pm';   // 'subah 11:06' / 'shaam 5:10'
+  t = t.replace(/(^|\s)(ki|ka|ke|tak|tk|video|clip|bje|baje|bajay|wali|wala|subah|subha|sobah|sbh|morning|dopahar|dopehar|dupehar|shaam|sham|evening|raat|rat)(?=\s|$)/g, ' ').replace(/\s+/g, ' ').trim();
+  let m = TR2.exec(t); if (m) return { h: m[1], m: m[2], ap: m[3] || dp, h2: m[4], m2: m[5], ap2: m[6] || (m[3] ? '' : dp), kal };
+  m = TRN.exec(t); if (m) return { h: m[1], m: m[2], ap: m[3] || dp, mn: m[4], kal };
+  m = TR1.exec(t); if (m) return { h: m[1], m: m[2], ap: m[3] || dp, kal };
+  return null;
+}
+const isT = t => !!tParse(t), looksT = t => { t = String(t || ''); return t.length <= 50 && /\d{1,2}[:.]\d{2}/.test(t); };
+const LIVE_T_RE = /^\s*(?:live|lyv|laiv|liv)\s+(\d{1,2})\s+(.*\d[:.]\d.*)$/i;   // v1.12: 📹 live camera
 const REP_RE = /^\s*reports?\s*$/i, STG_RE = /^\s*([1-5])(?!\d)(?:[\s:.\-]+(.*))?$/;
 const STOP = new Set('start,started,shuru,print,printauto,autoprint,auto,cancel,wapas,hatao,ok,okay,okey,yes,no,nahi,ji,jee,han,haan,hello,hi,hey,salam,slam,aoa,theek,thek,thik,thanks,thank,shukria,shukriya,done,test,acha,achha,bill,parchi,report,reports,kal,aaj,abhi,bhej,bhejo,kya,kia,hai,ha,g'.split(','));
 // sirf naam jaisa chhota paigham (Business number ki chat): 1-4 lafz, hindsa nahi, aam lafz nahi
 const looksName = t => { t = String(t || '').trim(); if (t.length < 3 || t.length > 40 || /[0-9?!@#:\/\\\n]/.test(t)) return false; const w = t.toLowerCase().split(/\s+/); return w.length <= 4 && !w.some(x => STOP.has(x.replace(/[^a-z]/g, ''))) && /[a-z\u0600-\u06ff]{3}/i.test(t); };
 const REM_RE = /^\s*(all\s+)?(reminders?|remainders?)(?![a-z])/i, OFF_RE = /^\s*(\d{1,3})\s+off\s*[.!]*\s*$/i;
-const looks = t => { t = String(t || ''); return /^\s*\d{3}(?!\d)/.test(t) || VID_RE.test(t) || LIVE_RE.test(t) || (LIVE_T_RE.test(t) && TIME_RE.test(LIVE_T_RE.exec(t)[2])) || REM_RE.test(t) || OFF_RE.test(t) || CANCEL_RE.test(t) || PICK_RE.test(t) || REP_RE.test(t) || (P2_RE.test(t) && !/print/i.test(t)); };
+const looks = t => { t = String(t || ''); return /^\s*\d{3}(?!\d)/.test(t) || VID_RE.test(t) || LIVE_RE.test(t) || (LIVE_T_RE.test(t) && isT(LIVE_T_RE.exec(t)[2])) || REM_RE.test(t) || OFF_RE.test(t) || CANCEL_RE.test(t) || PICK_RE.test(t) || REP_RE.test(t) || (P2_RE.test(t) && !/print/i.test(t)); };
 // '1 Imran chokar 5000 [no]' · '3 Imran 5000 Aslam' -> { k, a, b, amt, daily, note }
 function parse2(text) {
   let t = String(text || '').replace(/\s+/g, ' ').trim(); const m = P2_RE.exec(t); if (!m || /print/i.test(t)) return null;
@@ -250,7 +264,7 @@ function make({ biz, log = () => {} }) {
     catch (e) { if (/already exists/i.test(String(e.message || e))) return true; throw e; }
     return true;
   }
-  const waits = async (ph, t) => { const d = await pendGet(normPh(ph)); return !!(d && (d.stg === 'f' || ((d.stg === 'lt' || d.stg === 'lw') && TIME_RE.test(String(t || ''))))); };   // v1.13: camera chuna ho to waqt (3:45) bhi
+  const waits = async (ph, t) => { const d = await pendGet(normPh(ph)); return !!(d && (d.stg === 'f' || (d.stg === 'lt' && looksT(t)) || (d.stg === 'lw' && isT(t)))); };   // v1.13: camera chuna ho to waqt (3:45) bhi
   async function stage(ph, name, w, text, d) {
     const pk = PICK_RE.exec(text), sm = STG_RE.exec(text);
     if (pk && Number(pk[1]) === 0 && pk[2] == null) { await pendDrop(ph); await say(ph, 'kx-' + w, '↩ Theek hai — chhor diya.'); return true; }
@@ -314,39 +328,40 @@ function make({ biz, log = () => {} }) {
     '\n8 🕒 Waqt ki video (aap waqt likhein)' + (c.c ? '' : mk ? `\n9 ${c.r ? '⏹ Recording band karo' : '⏺ Recording chalu karo'}` : '') + `\n\n🕒 Seedha waqt bhi likh sakte hain: 3:45 · 3:45 5 · 3:40-3:50\n🔴 Seedha live (app): ${APP_URL}#live=${encodeURIComponent(c.n)}\nNumber bhejein (0 = chhoro)`;
   // v1.13: 🕒 waqt ki video — waqt Pakistan ka (am / pm na ho = aaj ka sab se qareebi GUZRA waqt; 12 ghante peeche tak)
   const PKO = 5 * 3600000;
-  function tAt(h, m, ap, ref) {
+  function tAt(h, m, ap, ref, kal) {
     h = Number(h); m = Number(m); if (!(h >= 0 && h <= 23 && m >= 0 && m <= 59)) return 0;
     const n = new Date(ref + PKO), mk = (H, off) => Date.UTC(n.getUTCFullYear(), n.getUTCMonth(), n.getUTCDate() + off, H, m) - PKO;
     let H = [];
     if (ap) { if (h < 1 || h > 12) return 0; H = [h % 12 + (/p/i.test(ap) ? 12 : 0)]; }
     else if (h >= 13 || h === 0) H = [h];
+    else if (kal) H = [h === 12 ? 12 : h >= 8 ? h : h + 12];   // v1.14: 'kal 11:06' = dukan ke waqt (8–11 subah, 12–7 dopahar / shaam)
     else H = h === 12 ? [12, 0] : [h, h + 12];
-    const c = []; for (const x of H) for (const off of [0, -1]) c.push(mk(x, off));
-    const past = c.filter(t => t <= ref + 60000 && ref - t <= 26 * 3600000).sort((a, b) => b - a);
+    const c = []; for (const x of H) for (const off of (kal ? [-1] : [0, -1])) c.push(mk(x, off));
+    const past = c.filter(t => t <= ref + 60000 && ref - t <= (kal ? 50 : 26) * 3600000).sort((a, b) => b - a);
     return past[0] || 0;
   }
   function tWin(text, ref = Date.now()) {   // → {f0, f1} | {err}
-    const m = TIME_RE.exec(String(text || '')); if (!m) return { err: 'waqt samajh nahi aaya' };
-    const a = tAt(m[1], m[2], m[3], ref); if (!a) return { err: 'waqt ghalat' };
+    const p = tParse(text); if (!p) return { err: 'waqt samajh nahi aaya' };
+    const a = tAt(p.h, p.m, p.ap, ref, p.kal); if (!a) return { err: 'waqt ghalat' };
     let f0, f1;
-    if (m[4] != null) { let b = tAt(m[4], m[5], m[6] || m[3], ref); if (b && b <= a) { const b2 = b + 12 * 3600000; if (b2 - a <= 30 * 60000) b = b2; }
+    if (p.h2 != null) { let b = tAt(p.h2, p.m2, p.ap2 || p.ap, ref, p.kal); if (b && b <= a) { for (const k of [12, 24]) { const b2 = b + k * 3600000; if (b2 > a && b2 - a <= 30 * 60000) { b = b2; break; } } }
       if (!b || b <= a) return { err: 'doosra waqt pehle se baad ka likhein (jaise 3:40-3:50)' }; f0 = a; f1 = b; }
-    else if (m[7] != null) { const mn = Number(m[7]); if (!(mn >= 1 && mn <= 30)) return { err: '1 se 30 min tak' }; f0 = a; f1 = a + mn * 60000; }
+    else if (p.mn != null) { const mn = Number(p.mn); if (!(mn >= 1 && mn <= 30)) return { err: '1 se 30 min tak' }; f0 = a; f1 = a + mn * 60000; }
     else { f0 = a - 60000; f1 = a + 60000; }
     if (f1 - f0 > 30 * 60000) return { err: 'zyada se zyada 30 min ek dafa' };
     if (f0 >= ref - 5000) return { err: 'yeh waqt abhi aaya nahi' };
     return { f0, f1: Math.min(f1, ref - 2000) };
   }
   const hmT = t => { const d = new Date(Number(t) + PKO); let h = d.getUTCHours(); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${String(d.getUTCMinutes()).padStart(2, '0')} ${ap}`; };
-  const TM_HELP = '🕒 Waqt aise likhein:\n3:45 = 3:44 se 3:46 tak (2 min)\n3:45 5 = 3:45 se 5 min tak\n3:40-3:50 = poora hissa (30 min tak)\nam / pm na likhein to aaj ka guzra hua waqt.';
-  async function rkMin() { try { const sn = await BA.doc('billClip').get(), d = sn.exists ? sn.data() || {} : {}; return Math.max(30, Math.min(720, Number(d.rk) || 180)); } catch { return 180; } }   // sirf recording rakhne ke minute — password wagera yahan kabhi nahi chhuta
-  const rkTxt = n => n % 60 ? `${n} min` : `${n / 60} ghante`;
+  const TM_HELP = '🕒 Waqt aise likhein:\n3:45 = 3:44 se 3:46 tak (2 min)\n3:45 se 7 minute = 3:45 se 3:52 tak\n3:40-3:50 = poora hissa (30 min tak)\nkal 3:45 = kal ka waqt\nam / pm na likhein to sab se qareebi guzra hua waqt.';
+  async function rkMin() { try { const sn = await BA.doc('billClip').get(), d = sn.exists ? sn.data() || {} : {}; return d.rkh != null && Number(d.rkh) > 0 ? Math.max(60, Math.min(10080, Math.round(Number(d.rkh) * 60))) : 2880; } catch { return 2880; } }   // sirf recording rakhne ke minute — password wagera yahan kabhi nahi chhuta
+  const rkTxt = n => n % 1440 === 0 ? `${n / 1440} din` : n % 60 ? `${n} min` : `${n / 60} ghante`;
   async function lvTime(ph, name, w, cam, text) {
     if (!canLive(ph)) { await say(ph, 'kv-' + w, '✕ Live camera sirf malik / Mubeen dekh sakte hain.'); return true; }
     const c = cam || {}; if (!c.n) { await pendDrop(ph); await say(ph, 'kx-' + w, '✕ Camera nahi chuna — "live" likh kar dobara.'); return true; }
     const r = tWin(text); if (r.err) { await say(ph, 'kx-' + w, `✕ ${r.err}.\n\n${TM_HELP}\n\n0 = chhoro`); return true; }
     const rk = await rkMin();
-    if (Date.now() - r.f0 > rk * 60000) { await pendDrop(ph); await say(ph, 'kx-' + w, `✕ ${hmT(r.f0)} ki recording nahi — PC sirf pichhle ${rkTxt(rk)} ki recording rakhta hai (raat ko PC band = kal ki nahi).\nZyada chahiye: app → Bill tally ⋮ ⚙️ Camera setup → "PC par live recording rakho (min)" (720 tak).`); return true; }
+    if (Date.now() - r.f0 > rk * 60000) { await pendDrop(ph); await say(ph, 'kx-' + w, `✕ ${hmT(r.f0)} ki recording nahi — PC sirf pichhle ${rkTxt(rk)} ki recording rakhta hai (PC band raha ho to us waqt ki recording hi nahi bani).\nZyada chahiye: app → Bill tally ⋮ ⚙️ Camera setup → "PC par recording rakho (ghante)".`); return true; }
     await pendDrop(ph);
     const sec = Math.max(5, Math.round((r.f1 - r.f0) / 1000)), eta = sec <= 120 ? '30-60 sec' : sec <= 300 ? '1-2 min' : `${Math.ceil(sec / 300)} hisse, ek ke baad ek (3-8 min)`;
     try { await biz.collection('billClipWa').doc('lt' + w.slice(0, 30)).create({ st: 'new', at: Date.now(), by: 'wa', kind: 'live', cam: String(c.n).slice(0, 40), sec, f0: r.f0, f1: r.f1, src: 'wa', from: ph, byN: name, day: today(), no: '' }); }
@@ -455,12 +470,12 @@ function make({ biz, log = () => {} }) {
     const lm = LIVE_RE.exec(text);
     if (lm) { if (!fresh) return true; return await lvStart(ph, name, w, lm); }   // v1.12: 📹
     const ltm = LIVE_T_RE.exec(text);
-    if (ltm && TIME_RE.test(ltm[2])) { if (!fresh) return true;   // v1.13: 'live 3 3:45'
+    if (ltm && isT(ltm[2])) { if (!fresh) return true;   // v1.13: 'live 3 3:45'
       if (!canLive(ph)) { await say(ph, 'kv-' + w, '✕ Live camera sirf malik / Mubeen dekh sakte hain.'); return true; }
       const C = await camsOf(), c = C[Number(ltm[1]) - 1]; if (!c) { await say(ph, 'kx-' + w, `✕ ${ltm[1]} number ka camera nahi — sirf "live" likhein, list aa jayegi.`); return true; }
       return await lvTime(ph, name, w, c, ltm[2]); }
-    if (TIME_RE.test(text)) { const tp = fresh ? await pendGet(ph) : null;   // v1.13: camera chunne ke baad waqt
-      if (tp && (tp.stg === 'lt' || tp.stg === 'lw')) return await lvTime(ph, name, w, tp.cam, text); }
+    if (looksT(text)) { const tp = fresh ? await pendGet(ph) : null;   // v1.13 / v1.14: camera chunne ke baad waqt ('lt' = samajh na aaye to madad, khamosh nahi)
+      if (tp && (tp.stg === 'lt' || (tp.stg === 'lw' && isT(text)))) return await lvTime(ph, name, w, tp.cam, text); }
     if (HZ_RE.test(text)) { if (!fresh) return true;
       await BA.doc('reportConfig').set({ reportNow: Date.now(), waOnly: 'h', waFor: isMalik(ph) ? '' : ph }, { merge: true }); await say(ph, 'kw-' + w, '⏳ Hazri ki report aa rahi hai (1 minute).'); return true; }
     if (REP_RE.test(text)) { if (!fresh) return true;

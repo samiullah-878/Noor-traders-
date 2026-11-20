@@ -66,7 +66,8 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.14';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.15';
+// v2.15 (20 Nov, malik: 'recording poora do din ki rehni chahiye · 750 GB ki hard pari hui hai'): recording ab GHANTON mein `billClip.rkh` (default 48 = 2 din; purana `rk` 180 min chhor diya) — 💾 hifazat: recording wali drive par 25 GB se kam jagah = 6 ghante se purane tukre pehle mitao (35 GB tak), haal billClipPc.dk {free, tot, cut}. Un-posted bill ki clip ki khirki pehle jaisi 3 ghante.
 // v2.14 (20 Nov, malik: 'WhatsApp par time ka clip — hum time likhein, us waqt ki video'): 📹 live hukum mein f0 / f1 (kh-wa v1.13 '3:45' · '3:45 5' · '3:40-3:50') = USI waqt ki video apni recording (clip-rec) se — NVR nahi; recording itni purani na ho = saaf wajah + sab se purana waqt.
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
@@ -78,13 +79,13 @@ const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_,
 const CHUNK = 900 * 1024;
 
 // ---------- setting (malik, app ⚙️) ----------
-let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', sub: 1, pre: 45, post: 20, keep: 2, ch: {}, rep: '20:30', maxs: 630, rk: 180 };
+let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', sub: 1, pre: 45, post: 20, keep: 2, ch: {}, rep: '20:30', maxs: 630, rk: 2880 };
 let cfReady = false;
 function cfApply(d) {
   d = d || {};
   CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), sub: d.sub === 0 || d.sub === '0' ? 0 : 1,
-    pre: d.pre === 0 || d.pre === '0' ? 0 : Math.max(10, Math.min(600, Number(d.pre) || 300)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), rk: Math.max(30, Math.min(720, Number(d.rk) || 180)), keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
+    pre: d.pre === 0 || d.pre === '0' ? 0 : Math.max(10, Math.min(600, Number(d.pre) || 300)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), rk: d.rkh != null && Number(d.rkh) > 0 ? Math.max(60, Math.min(10080, Math.round(Number(d.rkh) * 60))) : 2880, keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
     xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v2.10: 📹 mazeed cameras
     ch: (d.ch && typeof d.ch === 'object') ? d.ch : {}, rep: /^\d{1,2}:\d{2}$/.test(String(d.rep || '')) ? String(d.rep) : '20:30', maxs: Math.max(30, Math.min(700, Number(d.maxs) || 630)) };
   cfReady = true;
@@ -100,7 +101,7 @@ let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, ln: ST.ln || null, test: TEST || null, rec: recState(), net: NET || null, wg: ST.wg || null, cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, ln: ST.ln || null, test: TEST || null, rec: recState(), dk: DISK, rkh: Math.round(CF.rk / 60), net: NET || null, wg: ST.wg || null, cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -284,7 +285,24 @@ function recTick() {   // watchdog + safai (har 30 s)
     if (now - st.at > 150000 && (!last || now - fresh > 150000)) { log(`🎞 rec ch ${ch}: 2.5 min se nayi video nahi — dobara`); try { st.p.kill(); } catch {} }
   }
   try { for (const ch of recChannels()) for (const x of segList(ch)) if (now - x.t0 > CF.rk * 60000) { try { fs.unlinkSync(x.f); } catch {} } } catch {}
+  diskGuard(now);   // v2.15: 💾 drive bhar na jaye
   try { for (const d of fs.readdirSync(REC)) { const ch = Number((d.match(/^ch(\d+)$/) || [])[1]); if (ch && !recChannels().includes(ch)) for (const f of fs.readdirSync(path.join(REC, d))) { try { fs.unlinkSync(path.join(REC, d, f)); } catch {} } } } catch {}
+}
+// v2.15: 💾 recording wali drive ki jagah — 25 GB se kam = 6 ghante se purane tukre (sab channel, sab se purane pehle) mitao jab tak 35 GB na ho. Haal billClipPc.dk.
+let DISK = null, diskAt = 0;
+function diskFree() { try { const st = fs.statfsSync(REC); return { free: st.bavail * st.bsize, tot: st.blocks * st.bsize }; } catch { return null; } }
+function diskGuard(now) {
+  if (now - diskAt < 5 * 60000) return; diskAt = now;
+  let d = diskFree(); if (!d) { DISK = null; return; }
+  const GB = 1073741824; let cut = 0;
+  if (d.free < 25 * GB) {
+    const all = []; for (const ch of recChannels()) for (const x of segList(ch)) if (now - x.t0 > 6 * 3600000) all.push(x);
+    all.sort((a, b) => a.t0 - b.t0);
+    for (const x of all) { let sz = 0; try { sz = fs.statSync(x.f).size; fs.unlinkSync(x.f); cut++; } catch {} d.free += sz; if (d.free >= 35 * GB) break; }
+    if (cut) log(`💾 drive par jagah kam — ${cut} purane recording tukre mitaye (ab ${(d.free / GB).toFixed(1)} GB khali)`);
+  }
+  let old = 0; try { for (const ch of recChannels()) { const l = segList(ch); if (l.length && (!old || l[0].t0 < old)) old = l[0].t0; } } catch {}
+  DISK = { free: Math.round(d.free / GB * 10) / 10, tot: Math.round(d.tot / GB), cut, old, at: now };
 }
 function recState() { const o = {}; for (const [ch, st] of recs) { const l = segList(ch); const last = l.length ? l[l.length - 1] : null; o[ch] = { on: st.p ? 1 : 0, n: l.length, last: last ? last.t0 : 0, err: st.p ? '' : (st.lastErr || '').slice(0, 120) }; } return o; }
 function recCover(ch, t0, t1) {   // tukre jo [t0, t1] dhakte hon — poora dhaka ho to list, warna null
@@ -380,7 +398,7 @@ function pick() {
     if (k && (k.st === 'ok' || k.st === 'skip' || k.tries >= 3 || (k.st === 'err' && now - k.at < 2 * 60000) || (k.st === 'net' && NETBAD))) { if (rq && k.st === 'ok') reqDone(id, 'ok'); continue; }
     if (now < dueOf(b)) continue;   // v2.3: aakhri item ke baad hi · v2.13: apni recording = 8 s baad (pehle 20), NVR playback 90 s
     if (!rq && now - anchorOf(b) > CF.keep * 86400000) continue;
-    if (!rq && !posted && now - anchorOf(b) > (CF.rk - 5) * 60000) continue;   // un-posted chhapa bill sirf jab tak apni recording (rk min) mein ho — purane ka NVR playback nahi (bojh)
+    if (!rq && !posted && now - anchorOf(b) > (Math.min(CF.rk, 180) - 5) * 60000) continue;   // un-posted chhapa bill sirf jab tak apni recording (rk min) mein ho — purane ka NVR playback nahi (bojh)
     if (!rq && ON0 && anchorOf(b) < ON0 - 10 * 60000) continue;   // v1.2: camera ON se pehle ke bill nahi (10 min ki gunjaish)
     out.push(b);
   }
