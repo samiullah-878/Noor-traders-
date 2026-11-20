@@ -9102,3 +9102,10 @@ App v2.332.0:
 - cloud.reqBillCam · rules 2.109 billClipCam (malik / Full / Nigrani sirf naya {st new, apna by}, id ^[0-9]{1,12}~[a-z0-9-]{1,24}$).
 Test: Chrome (playwright) nakli cloud + asal clip namoone: PC 1 / 2 / 3 camera + 10 items patti + phone ✓ (screenshots).
 AI: NAHI.
+
+=== 2026-11-20 (phone macro, link se — repo mein nahi): 📞 KHAAS CONTACTS = VOLUME 20% ===
+Malik: 'droid banao — kuch contacts ki call aaye to volume itna ho jaye · contacts main khud droid se chun loon ga · 20 percent'.
+Macro '📞 Khaas contacts — volume 20%' (MacroDroid MCP validate + share link, 7 din): IncomingCallTrigger 'Select Contacts' KHALI (malik phone par khud chunta)
+→ local oldv = {vol_ring} → ringer 20% (silent / vibrate par bhi bajega) → Wait (CallEnded / CallMissed any, 600 s) → ringer wapas oldv.
+md/ (Claude Remote) se NAHI — contacts ke naam / number PUBLIC repo mein KABHI nahi; link import sirf local variables (oldv). {vol_ring} ko % maana hai — asal
+phone par nahi azmaya (call ke baad volume theek wapas aaye, malik se poochho). AI: NAHI.
