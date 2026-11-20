@@ -5132,3 +5132,5 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 - live-cam: CF.xc; chOf = counter || xcOf(naam); srcSync += xc.r channels.
 - kh-wa: LIVE_RE (live / lyv / laiv / liv [+ 1-2 number]) looks() mein; lvStart / lvStage / lvReq / lvRec; codesTxt mein line.
 
+
+=== 2026-11-20 (app v2.330.0, manifest wahi): PC scripts mein koi tabdeeli NAHI — sirf app ki Stock screen patli line (root AI_NOTES dekho). ===

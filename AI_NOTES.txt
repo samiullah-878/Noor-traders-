@@ -9002,3 +9002,20 @@ pichhle waqt ki video + app ka link) + 'live likhein to aage counter ke naam khu
   ghair number; tally setup (jorna / ⏺ / save / dohra naam) + live chips. Asal NVR / WhatsApp par NAHI chala.
 AI: NAHI (sirf ffmpeg + WhatsApp).
 
+
+=== v2.330.0 (2026-11-20): 📏 Stock screen PATLI LINE — ek screen par 8+ items ===
+Malik (Stock screen ki tasveer): 'yahan ek screen par kam az kam 8 chips aane chahiye' -> plan OK.
+- pos-stock.js rowSlimHTML (default): har item = 2 patli lines `.stock-row.sk-c` > `.sk-ln` (data-sk-tap): upar naam (… se kato) + daayein stock
+  (sirf seeStock, minus laal) · neeche ginti ka nishan `.sk-mk` (✓ N · farq ±N narangi · ⏳ Baqi · ⛔ Band; andhi ginti = '✓ N gina') + Urdu naam
+  (na ho to code). Factory tasveer ho to chhoti 34px baayein.
+- Tap = wohi item khule (`skOpen`, `skToggle` — sirf class `.is-in`, list dobara nahi; ek waqt ek). Andar `.sk-x`: info line (code · pack · R · W ·
+  Khareed · kul) · chips ki EK qatar side-scroll `.sk-tools` (🔤 Urdu · 🏷 Label · ⇄ Transfer · ✏️ Item · 🏭 Factory · ⛔ Band · ⏭ Skip — WAHI
+  purane data-* attr, handlers wahi) · rozSkipBox · hgHTML · countHTML (Ctn / Pcs / Kul / Save / ✓ Tick / Baqi / history — bilkul pehle jaisa).
+- Save / ✓ Tick kamyab -> `skMarkSet` (band line par ✓ foran, snapshot ka intezar nahi) + `skNext` (agla item khule, Ctn / Pcs khana focus +
+  scroll start, scroll-margin-top 118px chipki patti ke liye). ⏳ Baqi par agla NAHI (abhi ginna baqi). Enter ka 'agla khana' agle item mein jaye to
+  pehle wo item khulta hai. Scan (camera addScanned + scanner gun hardScan + ntItemOpen) = wohi item khula.
+- ⋮ '📋 Poora card' (data-sk-big, `sam-sk-big` = '1', har phone apna) = purana bara card (purana rowHTML bilkul wahi) · wapas '📏 Patli list'.
+- Farq tab ke cards (farqCardHTML) nahi badle.
+- Test: Chromium 412x860 (asal rowSlimHTML code, stubs): band line ~51-53 px, ek screen par 11 items (chipki patti ke saath), khula item ~220 px,
+  light + dark; side mein khisakna nahi. Asal phone / Firebase par NAHI chala.
+AI: NAHI.

@@ -8764,3 +8764,38 @@ html.dk body #dialogBody :is(.fv-r,.fv-q,.fv-out){background:var(--glass2,rgba(2
 html.dk body #dialogBody :is(.fv-nm b,.fv-cs b,.fv-mkt,.fv-oi b){color:var(--ink,#e8eeff)}
 html.dk body #dialogBody .fv-q input{color:var(--ink,#e8eeff)!important}
 html.dk body #dialogBody .fv-foot{background:linear-gradient(180deg,rgba(0,0,0,0),var(--bg,#0b1020) 30%)}
+/* v2.330.0 📏 Patli stock line (malik: ek screen par 8+ items) — 2 lines, tap = khule (.is-in), purana card ⋮ 📋 */
+html body #list .stock-row.sk-c{content-visibility:auto;contain-intrinsic-size:auto 58px;border-bottom:1px solid rgba(30,55,104,.09);scroll-margin-top:118px}
+html body #list .stock-row.sk-c.is-in{contain-intrinsic-size:auto 340px;background:linear-gradient(180deg,#f3f7ff,#fff 74px);box-shadow:inset 3px 0 0 #2f6fdb}
+.stock-row.sk-c .sk-ln{display:grid;grid-template-columns:minmax(0,1fr);gap:0 9px;padding:6px 10px 5px;cursor:pointer;-webkit-tap-highlight-color:transparent;user-select:none}
+.stock-row.sk-c .sk-ln.th{grid-template-columns:34px minmax(0,1fr)}
+.stock-row.sk-c .sk-cth{grid-row:1/span 2;width:34px;height:34px;align-self:center;border-radius:9px;object-fit:contain;background:#fff;border:1px solid rgba(30,55,104,.16);cursor:zoom-in}
+.stock-row.sk-c .sk-l1,.stock-row.sk-c .sk-l2{display:flex;align-items:center;gap:8px;min-width:0}
+.stock-row.sk-c .sk-l1 b{flex:1;min-width:0;font-size:14px;font-weight:700;line-height:21px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stock-row.sk-c .sk-q{flex:none;font-size:13.5px;font-weight:800;color:#1a2d53;white-space:nowrap}
+.stock-row.sk-c .sk-q.neg{color:#c0262d}
+.stock-row.sk-c .sk-l2{min-height:22px}
+.stock-row.sk-c .sk-ur{flex:1;min-width:0;font-family:"Jameel Noori Nastaleeq","Noto Nastaliq Urdu","Urdu Typesetting","Segoe UI",sans-serif;font-size:13px;line-height:24px;max-height:24px;overflow:hidden;white-space:nowrap;text-overflow:ellipsis;color:#4a5878;text-align:right}
+.stock-row.sk-c .sk-cd{flex:1;min-width:0;font-size:11.5px;color:#7a869c;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.stock-row.sk-c .sk-mk{flex:none;display:inline-flex;align-items:center;height:20px;padding:0 8px;border-radius:999px;font-size:11px;font-weight:800;white-space:nowrap;border:1px solid transparent}
+.stock-row.sk-c .sk-mk.ok{background:linear-gradient(180deg,#eafaf0,#d9f3e3);color:#11663a;border-color:#bfe6cd}
+.stock-row.sk-c .sk-mk.fq{background:linear-gradient(180deg,#fff4e6,#ffe7cc);color:#8a4b00;border-color:#f3d2a6}
+.stock-row.sk-c .sk-mk.w{background:linear-gradient(180deg,#fff9e0,#fff0b8);color:#7a5a00;border-color:#efdc95}
+.stock-row.sk-c .sk-mk.bd{background:#fdecec;color:#a3242b;border-color:#f3c4c6}
+.stock-row.sk-c .sk-x{display:none;padding:0 10px 4px}
+.stock-row.sk-c.is-in .sk-x{display:block}
+html body #list .stock-row.sk-c .sk-info{display:block;font-size:11.5px;color:#66738c;margin:0 0 6px;padding:0;background:none;border:0;box-shadow:none;border-radius:0}
+.stock-row.sk-c .sk-tools{display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;padding:1px 0 8px;margin:0}
+.stock-row.sk-c .sk-tools::-webkit-scrollbar{display:none}
+html body .stock-row.sk-c .sk-tools .sk-tc{flex:none;display:inline-flex;align-items:center;gap:4px;width:auto!important;min-height:32px!important;height:32px;padding:0 12px!important;margin:0!important;border-radius:999px!important;border:1px solid #cfdaf0!important;background:linear-gradient(180deg,#fff,#eef3fc)!important;color:#1a2d53!important;font-size:12.5px!important;font-weight:700;white-space:nowrap;box-shadow:0 1px 2px rgba(20,40,90,.08)!important}
+html body .stock-row.sk-c .sk-tools .sk-tc input{width:auto;margin:0;accent-color:#2f6fdb}
+html body .stock-row.sk-c .sk-tools .sk-tc.is-in{background:#7a4b00!important;color:#fff!important;border-color:#7a4b00!important}
+html.dk body #list .stock-row.sk-c{border-bottom-color:rgba(255,255,255,.08)}
+html.dk body #list .stock-row.sk-c.is-in{background:linear-gradient(180deg,rgba(80,140,255,.13),transparent 80px)}
+html.dk .stock-row.sk-c .sk-q{color:#dbe6ff}html.dk .stock-row.sk-c .sk-ur{color:#b9c6e4}html.dk .stock-row.sk-c .sk-cd,html.dk .stock-row.sk-c .sk-info{color:#9aa8c4}
+html.dk body .stock-row.sk-c .sk-tools .sk-tc{background:rgba(80,140,255,.14)!important;border-color:rgba(80,140,255,.35)!important;color:#d6e3ff!important}
+html.dk .stock-row.sk-c .sk-mk.ok{background:rgba(40,190,110,.16);color:#8ee6b4;border-color:rgba(40,190,110,.35)}
+html.dk .stock-row.sk-c .sk-mk.fq{background:rgba(245,150,40,.16);color:#ffc98a;border-color:rgba(245,150,40,.35)}
+html.dk .stock-row.sk-c .sk-mk.w{background:rgba(245,200,40,.14);color:#f6d98d;border-color:rgba(245,200,40,.32)}
+html.dk .stock-row.sk-c .sk-mk.bd{background:rgba(230,60,70,.16);color:#ffadb2;border-color:rgba(230,60,70,.35)}
+html.dk .stock-row.sk-c .sk-q.neg{color:#ff8a8f}
