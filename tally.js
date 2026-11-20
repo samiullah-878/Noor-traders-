@@ -42,6 +42,7 @@ export function renderTally(host) {
           <button type="button" data-bt-sum="1" data-mn="bt.sum" data-mn-i="📊" data-mn-t="Aaj ka hisaab" data-mn-s="kitne ✓ / ✕" data-mn-g="👀 Bill tally">📊 Aaj</button>
           <button type="button" data-bt-setup="1" data-mn="bt.setup" data-mn-i="⚙️" data-mn-t="Camera setup" data-mn-s="NVR + counter ka channel (malik)" data-mn-g="👀 Bill tally" hidden>⚙️ Setup</button>
           <button type="button" data-bt-wg="1" data-mn="bt.wg" data-mn-i="👥" data-mn-t="Group videos" data-mn-s="har bill ki video WhatsApp group mein (malik)" data-mn-g="👀 Bill tally" hidden>👥 Group videos</button>
+          <button type="button" data-bt-gn="1" data-mn="bt.gn" data-mn-i="📦" data-mn-t="Loading ginti" data-mn-s="godam camera — nag ginti · note milan · 🚨 bina note" data-mn-g="👀 Bill tally" hidden>📦 Loading ginti</button>
           <button type="button" data-bt-wa="1" data-mn="bt.wa" data-mn-i="📲" data-mn-t="Video WhatsApp par" data-mn-s="bill number likho → malik + Mubeen" data-mn-g="👀 Bill tally">📲 Video WhatsApp</button>
           <button type="button" data-bt-cam="1" data-mn="bt.cam" data-mn-i="🔴" data-mn-t="Live camera" data-mn-s="counter ki seedhi video" data-mn-g="👀 Bill tally">🔴 Live camera</button>
           <button type="button" data-bt-live="1" data-mn="bt.live" data-mn-i="📺" data-mn-t="Counter Nazar" data-mn-s="purani live screen" data-mn-g="👀 Bill tally">📺 Counter Nazar</button>
@@ -55,6 +56,7 @@ export function renderTally(host) {
     host.querySelector('[data-bt-cam]').hidden = !canK('nz.live');
     host.querySelector('[data-bt-wa]').hidden = !canK('nz.wa');   // v2.322.0
     host.querySelector('[data-bt-wg]').hidden = !isOwner();   // v2.328.0
+    host.querySelector('[data-bt-gn]').hidden = !canK('nz.ginti');   // v2.331.0
   }
   watch(); paint();
 }
@@ -250,7 +252,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.330.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN() })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.331.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN() })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
@@ -262,6 +264,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-sum]')) { openSum(); return; }
   if (t.closest('[data-bt-wa]')) { openWa(); return; }
   if (t.closest('[data-bt-wg]')) { openWg(); return; }
+  if (t.closest('[data-bt-gn]')) { try { window.ntGinti?.(); } catch (e) { notice('Loading ginti: ' + (e?.message || e)); } return; }   // v2.331.0: 📦 godam camera ki ginti
   if (t.closest('[data-bt-setup]')) { openSetup(); return; }
   if (t.closest('[data-bt-live]')) { window.ntNazarLive?.(); return; }
 }

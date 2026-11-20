@@ -9034,3 +9034,39 @@ upar Bill # (14) · counter + waqt (13) · Rs (28 bold) · N items + larka (13) 
 har 5 s agla. Kinara (b.png geq) / overlay / drawtext (relative fontfile + textfile + expansion=none) WAHI. Group videos + WhatsApp 'video <bill>' dono mkVideo
 se — dono par. Test: ffmpeg frame (3 items · items nahi aaye + (kal) · 19 items 2 safhe), Liberation font (PC par Segoe UI). Asal PC / WhatsApp par NAHI chala.
 AI: NAHI.
+
+=== 2026-11-20 (app v2.331.0 · rules 2.108 · PC ginti-cam v1.0 NAYI service + wa-out v1.30, manifest 2026-11-20.2): 📦 LOADING GINTI (lakeer wala camera) ===
+Malik: 'install kar do' (lakeer wala software) · camera abhi nahi laga ('camera baad m lga late ha') · pehla version 'Sab ek saath' — ginti + note milan +
+bina note alarm + Gemini naam + reply se seekhna. Pehle ki baat: Gemini video, YOLO lakeer, i5 10th gen / 16 GB kaafi, reply mein naam = seekhna.
+PC pc/ginti-cam.js (server, doctor service, Lock 47846, ginti-cam-auto.bat, log ginti-cam-log.txt):
+- NVR par KOI naya rabta nahi: bill-clip ki recording ke BAND tukre clip-rec/ch<N>/s-*.mp4 (1 min) — is liye ginti 1-2 min peeche. Camera = Camera setup ka
+  counter ya ＋ mazeed (billClip.xc) — ⏺ Rec ON zaroori (app setup mein 'Recording ON karein' chip billClip.xc r=1 karta hai).
+- ffmpeg (clip-mods) fps (3 default, 3-5) 512px rgb → harkat (48px gray farq, camera ki jhilmil NOISE se had upar) na ho to model nahi →
+  YOLOE-11s-seg ONNX (pc/ginti-model.onnx 40 MB, classes cardboard box · sack · crate · person, imgsz 512, manifest se doctor laata hai) via
+  onnxruntime-node@1.20.1 (apna folder ginti-mods, pehli dafa khud npm, --onnxruntime-node-install-cuda=skip) · intra 2 thread · process BELOW_NORMAL.
+  post(): out0 [1,40,5376] → dabbe 0-1000 (maal ki qismein ek doosre ko NMS, insaan alag). Tracker: markaz + raftar, sideOf(lakeer) ±22 (0-1000) margin,
+  hits >= 2, lakeer ke andar (proj -0.12..1.12) → +1 bahar (cam.out wali taraf) / -1 andar.
+- 90 s ke andar ki ginti = ek waqia → gintiEv/<ck>-<t0> {cam, b godam, out, in, xs JSON [[t, dir, box]], st wait}.
+- milan (AI NAHI) har tick + har note ki tabdeeli: posTransfers (day in [utc kal, utc aaj]; from = godam → bahar, to = godam → andar) + gatePass (day aaj,
+  gs mein godam; waqt pt || tm) ±win (default 20 min) → event st doc (ref) · na mile + win guzar gaya: bahar > andar = bina (alarm) · andar = in · barabar = zero ·
+  bina ke baad note bana = late. gintiDoc/<tn|gp>-<id>-<b> {ec ctn, ek khule (nagOf: pk>1 = poore ctn + bacha 1 khula; pcs poora number = utne nag; kg = 1
+  khula), out, in, ev JSON, st wait | ok | kam | zyada | x, sig}. Note bana magar camera ne kuch nahi = 📹 0 kam.
+- 🚨 bina note: collage (ffmpeg 4 frame, crossing wale frame par laal drawbox, xstack 2x2) + Gemini (aiConfig key, models list fallback, JSON items 3)
+  → dhoond.mjs smartFind (posStock b1) → waOut gi-<ev> {kind gi, ev, im, txt} SIRF malik (waParchi prFrom[0]) · roz hadd alMax (20) · dukan ka waqt hrs ·
+  camera ka al band = sirf app. Gahak / kisi aur ko KABHI nahi.
+- ↩ reply: wa-out v1.30 giReply / giOwn (sirf malik, Business phone se bhi) → gintiEv.rep {tx, at, by} → ginti-cam onRep: 1-3 = ai[i], 0 / ghalat = ghalat
+  alarm (ok 1), naam = smartFind → lab {id, n}, lk 1 + waOut gr-… '✅ Yaad kar liya'. LEARN = gintiEv lk==1 (shuru mein 60) → agle alarm par 3 misaal
+  (tasveer + naam) Gemini ko (few-shot). Model ki asal training NAHI (yaad = misaalein).
+- Haal blueAccess/gintiPc {v, on, mods, model, err, cams{ck: st, lag, ms, took, sz}, today{out, in, bina, al}}; lakeer ki tasveer blueAccess/gintiSnap-<ck>
+  (app snapReq + snapCam maange). Local ginti-state.json (doneT har camera, al ginti). 1 ghante se peeche = taza se. Test: env GINTI_TEST_WINMS / GINTI_FF /
+  GINTI_TEST_CLS (asal PC par khali).
+App ginti.js (☰ #gnNav + Bill tally ⋮ 📦, CAP nz.ginti OPT_IN, malik ke liye setup): apni <dialog id=gnDlg> (phone back ntGnClose, recent UP_CLOSE) —
+list (aaj / kal ⋮): 🧾 TN / 🚪 Gate pass (📄 ctn + khule · 📹 ⬆⬇ · ✅ / ⚠️ kam / zyada / ⏳; tap = waqiat + '✓ Theek mana' gintiDocOk) · 🚨 Bina note
+(tap = 4 tasveerein + AI chips 1-3 + smartFind item search + ✕ Ghalat alarm → gintiLabel) · ⏳ Note ka intezar · ⬇ Andar aaya.
+⚙️ Setup: CHALU (onAt) · har camera (billClipPc.cams): Ginti ON · godam (saleStock names) · ➖ Lakeer (gintiSnap tasveer par 2 tap, SVG teer 'BAHAR' = out *
+(-dy, dx), ⇄ badlo) · 🚨 Alarm · ⏺ Recording ON · intezar 10/20/30/45 · hadd 10/20/50 · fps 3/4/5 · dukan ka waqt. cloud: listenGinti / listenGintiCam /
+listenGintiPc / listenGintiSnap / saveGintiCam / gintiLabel / gintiDocOk. Rules 2.108: gintiEv / gintiDoc read malik + Full + Nigrani; update sirf malik
+(lab/lk/ok/labBy/labAt · ok/okBy/okAt). CSS .gn-* (html body #gnDlg … !important — halki theme ke button).
+Test (sandbox): bus.jpg par model 4 insaan ✓ (170 ms / 2 thread) · banawati video (insaan lakeer paar) → 1 crossing ✓ · nakli Firestore + nakli Gemini:
+bina note → collage + AI + waOut + reply '2' → lab + 'Yaad kar liya' ✓ · TN milan → gintiDoc ok ✓ · Chrome mein screens (light / dark / PC) ✓.
+Asal godam camera / asal PC par NAHI chala (camera abhi laga nahi). AI: SIRF 🚨 bina note ki tasveer par naam ke liye (Gemini) — ginti PC ka model (internet nahi).

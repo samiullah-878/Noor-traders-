@@ -1,4 +1,6 @@
 // =========================================================
+// v1.30 (20 Nov, malik: 'clips bhejein, reply mein naam likh dein to seekh jaye'): 📦 Loading ginti (ginti-cam.js) ke 🚨 bina note alarm (waOut 'gi-…', field ev) par
+//        SIRF malik ka REPLY (1 / 2 / 3 / item ka naam / 0) → gintiEv/<ev>.rep {tx, at, by} — item dhoondna / yaad karna / jawab ginti-cam karta hai. Business phone se reply bhi (giOwn).
 // v1.29 (19 Nov): kh-wa v1.12 (📹 'live' -> camera list -> 📸 / pichhle 30 sec … 30 min ki video) — is file mein sirf version (doctor dobara chalaye).
 // v1.28 (19 Nov, malik: 'din mein jitni videos banein SAB WhatsApp group mein · counter-wise'): 👥 waOut `grp` = group ka jid (bill-clip v2.9 bhejta hai,
 //        sirf malik ke chune group — blueAccess/billWaGroup). Group = apni line: gahak ka faasla / din ki hadd (cfg.gap / cfg.lim) na khaye na ruke —
@@ -46,7 +48,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.29';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.30';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -415,6 +417,24 @@ async function main() {
     } catch (e) { if (!/already exists|ALREADY_EXISTS/i.test(String(e.message || e))) { log('⚠️ report print: ' + e.message); await gpPut('rpx-' + mid, { to: gpMalik, nm: 'Malik', kind: 'rem', txt: '✕ Report print ka hukum nahi gaya: ' + String(e.message || e).slice(0, 80) }); } }
     return true;
   }
+  // v1.30: 📦 Loading ginti — bina note alarm (waOut 'gi-…') par malik ka reply → gintiEv.rep (baqi kaam ginti-cam.js). true = yeh ginti ka jawab tha.
+  const giSeen = new Set();
+  async function giReply(m, c, tx, s, fromMe) {
+    if (!tx || tx.length > 60) return false;
+    const kc = c.extendedTextMessage && c.extendedTextMessage.contextInfo, st = String((kc && kc.stanzaId) || ''); if (!st) return false;
+    const from = fromMe ? gpMalik : await fromNum(m, s); if (!from || from !== gpMalik) return false;
+    let id = '', job = null; try { const q = await Q.where('wid', '==', st).limit(1).get(); if (!q.empty) { id = q.docs[0].id; job = q.docs[0].data() || {}; } } catch (e) { log('⚠️ ginti jawab: ' + e.message); }
+    if (!job || !/^gi-/.test(id) || !job.ev) return false;
+    const mid = String(m.key.id || Date.now()); if (giSeen.has(mid)) return true; giSeen.add(mid); if (giSeen.size > 200) giSeen.delete(giSeen.values().next().value);
+    try { await biz.collection('gintiEv').doc(String(job.ev)).set({ rep: { tx: tx.slice(0, 60), at: Date.now(), by: fromMe ? 'biz' : 'wa' } }, { merge: true }); log('📦 ginti jawab: ' + tx.slice(0, 30)); } catch (e) { log('⚠️ ginti jawab: ' + e.message); }
+    return true;
+  }
+  async function giOwn(m, s) {   // malik Business phone se hi alarm par reply likhe
+    const id = String((m.key && m.key.id) || ''); if (!id || /^3EB0/i.test(id) || ownSent.has(id)) return;
+    let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || c;
+    const x = c.extendedTextMessage, tx = String((x && x.text) || '').trim(); if (!x || !tx || tx.length > 60) return;
+    await giReply(m, c, tx, s, true);
+  }
   async function repOwn(m, s) {   // malik Business phone se hi report par reply "print" likhe
     const id = String((m.key && m.key.id) || ''); if (!id || /^3EB0/i.test(id) || ownSent.has(id)) return;
     let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || c;
@@ -431,13 +451,14 @@ async function main() {
   async function onMsgs(ms, s, typ) {
     for (const m of ms || []) {
       try {
-        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); ownNum(m, s).catch(e => log('⚠️ apna reply: ' + ((e && e.message) || e))); hzOwn(m, s).catch(e => log('⚠️ hazri jawab: ' + ((e && e.message) || e))); repOwn(m, s).catch(e => log('⚠️ report print: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" · v1.20: 👤 apna reply mein number (intezar nahi — baqi paigham na rukein)
+        if (m && m.key && m.key.fromMe && m.message) { billTry(m, s).catch(e => log('⚠️ bill: ' + ((e && e.message) || e))); ownNum(m, s).catch(e => log('⚠️ apna reply: ' + ((e && e.message) || e))); giOwn(m, s).catch(e => log('⚠️ ginti jawab: ' + ((e && e.message) || e))); hzOwn(m, s).catch(e => log('⚠️ hazri jawab: ' + ((e && e.message) || e))); repOwn(m, s).catch(e => log('⚠️ report print: ' + ((e && e.message) || e))); continue; }   // v1.19: 🧾 apna reply "bill" · v1.20: 👤 apna reply mein number (intezar nahi — baqi paigham na rukein)
         if (typ && typ !== 'notify') continue;
         if (!m || !m.key || m.key.fromMe || !m.message) continue;
         let c = m.message; c = (c.ephemeralMessage && c.ephemeralMessage.message) || (c.viewOnceMessage && c.viewOnceMessage.message) || c;
         const ktx = String(c.conversation || (c.extendedTextMessage && c.extendedTextMessage.text) || '').trim();
         if (ktx && ktx.length <= 3 && await gpReply(m, c, ktx, s)) continue;   // v1.18: 🚪 gate pass ka jawab (1 / 2) — sirf gate numbers, sirf gate paigham par reply
         if (ktx && ktx.length <= 8 && await repPrint(m, c, ktx, s, false)) continue;   // v1.24: 🖨 report par reply print -> thermal (sirf malik)
+        if (ktx && ktx.length <= 60 && await giReply(m, c, ktx, s, false)) continue;   // v1.30: 📦 Loading ginti alarm ka jawab (sirf malik)
         if (ktx && (ktx.length <= 30 || (ktx.length <= 160 && /^\s*ha[zj]i?r[iy]\s/i.test(ktx))) && await hzIn(m, c, ktx, s, false)) continue;
         // v1.23: 📝 kh-wa ne is number se TAFSEEL maangi ho (khPend stg 'f') to us ka agla likha paigham kh-wa ko — sirf ijazat wale number, baqi sab pehle jaisa
         if (KHW && KHW.waits && ktx && ktx.length <= 300 && !KHW.looks(ktx)) { const kn0 = await fromNum(m, s);
