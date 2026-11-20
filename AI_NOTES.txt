@@ -9109,3 +9109,13 @@ Macro '📞 Khaas contacts — volume 20%' (MacroDroid MCP validate + share link
 → local oldv = {vol_ring} → ringer 20% (silent / vibrate par bhi bajega) → Wait (CallEnded / CallMissed any, 600 s) → ringer wapas oldv.
 md/ (Claude Remote) se NAHI — contacts ke naam / number PUBLIC repo mein KABHI nahi; link import sirf local variables (oldv). {vol_ring} ko % maana hai — asal
 phone par nahi azmaya (call ke baad volume theek wapas aaye, malik se poochho). AI: NAHI.
+
+=== 2026-11-20 (md pkg v59): 📞 KHAAS CONTACTS 20% AUTO (Claude Remote) ===
+Malik: 'es droid ko auto lagao na bhai' (link wala macro phone par khud).
+- md/tools/khaasvol.py → '📞 Khaas contacts 20%' (GUID h64 claude|khaasvol): IncomingCall 'Select Contacts' KHALI → oldv = {vol_ring} → ringer 20%
+  → Wait CallEnded / CallMissed (600 s) → ringer = oldv. Validator VALID (pkg_v.json). Contacts malik phone par khud chunta — naam / number md/ mein KABHI nahi.
+- ⚠️ pkg.py ONCE = {'59': [mkv]}: har pkg version 'macros' ko Overwrite by ID karta hai — agle version mein yeh macro gaya to malik ke chune contacts
+  khali ho jayenge. Is liye sirf v59 mein; v60+ mein khud nahi jata. Phone ne v59 chhor diya ho (v60 seedha) = macro nahi aayega — malik bataye to
+  ek dafa phir ONCE mein (pehle poochho contacts chune hain ya nahi).
+- Link wala '📞 Khaas contacts — volume 20%' malik ne pehle laga liya ho to phone par DO macro — ek band karein (malik ko bataya; off list mein khud nahi).
+- Baqi 24 macros / vars HUBAHU (diff jaancha). AI: NAHI. Asal phone par azmaya nahi.
