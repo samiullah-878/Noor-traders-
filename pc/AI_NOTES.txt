@@ -5134,3 +5134,11 @@ Malik: 'memory konsi apps kha rahi hai' -> malik ne read-only PowerShell lines c
 
 
 === 2026-11-20 (app v2.330.0, manifest wahi): PC scripts mein koi tabdeeli NAHI — sirf app ki Stock screen patli line (root AI_NOTES dekho). ===
+
+=== 2026-11-20 (PC bill-clip v2.11, manifest 2026-11-20.1): 🪟 video ki patti DAAYEIN patli column ===
+Malik (group video ki screenshot: patti beech mein counter dhak rahi thi): 'kiya aik side par aa sakti hain — right side' -> namoona tasveer (asal ffmpeg
+filter se, malik ki screenshot par) -> OK. ovPlan: cw 214, x0 = W-10-cw (daayein), y0 10 (upar se), ch = 112 + nr*23 (+24 safha) — kam items = chhoti patti;
+upar Bill # (14) · counter + waqt (13) · Rs (28 bold) · N items + larka (13) · lakeer · items naam cut 18 (15) + x tadad peeli daayein; OV.R 6 -> 12 fi safha,
+har 5 s agla. Kinara (b.png geq) / overlay / drawtext (relative fontfile + textfile + expansion=none) WAHI. Group videos + WhatsApp 'video <bill>' dono mkVideo
+se — dono par. Test: ffmpeg frame (3 items · items nahi aaye + (kal) · 19 items 2 safhe), Liberation font (PC par Segoe UI). Asal PC / WhatsApp par NAHI chala.
+AI: NAHI.

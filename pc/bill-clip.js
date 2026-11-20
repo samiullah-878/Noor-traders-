@@ -1,5 +1,6 @@
 // =========================================================
-//  bill-clip.js  v2.10 (2026-11-19: 📹 malik: 'live likhein -> camera ke naam -> number -> abhi ki tasveer / pichhle 30 sec … 30 min ki video, tarteeb se ·
+//  bill-clip.js  v2.11 (2026-11-20: 🪟 patti DAAYEIN patli column (malik: 'aik side par — right side') — ovPlan x0 = W-10-cw (214), 12 items fi safha.
+//  v2.10 (2026-11-19: 📹 malik: 'live likhein -> camera ke naam -> number -> abhi ki tasveer / pichhle 30 sec … 30 min ki video, tarteeb se ·
 //    counter ke ilawa mazeed cameras · kisi ki recording chalu karni ho to wo bhi': CF.xc [{n, ch, r}] (mazeed cameras, r = recording), billClipWa kind 'live'
 //    (kh-wa v1.12) -> lvOne: 📸 taza tukre ka aakhri frame / RTSP (recording band ho to) · 🎥 apni recording se 5-5 min ke hisse -> SIRF maangne wale ko.
 //    billClipPc.cams [{n, c, r, on}] = app / WhatsApp ki list.) · v2.9 (2026-11-19: 👥 malik: 'din mein jitni videos banein SAB WhatsApp group mein · counter-wise · video ke upar transparent
@@ -509,7 +510,8 @@ async function clipToMp4(bid, meta, out) {   // bani clip (Firestore ke hisse) �
 //   kinara (borderw) taake har rang par parhi jaye. Upar: Bill # · counter · waqt / Rs (bara) / N items · larka; phir items × tadad (tadad peeli),
 //   OV.R qatar fi safha, har 5 s agla safha (chakkar). Font: Windows Segoe UI (na ho Arial) clip-font mein copy — drawtext ko C: wala raasta nahi dete
 //   (':' filter tor deta hai). drawtext / font na chale = bina patti video (ov 0) — video kabhi nahi rukti.
-const OV = { W: 640, H: 480, R: 6, PAGE: 5 }, FONT_DIR = path.join(DIR, 'clip-font');
+// v2.11 (malik 20 Nov: 'aik side par — right side'): patti ab DAAYEIN patli column (chaurai 214, upar se) — baayein / beech ka counter khula; R 12.
+const OV = { W: 640, H: 480, R: 12, PAGE: 5 }, FONT_DIR = path.join(DIR, 'clip-font');
 function ovFonts() {
   const win = path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts');
   const pick = (k, names) => {
@@ -534,29 +536,30 @@ const fq = q => Number.isInteger(q) ? String(q) : String(+Number(q).toFixed(3));
 const cut = (s, n) => (s.length > n ? s.slice(0, n - 1) + '…' : s);
 function ovPlan(dir, b, items, dayTag) {   // filter ka likha hissa + text files (dir mein)
   const F = ovFonts(); if (!F) return null;
-  const { W, H, R, PAGE } = OV, nr = items && items.length ? Math.min(R, items.length) : 1, many = !!(items && items.length > R);   // kam items = chhoti patti (video zyada nazar aaye)
-  const x0 = 10, cw = W - 20, ch = 12 + 20 + 40 + 24 + 12 + nr * 25 + (many ? 24 : 8), y0 = H - 10 - ch;
+  const { W, R, PAGE } = OV, nr = items && items.length ? Math.min(R, items.length) : 1, many = !!(items && items.length > R);   // kam items = chhoti patti (video zyada nazar aaye)
+  const cw = 214, x0 = W - 10 - cw, y0 = 10, ch = 112 + nr * 23 + (many ? 24 : 8);   // v2.11: daayein patli column
   const rel = f => path.relative(dir, f).replace(/\\/g, '/');
   let n = 0; const tf = s => { const f = `t${n++}.txt`; fs.writeFileSync(path.join(dir, f), String(s).replace(/[\r\n]+/g, ' '), 'utf8'); return f; };
   const dt = (font, txt, size, x, y, color, en) => `drawtext=fontfile='${rel(font)}':textfile='${tf(txt)}':expansion=none:fontsize=${size}:fontcolor=${color}:borderw=2:bordercolor=black@0.85:x=${x}:y=${y}${en ? `:enable='${en}'` : ''}`;
   const an = anchorOf(b), rs = Math.round(Number(b.t) || 0).toLocaleString('en-US');
   const P = [];
-  P.push(dt(F.r, `Bill #${b.no || b.id}   ${b.pc || '?'}   ${an ? hm(an) : ''}${dayTag ? '  (' + dayTag + ')' : ''}`, 16, x0 + 14, y0 + 12, 'white'));
-  P.push(dt(F.b, 'Rs ' + rs, 34, x0 + 12, y0 + 32, 'white'));
+  P.push(dt(F.r, `Bill #${b.no || b.id}`, 14, x0 + 12, y0 + 10, 'white'));
+  P.push(dt(F.r, cut(`${b.pc || '?'}  ${an ? hm(an) : ''}${dayTag ? '  (' + dayTag + ')' : ''}`, 30), 13, x0 + 12, y0 + 28, 'white@0.9'));
+  P.push(dt(F.b, 'Rs ' + rs, 28, x0 + 11, y0 + 46, 'white'));
   const nIt = items && items.length ? items.length : Number(b.n) || 0;
-  P.push(dt(F.r, `${nIt} items${b.by ? '   ' + cut(String(b.by), 28) : ''}`, 15, x0 + 14, y0 + 78, 'white'));
-  P.push(`drawbox=x=${x0 + 14}:y=${y0 + 104}:w=${cw - 28}:h=1:color=white@0.6:t=fill`);
-  if (!items || !items.length) P.push(dt(F.r, items ? 'Is bill mein items nahi mile' : 'Items abhi PC tak nahi pohanche', 15, x0 + 14, y0 + 116, 'white'));
+  P.push(dt(F.r, cut(`${nIt} items${b.by ? '  ' + String(b.by) : ''}`, 28), 13, x0 + 12, y0 + 80, 'white'));
+  P.push(`drawbox=x=${x0 + 12}:y=${y0 + 101}:w=${cw - 24}:h=1:color=white@0.6:t=fill`);
+  if (!items || !items.length) P.push(dt(F.r, items ? 'Items nahi mile' : 'Items abhi nahi aaye', 14, x0 + 12, y0 + 112, 'white'));
   else {
     const pages = Math.ceil(items.length / R), cyc = pages * PAGE;
     for (let p = 0; p < pages; p++) {
       const en = pages > 1 ? `between(mod(t,${cyc}),${p * PAGE},${p * PAGE + PAGE - 0.01})` : '';
       items.slice(p * R, (p + 1) * R).forEach((it, i) => {
-        const y = y0 + 114 + i * 25;
-        P.push(dt(F.r, cut(it.n, 44), 18, x0 + 14, y, 'white', en));
-        P.push(dt(F.b, 'x' + fq(it.q), 18, `${x0 + cw - 14}-tw`, y, '0xFFE278', en));
+        const y = y0 + 110 + i * 23;
+        P.push(dt(F.r, cut(it.n, 18), 15, x0 + 12, y, 'white', en));
+        P.push(dt(F.b, 'x' + fq(it.q), 15, `${x0 + cw - 12}-tw`, y, '0xFFE278', en));
       });
-      if (pages > 1) P.push(dt(F.r, `safha ${p + 1}/${pages}  -  har 5 sec agla`, 13, x0 + 14, y0 + 116 + nr * 25, 'white@0.85', en));
+      if (pages > 1) P.push(dt(F.r, `safha ${p + 1}/${pages} - 5 sec agla`, 12, x0 + 12, y0 + 112 + nr * 23, 'white@0.85', en));
     }
   }
   return { x0, y0, cw, ch, filt: P.join(',') };
