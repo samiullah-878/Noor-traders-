@@ -4,7 +4,7 @@
 #   HIFAZAT: koi variable / OR / LogicConstraint nahi — sirf PACKAGE LIST (trigger + ActiveApplicationConstraint).
 #   List se bahar ki app kabhi band nahi ho sakti (WhatsApp, bank, call, Chrome… sab khuli). AI nahi.
 import json, os
-from cb import expr, lt, gt, strne, boolc, trig, iff, END, ELSE, HOME, var, lvar, NOW
+from cb import expr, lt, gt, strne, boolc, trig, iff, END, ELSE, HOME, var, lvar, NOW, setv
 D = os.path.dirname(os.path.abspath(__file__))
 APPS = [
     ("com.android.settings", "Settings"), ("com.android.vending", "Play Store"), ("com.arlosoft.macrodroid", "MacroDroid"),
@@ -24,6 +24,11 @@ PK = [p for p, _ in APPS]; NM = [n for _, n in APPS]
 T1, T2 = 112233445566691, 112233445566692
 FG = {"m_classType": "ActiveApplicationConstraint", "m_SIGUID": 0, "m_active": True, "m_foreground": True,
       "m_packageNameList": PK, "m_applicationNameList": NM, "usePackageNameOption": 0, "mechanismOption": 0}
+# v61 (20 Nov, malik: 'beej ki picture don to Claude open ho jaye, baqi apps band · 30 minute tak'): Blue Khata ki 🌱 sabzi photo sahi = clOk (epoch,
+#   📸 Sehat lock ka webhook likhta hai) -> 30 min SIRF Claude ki chhoot. Sharat chook jaye = cx 0 = pehle jaisa band (ghalti se kuch khulta nahi).
+FGC = dict(FG, m_packageNameList=["com.anthropic.claude"], m_applicationNameList=["Claude"])
+def clx(): return [expr("okL", "{v=clOk}-" + NOW, True), setv("cx", 1, True, m_newIntValue=0),
+                   iff([FGC, gt("okL", 0, True)]), setv("cx", 1, True, m_newIntValue=1), END]
 def ft(text): return {"m_classType": "FloatingTextAction", "m_SIGUID": 0, "option": 0, "identifier": "ntrb", "textToDisplay": text,
     "bgColor": -15788246, "textColor": -1, "alpha": 92, "updateLocation": False, "xPosition": 0.5, "yPosition": 0.04, "padding": 8, "textSize": 16,
     "corners": 14, "alignment": 0, "moveOption": 0, "variableWidth": True, "widthPercentage": 90, "showOverStatusBar": False, "enableShadow": True}
@@ -35,9 +40,9 @@ a = [
     expr("emL", "{v=sbEm}-" + NOW, True),
     iff([lt("emL", 1, True)]),
       {"m_classType": "PauseAction", "m_SIGUID": 0, "m_delayInSeconds": 1, "m_useAlarm": False},
-      iff([FG]),
+      iff([FG]), *clx(),
         expr("askAge", NOW + "-{v=sbAsk}", True),
-        iff([gt("askAge", 20, True)]),
+        iff([gt("askAge", 20, True), lt("cx", 1, True)]),
           HOME,
           iff([trig(T2, "App khuli"), strne("sbEmDay", "{dayofmonth}")]),
             expr("sbAsk", NOW),
@@ -54,15 +59,15 @@ a = [
 ]
 RB = {"macroExportVersion": 1, "macro": {
     "m_name": "🌙 Raat 12-11 band",
-    "m_description": "Raat 12 se subah 11 tak SIRF list wali apps band (Settings, Play Store, MacroDroid, Claude, social media, YouTube, Netflix, Prime, games). Baqi sab khuli. 🚨 Zaroori: din mein 1 dafa 10 minute sab khula. AI nahi.",
+    "m_description": "Raat 12 se subah 11 tak SIRF list wali apps band (Settings, Play Store, MacroDroid, Claude, social media, YouTube, Netflix, Prime, games). Baqi sab khuli. 🚨 Zaroori: din mein 1 dafa 10 minute sab khula. 🌱 Blue Khata mein sabzi ki photo = sirf Claude 30 min. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [lvar("emL"), lvar("askAge"), lvar("never", 0)],
+    "localVariables": [lvar("emL"), lvar("askAge"), lvar("never", 0), lvar("okL"), lvar("cx")],
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 30, "m_useAlarm": False},
         {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "isAllApps": False,
          "m_packageNameList": PK, "m_applicationNameList": NM}],
     "m_actionList": a,
     "m_constraintList": [{"m_classType": "TimeOfDayConstraint", "m_SIGUID": 0, "m_startHour": 0, "m_startMinute": 0, "m_endHour": 10, "m_endMinute": 59}]},
-    "globalVariables": [var("sbEm"), var("sbAsk"), var("sbEmDay", 2)], "userIcons": None}
+    "globalVariables": [var("sbEm"), var("sbAsk"), var("sbEmDay", 2), var("clOk")], "userIcons": None}
 if __name__ == '__main__':
     json.dump(RB, open(os.path.join(D, 'raatband.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('raatband ok', len(PK))

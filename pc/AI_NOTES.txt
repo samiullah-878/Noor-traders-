@@ -5302,3 +5302,20 @@ Phir: 'PC scripts mein poora drive show karwa do — C ya D dono · phir selecti
 Test: nakli Firestore + asli ffmpeg (NT_DRV_ROOT): rdrv 'D' → recording nayi jagah, waqt ki video 7:00–7:03 DONO jagah ke tukron se ek
 video ✓, setting se nikla channel (ch7) mita ✓, billClipPc.drv / dk ✓. App dabba Chrome mein (390px, light / dark): D chuna → ✅ D: par, 30 din
 → '≈ 282 GB aaram se' ✓. Asal PC (Windows PowerShell, asal D:) par NAHI chala. AI: NAHI.
+
+=== v2.335.0 + md pkg v61 (20 Nov 2026) — 💧 Paani 9-9 · 🌱 Sabzi photo = Claude 30 min · 📊 Sehat hisaab ===
+Malik (22:07): 'Pani wala raat 9 baje ke baad subah 9 tak notification na de, na zaroorat · sabzi lagani hai — beej ki picture doon to Claude open ho jaye,
+baqi apps band jaise 11 baje tak · phir kaam mukammal kar ke picture wapis · apps mein apni screen — sabzi ka kaam aur paani / nuts kitna piya, date wise aaj kal parso' · '30 minute tak'.
+- md/tools/sehat.py: PWIN (9:00-20:59) = paani ki yaad; WIN ab 11:00-20:59 (lock / photo / coffee-fruit-nuts popup) — raat 9 ke baad na popup na lock.
+  9-11 ke beech paani popup aata hai (lock 11 baje se — raatband pehle hi wahi list band karta hai; do macro ek saath band na karein, MacroDroid popup bachao).
+  Webhook nt_sehat shOk 'c:sabzi' (shT 3 min) -> clOk = abhi + 1800 aur clEm = abhi + 1800 (⏸ Claude break ka apna zaroori waqt — cb.py nahi badla).
+  Lock ke dono Home raaste (app khuli + 2 s chowkidar) mein clx(): Claude saamne + clOk baqi = chhoot.
+- md/tools/raatband.py: FGC (sirf Claude) + clx() — cx 0 = pehle jaisa band (sharat chooke to kuch nahi khulta). Sirf Claude chhoot, baqi list wahi.
+- sehat.js v1.4: app wali screen mein 🌱 Sabzi (beej / paudha / mitti — AI) + ✅ Kaam (sirf hisaab, phone ko kuch nahi). 📊 chip = Hisaab khirki
+  (Aaj · Kal · Parson): paani glass + waqt, coffee / fruit / nuts ✓, sabzi ki chhoti tasveerein (tap = bari). Data = is phone ki IndexedDB 'nt-sehat'
+  (store log {d, t, k, th}, index d) — sw.js shLog bhi WAHI (app band ho tab bhi). Firestore / server par kuch nahi, rules nahi badle.
+  Purani localStorage ginti (sam-sehat-YYYY-MM-DD) ek dafa log mein (t 0) aur mit gayi. AI = sirf photo jaanch (pehle wala Gemini).
+- sw.js: job.qk ('c:sabzi' = phone ko Claude · '' = phone ko kuch nahi) + okT / okB notification ki likhai + shLog.
+- pkg v61: 24 macros (📞 Khaas contacts ONCE wale dobara NAHI bheje — malik ke chune contacts mehfooz). Validator: raatband VALID; baqi local jaanch (If / Loop / vars).
+- Test: headless Chrome (fake camera + fake webhook): sabzi -> c:sabzi, kaam -> koi webhook nahi, paani -> a:paani; hisaab Aaj / Parson, tasveer bari.
+- Asal phone par NAHI azmaya: Claude 30 min ki chhoot (FGC), 9 baje ke baad lock band. Malik pehli dafa batayein.

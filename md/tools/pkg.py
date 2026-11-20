@@ -106,7 +106,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📞 Khaas: ghanti full (silent mein bhi) + 📞 Khaas: baat 20% (SIM + WhatsApp) — contacts khali, phone par khud chunein. Baqi macros wahi.",
+       "note": "💧 Paani sirf 9 am – 9 pm · 🌱 Blue Khata mein sabzi ki photo = sirf Claude 30 min (raatband + Sehat lock + Claude break) · 📞 Khaas contacts dobara NAHI bheje (ONCE).",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl, mal] + ONCE.get(ver, []),   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
@@ -128,7 +128,7 @@ assert not re.search(r'(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{30,}', chk), 'lambi 
 open(os.path.join(REPO, 'pkg.json'), 'w').write(s)
 open(os.path.join(REPO, 'ver.txt'), 'w').write(ver + '\n')
 # validator ke liye har macro alag .macro shakal mein bhi
-for nm, m in (('p', mp), ('k', mk), ('s', msl), ('a', mal), ('v', mkv), ('b', mkb)):
+for nm, m in (('p', mp), ('k', mk), ('s', msl), ('a', mal), ('v', mkv), ('b', mkb), ('r', mrb)):
     json.dump({"macroExportVersion": 1, "macro": m, "globalVariables": vars_, "userIcons": None},
               open(os.path.join(D, f'pkg_{nm}.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('pkg', len(s), [m['m_name'] for m in pkg['macros']])
