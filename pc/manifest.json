@@ -1,6 +1,6 @@
 {
- "version": "2026-11-20.6",
- "note": "bill-clip v2.15 (💾 recording 2 din — billClip.rkh ghante, drive 25 GB se kam = purane tukre) + kh-wa v1.14 (🕒 '11:06 se 7 minute ki' · 'kal 3:45' · 'subah / shaam' — samajh na aaye to madad) · wa-out v1.32 / wa-parchi v2.43 sirf dobara shuru",
+ "version": "2026-11-20.7",
+ "note": "bill-clip v2.16 (💽 recording ki drive malik chune — billClip.rdrv, din billClip.rkd default 10, har drive ki jagah app ko) + rec-dir.js v1.0 (nayi) + ginti-cam v1.1 + kh-wa v1.15 · wa-out v1.33 / wa-parchi v2.44 sirf dobara shuru",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -52,7 +52,7 @@
   "purchase-parchi.js": "2d4027987c2e96ce6cbbdec5afc8dd14dfd9afbb5d0f49727c713b41447270aa",
   "raat-report.js": "eea9d98592b5d31e8c45679c0f19bfadd307b73acef23d3ad59cb5b09f7cc2d4",
   "report-auto.bat": "867f58bc2fee20409d1682975ebaa305d5cf287a3dad6e1cd3e4f08708130af8",
-  "kh-wa.js": "624f182e36394a4b21e34aa7831504e8623a8b85a6ca57a1836645ab3842cbab",
+  "kh-wa.js": "fbe172e08067f366aedf73b99c509359d1b93590c694d277ea62f1b127ae20d4",
   "hz-wa.js": "f63d935e849b561985bd4c559ebafcbf0cc9886a2ac815a1796442332377947a",
   "zinda.js": "de1e04f6906b66493dc3da2606ea0cf2ee200053841516e3e1fcf84a32a950a3",
   "bank-parchi.js": "b79e74836c832a48846460e1938346ff561da401bb591cf3d9946af3adb5e80f",
@@ -90,16 +90,16 @@
   "gate-pass-auto.bat": "346f3aaa8be4f1923775d6d9ca364dbc12f7089ba50e90a68c750f98a0f4d751",
   "a4-print.js": "5b5a08c73e29ce77267a57c73c7da4239fdee4bf049ec318a6044c6a283164be",
   "a4-print-auto.bat": "c306dc288a3ab7390fb51fac96175893a7fae3ac93b5e2e26c296621c78ec269",
-  "wa-parchi.js": "ca5ffd9ecf33fdc1746be53b09a570b1d827b5fe0b0601c2d4849a7f08220c49",
+  "wa-parchi.js": "499f81ecb43ec56de2f6e79e42446e6e4aad33eaec00ebeacd315c7308320f23",
   "wa-parchi-auto.bat": "0d07e04e51af91a216b5f48e5b22d7e6bcdb0657e493a89ca4a6408dc8439c93",
   "wa-a4.ps1": "9fe9f8407ceaf70eb9c53cfd864aea6397ba2fb810680311757dd07b39b8093e",
   "dhoond.mjs": "967ba20504d1f0cfd9fb7c126800cd7767213989693d3516741983375fd4a4b3",
   "pos-jaanch.js": "e616b61a7e82a05452423c625b38dbf08a7bfa08edca189d6dd3728575ce6021",
   "rate-change.js": "51a127aeb5b8284ab6d0b4f52c67c7974a285ecebe6c623591fc6ae11b9a52df",
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
-  "wa-out.js": "7a0e42de337a3586bf5d93f648c131117f42fbf6e7451e7a342c6517ac1e3668",
+  "wa-out.js": "2b9a572b8c24c50a5364faf21f3669c80c2e4c9ea352c536e4c24690a3e5cfe0",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
-  "bill-clip.js": "0098656822e524fff545b319c0ef8f02902811ace5daff680a77dcfb245bcf76",
+  "bill-clip.js": "0661dfa0800c116c1558957b86598f5e90f308c50b63ddfd9701de023a7c6db6",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
   "live-cam.js": "ec3589ec0ab36f328159175912177102d8ab8e57e8ff75e67bd6970c612368ed",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
@@ -107,9 +107,10 @@
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",
   "pc-names.js": "927a9d5c344705f4397c6de058c4df2e950985eba1c813edccbee5522ce6424a",
   "fac-voice.js": "742e6a4b674d827d2ba6f754b4040834879d221fb3e188299b79372b20c4b429",
-  "ginti-cam.js": "384225764219c2980fa9df2ef09726220207adbd5c9bcb4d1f572e8da88c0f60",
+  "ginti-cam.js": "1cbf09a996dc1916d65b7fa9a0433a34101231dbb10de942dff94fe65cf2104a",
   "ginti-cam-auto.bat": "a8ae2c822c216c9baed2bdc60b84f6c01f8779f67e48568113f8768954eb0464",
-  "ginti-model.onnx": "9165d7df0307f609dce6f96fdf42f6063d70eaef08dfaf5b8b9dc69d8e3d42fc"
+  "ginti-model.onnx": "9165d7df0307f609dce6f96fdf42f6063d70eaef08dfaf5b8b9dc69d8e3d42fc",
+  "rec-dir.js": "53bac4de5a3bc05eacbad37209a1ff2c71ae5adca765d15852b93b344f4feb04"
  },
  "services": [
   {

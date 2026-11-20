@@ -9178,3 +9178,26 @@ Wajah: (1) v1.13 ka TIME_RE 'se 7 minute ki' nahi samajhta tha, aur waits() sirf
 Test: nakli Firestore — '11:06 SE 7 minute ki' → f0 11:06 f1 11:13 ✓ · 'kal 3:45 se 3:50' = kal 3:45 pm ✓ · 'subah 11:06 wali' = 11:05–11:07 am ✓ ·
 'live 2 shaam 6:05 se 6:15' ✓ · '11:70 baje' = ✕ waqt ghalat + madad ✓ · 'kya haal' = kh-wa nahi uthata ✓; bill-clip harness: waqt ki video ✓,
 purana waqt = saaf ✕ ✓. Disk guard asal PC par nahi chala (sandbox mein jagah zyada). AI: NAHI.
+
+
+=== v2.334.0 (2026-11-20) — 💽 RECORDING KAHAN: drive chuno (C / D…) + 10 din (PC bill-clip v2.16 · rec-dir.js v1.0 nayi · ginti-cam v1.1 · kh-wa v1.15 · wa-out v1.33 / wa-parchi v2.44 sirf dobara shuru) ===
+Malik: '750 GB ki HDD full karni ho to kitne din ki recording?' → andaza 1–2 mahine (3–5 camera, ~230 MB fi camera fi ghanta, PC ~12 ghante).
+Phir: 'PC scripts mein poora drive show karwa do — C ya D dono · phir selection · kis mein rakhna hai · us mein 10 din ki video bhi pari rahe'.
+- pc/rec-dir.js (NAYI, mushtarka): active(dir, drv) = likhne ki jagah <D>:\NT-Recording\clip-rec (scripts wala drive = purani <script>\clip-rec;
+  folder ka naam clip-rec hi — doctor ka ffmpeg naam isi se) · drive na mile / folder na bane = purani jagah + err · roots() = sab maujood jagahein
+  (60 s yaad) · segFiles(roots, ch) = har jagah ke tukre naam ki tarteeb mein. Test ke liye NT_DRV_ROOT (Linux).
+- bill-clip v2.16: billClip.rdrv (drive) + billClip.rkd (din, default 10, 1–90; v2.15 ka rkh ab nahi parha jata). Jagah badli = recStopAll →
+  nayi jagah par recording; purani jagah ki recording PARHI jati hai (bill clip / waqt ki video / ginti) aur din pure kar ke khud mitti hai —
+  move / copy nahi (dukan ke waqt hard par bojh nahi). Safai + hisaab ab har 10 min (recClean, sirf cfReady ke baad — pehle setting na aaye to
+  recChannels khali = sab mit jata): rk se purane, setting se nikle channel, drive 25 GB se kam = 6 ghante se purane (sab se purane pehle) jab tak
+  35 GB. Band tukre ka size yaad (SZ). drvScan har 10 min: PowerShell Win32_LogicalDisk (DriveType 3 apni hard · 2 USB · 4 network), na chale =
+  statfs. billClipPc.drv [{d, t, lbl, free, tot, sys, rec, use}] + dk {d, err, free, tot, used, day, est, can, old, cut, n} + rkd + rdrv.
+- ginti-cam v1.1: segList RD.roots se (kisi bhi drive ki recording).
+- kh-wa v1.15: rkMin = billClip.rkd (default 10 din); 'recording nahi' paigham mein setting ki nayi jagah.
+- App: pc-drives.js (NAYI) — Settings → 🖥️ PC scripts → '💽 Recording kahan' (#pcDrv, sirf malik): har drive patli qatar (💽 C: · kul GB ·
+  Windows / naam · 📼 recording · bar + khali GB · ✓ yahan), USB / network ✕; tap = confirm → cloud.setBillClipPart({rdrv}) (bina `at` — PC
+  Rabta test / recording dobara nahi); din chips 2 · 5 · 10 · 15 · 30 · 60 → {rkd}; neeche roz ≈ GB + 'is drive par ≈ N din ki jagah' + din
+  zyada hon to ⚠️. Status chip ⏳ / ✅ / ✕ / 🔴 PC chup. tally ⚙️ Camera setup ka khana ab 'PC par recording rakho (din)' (rkd) + 💾 line.
+Test: nakli Firestore + asli ffmpeg (NT_DRV_ROOT): rdrv 'D' → recording nayi jagah, waqt ki video 7:00–7:03 DONO jagah ke tukron se ek
+video ✓, setting se nikla channel (ch7) mita ✓, billClipPc.drv / dk ✓. App dabba Chrome mein (390px, light / dark): D chuna → ✅ D: par, 30 din
+→ '≈ 282 GB aaram se' ✓. Asal PC (Windows PowerShell, asal D:) par NAHI chala. AI: NAHI.

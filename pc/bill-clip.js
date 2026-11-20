@@ -66,7 +66,9 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.15';
+const RD = require('./rec-dir.js');   // v2.16: 💽 recording kahan
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.16';
+// v2.16 (20 Nov, malik: 'PC scripts mein poora drive show karwa do — C ya D · phir selection · us mein 10 din ki video bhi pari rahe'): 💽 recording ki jagah malik ka chuna drive `billClip.rdrv` (rec-dir.js — ginti-cam bhi wahi) · din `billClip.rkd` (default 10, 1–90; v2.15 ka rkh ghante ab nahi) · purani jagah ki recording parhi jati hai aur din pure kar ke khud mitti (move nahi) · safai + hisaab har 10 min (band tukre ka size yaad) · billClipPc.drv = har drive (PowerShell Win32_LogicalDisk, har 10 min) + dk {d, free, tot, used, day, can, est, err}. Safai sirf setting aane ke baad (cfReady).
 // v2.15 (20 Nov, malik: 'recording poora do din ki rehni chahiye · 750 GB ki hard pari hui hai'): recording ab GHANTON mein `billClip.rkh` (default 48 = 2 din; purana `rk` 180 min chhor diya) — 💾 hifazat: recording wali drive par 25 GB se kam jagah = 6 ghante se purane tukre pehle mitao (35 GB tak), haal billClipPc.dk {free, tot, cut}. Un-posted bill ki clip ki khirki pehle jaisi 3 ghante.
 // v2.14 (20 Nov, malik: 'WhatsApp par time ka clip — hum time likhein, us waqt ki video'): 📹 live hukum mein f0 / f1 (kh-wa v1.13 '3:45' · '3:45 5' · '3:40-3:50') = USI waqt ki video apni recording (clip-rec) se — NVR nahi; recording itni purani na ho = saaf wajah + sab se purana waqt.
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
@@ -79,20 +81,20 @@ const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_,
 const CHUNK = 900 * 1024;
 
 // ---------- setting (malik, app ⚙️) ----------
-let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', sub: 1, pre: 45, post: 20, keep: 2, ch: {}, rep: '20:30', maxs: 630, rk: 2880 };
+let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', sub: 1, pre: 45, post: 20, keep: 2, ch: {}, rep: '20:30', maxs: 630, rk: 14400, rdrv: '' };
 let cfReady = false;
 function cfApply(d) {
   d = d || {};
   CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), sub: d.sub === 0 || d.sub === '0' ? 0 : 1,
-    pre: d.pre === 0 || d.pre === '0' ? 0 : Math.max(10, Math.min(600, Number(d.pre) || 300)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), rk: d.rkh != null && Number(d.rkh) > 0 ? Math.max(60, Math.min(10080, Math.round(Number(d.rkh) * 60))) : 2880, keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
+    pre: d.pre === 0 || d.pre === '0' ? 0 : Math.max(10, Math.min(600, Number(d.pre) || 300)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), rk: (Number(d.rkd) > 0 ? Math.max(1, Math.min(90, Math.round(Number(d.rkd)))) : 10) * 1440, rdrv: RD.letter(d.rdrv), keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
     xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v2.10: 📹 mazeed cameras
     ch: (d.ch && typeof d.ch === 'object') ? d.ch : {}, rep: /^\d{1,2}:\d{2}$/.test(String(d.rep || '')) ? String(d.rep) : '20:30', maxs: Math.max(30, Math.min(700, Number(d.maxs) || 630)) };
   cfReady = true;
 }
 let ON0 = 0;   // v1.2: camera kab ON hua (app `onAt`, purani setting = aakhri save `at`) — us se pehle ke bill nahi; PC restart par bhi wahi
 let AUTHBAD = 0, cfSig = '', TEST = null;   // v1.3: 401 aaya = ruko jab tak user / password / IP / port na badle
-biz.collection('blueAccess').doc('billClip').onSnapshot(s => { const d0 = s.exists ? s.data() : null; cfApply(d0);
+biz.collection('blueAccess').doc('billClip').onSnapshot(s => { const d0 = s.exists ? s.data() : null; cfApply(d0); try { recRoot(); } catch (e) { log('⚠️ jagah: ' + e.message); }
   // v1.5: sig mein cfg.at = har Save naya Rabta test
   const sig = [CF.on, CF.kind, CF.ip, CF.port, CF.user, CF.pw, CF.sub, Number(d0 && d0.at) || 0].join('|'); if (sig !== cfSig) { const first = !cfSig; cfSig = sig; AUTHBAD = 0; NETBAD = 0; netScanAt = 0; for (const [k, v] of known) if (v.st === 'err') known.set(k, { st: 'err', tries: 0, at: 0 }); if (CF.on && CF.ip) setTimeout(() => rabta().catch(e => log('⚠️ rabta: ' + e.message)), first ? 20000 : 1500); recStopAll('setting badli'); } recSync(); ON0 = CF.on ? (Number(d0 && (d0.onAt || d0.at)) || Date.now()) : 0; log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre === 0 ? 'pehli item' : CF.pre + ' s'}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
 
@@ -101,7 +103,7 @@ let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, ln: ST.ln || null, test: TEST || null, rec: recState(), dk: DISK, rkh: Math.round(CF.rk / 60), net: NET || null, wg: ST.wg || null, cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, ln: ST.ln || null, test: TEST || null, rec: recState(), dk: DISK, rkd: Math.round(CF.rk / 1440), rdrv: CF.rdrv || '', drv: drvOut(), net: NET || null, wg: ST.wg || null, cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -238,10 +240,13 @@ async function rabta() {
 const recs = new Map();   // ch → { p, at, errs, restarts, dead, lastErr }
 function liveUrl(ch) { const u = credOf(CF.user), p = credOf(CF.pw); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${CF.sub ? 2 : 1}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${CF.sub}`; }
 function recChannels() { const s = new Set(); for (const v of Object.values(CF.ch)) if (Number(v) > 0) s.add(Number(v)); for (const x of CF.xc || []) if (x.r) s.add(x.ch); return [...s]; }   // v2.10: mazeed camera sirf jab ⏺ recording chalu
-function recDir(ch) { return path.join(REC, 'ch' + ch); }
+// v2.16: 💽 likhne ki jagah (malik ka drive) + parhne ki sab jagahein
+let RA = { root: REC, d: '', err: '' };
+function recRoot() { const a = RD.active(DIR, CF.rdrv); const moved = path.resolve(a.root) !== path.resolve(RA.root); const was = RA.root; RA = a; if (moved) { log(`💽 recording ki jagah: ${was} → ${a.root}`); recStopAll('jagah badli'); } if (a.err && a.err !== recRoot.e) log('💽 ' + a.err); recRoot.e = a.err; return moved; }
+const roots = () => RD.roots(DIR, RA.root);
+function recDir(ch) { return path.join(RA.root, 'ch' + ch); }
 function segList(ch) {   // [{f, t0, t1}] waqt ke mutabiq (file ke naam se — PC ka local waqt)
-  let names = []; try { names = fs.readdirSync(recDir(ch)).filter(f => /^s-\d{8}-\d{6}\.mp4$/.test(f)).sort(); } catch { return []; }
-  const out = names.map(f => { const m = f.match(/^s-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/); return { f: path.join(recDir(ch), f), t0: new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime(), t1: 0 }; });
+  const out = RD.segFiles(roots(), ch).map(x => ({ f: x.f, t0: RD.t0Of(x.n), t1: 0 }));   // v2.16: sab jagahon se (purani jagah bhi)
   for (let i = 0; i < out.length; i++) { out[i].t1 = i + 1 < out.length ? out[i + 1].t0 : Math.min(out[i].t0 + 60000, Date.now()); }
   return out;
 }
@@ -284,25 +289,53 @@ function recTick() {   // watchdog + safai (har 30 s)
     const l = segList(ch); const last = l.length ? l[l.length - 1] : null; let fresh = 0; if (last) { try { fresh = fs.statSync(last.f).mtimeMs; } catch {} }
     if (now - st.at > 150000 && (!last || now - fresh > 150000)) { log(`🎞 rec ch ${ch}: 2.5 min se nayi video nahi — dobara`); try { st.p.kill(); } catch {} }
   }
-  try { for (const ch of recChannels()) for (const x of segList(ch)) if (now - x.t0 > CF.rk * 60000) { try { fs.unlinkSync(x.f); } catch {} } } catch {}
-  diskGuard(now);   // v2.15: 💾 drive bhar na jaye
-  try { for (const d of fs.readdirSync(REC)) { const ch = Number((d.match(/^ch(\d+)$/) || [])[1]); if (ch && !recChannels().includes(ch)) for (const f of fs.readdirSync(path.join(REC, d))) { try { fs.unlinkSync(path.join(REC, d, f)); } catch {} } } } catch {}
+  try { recClean(now); } catch (e) { log('⚠️ safai: ' + e.message); }   // v2.16: har 10 min (sab jagah)
 }
-// v2.15: 💾 recording wali drive ki jagah — 25 GB se kam = 6 ghante se purane tukre (sab channel, sab se purane pehle) mitao jab tak 35 GB na ho. Haal billClipPc.dk.
-let DISK = null, diskAt = 0;
-function diskFree() { try { const st = fs.statfsSync(REC); return { free: st.bavail * st.bsize, tot: st.blocks * st.bsize }; } catch { return null; } }
-function diskGuard(now) {
-  if (now - diskAt < 5 * 60000) return; diskAt = now;
-  let d = diskFree(); if (!d) { DISK = null; return; }
-  const GB = 1073741824; let cut = 0;
-  if (d.free < 25 * GB) {
-    const all = []; for (const ch of recChannels()) for (const x of segList(ch)) if (now - x.t0 > 6 * 3600000) all.push(x);
-    all.sort((a, b) => a.t0 - b.t0);
-    for (const x of all) { let sz = 0; try { sz = fs.statSync(x.f).size; fs.unlinkSync(x.f); cut++; } catch {} d.free += sz; if (d.free >= 35 * GB) break; }
-    if (cut) log(`💾 drive par jagah kam — ${cut} purane recording tukre mitaye (ab ${(d.free / GB).toFixed(1)} GB khali)`);
+// v2.16: 🧹 safai + 💽 hisaab (har 10 min, setting aane ke baad): rk se purane tukre (SAB jagah), setting se nikle channel ke tukre, drive 25 GB se kam = 6 ghante se
+//   purane tukre (sab se purane pehle) jab tak 35 GB na ho. Size ka hisaab: band tukre ka size yaad (SZ) — har dafa 36,000 file nahi naapte.
+const GB = 1073741824, r1 = x => Math.round(x * 10) / 10, SYSD = String(process.env.SystemDrive || 'C:').slice(0, 1).toUpperCase();
+let DISK = null, cleanAt = 0, USE = {}, DRV = [], drvAt = 0, drvBusy = false; const SZ = new Map();
+function freeOf(dv) {
+  const b = RD.base(dv) || (dv === RD.driveOf(RA.root) ? RA.root : null);
+  if (b && typeof fs.statfsSync === 'function') { try { const st = fs.statfsSync(b); return { free: st.bavail * st.bsize, tot: st.blocks * st.bsize }; } catch {} }
+  const x = DRV.find(y => y.d === dv); return x ? { free: x.free, tot: x.tot } : null;
+}
+function drvScan() {   // 💽 PC ki drives (har 10 min) — Windows: PowerShell Win32_LogicalDisk (DriveType 3 = PC ki apni hard, 2 = USB, 4 = network)
+  if (drvBusy || Date.now() - drvAt < 9 * 60000) return; drvBusy = true;
+  const done = a => { drvBusy = false; drvAt = Date.now(); if (a.length) DRV = a; };
+  if (process.platform !== 'win32') { const a = []; for (const L of 'CDEFGH') { const b = RD.base(L); if (!b || !fs.existsSync(b)) continue; const f = freeOf(L); if (f) a.push({ d: L, t: 3, free: f.free, tot: f.tot, lbl: '' }); } return done(a); }
+  exec('powershell -NoProfile -NonInteractive -Command "Get-CimInstance Win32_LogicalDisk | Select-Object DeviceID,DriveType,FreeSpace,Size,VolumeName | ConvertTo-Json -Compress"', { timeout: 25000, windowsHide: true, maxBuffer: 1 << 20 }, (e, out) => {
+    let a = []; try { a = JSON.parse(String(out || '').trim() || '[]'); if (!Array.isArray(a)) a = [a]; } catch {}
+    a = a.map(x => ({ d: String((x && x.DeviceID) || '').slice(0, 1).toUpperCase(), t: Number(x && x.DriveType) || 0, free: Number(x && x.FreeSpace) || 0, tot: Number(x && x.Size) || 0, lbl: String((x && x.VolumeName) || '').slice(0, 24) })).filter(x => /^[C-Z]$/.test(x.d) && x.tot > 0);
+    if (!a.length && typeof fs.statfsSync === 'function') for (const L of 'CDEFGHIJKLMNOPQRSTUVWXYZ') { try { if (!fs.existsSync(L + ':\\')) continue; const st = fs.statfsSync(L + ':\\'); a.push({ d: L, t: 0, free: st.bavail * st.bsize, tot: st.blocks * st.bsize, lbl: '' }); } catch {} }
+    if (e && !a.length) log('⚠️ drives ki list nahi mili: ' + String(e.message || e).slice(0, 80));
+    done(a); pushSt(true);
+  });
+}
+function drvOut() { return DRV.slice(0, 12).map(x => { const f = freeOf(x.d) || x; return { d: x.d, t: x.t, lbl: x.lbl, free: r1(f.free / GB), tot: Math.round(f.tot / GB), sys: x.d === SYSD ? 1 : 0, rec: x.d === RD.driveOf(RA.root) ? 1 : 0, use: r1((USE[x.d] || 0) / GB) }; }); }
+function recClean(now) {
+  if (!cfReady || now - cleanAt < 10 * 60000) return; cleanAt = now;
+  try { recRoot(); } catch {} try { drvScan(); } catch {}
+  const rts = roots(), keep = new Set(recChannels()), all = [];
+  for (const r of rts) { let ds = []; try { ds = fs.readdirSync(r); } catch { continue; }
+    for (const d of ds) { const ch = Number((d.match(/^ch(\d+)$/) || [])[1]); if (!ch) continue; let fl = []; try { fl = fs.readdirSync(path.join(r, d)); } catch { continue; }
+      for (const n of fl) { if (!/^s-\d{8}-\d{6}\.mp4$/.test(n)) continue; const f = path.join(r, d, n), t0 = RD.t0Of(n);
+        if (!keep.has(ch) || now - t0 > CF.rk * 60000) { try { fs.unlinkSync(f); } catch {} SZ.delete(f); continue; }
+        let sz = SZ.get(f); if (sz == null || now - t0 < 3 * 60000) { try { sz = fs.statSync(f).size; } catch { continue; } if (now - t0 >= 3 * 60000) SZ.set(f, sz); }
+        all.push({ f, t0, sz, dv: RD.driveOf(f) }); } } }
+  if (SZ.size > all.length + 500) { const live = new Set(all.map(x => x.f)); for (const k of SZ.keys()) if (!live.has(k)) SZ.delete(k); }
+  let cut = 0; const ad = RD.driveOf(RA.root);
+  for (const dv of new Set(all.map(x => x.dv).concat([ad]))) {
+    const fr0 = freeOf(dv); if (!fr0 || fr0.free >= 25 * GB) continue; let fr = fr0.free, c = 0;
+    const mine = all.filter(x => x.dv === dv && now - x.t0 > 6 * 3600000).sort((a, b) => a.t0 - b.t0);
+    for (const x of mine) { try { fs.unlinkSync(x.f); c++; fr += x.sz; x.gone = 1; SZ.delete(x.f); } catch {} if (fr >= 35 * GB) break; }
+    if (c) log(`💾 ${dv}: drive par jagah kam — ${c} purane recording tukre mitaye (ab ${(fr / GB).toFixed(1)} GB khali)`); cut += c;
   }
-  let old = 0; try { for (const ch of recChannels()) { const l = segList(ch); if (l.length && (!old || l[0].t0 < old)) old = l[0].t0; } } catch {}
-  DISK = { free: Math.round(d.free / GB * 10) / 10, tot: Math.round(d.tot / GB), cut, old, at: now };
+  const left = all.filter(x => !x.gone); USE = {}; let bytes = 0, d24 = 0, old = 0;
+  for (const x of left) { USE[x.dv] = (USE[x.dv] || 0) + x.sz; bytes += x.sz; if (x.t0 > now - 86400000) d24 += x.sz; if (!old || x.t0 < old) old = x.t0; }
+  let day = d24, est = 0; if (left.length && (!old || now - old < 20 * 3600000)) { day = bytes / left.length * 720 * Math.max(1, keep.size); est = 1; }   // 1 din se kam recording = andaza (PC ~12 ghante on)
+  const af = freeOf(ad), can = af && day > 0 ? Math.max(0, (af.free + (USE[ad] || 0) - 25 * GB) / day) : 0;
+  DISK = { d: ad, err: RA.err || '', free: af ? r1(af.free / GB) : null, tot: af ? Math.round(af.tot / GB) : null, used: r1(bytes / GB), day: r1(day / GB), est, can: Math.floor(can), old, cut, n: left.length, at: now };
 }
 function recState() { const o = {}; for (const [ch, st] of recs) { const l = segList(ch); const last = l.length ? l[l.length - 1] : null; o[ch] = { on: st.p ? 1 : 0, n: l.length, last: last ? last.t0 : 0, err: st.p ? '' : (st.lastErr || '').slice(0, 120) }; } return o; }
 function recCover(ch, t0, t1) {   // tukre jo [t0, t1] dhakte hon — poora dhaka ho to list, warna null

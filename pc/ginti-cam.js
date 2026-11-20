@@ -27,7 +27,7 @@ const path = require('path');
 const { spawn, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 
-const VER = '1.0';
+const VER = '1.1';   // v1.1 (20 Nov): 💽 recording kisi bhi drive par ho (malik ka chuna, rec-dir.js) — sab jagah se parhta hai
 const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47846;
 const MODS = path.join(DIR, 'ginti-mods'), CLIP_MODS = path.join(DIR, 'clip-mods'), REC = path.join(DIR, 'clip-rec'), TMP = path.join(DIR, 'ginti-tmp');
 const MODEL = path.join(DIR, 'ginti-model.onnx'), STATE = path.join(DIR, 'ginti-state.json');
@@ -105,10 +105,9 @@ class Tracker {
 }
 
 // ---------- 🎞 recording ke tukre (bill-clip.js jaisa naqsha) ----------
-const recDir = ch => path.join(REC, 'ch' + ch);
+const RD = require('./rec-dir.js');   // v1.1: 💽 sab jagahein (scripts wali clip-rec + har drive ki NT-Recording)
 function segList(ch, now = Date.now()) {
-  let names = []; try { names = fs.readdirSync(recDir(ch)).filter(f => /^s-\d{8}-\d{6}\.mp4$/.test(f)).sort(); } catch { return []; }
-  const out = names.map(f => { const m = f.match(/^s-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})/); return { f: path.join(recDir(ch), f), t0: new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime(), t1: 0, done: false }; });
+  const out = RD.segFiles(RD.roots(DIR, REC), ch).map(x => ({ f: x.f, t0: RD.t0Of(x.n), t1: 0, done: false }));
   for (let i = 0; i < out.length; i++) {
     const nx = out[i + 1];
     if (nx) { out[i].t1 = Math.min(nx.t0, out[i].t0 + 75000); out[i].done = now - nx.t0 > 15000; }
