@@ -9144,3 +9144,16 @@ aaye volume full ho' (AskUserQuestion: WAHI 20% wale numbers — ghanti full, ba
 - pkg.py ONCE = {'60': [mkv, mkb]}; baqi 24 macros / vars HUBAHU. Validator VALID (dono). v59 mein chune contacts (agar chune) overwrite se khali — malik ko bataya.
 - Asal phone par NAHI azmaya: silent mein ghanti beech mein chalu hoti hai ya nahi (OnePlus alert slider), {vol_ring}/{vol_call} %, WhatsApp ki awaaz VoiceCall
   par. AI: NAHI.
+
+=== 2026-11-20 (PC kh-wa v1.13 · bill-clip v2.14 · wa-out v1.31 · wa-parchi v2.42 (sirf dobara shuru), manifest 2026-11-20.5): 🕒 WhatsApp par WAQT KI VIDEO ===
+Malik: 'WhatsApp par time ka clip ka option banao — jaise live ka pehle hi option hai, us mein clip banao · hum time likhein, us ki video'. Plan OK.
+- kh-wa: live → camera → menu mein '8 🕒 Waqt ki video' (khPend stg 'lt') → waqt; camera menu (stg 'lw') par seedha waqt bhi; one-liner 'live 3 3:45'.
+  TIME_RE: '3:45' = 3:44–3:46 (2 min) · '3:45 5' = 3:45 se 5 min · '3:40-3:50' (30 min tak) · am / pm na ho = aaj ka sab se qareebi GUZRA waqt (tAt, Pakistan waqt PKO,
+  26 ghante tak). Recording ki hadd (blueAccess/billClip.rk, default 180 min) se purana = saaf paigham + Camera setup ka raasta (sirf rk parhta hai, password nahi).
+  billClipWa/lt<paigham> {kind live, cam, sec, f0, f1}. Mazeed camera ki ⏺ recording ON / OFF ab 9 (pehle 8). waits(number, likhai) = 'f' YA (lt / lw + TIME_RE) —
+  wa-out v1.31 likhai bhi deta hai (KHW.waits(kn0, ktx)); 1:xx / 2:xx / 3:xx pehle se looks (P2_RE) se aate the, ab pending lt/lw ho to waqt ka raasta pehle.
+- bill-clip lvOne: f0 / f1 ho (TW) = usi waqt ki recording (segList overlap, t0 = max(f0, tukra), tEnd = min(f1, aakhri tukra)), 5-5 min ke hisse WAHI lvEnc;
+  na mile = 'X – Y ki recording nahi mili (PC par sab se purani: Z)'; adhoori = 'sirf X – Y mili'. NVR playback NAHI (malik: NVR se mangwana rehne do).
+Test: nakli Firestore — live → 1 → 8 → '5:30' → billClipWa f0/f1 ✓, '25:99' = madad ✓, 3 ghante purana = rk paigham ✓, 'live 1 6:10-6:20 pm' / 'live 2 6:30 5' ✓,
+camera menu par seedha '6:40' ✓; bill-clip (nakli Firestore + asli ffmpeg, 5 banawati tukre): f0 = tukra1 + 30 s, f1 = tukra2 + 30 s → 60 s video, 5 s par 'SEG 1 · 35',
+50 s par 'SEG 2 · 20' ✓; purana waqt = saaf ✕ ✓. Asal PC / WhatsApp par NAHI chala. AI: NAHI.

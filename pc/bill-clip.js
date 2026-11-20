@@ -66,7 +66,8 @@ const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.13';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.14';
+// v2.14 (20 Nov, malik: 'WhatsApp par time ka clip — hum time likhein, us waqt ki video'): 📹 live hukum mein f0 / f1 (kh-wa v1.13 '3:45' · '3:45 5' · '3:40-3:50') = USI waqt ki video apni recording (clip-rec) se — NVR nahi; recording itni purani na ho = saaf wajah + sab se purana waqt.
 const MODS = path.join(DIR, 'clip-mods'), TMP = path.join(DIR, 'clip-tmp'), REC = path.join(DIR, 'clip-rec'), NPM_FILE = path.join(MODS, 'npm-at.json');
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(DIR, 'firebase-key.json'))) });
 const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), CLIP = biz.collection('billClip'), TALLY = biz.collection('billTally');
@@ -884,24 +885,25 @@ async function lvOne(id, r) {
   }
   const c = cams[0];
   if (!recOn(c.ch)) {   // recording band = pichhle waqt ki video nahi — tasveer + raasta
-    await tell(`⏹ ${c.n} ki recording band hai — pichhle waqt ki video nahi ban sakti.${c.c ? ' (Camera setup / PC dekhein)' : '\nRecording chalu karni ho: live → ' + c.n + ' → 8'}\n📸 Abhi ki tasveer bhej raha hoon.`, 'r');
+    await tell(`⏹ ${c.n} ki recording band hai — pichhle waqt ki video nahi ban sakti.${c.c ? ' (Camera setup / PC dekhein)' : '\nRecording chalu karni ho: live → ' + c.n + ' → 9'}\n📸 Abhi ki tasveer bhej raha hoon.`, 'r');
     const s = await snapOf(c); if (s.ok) await put(`lvs-${id}-${c.ch}`, { im: s.buf, txt: `📸 ${ic(c)} ${c.n} · ${hm(s.at)} · ⏹ recording band` });
     await waSet(id, { st: 'err', err: 'recording band — sirf tasveer', doneAt: Date.now() }); return;
   }
-  const t1 = Date.now() - 2000, want0 = t1 - sec * 1000;
+  const TW = Number(r.f0) > 0 && Number(r.f1) > Number(r.f0);   // v2.14: 🕒 waqt ki video (kh-wa v1.13) — warna pichhle sec
+  const t1 = TW ? Math.min(Number(r.f1), Date.now() - 2000) : Date.now() - 2000, want0 = TW ? Math.max(Number(r.f0), t1 - 1800000) : t1 - sec * 1000;
   const segs = segList(c.ch).filter(x => x.t1 > want0 - 2000 && x.t0 < t1);
   let i0 = segs.length - 1; while (i0 > 0 && segs[i0].t0 - segs[i0 - 1].t1 <= 10000) i0--;
   const run = segs.slice(Math.max(0, i0));
-  if (!run.length) return fail(`${c.n}: recording ki file nahi mili`);
-  const t0 = Math.max(want0, run[0].t0), tot = Math.round((t1 - t0) / 1000);
-  if (tot < 5) return fail(`${c.n}: recording abhi shuru hui hai — 1 min baad dobara`);
+  if (!run.length) { const old = (segList(c.ch)[0] || {}).t0; return fail(TW ? `${c.n}: ${hm(want0)} – ${hm(t1)} ki recording nahi mili${old ? ` (PC par sab se purani: ${hm(old)})` : ''}` : `${c.n}: recording ki file nahi mili`); }
+  const t0 = Math.max(want0, run[0].t0), tEnd = TW ? Math.min(t1, run[run.length - 1].t1) : t1, tot = Math.round((tEnd - t0) / 1000);
+  if (tot < 5) return fail(TW ? `${c.n}: ${hm(want0)} – ${hm(t1)} ki recording nahi mili (beech mein recording band thi?)` : `${c.n}: recording abhi shuru hui hai — 1 min baad dobara`);
   const P = Math.ceil(tot / 300), lst = path.join(TMP, `lv-${id}.txt`);
   fs.writeFileSync(lst, run.map(x => `file '${x.f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n');
-  if (tot < sec - 20) await tell(`ℹ️ ${c.n}: sirf ${fdur(tot)} ki recording mili (poori ${fdur(sec)} nahi) — wohi bhej raha hoon.`, 'p');
+  if (tot < sec - 20) await tell(TW ? `ℹ️ ${c.n}: sirf ${hm(t0)} – ${hm(tEnd)} ki recording mili (poori ${fdur(sec)} nahi) — wohi bhej raha hoon.` : `ℹ️ ${c.n}: sirf ${fdur(tot)} ki recording mili (poori ${fdur(sec)} nahi) — wohi bhej raha hoon.`, 'p');
   let sent = 0;
   try {
     for (let i = 0; i < P; i++) {
-      const pt0 = t0 + i * 300000, pd = Math.min(300, Math.round((t1 - pt0) / 1000)); if (pd < 2) break;
+      const pt0 = t0 + i * 300000, pd = Math.min(300, Math.round((tEnd - pt0) / 1000)); if (pd < 2) break;
       await waSet(id, { st: 'run', m: `🎬 ${P > 1 ? `hissa ${i + 1}/${P} ` : ''}bana raha` });
       const out = path.join(WAM, `bv-lv${id}-${i + 1}.mp4`); try { fs.unlinkSync(out); } catch {}
       const e2 = await lvEnc(lst, (pt0 - run[0].t0) / 1000, pd, out); let sz = 0; try { sz = fs.statSync(out).size; } catch {}
