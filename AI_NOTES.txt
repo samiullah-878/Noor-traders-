@@ -9218,3 +9218,14 @@ baqi apps band jaise 11 baje tak · phir kaam mukammal kar ke picture wapis · a
 - pkg v61: 24 macros (📞 Khaas contacts ONCE wale dobara NAHI bheje — malik ke chune contacts mehfooz). Validator: raatband VALID; baqi local jaanch (If / Loop / vars).
 - Test: headless Chrome (fake camera + fake webhook): sabzi -> c:sabzi, kaam -> koi webhook nahi, paani -> a:paani; hisaab Aaj / Parson, tasveer bari.
 - Asal phone par NAHI azmaya: Claude 30 min ki chhoot (FGC), 9 baje ke baad lock band. Malik pehli dafa batayein.
+
+
+=== v2.336.0 (2026-11-21) — ⏱ HAR BILL KI VIDEO KITNI DER MEIN BANI (PC bill-clip v2.17) ===
+Malik (21 Nov 00:30): 'PC ne subah ki videos abhi poori ki hain — time calculate kar ke dekho fi video kitna time laga' → plan OK.
+Wajah (andaza, code se): subah recording sirf 3 ghante rakhi jati thi (v2.333 se pehle) — der wale bills ki recording mit chuki thi, PC ne NVR
+playback (lane 'b', jitni lambi video utna waqt, ~5–8 min fi bill) se banai = ghanton ki line. Ab recording 10 din (v2.334) — aage NVR ki zaroorat kam.
+- bill-clip v2.17: counter clip meta mein `rd` (video tayyar — aakhri likhai) + `mk` (PC ne kitne ms mein banai = rd − at; `at` = PC ne shuru ki).
+- tally.js 📋 Bills list: har bill par chip `.bt-rf` ⚡ (apni recording) / 🐢 (NVR) + bill chhapne (ct, warna pt) se video tayyar tak ka waqt
+  (hara ≤ 2 min · peela ≤ 15 min · laal zyada); search ke neeche ek patli line `.bt-rfs`: kitni video · average · ⚡ / 🐢 ginti + average ·
+  sab se der. Purani clip (rd nahi) = ≈ (PC ne kab shuru ki — asal se kam). AI: NAHI.
+Agla (malik ko plan bheja, OK ka intezar): gate pass wale bill par godam camera ki video (tick tak) — tally upar + WhatsApp.

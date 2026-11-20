@@ -67,7 +67,8 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const RD = require('./rec-dir.js');   // v2.16: 💽 recording kahan
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.16';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.17';
+// v2.17 (21 Nov, malik: 'time calculate kar ke dekho fi video kitna time laga'): counter clip ke meta mein `rd` (video tayyar = aakhri likhai ka waqt) + `mk` (PC ne kitne ms mein banai: rd − at) — app 📋 Bills mein har bill ka ⏱ + average.
 // v2.16 (20 Nov, malik: 'PC scripts mein poora drive show karwa do — C ya D · phir selection · us mein 10 din ki video bhi pari rahe'): 💽 recording ki jagah malik ka chuna drive `billClip.rdrv` (rec-dir.js — ginti-cam bhi wahi) · din `billClip.rkd` (default 10, 1–90; v2.15 ka rkh ghante ab nahi) · purani jagah ki recording parhi jati hai aur din pure kar ke khud mitti (move nahi) · safai + hisaab har 10 min (band tukre ka size yaad) · billClipPc.drv = har drive (PowerShell Win32_LogicalDisk, har 10 min) + dk {d, free, tot, used, day, can, est, err}. Safai sirf setting aane ke baad (cfReady).
 // v2.15 (20 Nov, malik: 'recording poora do din ki rehni chahiye · 750 GB ki hard pari hui hai'): recording ab GHANTON mein `billClip.rkh` (default 48 = 2 din; purana `rk` 180 min chhor diya) — 💾 hifazat: recording wali drive par 25 GB se kam jagah = 6 ghante se purane tukre pehle mitao (35 GB tak), haal billClipPc.dk {free, tot, cut}. Un-posted bill ki clip ki khirki pehle jaisi 3 ghante.
 // v2.14 (20 Nov, malik: 'WhatsApp par time ka clip — hum time likhein, us waqt ki video'): 📹 live hukum mein f0 / f1 (kh-wa v1.13 '3:45' · '3:45 5' · '3:40-3:50') = USI waqt ki video apni recording (clip-rec) se — NVR nahi; recording itni purani na ho = saaf wajah + sab se purana waqt.
@@ -589,7 +590,7 @@ async function one(b, lane) {   // v2.12: lane 'a' = sirf apni recording (NVR ka
     for (let j = 0; j < n; j++) { const did = `${id}_s${i}_${j}`; await within(CLIP.doc(did).set({ b: buf.subarray(j * CHUNK, (j + 1) * CHUNK), i, j, id }), 60000, 'clip hissa'); pk.push(did); }
     segs.push({ n, sz: buf.length, d: Math.min(60, dur - i * 60) }); sz += buf.length;
   } } finally { rmDir(outDir); }
-  await within(CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, as, lt: Number(b.lt) || 0, t0, ln: lane || '', err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true }), 30000, 'clip');
+  await within(CLIP.doc(id).set({ ...base, st: 'ok', v: 2, segs, pk, n: 0, sz, dur, ch, sub: CF.sub, src, rq, ft, as, lt: Number(b.lt) || 0, t0, ln: lane || '', rd: Date.now(), mk: Date.now() - base.at, err: FieldValue.delete(), raw: FieldValue.delete() }, { merge: true }), 30000, 'clip');
   if (src === 'nvr') T.nvr = (T.nvr || 0) + 1;
   known.set(id, { st: 'ok', tries, at: Date.now() });
   if (rq) reqDone(id, 'ok');
