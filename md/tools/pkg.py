@@ -93,9 +93,10 @@ mnb, vnb = fix(json.loads(json.dumps(NBM.NB)), h64('claude|nabz'), '🚨 Dukan n
 import alfa as ALM
 mal, val = fix(json.loads(json.dumps(ALM.AL)), h64('claude|alfa'), '🏦 Alfa notification')   # v57 (19 Nov): Alfa app ki BAF A/C notification -> bankSms (chaabi app se webhook nt_bank)
 import khaasvol as KVM
-mkv, vkv = fix(json.loads(json.dumps(KVM.KV)), h64('claude|khaasvol'), '📞 Khaas contacts 20%')   # v59 (20 Nov): chune contacts ki call = ringer 20%
+mkv, vkv = fix(json.loads(json.dumps(KVM.KV)), h64('claude|khaasvol'), '📞 Khaas: ghanti full')   # v59 ringer 20% tha · v60 (20 Nov, malik): wahi GUID = silent mein bhi ghanti full
+mkb, vkb = fix(json.loads(json.dumps(KVM.KB)), h64('claude|khaasbaat'), '📞 Khaas: baat 20%')   # v60: baat ki awaaz 20% (SIM in/out + WhatsApp)
 # ⚠️ ONCE: har pkg update Overwrite by ID karta hai — yeh macro SIRF v59 mein, warna malik ke chune contacts mit jayenge. Agle version mein kabhi mat daalo.
-ONCE = {'59': [mkv]}
+ONCE = {'60': [mkv, mkb]}   # v59 = [mkv] (purana ringer 20%)
 vars_, seen = [], set()
 # 🏦 Bank mode (chat link, phone par) ke globals — link import banata nahi (7 Nov: "Variable does not exist (bkSave)")
 def _gv(n, t, **kw):
@@ -105,7 +106,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📞 Khaas contacts 20%: naya macro (contacts khali — Incoming call trigger par khud chunein). Baqi macros wahi.",
+       "note": "📞 Khaas: ghanti full (silent mein bhi) + 📞 Khaas: baat 20% (SIM + WhatsApp) — contacts khali, phone par khud chunein. Baqi macros wahi.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl, mal] + ONCE.get(ver, []),   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
@@ -127,7 +128,7 @@ assert not re.search(r'(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{30,}', chk), 'lambi 
 open(os.path.join(REPO, 'pkg.json'), 'w').write(s)
 open(os.path.join(REPO, 'ver.txt'), 'w').write(ver + '\n')
 # validator ke liye har macro alag .macro shakal mein bhi
-for nm, m in (('p', mp), ('k', mk), ('s', msl), ('a', mal), ('v', mkv)):
+for nm, m in (('p', mp), ('k', mk), ('s', msl), ('a', mal), ('v', mkv), ('b', mkb)):
     json.dump({"macroExportVersion": 1, "macro": m, "globalVariables": vars_, "userIcons": None},
               open(os.path.join(D, f'pkg_{nm}.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('pkg', len(s), [m['m_name'] for m in pkg['macros']])

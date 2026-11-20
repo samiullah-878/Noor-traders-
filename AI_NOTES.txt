@@ -9131,3 +9131,16 @@ video WhatsApp par aur tez' (plan OK).
   gwAdd (app clip ka intezar nahi; one() ke baad wala gwAdd bhi rehta — gwSeen = gwDone Set || known.wg, dohri video nahi) · GW_GAP 20 → 10 s · items 20 s tak (4 × 5 s).
 - Sandbox (nakli Firestore + nakli recording, 23 items, ADD har 4 s): bill print T-5 s → clip T+31 s (line a) · group video waOut T+37 s (encode 12 s, ek hi) ·
   filter lt(t,58) | gte(t,58) = 12wi item + 2 s ✓ (frame 50 s = safha 1, 65 s = safha 2). Asal PC / NVR / WhatsApp par nahi chala. AI: NAHI.
+
+=== 2026-11-20 (md pkg v60): 📞 KHAAS CONTACTS — GHANTI FULL (SILENT MEIN BHI) + BAAT 20% (SIM + WHATSAPP) ===
+Malik: 'agar main call karun selected number ko to kya volume phir bhi kam ho ga · WhatsApp par bhi yahi' → plan OK + 'in numbers ki silent mein bhi call
+aaye volume full ho' (AskUserQuestion: WAHI 20% wale numbers — ghanti full, baat 20%).
+- KV '📞 Khaas: ghanti full' (h64 claude|khaasvol = v59 wala GUID, overwrite): IncomingCall (contacts khali) → md (VolumeConstraint 1 vibrate / 2 silent),
+  dn (PriorityModeConstraint 1/2/3) yaad → DND ho to SetPriorityMode 0 → oldr = {vol_ring} → SetVibrateAction 1 (normal) → ringer 100 → Wait CallEnded /
+  CallMissed (600 s) → ringer oldr → md 1 = SetVibrateAction 0 · md 2 = SilentModeVibrateOffAction 0 · dn wapas.
+- KB '📞 Khaas: baat 20%' (h64 claude|khaasbaat, naya): CallActive (contacts khali, in + out) · WhatsApp / WA Business NotificationTrigger (title regex
+  'NAAM1|NAAM2' — malik naam likhe; message contains 'ongoing', ignoreOngoing false) · BootTrigger (on = 0). on < 1 → on 1 → oldc = {vol_call} → VoiceCall 20 →
+  Wait CallEnded (SIM) ya WhatsApp 'ongoing' notification cleared (4 ghante tak) → VoiceCall oldc → on 0.
+- pkg.py ONCE = {'60': [mkv, mkb]}; baqi 24 macros / vars HUBAHU. Validator VALID (dono). v59 mein chune contacts (agar chune) overwrite se khali — malik ko bataya.
+- Asal phone par NAHI azmaya: silent mein ghanti beech mein chalu hoti hai ya nahi (OnePlus alert slider), {vol_ring}/{vol_call} %, WhatsApp ki awaaz VoiceCall
+  par. AI: NAHI.
