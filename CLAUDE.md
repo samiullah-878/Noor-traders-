@@ -355,6 +355,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **📅 Tareekh / waqt ka khana likhte waqt dobara mat banao (v2.342.0, ghalti 21 Nov)**: PC par `<input type=date|time>` har hindse par `change` deta hai — us par poori khirki paint ki to saal '0020' reh jata hai aur focus toot-ta hai. Change par sirf LIST badlo (khana wahi rahe), saal adhoora (< 2020) ho to intezar. Naya date / time filter banao to PC keyboard se poori tareekh likh kar dekho.
 
+- **📅 Khata tareekh-war (v2.343.0, 21 Nov)** (malik: 'is ko date wise karo'): khate ki tarteeb = entry ki TAREEKH, phir banne ka waqt (`khDated`) — `khOrdered` aur `runningOf` dono isi se (screen / PDF / parchi / baqaya ek jaisa). Khate ki koi nayi list / baqaya banao to `khDated` se; sirf createdAt (`newestEntries`) se mat karo (purani tareekh ki nayi entry upar aa jati hai).
+
 ## 4. POS / PC — KHATARNAK, dhyan se
 - POS = Cognitive Solutions (SQL Server). Jo script POS mein **likhti** hai (item-post, purchase-post, transfer-sync, sale-post…) us mein **koi value kabhi 0/khali na jaye jis se POS divide karta ho** — khas taur par **PackQty (carton pcs) kam az kam 1**. (18 Oct 2026: "kala tail khula" ka PackQty 0 gaya → counter sale "Divide by zero", bill band.)
 - Parhne wali scripts (rack, irep, stats) POS mein kabhi kuch nahi likhti.

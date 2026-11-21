@@ -5408,3 +5408,10 @@ Malik (PC, screenshot '11/16/0020'): 'date time nahi likhna ho raha'. Wajah: dat
 (PC Chrome har hisse — mahina / din / saal ka har hindsa — par change deta hai) -> saal ka pehla hindsa likhte hi focus gaya.
 - waqt.js: paint() ab sirf list (data-wq-body) badalta hai, tareekh / waqt ke khane wahi rehte; chips par poora paint. Saal < 2020 = intezar.
 - Deleted entries ki 'Is tareekh se': saal adhoora = kuch nahi; poori tareekh ke 1.1 s baad list taza (trashFromT).
+
+
+=== v2.343.0 (2026-11-21) — 📅 Khata TAREEKH-WAR ===
+Malik (haseeb cus ki screenshot: wapas laye 16-Sep ke transfer sab se upar): 'is ko date wise karo'.
+- khDated(rows): pehle entry ki tareekh (naya din upar), ek hi din mein banne ka waqt (createdAt). khOrdered + runningOf dono isi se
+  -> screen / table / PDF / thermal parchi sab tareekh-war, har qatar ka baqaya bhi tareekh ki tarteeb se. ↕ (naya / purana upar) wahi.
+- Pehle tarteeb sirf banne ke waqt se thi — purani tareekh ki nayi bani entry (wapas layi / barabar se bani) upar aa jati thi.
