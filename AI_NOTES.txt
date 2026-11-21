@@ -9338,3 +9338,16 @@ Malik: 'Mulazim screen par malik ki bhi aik screen — konsi device par hum logi
 - Hadd (malik ko bataya): sirf app logout — jis ke paas code / password ho dobara login kar sakta hai.
 - Test: node harness (cache par kuch nahi · hataya = logout · dobara login = x saaf) — asal phones par nahi azmaya. AI NAHI.
 - BAQI (malik ke OK ka intezar): cash purchase ka auto POS voucher + delete ka qaida (POS bill: Cancel ya Delete?).
+
+=== v2.345.0 (2026-11-21 raat) — 🧾 SALE KI POORI REPORT ===
+Malik (Daily Sale ki photo: POS report 3,130,271 vs galle ki sale 3,076,492): 'farq kyun · konsi sahi · poori report banao — bill, cancel, return, minus · sale chip par click · with / without return'.
+- Nayi file sale-rep.js v1.0; app.js: Daily ka pehla chip button (.dy-sr, data-sr-open) + srCan() + CAP d.salerep (OPT_IN). PC / rules NAHI badle.
+- Data posSales/<din>: bills[] (x cancel, cr udhaar, p party — stock fraq / whole sale naam se, PC jaisa regex) + sum (g gc gu un rtRs rtd mn cx cxRs fq).
+- Screen: 2 cards (Return minus kar ke = g − un − rtRs · Return ke baghair = g − un) · ⚖️ Galle mein hona dono tarah (doosri line sirf jab Daily mein possale-<din> auto entry ho)
+  · hisse <details>: Kul bill (+ sab bill) · Cancel list · Return (items + badle ka bill: 🔗 juri / ≈ andaza) · bill ke andar minus (bill-war) · stock fraq.
+- 📄 PDF (h2 + table seedhe bache) · 🖨 thermal = requestKhataPrint j {k:'txt', t, x} (pos-khata-sync txtSlip), 45 s jawab nahi = ⚠️.
+- Malik ka kehna: wapsi par paisa wapas nahi diya, log saman le gaye. Us ki photo ke hisaab se 'Galle mein hona' return minus ke saath −12,850 (namumkin) aur baghair +40,929 —
+  yani kuch wapsi shayad waqai cash nahi thi YA koi wasooli nahi likhi. Faisla malik report dekh kar karega; auto sale ka qaida abhi WAHI (return minus).
+- Meri ghalti: pehle 'Kharcha + Aaj change' ko gina hua cash keh kar 'neeche wala number qareeb hai' kaha — Daily mein ab closing cash hai hi nahi. Malik ko saaf bataya.
+- Test: node harness (namoona data) — asal data / PC print par nahi azmaya. AI NAHI.
+- 🏦 Alfa notification: malik ne kaha 'droid nahi banaya' — macro md pkg v57 se pkg mein HAI ('🏦 Alfa notification'); phone par chal nahi raha to popup ki photo maangi (BAF + PKR lafz / bkU-bkK link).

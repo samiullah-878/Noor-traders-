@@ -5417,3 +5417,5 @@ Malik (haseeb cus ki screenshot: wapas laye 16-Sep ke transfer sab se upar): 'is
 - Pehle tarteeb sirf banne ke waqt se thi — purani tareekh ki nayi bani entry (wapas layi / barabar se bani) upar aa jati thi.
 
 === app v2.344.0 (2026-11-21) — 👑 Malik ke devices: sirf app (malik-dev.js, blueAccess/malikDevs). PC ki koi file nahi badli, manifest wahi. ===
+
+=== app v2.345.0 (2026-11-21) — 🧾 Sale ki poori report: sirf app (sale-rep.js), data wahi posSales/<din> (pos-sales-dekho v2.14 jaisa hai waisa). PC ki koi file nahi badli. ===
