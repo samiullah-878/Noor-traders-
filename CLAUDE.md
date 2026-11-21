@@ -351,6 +351,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **🕒 Is waqt ki entries (v2.340.0, waqt.js, 21 Nov)** (malik: 'us time ki entries ka data do to recover kar lein'): Deleted entries ke '🕒 Waqt se' / '🕒 Is waqt ki' chip -> kisi waqt ke aas paas bani / badli / hatai entries (sab khate) + hatai hui ↩ wapas (tick se, default khali). 'Khata bigar gaya / entries gayab' ki shikayat = pehle yeh screen + khata ⋮ 🗑 Din ki entries -> ⚖️ Barabar se bani dekhne ko kaho. Main yahan se malik ka asal data nahi dekh sakta — saaf batao, andaza nahi. Entry wapas lane ka naya raasta `trashRestoreOne` se (transfer / HBL jora / POS bill nahi).
 
+- **↩ Entry wapas = POS mein dohra na bane (v2.341.0, waqt.js v1.1)**: hatai entry wapas lane par PC NAYA POS voucher banata hai — is liye pehle dekho us ka purana voucher POS mein abhi hai ya nahi (`posHas`, posLines): ho to wapas ROK (raasta = Farq screen '📱 App ko POS jaisa'). ⇄ Transfer wapas = naya transfer + note mein '↩<id>' nishan (`trDoneOf`). Entry wapas lane ka koi naya raasta banao to yehi do hifazatein.
+
 ## 4. POS / PC — KHATARNAK, dhyan se
 - POS = Cognitive Solutions (SQL Server). Jo script POS mein **likhti** hai (item-post, purchase-post, transfer-sync, sale-post…) us mein **koi value kabhi 0/khali na jaye jis se POS divide karta ho** — khas taur par **PackQty (carton pcs) kam az kam 1**. (18 Oct 2026: "kala tail khula" ka PackQty 0 gaya → counter sale "Divide by zero", bill band.)
 - Parhne wali scripts (rack, irep, stats) POS mein kabhi kuch nahi likhti.

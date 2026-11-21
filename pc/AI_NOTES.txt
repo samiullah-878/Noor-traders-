@@ -5391,3 +5391,13 @@ Malik: 'Naeem ki entry ke neeche time likha hai — us time ki entries ka data d
 - Barabar (milan) se bani cheezein wapas = pehle se: khata ⋮ -> 🗑 Din ki entries -> ⚖️ Barabar se bani (tareekh chun kar).
 - Test: node harness (4 namoona entries: hatai / PC ki bani / transfer / daire se bahar) — asal data par malik dekhega.
 - Baqi (malik ka OK nahi aaya, 'filhal 1'): cash purchase ka foran POS voucher + delete ka qaida (app delete -> POS, POS delete -> app nahi).
+
+
+=== v2.341.0 (2026-11-21) — 🕒 Is waqt ki entries: ⇄ transfer wapas + 🖥 POS dohra-rok (waqt.js v1.1) ===
+Malik (screenshot 16 Nov 3:55 pm: 15 hatai, sab '🖥 PC' ne — purane server wala waqia): 'kuch par likha hai transfer dobara banana hoga, entries to mil gayi hain'.
+- ⇄ Transfer ab wapas: trashRestoreOne -> NAYA transfer (commitAccountTransfer, nayi id, wohi khate / raqam / tareekh, note ke aakhir '↩<purani id ke 6 harf>');
+  trDoneOf() = wohi nishan wala zinda transfer ho to dobara nahi (dono legs list mein aate hain — ek tick kaafi).
+- 🖥 POS dohra-rok: hatai entry ka posCode us khate ki posLines (cloud.getPosLines, PC har 15 min) mein ABHI ho = tick band
+  ('wapas = dohra — Farq screen se App ko POS jaisa'). Wajah: PC restore par NAYA voucher banata hai (link voucherId 0), twin jaanch nahi —
+  purane server ne app se hataya tha magar asal POS mein voucher reh gaya ho sakta hai. posLines na ho = ijazat (nishan nahi).
+- Test: node harness (POS mein hai = rok · nahi = ✓ · transfer ok). Asal data / asal PC par nahi azmaya — malik pehle EK entry wapas la kar POS milan dekhe.
