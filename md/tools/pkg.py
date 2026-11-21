@@ -106,7 +106,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "▶ 📸 Sehat lock CHALU (malik 21 Nov raat: 'paani wala on kar do') — paani / coffee / fruit / nuts ka photo lock wapas (pehle jaisa, 11 am – 9 pm).",
+       "note": "🏦 Alfa notification theek (malik 21 Nov: 'SMS wala lagta hai, pop wala nahi') — popup ki likhai ab pehle macro ke apne khane mein, phir bheji jati hai. Koi macro band / delete nahi.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl, mal] + ONCE.get(ver, []),   # v63 (21 Nov raat): msl wapas CHALU — malik: 'paani wala on kar do'   # v62 (21 Nov): msl (📸 Sehat lock) RUKA — malik: 'abhi pause kar do, shop par nahi hoon' (dobara chalu = msl wapas yahan + off se hatao)   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)

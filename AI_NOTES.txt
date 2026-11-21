@@ -9351,3 +9351,13 @@ Malik (Daily Sale ki photo: POS report 3,130,271 vs galle ki sale 3,076,492): 'f
 - Meri ghalti: pehle 'Kharcha + Aaj change' ko gina hua cash keh kar 'neeche wala number qareeb hai' kaha — Daily mein ab closing cash hai hi nahi. Malik ko saaf bataya.
 - Test: node harness (namoona data) — asal data / PC print par nahi azmaya. AI NAHI.
 - 🏦 Alfa notification: malik ne kaha 'droid nahi banaya' — macro md pkg v57 se pkg mein HAI ('🏦 Alfa notification'); phone par chal nahi raha to popup ki photo maangi (BAF + PKR lafz / bkU-bkK link).
+
+=== md pkg v64 (2026-11-21 raat) — 🏦 Alfa notification: popup ki likhai local variable se ===
+Malik (photo: Alfa 'PKR 100.0 received from SAMIH ULLAH WMBLP-KKA in your BAF A/C *0294 via your Raast ID on 21-11-26 at 22:46 Tx ID FT2632707MC2LZMS' + 8558 ka 'sent' SMS):
+'entry nahi lag rahi · SMS wala lagta hai, pop wala nahi · SMS aur pop dono se ek raqam do bar na lage'.
+- Jaancha: yehi likhai bank-sms.js parseBank se theek (in · 10000 paisa · 0294 · alfalah · 2026-11-21 22:46 · txn). NotificationTrigger ke fields MCP schema se theek.
+- Shak: JavaAction mein magicText.evaluateString("{notification}") trigger ka text nahi deta (kisi aur macro mein azmaya nahi) -> khali -> 'len-den nahi'.
+- Ilaaj (alfa.py): if-branch mein SetVariable bkT = {not_title}, bkX = {notification} (local), Java pehle wahan se, khali ho to purana raasta. Sirf yehi macro badla (pkg diff jaancha), off / del / vars wahi.
+- Dohra: PC bank-parchi `seen` Tx ID + jurwan (dir + amt ±30 min, zariya alag) — nahi badla. 8558 wala SMS doosre bank ka 'sent' hai (day '' = PC khud nahi lagata).
+- Phone par azmaya NAHI. Na chale to: bkU / bkK (app bank-phone.js webhook nt_bank, malik login se app kholna) ya package com.base.bankalfalah.
+- Raat PC band (9 baje) = entry subah; app ki Bank screen ke baqi mein dikhni chahiye.

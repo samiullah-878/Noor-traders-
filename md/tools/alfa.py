@@ -5,6 +5,8 @@
 #   Net na ho = text phone mein line (bkQ, 20 tak) — har 5 min (sirf jab line mein kuch ho) + agli notification par khud chala jata hai.
 #   Chaabi + link REPO MEIN NAHI: app (malik, din mein 1 dafa, khamosh) webhook `nt_bank` se globals bkU (Firestore link) + bkK (bankKey).
 #   Koi paigham / toast nahi. AI nahi.
+#   v64 (21 Nov, malik: 'SMS wala lagta hai, pop wala nahi'): notification ki likhai pehle LOCAL variables (bkT / bkX — SetVariable mein magic text trigger ke saath
+#   pakka chalta hai) mein, Java wahan se parhta hai; pehle Java seedha {notification} maangta tha (JavaAction mein trigger ka magic text azmaya hua nahi tha).
 import json, os
 from cb import trig, iff, END, ELSE, var, lvar
 D = os.path.dirname(os.path.abspath(__file__))
@@ -31,7 +33,11 @@ J = '\n'.join([
  '  org.json.JSONArray q = new org.json.JSONArray();',
  '  try { String s0 = ev("v=bkQ").trim(); if (s0.startsWith("[")) q = new org.json.JSONArray(s0); } catch (Throwable e) { }',
  '  if (md.equals("n")) {',
- '    String tt = ev("not_title").trim(), tx = ev("notification").trim(), low = (tt + " " + tx).toLowerCase();',
+ '    String tt = ev("lv=bkT").trim(), tx = ev("lv=bkX").trim();',
+ '    if (tx.length() == 0 || tx.startsWith("{")) tx = ev("notification").trim();',
+ '    if (tt.length() == 0 || tt.startsWith("{")) tt = ev("not_title").trim();',
+ '    if (tt.startsWith("{")) tt = "";',
+ '    String low = (tt + " " + tx).toLowerCase();',
  '    if (low.indexOf("otp") >= 0 || low.indexOf("one time") >= 0 || low.indexOf("password") >= 0 || low.indexOf(" pin") >= 0 || low.indexOf("pin:") >= 0 || low.indexOf("code is") >= 0) return "otp — nahi bheja";',
  '    if (tx.toUpperCase().indexOf("BAF") < 0 || tx.toUpperCase().indexOf("PKR") < 0) return "len-den nahi";',
  '    String text = (tt.length() > 0 ? tt + " — " : "") + tx;',
@@ -53,14 +59,14 @@ J = '\n'.join([
 
 def lsstr(n, v): return {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": n, "m_type": 2, "isLocalVar": True}, "m_newStringValue": v}
 a = [
-    iff([trig(T1, "Alfa notification")]), lsstr("bkM", "n"), ELSE, lsstr("bkM", "q"), END,
+    iff([trig(T1, "Alfa notification")]), lsstr("bkM", "n"), lsstr("bkT", "{not_title}"), lsstr("bkX", "{notification}"), ELSE, lsstr("bkM", "q"), END,
     {"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": J, "blockNextAction": True, "responseVariableName": "bkR", "runInBackgroundThread": True},
 ]
 AL = {"macroExportVersion": 1, "macro": {
     "m_name": "🏦 Alfa notification",
     "m_description": "Alfa app ki 'BAF A/C' paise aaye / gaye wali notification Blue Khata ke HBL Inbox (bankSms) mein — PC khud khate mein lagata hai, wahi Tx ID wala SMS jurwan (double nahi). OTP / PIN kabhi nahi. Net na ho = phone mein line, baad mein khud. Chaabi app webhook (nt_bank) se.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [lvar("bkM", 2), lvar("bkR", 2)],
+    "localVariables": [lvar("bkM", 2), lvar("bkR", 2), lvar("bkT", 2), lvar("bkX", 2)],
     "m_triggerList": [
         {"m_classType": "NotificationTrigger", "m_SIGUID": T1, "m_option": 0, "m_packageNameList": ["com.base.bankalfalah"], "m_applicationNameList": ["Alfa"],
          "m_excludeApps": False, "separateTitleAndMessage": True, "matchOptionTitle": 0, "matchOptionMessage": 2, "messageContent": "BAF",
