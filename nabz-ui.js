@@ -5,7 +5,7 @@
 //  har 3 min parhta hai. Yeh dabba: chaabi banata (blueAccess/pcBeatKey, sirf malik) + phone ko link bhejta (Falcon wala webhook, `nt_nabz`) +
 //  abhi ka haal dikhata + 🔔 Test. Chaabi / link repo / chat mein KABHI nahi. AI nahi.
 // =========================================================
-import { firebaseConfig as F } from './config.js?v=2.338.0';
+import { firebaseConfig as F } from './config.js?v=2.339.0';
 let A = null, key = null, beat = null, busy = '', wired = false, loadAt = 0;
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const beatUrl = k => `https://firestore.googleapis.com/v1/projects/${F.projectId}/databases/(default)/documents/businesses/noor-traders/pcBeat/${k}?key=${F.apiKey}`;

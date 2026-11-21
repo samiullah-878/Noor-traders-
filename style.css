@@ -87,6 +87,7 @@ dialog.search-dialog #dialogBody{max-height:calc(var(--search-viewport-height,90
 .sale-hit{display:block;width:100%;text-align:left;background:#fff;border:1px solid #e2e5ec;border-radius:10px;padding:8px 10px;min-height:0}
 .sale-hit b{display:block;font-size:15px;color:#10192b}
 .sale-hit small{color:#6b7c93;font-weight:400}
+html body #list .sale-found :is(.sale-hit,button[data-pp-add]):focus{outline:none!important;border-color:#2f6fed!important;background:linear-gradient(180deg,#eef4ff,#dbe7ff)!important;box-shadow:0 0 0 3px rgba(47,111,237,.32)!important}   /* v2.339.0: keyboard ↑ ↓ se chuna item neela */
 .sale-cart{display:grid;gap:8px}
 .sale-line{background:#fff;border-radius:12px;padding:10px;border:1px solid #e6e9ee}
 .sale-line-top{display:flex;justify-content:space-between;align-items:center;gap:8px}

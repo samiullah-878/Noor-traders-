@@ -9273,3 +9273,16 @@ two cameras hain · dono side by side dikha diya karo' → plan (WhatsApp par up
   agla hissa = doosra bhi (gpSync / gpNext); tap kisi par bhi = dono ruk / chal; har camera par chhota naam (.bt-gcn). Patti (godam · ✓ · kis ne) upar
   aur items neeche — video ke upar nahi (do chhoti video par dhakti). ⚙️ Camera setup: har godam ke 2 select (📹 1 / 📹 2: Auto / camera / ✕ Koi nahi).
 - Sandbox: ch9 + ch10 dono clip (194 s), group + 'video' mein ek 640x720 video (upar gate, neeche andar), patti nakli ghari ke neeche. AI: NAHI. Rules: nahi.
+
+=== v2.339.0 (21 Nov 2026) — ⌨️ Purchase '📱 Mobile jaisa' screen par PC / laptop keyboard ===
+Malik (Dell laptop ki photo): 'wapis search par jane ke liye Enter · search mein cheezein aayein to ↑ ↓ se upar neeche · Enter = item neeche list mein ·
+Tab = 3 number wali jagah (naya item) · Tab se aage, Shift+Tab se peeche'.
+- purchase.js `kbdPc()` (any-pointer fine + phone UA nahi) — SIRF asal keyboard wale PC / laptop, aur sirf jab POS jaisi table (.pp-posr) NAHI (us ka keyboard pehle se).
+  Search: ↓ = list ka pehla item (neela, style.css :focus) · Enter = pehli dafa roshni, doosri dafa jorna (barcode 6+ hindse / pakka code = seedha, purana raasta) ·
+  list mein ↑ ↓ (pehle se upar = wapas search), Enter = bill mein + cursor wapas search, Esc = search · Tab (search / list se) = abhi jora item (openKey, phir selKey,
+  warna aakhri) ka pehla khana. Khane: Tab / Shift+Tab = agla / pichhla (har item ke khane, aakhir mein Goda select; aakhri ke baad search) · Enter = wapas search ·
+  ↑ ↓ = raqam NAHI badalti, upar / neeche item ka wohi khana (Goda par ↑ ↓ = godam badlo, browser khud).
+- `kbGo`: change par list dobara bane to khana `data-pp-*` naam se dobara dhoondta hai — sirf jab focus gum ho (user aage nikal gaya ho to nahi chherta).
+- Phone par kuch nahi badla (Enter = agla khana, v2.4.0) — mera handler v2.4.0 se pehle laga hai, PC par `stopImmediatePropagation`.
+- Test: browser harness (asal handler ka code + nakli rows view): search ↓↑, 2 Enter, Tab naye item par, Tab / Shift+Tab, ↑ ↓ raqam same, Enter = search — sab theek.
+  Asal app (login wali) mein nahi azmaya. AI nahi.

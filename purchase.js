@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.338.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.338.0';
-import { blurScore, blurText } from './pic-check.js?v=2.338.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.339.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.339.0';
+import { blurScore, blurText } from './pic-check.js?v=2.339.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -370,6 +370,55 @@ document.addEventListener('keydown', e => {
   else if ((e.key === 'Tab' && !e.shiftKey) || e.key === 'Enter') {
     e.preventDefault(); e.stopPropagation(); t.click();
     setTimeout(() => { const r = document.querySelector('.pp-postw tr.sel') || [...document.querySelectorAll('.pp-postw tr.pp-tr')].pop(), x = r && r.querySelector('input'); if (x) { x.focus(); try { x.select(); } catch {} } }, 120);
+  }
+}, true);
+// v2.339.0 (malik 21 Nov, Dell laptop par '📱 Mobile jaisa' screen: 'search mein ↑ ↓ se list · Enter = item neeche bill mein · Tab = naya item (3 number) ·
+//   Tab aage, Shift+Tab peeche · khane mein Enter = wapas search'): POS jaisi table wala keyboard (oopar) ab phone wali screen par bhi — SIRF asal keyboard
+//   wale PC / laptop par (any-pointer fine + phone ka UA nahi); phone par Enter = agla khana (v2.4.0) pehle jaisa. ↑ ↓ khane mein = raqam nahi badalti (v2.254.0 jaisa).
+const kbdPc = () => { try { return matchMedia('(any-pointer: fine)').matches && !/Android|iPhone|iPad|Mobile/i.test(navigator.userAgent || ''); } catch { return false; } };
+const kbLines = () => [...document.querySelectorAll('#list .sale-cart .pp-line')];
+const kbFields = ln => [...ln.querySelectorAll('input:not([type=hidden]):not([disabled]):not([readonly])')].filter(x => !x.closest('.pp-tl')).concat([...ln.querySelectorAll('select.pp-gsel')]);   // har item: khane, aakhir mein Goda
+const kbKey = el => { const a = [...(el?.attributes || [])].find(x => /^data-pp-(?!sel$|line$)/.test(x.name)); return a ? [a.name, a.value] : null; };
+function kbGo(el) {   // focus + select; change par list dobara bani ho to wahi khana dobara dhoondo
+  if (!el) return;
+  const k = kbKey(el), put = x => { try { x.focus(); if (x.select) x.select(); x.scrollIntoView({ block: 'nearest', inline: 'nearest' }); } catch {} };
+  put(el);
+  if (k) setTimeout(() => { const a = document.activeElement; if (el.isConnected || (a && a !== document.body && a.isConnected)) return; const y = document.querySelector(`#list .sale-cart [${k[0]}="${CSS.escape(k[1])}"]`); if (y) put(y); }, 40);
+}
+function kbSearch() { const q = $('search'); if (!q) return; try { q.focus(); q.select(); } catch {} }
+function kbNewest() {   // abhi jora hua item (openKey — dobara jora = +1 wala bhi), phir chuna (selKey), warna aakhri — pehla khana
+  const L = kbLines(), ln = L.find(x => x.dataset.ppSel === openKey) || L.find(x => x.dataset.ppSel === selKey) || L.find(x => Number(x.dataset.ppLine) === cart.length - 1) || L[L.length - 1];
+  const f = ln && kbFields(ln); if (f && f.length) kbGo(f[0]);
+}
+document.addEventListener('keydown', e => {
+  if (!document.querySelector('[data-pp-root]') || document.querySelector('.pp-posr') || e.ctrlKey || e.altKey || e.metaKey || !kbdPc()) return;
+  const t = e.target; if (!t || !t.closest) return;
+  const hits = [...document.querySelectorAll('#list .sale-found [data-pp-add]')];
+  const stop = () => { e.preventDefault(); e.stopImmediatePropagation(); };
+  if (t.id === 'search') {
+    const v = String(t.value || '').trim();
+    if (e.key === 'ArrowDown' && hits.length) { stop(); kbGo(hits[0]); return; }
+    if (e.key === 'Enter' && v && hits.length && !/^\d{6,}$/.test(v) && !findByCode(stock().items, v)) { stop(); kbGo(hits[0]); return; }   // pehli Enter = roshni, doosri = jorna (barcode / pakka code = seedha)
+    if (e.key === 'Tab' && !e.shiftKey && cart.length) { stop(); kbNewest(); }
+    return;
+  }
+  const hi = hits.indexOf(t);
+  if (hi >= 0) {
+    if (e.key === 'ArrowDown' || e.key === 'ArrowRight') { stop(); kbGo(hits[Math.min(hits.length - 1, hi + 1)]); }
+    else if (e.key === 'ArrowUp' || e.key === 'ArrowLeft') { stop(); if (hi > 0) kbGo(hits[hi - 1]); else kbSearch(); }
+    else if (e.key === 'Escape') { stop(); kbSearch(); }
+    else if (e.key === 'Enter') { stop(); t.click(); setTimeout(kbSearch, 60); }   // item bill mein, cursor wapas search (agla item)
+    else if (e.key === 'Tab' && !e.shiftKey && cart.length) { stop(); kbNewest(); }
+    return;
+  }
+  const ln = t.closest('#list .sale-cart .pp-line'); if (!ln) return;
+  const L = kbLines(), F = L.flatMap(kbFields), i = F.indexOf(t); if (i < 0) return;
+  if (e.key === 'Enter') { stop(); try { t.blur(); } catch {} kbSearch(); return; }
+  if (e.key === 'Tab') { stop(); const nx = F[i + (e.shiftKey ? -1 : 1)]; if (nx) kbGo(nx); else kbSearch(); return; }
+  if ((e.key === 'ArrowDown' || e.key === 'ArrowUp') && t.tagName === 'INPUT') {   // raqam kabhi na badle — upar / neeche wale item ka wohi khana
+    stop();
+    const k = kbKey(t); if (!k) return;
+    for (let li = L.indexOf(ln) + (e.key === 'ArrowDown' ? 1 : -1); li >= 0 && li < L.length; li += e.key === 'ArrowDown' ? 1 : -1) { const y = L[li].querySelector(`[${k[0]}]`); if (y) { kbGo(y); return; } }
   }
 }, true);
 function addItem(it, again = true) {
