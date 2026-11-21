@@ -106,10 +106,10 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "🏦 Alfa notification theek (malik 21 Nov: 'SMS wala lagta hai, pop wala nahi') — popup ki likhai ab pehle macro ke apne khane mein, phir bheji jati hai. Koi macro band / delete nahi.",
+       "note": "📵 TikTok ke 25 minute dobara shuru hone ka ilaaj (malik 21 Nov): har update phone ki saari ginti zero kar deta tha — ab Claude Remote update ke waqt ginti / link waise hi rakhta hai. Yeh aakhri dafa zero hogi. Koi macro band / delete nahi.",
        "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl, mal] + ONCE.get(ver, []),   # v63 (21 Nov raat): msl wapas CHALU — malik: 'paani wala on kar do'   # v62 (21 Nov): msl (📸 Sehat lock) RUKA — malik: 'abhi pause kar do, shop par nahi hoon' (dobara chalu = msl wapas yahan + off se hatao)   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
-                 {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
+                 # v65 (21 Nov): Remote 5 ka patch HATA — patch phone ki PURANI copy ko dobara package mein daal deta tha (wahi ID) = Remote ka naya code kabhi na lagta; 60 s ab remote.py mein
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
        "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧘 10 min break", "Mobiel locked", "⛔ Subah 11 tak"],   # v63: Sehat lock wapas chalu (off se hata)   # v62: Sehat lock malik ke kehne par ruka   # v53: malik ne kaha purana band   # v50 (17 Nov): malik ka apna "Mobiel locked" band (OK diya) — har app / Recents band karta tha   # v48: break malik ne band karwaya
