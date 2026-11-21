@@ -181,30 +181,64 @@ function xcSync() {
 // ---------- 🚪 v2.337.0: GATE PASS — godam ki video (malik 21 Nov: 'jis item ka gate pass banta hai us item ka godam ka camera — screen ke upar bhi') ----------
 // PC bill-clip v2.18: billClip/<SaleID>~g<godam> {gp 1, st wait|ok|err, gn, cam, it [{n, qs, ok}], nt / nl, gb} — post se 20 s pehle → godam wale ke ✓ de diya ke
 // 1 min baad (✓ na ho = post + 10 min). Yahan counter video ke UPAR chhoti (apna waqt — counter video ke saath sync NAHI, alag lamha hai). Tap = ruk / chal · ⛶ poori screen.
-const gpFor = id => [...clips.values()].filter(c => c && c.gp && String(c.sid) === String(id) && c.st !== 'skip').sort((a, c) => (Number(a.g) || 0) - (Number(c.g) || 0));
+const gpFor = id => [...clips.values()].filter(c => c && c.gp && String(c.sid) === String(id) && c.st !== 'skip');
+// v2.338.0: ek godam par 2 camera (malik 21 Nov: 'aik hi godam par two cameras — dono side by side') — ~g<g> (ci 1) + ~g<g>b (ci 2), WAHI waqt → ek dabbe mein saath saath, ek saath chalein / rukein
+function gpGroups(id) { const m = new Map(); for (const c of gpFor(id)) { const g = Number(c.g) || 0; if (!m.has(g)) m.set(g, []); m.get(g).push(c); } for (const L of m.values()) L.sort((a, c) => (Number(a.ci) || 1) - (Number(c.ci) || 1)); return [...m.entries()].sort((a, c) => a[0] - c[0]); }
 const durS = s => { s = Number(s) || 0; return s >= 120 ? Math.round(s / 60) + ' min' : s + ' s'; };
-function gpLoad(t, c, i) {
-  const id = String(c.id), v = t.querySelector('video'); if (!v) return; v.dataset.seg = String(i);
-  segUrl(id, i).then(u => { if (!u || !t.isConnected || v.dataset.seg !== String(i)) return; v.src = u; v.playbackRate = speed; v.play().catch(() => {}); const sg = segsOf(c); if (sg && i + 1 < sg.length) segUrl(id, i + 1).catch(() => {}); }).catch(() => {});
+const gpMaster = t => (t ? [...t.querySelectorAll('[data-gk]')].find(cell => clips.get(cell.dataset.gk)?.st === 'ok' && cell.querySelector('video')?.src) || null : null);
+function gpLoad(cell, c, i) {
+  const id = String(c.id), v = cell.querySelector('video'), lb = cell.querySelector('.bt-gl'); if (!v) return; v.dataset.seg = String(i);
+  segUrl(id, i).then(u => { if (!u || !cell.isConnected || v.dataset.seg !== String(i)) return; v.src = u; v.playbackRate = speed; v.play().catch(() => {}); if (lb) lb.hidden = true; const sg = segsOf(c); if (sg && i + 1 < sg.length) segUrl(id, i + 1).catch(() => {}); }).catch(() => { if (lb) { lb.hidden = false; lb.textContent = '✕ video nahi aayi'; } });
 }
-function gpNext(t) { const c = clips.get(t.dataset.gk), v = t.querySelector('video'), sg = segsOf(c), i = Number(v?.dataset.seg) || 0; if (c && sg && i + 1 < sg.length) gpLoad(t, c, i + 1); }
+function gpSync(t) {
+  const mv = gpMaster(t)?.querySelector('video'); if (!mv) return;
+  t.querySelectorAll('video.bt-gv').forEach(x => {
+    if (x === mv || !x.src || x.dataset.seg !== mv.dataset.seg || x.readyState < 1) return;
+    if (x.playbackRate !== mv.playbackRate) x.playbackRate = mv.playbackRate;
+    if (Math.abs(x.currentTime - mv.currentTime) > 0.6) { try { x.currentTime = Math.min(mv.currentTime, Math.max(0, (x.duration || 1e9) - 0.05)); } catch {} }
+    if (mv.paused || mv.ended) { if (!x.paused) x.pause(); } else if (x.paused) x.play().catch(() => {});
+  });
+}
+function gpNext(t) {   // pehle camera ka hissa khatam = sab camera agla hissa
+  const m = gpMaster(t), mv = m?.querySelector('video'); if (!mv) return;
+  const sg = segsOf(clips.get(m.dataset.gk)), i = Number(mv.dataset.seg) || 0; if (!sg || i + 1 >= sg.length) return;
+  t.querySelectorAll('[data-gk]').forEach(cell => { const c = clips.get(cell.dataset.gk); if (c && c.st === 'ok') gpLoad(cell, c, i + 1); });
+}
 function gpPaint() {
   const box = $('btGp'); if (!box) return;
-  const L = gpFor(cur), want = new Set(L.map(c => String(c.id)));
-  box.hidden = !L.length;
-  box.querySelectorAll('[data-gk]').forEach(t => { if (!want.has(t.dataset.gk)) t.remove(); });
-  for (const c of L) {
-    const id = String(c.id); let t = [...box.querySelectorAll('[data-gk]')].find(x => x.dataset.gk === id);
-    if (!t) { box.insertAdjacentHTML('beforeend', `<div class="bt-gt" data-gk="${esc(id)}"><video class="bt-gv" playsinline muted autoplay preload="auto" hidden></video><div class="bt-gh"><b></b><small></small><button type="button" class="bt-gfull" data-bt-gfull="1" title="poori screen" hidden>⛶</button></div><div class="bt-gi" hidden></div></div>`); t = box.lastElementChild; t.querySelector('video').addEventListener('ended', () => gpNext(t)); }
-    const ok = c.st === 'ok', v = t.querySelector('video'), nl = Number(c.nl) || (Array.isArray(c.it) ? c.it.length : 0), nt = Number(c.nt) || 0;
-    t.classList.toggle('ok', ok); t.classList.toggle('bad', c.st === 'err');
-    t.querySelector('b').textContent = '🚪 ' + (c.gn || 'Godam');
-    t.querySelector('small').textContent = ok ? `${nt && nt === nl ? '✓ sab diya' : nt ? `✓ ${nt}/${nl} diya` : '✓ tick nahi hua'}${c.gb ? ' · ' + c.gb : ''} · ${durS(c.dur)}`
-      : c.st === 'err' ? '✕ ' + (c.err || 'video nahi bani') : `⏳ ✓ de diya ke 1 min baad video aayegi${c.due ? ' (zyada se zyada ' + tm(c.due) + ')' : ''}`;
-    const gi = t.querySelector('.bt-gi'), its = Array.isArray(c.it) ? c.it : [];
+  const G = gpGroups(cur), want = new Set(G.map(([g]) => String(g)));
+  box.hidden = !G.length;
+  box.querySelectorAll('[data-gg]').forEach(t => { if (!want.has(t.dataset.gg)) t.remove(); });
+  for (const [g, L] of G) {
+    const sig = L.map(c => c.id).join('|'), find = () => [...box.querySelectorAll('[data-gg]')].find(x => x.dataset.gg === String(g));
+    let t = find();
+    if (!t || t.dataset.sig !== sig) {
+      const html = `<div class="bt-gt" data-gg="${esc(g)}" data-sig="${esc(sig)}"><div class="bt-gh"><b></b><small></small><button type="button" class="bt-gfull" data-bt-gfull="1" title="poori screen" hidden>⛶</button></div><div class="bt-gvs n${L.length}" hidden>${L.map(c => `<div class="bt-gc" data-gk="${esc(c.id)}"><video class="bt-gv" playsinline muted autoplay preload="auto"></video><span class="bt-gcn"></span><div class="bt-gl"></div></div>`).join('')}</div><div class="bt-gi" hidden></div></div>`;
+      if (t) t.outerHTML = html; else box.insertAdjacentHTML('beforeend', html);
+      const tt = find(); t = tt;
+      tt.querySelectorAll('video').forEach(v => {
+        ['play', 'pause', 'seeked', 'ratechange', 'timeupdate'].forEach(ev => v.addEventListener(ev, () => { if (gpMaster(tt)?.querySelector('video') === v) gpSync(tt); }));
+        v.addEventListener('ended', () => { if (gpMaster(tt)?.querySelector('video') === v) gpNext(tt); });
+        v.addEventListener('loadedmetadata', () => gpSync(tt));
+      });
+    }
+    const okL = L.filter(c => c.st === 'ok'), p = okL[0] || L[0], ok = !!okL.length, nl = Number(p.nl) || (Array.isArray(p.it) ? p.it.length : 0), nt = Number(p.nt) || 0;
+    t.classList.toggle('ok', ok); t.classList.toggle('bad', !ok && L.every(c => c.st === 'err')); t.classList.toggle('n2', L.length > 1);
+    t.querySelector('.bt-gh b').textContent = '🚪 ' + (p.gn || 'Godam');
+    t.querySelector('.bt-gh small').textContent = ok ? `${nt && nt === nl ? '✓ sab diya' : nt ? `✓ ${nt}/${nl} diya` : '✓ tick nahi hua'}${p.gb ? ' · ' + p.gb : ''} · ${durS(p.dur)}`
+      : L.every(c => c.st === 'err') ? '✕ ' + (p.err || 'video nahi bani') : `⏳ ✓ de diya ke 1 min baad video aayegi${p.due ? ' (zyada se zyada ' + tm(p.due) + ')' : ''}`;
+    const gi = t.querySelector('.bt-gi'), its = Array.isArray(p.it) ? p.it : [];
     gi.hidden = !ok || !its.length; gi.textContent = its.map(x => `${x.n} ${x.qs || ('×' + x.q)}${x.ok ? ' ✓' : ''}`).join(' · ');
-    t.querySelector('.bt-gfull').hidden = !ok; v.hidden = !ok;
-    if (ok && !v.dataset.seg) gpLoad(t, c, 0);
+    t.querySelector('.bt-gfull').hidden = !ok; t.querySelector('.bt-gvs').hidden = !ok;
+    if (!ok) continue;
+    const mv = gpMaster(t)?.querySelector('video');
+    for (const c of L) {
+      const cell = [...t.querySelectorAll('[data-gk]')].find(x => x.dataset.gk === String(c.id)); if (!cell) continue;
+      const v = cell.querySelector('video'), lb = cell.querySelector('.bt-gl');
+      cell.querySelector('.bt-gcn').textContent = L.length > 1 ? '📹 ' + (c.cam || '') : '';
+      if (c.st === 'ok') { if (!v.dataset.seg) { lb.hidden = false; lb.textContent = '⏳ video…'; gpLoad(cell, c, mv && mv !== v ? Number(mv.dataset.seg) || 0 : 0); } }
+      else { lb.hidden = false; lb.textContent = c.st === 'err' ? '✕ ' + (c.err || 'nahi bani') : '⏳ ban rahi…'; }
+    }
   }
 }
 
@@ -360,11 +394,11 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.337.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN() })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.338.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN() })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-gfull]')) { const tile = t.closest('.bt-gt'), v = tile?.querySelector('video'); try { if (document.fullscreenElement) document.exitFullscreen(); else if (v?.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else tile?.requestFullscreen?.(); } catch {} return; }   // v2.337.0: 🚪 godam video
-  if (t.tagName === 'VIDEO' && t.classList.contains('bt-gv')) { if (t.paused) t.play().catch(() => {}); else t.pause(); return; }
+  if (t.tagName === 'VIDEO' && t.classList.contains('bt-gv')) { const tile = t.closest('.bt-gt'), mv = gpMaster(tile)?.querySelector('video') || t; if (mv.paused) mv.play().catch(() => {}); else mv.pause(); if (tile) gpSync(tile); return; }   // v2.338.0: dono camera saath ruk / chal
   if (t.tagName === 'VIDEO' && t.classList.contains('bt-xv')) { const tile = t.closest('.bt-vx'); try { if (document.fullscreenElement) document.exitFullscreen(); else tile?.requestFullscreen?.(); } catch {} return; }   // v2.332.0: doosre camera par tap = us ki poori screen
   if (t.closest('[data-bt-full]')) { const v = $('btVid'); try { if (v.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else (($('btStage')?.querySelector('.bt-vx') && $('btStage')) || v.closest('.bt-vwrap') || v).requestFullscreen?.(); } catch {} return; }
   if (t.closest('.bt-vwrap') && t.tagName === 'VIDEO') { const v = t, side = (e.offsetX || 0) < v.offsetWidth / 2 ? -1 : 1;   // v2.224.0: 1 tap = ruk / chal · 2 tap = ±10 s
@@ -597,15 +631,17 @@ function openUnposted() {
   if (!d.open) d.showModal();
 }
 
-// v2.337.0: 🚪 har godam ka camera — PC (bill-clip v2.18) jo faisla kar raha (gpm) + malik ka chunao (gc [{g, c}], '-' = koi nahi)
+// v2.337.0: 🚪 har godam ka camera — PC (bill-clip v2.18) jo faisla kar raha (gpm) + malik ka chunao (gc [{g, c, i}], '-' = koi nahi)
+// v2.338.0: har godam par 2 camera (i 1 | 2) — PC bill-clip v2.19 gpm cam2 / how2 / r2
 function gpRows(cf, st) {
   const gm = Array.isArray(st.gpm) ? st.gpm : [], cams = (Array.isArray(st.cams) ? st.cams : []).filter(c => c && c.n), set = {};
-  for (const x of (Array.isArray(cf.gc) ? cf.gc : [])) if (x && x.g) set[String(x.g)] = String(x.c || '');
+  for (const x of (Array.isArray(cf.gc) ? cf.gc : [])) if (x && x.g) { const k = String(x.g); set[k] = set[k] || ['', '']; set[k][Number(x.i) === 2 ? 1 : 0] = String(x.c || ''); }
   if (!gm.length) return `<p class="bt-sub">${st.ver && verLt(st.ver, 2, 18) ? `⏳ PC ka bill-clip purana (v${esc(st.ver)}) — 3-5 min mein khud update, phir godam yahan aayenge` : '⏳ Godam ki list PC se abhi nahi aayi (pehle gate pass ke baad khud aati hai)'}</p>`;
   const how = { set: 'aap ka chuna', naam: 'naam se', ginti: '📦 Loading ginti se', off: 'band', gum: 'chuna camera list mein nahi' };
-  return gm.map(g => { const v = set[String(g.g)] || '', auto = g.how === 'naam' || g.how === 'ginti' ? `Auto: ${g.cam} (${how[g.how]})` : 'Auto (naam se dhoondo)';
-    const rs = g.cam ? (g.r === 2 ? '⏺ 🟢 recording chal rahi' : g.r === 1 ? '⏺ ⚫ recording ruki' : '⏹ recording BAND — upar ⏺ Rec ON karein') : g.how === 'off' ? 'band' : g.how === 'gum' ? `✕ "${g.want}" camera list mein nahi` : '✕ camera nahi mila — chunein ya camera ke naam mein godam ka naam likhein';
-    return `<div class="bt-wgrow"><b>🏬 ${esc(g.n)}</b><select data-gc="${esc(g.g)}"><option value="">${esc(auto)}</option>${cams.map(c => `<option value="${esc(c.n)}"${v === c.n ? ' selected' : ''}>${c.c ? '🖥' : '📹'} ${esc(c.n)}${c.r ? '' : ' (⏹ recording band)'}</option>`).join('')}${v && v !== '-' && !cams.some(c => c.n === v) ? `<option value="${esc(v)}" selected>${esc(v)} (list mein nahi)</option>` : ''}<option value="-"${v === '-' ? ' selected' : ''}>✕ Koi nahi</option></select></div><p class="bt-sub bt-gpst${g.cam && g.r === 2 ? '' : ' bad'}">${esc(rs)}${g.cam ? ' · ' + esc(how[g.how] || '') : ''}</p>`; }).join('') + (st.gp && st.gp.day === dayKey(0) ? `<p class="bt-sub">🚪 Aaj: ✓ ${Number(st.gp.ok) || 0} video${st.gp.w ? ' · ⏳ ' + st.gp.w + ' intezar mein' : ''}${st.gp.err ? ' · ✕ ' + st.gp.err : ''}${st.gp.le ? ' (' + esc(st.gp.le) + ')' : ''}</p>` : '');
+  const rs = (cam, r, h, w) => cam ? (r === 2 ? '⏺ 🟢 recording chal rahi' : r === 1 ? '⏺ ⚫ recording ruki' : '⏹ recording BAND — upar ⏺ Rec ON karein') + ' · ' + (how[h] || '') : h === 'off' ? 'band' : h === 'gum' ? `✕ "${w}" camera list mein nahi` : '';
+  const sel = (g, i, v, cam, h) => `<select data-gc="${esc(g)}" data-gi="${i}"><option value="">${esc((h === 'naam' || h === 'ginti') && cam ? `Auto: ${cam} (${how[h]})` : i === 1 ? 'Auto (naam se dhoondo)' : 'Auto (doosra camera naam se)')}</option>${cams.map(c => `<option value="${esc(c.n)}"${v === c.n ? ' selected' : ''}>${c.c ? '🖥' : '📹'} ${esc(c.n)}${c.r ? '' : ' (⏹ recording band)'}</option>`).join('')}${v && v !== '-' && !cams.some(c => c.n === v) ? `<option value="${esc(v)}" selected>${esc(v)} (list mein nahi)</option>` : ''}<option value="-"${v === '-' ? ' selected' : ''}>✕ Koi nahi</option></select>`;
+  return gm.map(g => { const v = set[String(g.g)] || ['', ''], s1 = rs(g.cam, g.r, g.how, g.want), s2 = rs(g.cam2, g.r2, g.how2, g.want2), none = !g.cam && !g.cam2 && g.how !== 'off';
+    return `<div class="bt-wgrow"><b>🏬 ${esc(g.n)} · 📹 1</b>${sel(g.g, 1, v[0], g.cam, g.how)}</div><div class="bt-wgrow"><b>📹 2</b>${sel(g.g, 2, v[1], g.cam2, g.how2)}</div><p class="bt-sub bt-gpst${(g.cam && g.r === 2) || (g.cam2 && g.r2 === 2) ? '' : ' bad'}">${none ? '✕ camera nahi mila — chunein ya camera ke naam mein godam ka naam likhein' : esc([s1 && '1: ' + s1, s2 && '2: ' + s2].filter(Boolean).join(' · '))}</p>`; }).join('') + (st.gp && st.gp.day === dayKey(0) ? `<p class="bt-sub">🚪 Aaj: ✓ ${Number(st.gp.ok) || 0} video${st.gp.w ? ' · ⏳ ' + st.gp.w + ' intezar mein' : ''}${st.gp.err ? ' · ✕ ' + st.gp.err : ''}${st.gp.le ? ' (' + esc(st.gp.le) + ')' : ''}</p>` : '');
 }
 
 async function openSetup() {
@@ -657,7 +693,7 @@ async function openSetup() {
       <p class="bt-sub">Godam / gate jaisa koi bhi camera: naam + NVR channel. ⏺ Rec = PC us ki recording rakhe (WhatsApp par pichhle waqt ki video sirf recording wale ki) · ⏹ = sirf live / 📸 tasveer. Live (app + WhatsApp: likhein <b>live</b>) har camera ka.</p>
       <div class="bt-ihead">🚪 Gate pass — godam ka camera <button type="button" class="bt-tg${cf.gpv === false ? '' : ' on'}" data-tg="gpv">${cf.gpv === false ? '⚫ Band' : '🟢 ON'}</button></div>
       ${gpRows(cf, st)}
-      <p class="bt-sub">Bill ki jo item godam se nikalti hai (gate pass), us godam ke camera ki video: post se pehle → godam wale ke ✓ de diya ke 1 min baad (✓ na ho = 10 min). Tally screen par counter video ke upar + WhatsApp (group / video) mein bill ki video ke baad. Camera ⏺ Rec ON hona chahiye. Auto = camera ke naam mein godam ka naam (jaise "Godam 2 gate") ya 📦 Loading ginti wala camera.</p>
+      <p class="bt-sub">Bill ki jo item godam se nikalti hai (gate pass), us godam ke camera ki video: post se pehle → godam wale ke ✓ de diya ke 1 min baad (✓ na ho = 10 min). Tally screen par counter video ke upar + WhatsApp (group / video) mein bill ki video ke baad. Ek godam par 2 camera ho sakte hain (dono saath saath; WhatsApp par ek ke upar doosra). Camera ⏺ Rec ON hona chahiye. Auto = camera ke naam mein godam ka naam (jaise "Godam 2 gate") ya 📦 Loading ginti wala camera.</p>
       <p class="bt-sub">🖥 Naam = har PC ka apna naam (NT-PRINT se). 🟢 = NT-PRINT chal raha · 🔴 = band · ⚪ = bill is naam se aaye magar NT-PRINT nahi mila — wohi PC ho to 🔗 se jor dein.</p>
       <p class="bt-sub">🖥 PC: ${st.at ? (Date.now() - st.at < 5 * 60000 ? '🟢 chalu' : '⚫ chup ' + ago(st.at)) + ' · v' + esc(st.ver || '?') + (st.ff ? ' · ffmpeg ✓' : ' · ffmpeg ⏳') + (st.today ? ` · aaj ${st.today.n} (✓ ${st.today.ok} ✕ ${st.today.err})` : '') + (st.last ? ' · ' + esc(st.last) : '') + (st.err ? ' · ⚠ ' + esc(st.err) : '') : 'abhi report nahi (PC 3-5 min mein script lagata hai)'}</p>
       ${st.rec && Object.keys(st.rec).length ? `<p class="bt-sub">🎞 Recording: ${Object.entries(st.rec).map(([ch, r]) => `ch ${esc(ch)} ${r.on ? '🟢' : '⚫'} ${r.n || 0} min${r.last ? ' · ' + tm(r.last) : ''}${r.err ? ' · ' + esc(r.err) : ''}`).join(' · ')}</p>` : ''}${st.dk ? `<p class="bt-sub">💾 Recording ${esc(String(st.dk.d || ''))}${st.dk.d ? ':' : ''} · ${esc(String(st.dk.free ?? '?'))} GB khali / ${esc(String(st.dk.tot ?? '?'))} GB · ${esc(String(st.rkd || 10))} din rakhi jati hai${st.dk.day ? ' · roz ≈ ' + esc(String(st.dk.day)) + ' GB · jagah ≈ ' + esc(String(st.dk.can || 0)) + ' din' : ''}${st.dk.old ? ' · sab se purani ' + new Date(Number(st.dk.old)).toLocaleString('en-GB', { day: 'numeric', month: 'short', hour: 'numeric', minute: '2-digit' }) : ''}${st.dk.cut ? ' · ⚠️ jagah kam — purane tukre mitaye' : ''}${st.dk.err ? ' · ✕ ' + esc(st.dk.err) : ''} · drive badalni ho: Settings → 🖥️ PC scripts → 💽</p>` : ''}
@@ -695,7 +731,7 @@ async function openSetup() {
     d.querySelectorAll('[data-xc]').forEach(r => { const n = String(r.querySelector('[data-xn]').value || '').replace(/\s+/g, ' ').trim().slice(0, 30), c = Math.floor(Number(r.querySelector('[data-xch]').value) || 0);
       if (!n && !c) return; if (!n || !(c > 0 && c < 1000)) { xBad = xBad || `"${n || '?'}" ka naam / channel adhoora`; return; } if (seenX.has(n.toLowerCase()) || pcs.has(n)) { xBad = xBad || `"${n}" naam dohra hai`; return; } seenX.add(n.toLowerCase()); xc.push({ n, ch: c, r: r.querySelector('[data-xr]').classList.contains('on') ? 1 : 0 }); });
     if (xBad) { notice('📹 ' + xBad); return; }
-    const gc = []; d.querySelectorAll('select[data-gc]').forEach(sl => { const v = String(sl.value || ''); if (v) gc.push({ g: Number(sl.dataset.gc), c: v.slice(0, 30) }); });   // v2.337.0: 🚪 list (merge mein poori badalti)
+    const gc = []; d.querySelectorAll('select[data-gc]').forEach(sl => { const v = String(sl.value || ''); if (v) gc.push({ g: Number(sl.dataset.gc), c: v.slice(0, 30), i: Number(sl.dataset.gi) === 2 ? 2 : 1 }); });   // v2.337.0: 🚪 list (merge mein poori badalti) · v2.338.0: i = 1 / 2 camera
     const out = { xc, gc, gpv, on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rkd: Math.max(1, Math.min(90, Math.round(Number(g('rkd')) || 10))), rep: String(g('rep')).trim() || '20:30', ch };
     ev.currentTarget.disabled = true;
     try { await cloud.setBillClipCfg(out); notice('💾 Camera setup save — PC 30 s mein uthata hai'); d.close(); }

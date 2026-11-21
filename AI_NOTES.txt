@@ -9257,3 +9257,19 @@ Malik (21 Nov): 'jis item ka gate pass banta hai us item ka godam ka camera — 
   ⚙️ Camera setup: '🚪 Gate pass — godam ka camera' ON / Band (gpv) + har godam ka select (Auto / camera / ✕ Koi nahi) + recording ka haal + aaj ki ginti.
 - Sandbox test (nakli Firestore + nakli recording): godam clip 194 s bani, 'Godam 22 back' nahi pakra, camera na ho = koi doc nahi, ✓ nahi = wait,
   group mein pehle bill phir godam, 'video 138900' = counter + godam dono malik + Mubeen. AI: NAHI. Rules: koi tabdeeli nahi (billClip parhna pehle se).
+
+
+=== v2.338.0 (2026-11-21) — 🚪 EK GODAM PAR 2 CAMERA, SAATH SAATH (PC bill-clip v2.19) ===
+Malik (21 Nov 13:22, WhatsApp par Godam 1 ghee camera ki gate pass video ki screenshot): 'doosra godam ka camera bhi is ke saath add karo — aik hi godam par
+two cameras hain · dono side by side dikha diya karo' → plan (WhatsApp par upar-neeche, patti ghari se neeche) → 'Ok'.
+- bill-clip v2.19: gpCam(g) = do slot — billClip.gc [{g, c, i 1|2}] ('' = auto, '-' = koi nahi); auto = gpAuto (📦 ginti ke camera, phir naam se — 'Godam 1 …'
+  wale sab, counter ka nahi), 2 tak. Har camera ki apni clip, WAHI waqt: pehla billClip/<SaleID>~g<godam> (ci 1), doosra ~g<godam>b (ci 2); wait doc dono ka.
+  gpOne → gpClip (har camera); ek bhi bani = item ok; dono ki recording abhi likhi ja rahi ho to 20 s ruk kar dono ek saath.
+  WhatsApp (group + 'video <bill>'): mkGVideo(list) = EK video — 2 camera ek ke upar doosra (640x720; phone par side by side bohat chhota hota),
+  akela camera 640x360 (godam camera 16:9, kale patte nahi). ovRender ab src.ins (kai input, vstack) + o {W, H, y0, R}; ovPlan / pageAt mein R.
+  Patti camera ki apni ghari (upar daayein, ~4-9% oonchai) ke NEECHE: y0 48 (akela) / 52 (do), 7 qatar fi safha — counter video ki patti wahi (10, 12 qatar).
+  Caption '📹 Godam 1 ghee + Godam 1 …'. gwSweep sirf ~g<n> (b wala alag group item nahi). gpm mein cam2 / how2 / want2 / r2.
+- tally.js: godam dabba ab godam-war (gpGroups) — 2 camera = .bt-gvs.n2 saath saath, pehla camera 'master' (gpMaster): chale / ruke / seek / raftar /
+  agla hissa = doosra bhi (gpSync / gpNext); tap kisi par bhi = dono ruk / chal; har camera par chhota naam (.bt-gcn). Patti (godam · ✓ · kis ne) upar
+  aur items neeche — video ke upar nahi (do chhoti video par dhakti). ⚙️ Camera setup: har godam ke 2 select (📹 1 / 📹 2: Auto / camera / ✕ Koi nahi).
+- Sandbox: ch9 + ch10 dono clip (194 s), group + 'video' mein ek 640x720 video (upar gate, neeche andar), patti nakli ghari ke neeche. AI: NAHI. Rules: nahi.

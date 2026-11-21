@@ -1,6 +1,6 @@
 {
- "version": "2026-11-21.2",
- "note": "bill-clip v2.18 (🚪 gate pass wale bill par godam ka camera — apni recording se, ✓ ke 1 min baad · tally upar + group + 'video <bill>')",
+ "version": "2026-11-21.3",
+ "note": "bill-clip v2.19 (🚪 ek godam par 2 camera — dono ki clip, WhatsApp par ek video upar-neeche · patti camera ki ghari ke neeche)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -99,7 +99,7 @@
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
   "wa-out.js": "2b9a572b8c24c50a5364faf21f3669c80c2e4c9ea352c536e4c24690a3e5cfe0",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
-  "bill-clip.js": "44d5e3fe92b5c41fcf49f09cc296e5bfdd1f1fceb9486f5cd9d63600d43ddaad",
+  "bill-clip.js": "4753dce4808b83dbd1a86fac06f3964534b4b275a9c82efe641b495f5d04f1a7",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
   "live-cam.js": "ec3589ec0ab36f328159175912177102d8ab8e57e8ff75e67bd6970c612368ed",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
