@@ -1,14 +1,14 @@
-import {cashLinkChanges} from './cash-links.js?v=2.343.0';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.343.0';
-import {snapshotRows} from './live-data.js?v=2.343.0';
+import {cashLinkChanges} from './cash-links.js?v=2.344.0';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.344.0';
+import {snapshotRows} from './live-data.js?v=2.344.0';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.343.0';
-import {planImport} from './import-plan.js?v=2.343.0';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.344.0';
+import {planImport} from './import-plan.js?v=2.344.0';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp,Bytes,FieldPath} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.343.0';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.343.0';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.344.0';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.344.0';
 export {loginErrorMessage};
 export async function connect(callbacks){const MT=(()=>{try{return sessionStorage.getItem('sam-malik-tab')==='1'}catch{return false}})();   /* v2.105.8: 👑 MULAZIM KI TAB MEIN MALIK — alag Firebase app (naam 'blue-khata-malik'), login sirf is tab (sessionStorage), data memory mein (phone par save nahi). Mulazim ka login ('blue-khata', localStorage) bilkul nahi hilta. */
 const app=initializeApp(firebaseConfig,MT?'blue-khata-malik':'blue-khata');let auth;try{auth=authSDK.initializeAuth(app,{persistence:MT?authSDK.browserSessionPersistence:[authSDK.browserLocalPersistence,authSDK.indexedDBLocalPersistence]})}catch(e){console.warn('initializeAuth nahi chala — purana tareeqa',e);auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,MT?authSDK.browserSessionPersistence:authSDK.browserLocalPersistence)}catch(e2){console.warn('Auth persistence nahi mili',e2)}}   /* v2.112.0: ⚡ TEZ KHULNA — getAuth() mobile par HAR dafa Google ka chhupa sign-in iframe (apis.google.com + firebaseapp.com) internet se laata tha, login ki jaanch us ke BAAD (sust net = 10+ sec, phir index.html ka 10 sec parda login page dikha deta — malik ke phone par 5-7 sec jhalak). Hum popup / redirect login nahi karte → initializeAuth bina popupRedirectResolver. Login phone ki yaad (localStorage; IndexedDB wala bhi utha leta hai). setPersistence ka await bhi nahi (wo auth ki poori tayyari ka intezar karta tha) */let db;try{db=MT?initializeFirestore(app,{localCache:memoryLocalCache()}):initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
@@ -296,6 +296,10 @@ async devSet(d,st,o={}){if(!auth.currentUser||auth.currentUser.isAnonymous)throw
 async clearJoins(){if(!auth.currentUser||auth.currentUser.isAnonymous)return 0;let n=0;try{const s=await getDocs(collection(db,'businesses',BUSINESS_ID,'deviceJoins'));for(const d of s.docs)if(/^(pc|tk)-/.test(d.id)){try{await deleteDoc(d.ref);n++}catch{}}}catch{}try{const w=await getDocs(collection(db,'businesses',BUSINESS_ID,'devWait'));for(const d of w.docs){const t=d.data().ts?.toMillis?.()||0;if(t&&Date.now()-t>864e5)try{await deleteDoc(d.ref)}catch{}}}catch{}return n},   /* mulazim ke purane code / link khatam (malik: "code password khatam — sirf malik ke liye") */
 listenStaffDevices(cb){return onSnapshot(collection(db,'businesses',BUSINESS_ID,'staffDevices'),s=>cb(s.docs.map(d=>({...d.data(),id:d.id}))),()=>cb([]))},
 async deviceSeen(devId,info){if(info&&info.staffId)LBL_ME=String(info.staffId);if(!auth.currentUser||!auth.currentUser.isAnonymous)return;await setDoc(other('staffDevices',String(devId)),{...info,by:auth.currentUser.uid,seen:Date.now()},{merge:true})},
+/* v2.344.0: 👑 MALIK KE DEVICES — blueAccess/malikDevs {d:{<device id>:{nm, ua, at, tab, x}}} (sirf malik parhe / likhe — rules wahi). x = hatane ka waqt: wo device apni x dekh kar khud logout. */
+listenMalikDevs(cb){return onSnapshot(other('blueAccess','malikDevs'),{includeMetadataChanges:true},s=>cb(s.exists()?(s.data().d||{}):{},s.metadata.fromCache),()=>cb(null,true))},
+async malikDevBeat(id,info,clearX){if(!auth.currentUser||auth.currentUser.isAnonymous)return;const o={...info,at:Date.now()};if(clearX)o.x=deleteField();await setDoc(other('blueAccess','malikDevs'),{d:{[String(id)]:o}},{merge:true})},
+async malikDevSet(id,o){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await setDoc(other('blueAccess','malikDevs'),{d:{[String(id)]:o}},{merge:true})},
 async deleteStaffDevice(id,uid){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');const b=writeBatch(db);b.delete(other('staffDevices',id));if(uid&&/^[A-Za-z0-9]{10,60}$/.test(String(uid)))b.delete(other('blueStaffSessions',String(uid)));await b.commit()},   /* v2.231.0: session bhi — wo phone foran logout */
 async getPosLines(id){const d=await getDoc(other('posLines',String(id)));return d.exists()?d.data():null},   /* v2.125.0: 🔍 farq ki entries */
 listenPosLedger(cb){return onSnapshot(other('blueAccess','posLedger'),d=>cb(d.exists()?d.data():null),e=>cb(null,e))},   /* v2.124.0: ⚖️ POS milan */

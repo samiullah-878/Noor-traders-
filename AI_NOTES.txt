@@ -9327,3 +9327,14 @@ Malik (haseeb cus ki screenshot: wapas laye 16-Sep ke transfer sab se upar): 'is
 
 === md pkg v63 (21 Nov 2026 raat) — ▶ 📸 Sehat lock wapas CHALU ===
 Malik: 'yaar wo paani wala on kar do'. v62 mein ruka tha. Ab msl (📸 Sehat lock) wapas pkg macros mein + 'off' list se hata — Remote import (Overwrite by ID, m_enabled true) se phone par chalu. Waqt wahi: lock 11:00–20:59, paani yaad 9–9. Kuch aur nahi badla.
+
+=== v2.344.0 (2026-11-21) — 👑 MALIK KE DEVICES + 👥 MULAZIM KE DEVICES ===
+Malik: 'Mulazim screen par malik ki bhi aik screen — konsi device par hum login hain, total kitni devices, hataya ja sake · chips mulazim ka alehda, mera alehda'.
+- Nayi file malik-dev.js v1.0 (app.js mkdBoot: login ke 2.6 s baad + har 1 min jaanch, sirf malik). cloud.js: listenMalikDevs / malikDevBeat / malikDevSet.
+- Data blueAccess/malikDevs {d:{<device id 'abc-def'>:{nm, ua, at, tab, x}}} — rules NAHI badle (blueAccess sirf malik).
+- Har malik wala device khud darj (ua, at har 10 min; tab 1 = mulazim ki tab mein malik). List Update ke baad bharti hai (har device ek dafa app khole).
+- ✕ Hatao = x (waqt) -> wo device server ka data dekh kar khud logout (localStorage sam-md-x = handled); dobara login = x saaf, wapas list mein.
+  'Yehi device' par ✕ nahi. ✏️ = naam (nm). Mulazim tab = staffDevices, ✕ = purana deleteStaffDevice. 🟢 = 12 min ke andar dekha.
+- Hadd (malik ko bataya): sirf app logout — jis ke paas code / password ho dobara login kar sakta hai.
+- Test: node harness (cache par kuch nahi · hataya = logout · dobara login = x saaf) — asal phones par nahi azmaya. AI NAHI.
+- BAQI (malik ke OK ka intezar): cash purchase ka auto POS voucher + delete ka qaida (POS bill: Cancel ya Delete?).

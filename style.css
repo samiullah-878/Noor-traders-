@@ -8979,3 +8979,37 @@ html body #dialogBody .wq-root .dd-t small{font-size:13px;line-height:1.35;white
 html body #dialogBody .wq-root .wq-go{background:linear-gradient(180deg,#22a35a,#1b8a4b)!important;color:#fff!important;border:0!important}
 html body #dialogBody .wq-root .wq-go[disabled]{opacity:.5}
 html body #dialogBody button.tr-wq{height:28px!important;min-height:0!important;padding:0 10px!important;border-radius:999px!important;border:1px solid #c9d6ee!important;background:linear-gradient(180deg,#fff,#eef3fb)!important;color:#223B6D!important;font-size:12px!important;font-weight:700;white-space:nowrap;vertical-align:middle}
+
+/* v2.344.0: 👑 Malik ke devices + 👥 Mulazim ke devices (malik-dev.js) */
+.mkd-chips{display:flex;gap:6px;flex-wrap:wrap;margin:2px 0 8px}
+html body .mkd-chips .mkd-chip{flex:1 1 150px;min-width:0;min-height:36px!important;padding:4px 12px!important;border-radius:999px!important;border:1.5px solid #d6deeb!important;background:linear-gradient(180deg,#fff,#f3f6fc)!important;color:#1b3058!important;font-weight:800;font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;box-shadow:0 2px 6px rgba(20,40,90,.08)}
+html body .mkd-chips .mkd-chip.own{border-color:#e3c56a!important;background:linear-gradient(180deg,#fffaf0,#fbefc9)!important;color:#6a4a00!important}
+.mkd-chip i,.mkd-tabs i{font-style:normal;margin-left:4px;padding:1px 8px;border-radius:999px;background:#1d3a75;color:#fff;font-size:12px}
+.mkd-chip em{font-style:normal;margin-left:5px;font-size:11.5px;color:#0b7a3b}
+dialog.mkd-dlg{border:0;padding:0;border-radius:20px;width:min(460px,95%);max-width:95%;max-height:88%;background:#fff;color:#1b2b4b;box-shadow:0 24px 60px rgba(10,20,50,.35);overflow:hidden}
+dialog.mkd-dlg[open]{display:flex;flex-direction:column}
+dialog.mkd-dlg::backdrop{background:rgba(8,16,40,.5)}
+.mkd-hd{display:flex;align-items:center;justify-content:space-between;padding:12px 14px 6px;font-size:16px}
+html body dialog.mkd-dlg .mkd-cl{min-height:32px!important;width:32px;padding:0!important;border-radius:999px!important;border:0!important;background:#eef2f9!important;color:#1b3058!important;font-weight:900}
+.mkd-tabs{display:flex;gap:6px;align-items:center;padding:4px 14px 8px;flex-wrap:wrap}
+.mkd-tabs span{margin-left:auto;font-size:12.5px;font-weight:800;color:#51607f}
+html body dialog.mkd-dlg .mkd-tabs button{min-height:34px!important;padding:4px 12px!important;border-radius:999px!important;border:1.5px solid #d6deeb!important;background:#fff!important;color:#1b3058!important;font-weight:800;font-size:13px;white-space:nowrap}
+html body dialog.mkd-dlg .mkd-tabs button.is-in{background:linear-gradient(135deg,#2c5bb0,#1d3a75)!important;border-color:transparent!important;color:#fff!important}
+.mkd-tabs button.is-in i{background:#ffffff33}
+.mkd-q{display:flex;align-items:center;gap:6px;margin:0 14px 8px;padding:0 10px;border:1.5px solid #d6deeb;border-radius:999px;background:#fff}
+.mkd-q input{flex:1;min-width:0;border:0!important;background:transparent!important;min-height:36px;font-size:14px;outline:0;box-shadow:none!important}
+.mkd-list{overflow-y:auto;padding:0 10px;display:grid;grid-template-columns:minmax(0,1fr);gap:6px;flex:1 1 auto;min-height:60px;align-content:start}
+.mkd-row{display:flex;align-items:center;gap:8px;padding:7px 9px;border:1px solid #e3e9f4;border-radius:13px;background:#fafcff;min-width:0}
+.mkd-row.me{border-color:#e3c56a;background:#fffaf0}
+.mkd-ic{font-size:20px;flex:none}
+.mkd-tx{flex:1;min-width:0;display:grid;gap:1px}
+.mkd-tx b{font-size:14px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mkd-tx small{font-size:12px;color:#5b6885;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.mkd-tx u{text-decoration:none;font-size:11px;font-weight:800;padding:1px 7px;border-radius:999px;background:#f5d97a;color:#5a3d00;margin-left:3px}
+.mkd-tx u.t{background:#e6edfb;color:#1d3a75}
+.mkd-bt{display:flex;gap:5px;flex:none}
+html body dialog.mkd-dlg .mkd-bt button{min-height:32px!important;width:34px;padding:0!important;border-radius:11px!important;border:1.5px solid #d6deeb!important;background:#fff!important;color:#1b3058!important;font-size:14px}
+html body dialog.mkd-dlg .mkd-bt button.x{border-color:#f1b9b9!important;background:#fff3f3!important;color:#b3261e!important;font-weight:900}
+.mkd-none{margin:14px 6px;font-size:14px;color:#5b6885;text-align:center}
+.mkd-ft{margin:8px 14px 12px;font-size:12px;color:#6a7591;line-height:1.35}
+html.dk dialog.mkd-dlg{background:#111b33;color:#e8eefc}html.dk .mkd-row{background:#18243f;border-color:#2a3a5e}html.dk .mkd-row.me{background:#2b2613;border-color:#6d5a1e}html.dk .mkd-tx small,html.dk .mkd-ft,html.dk .mkd-none,html.dk .mkd-tabs span{color:#aebcdb}html.dk .mkd-q{background:#0b1428;border-color:#2a3a5e}html.dk .mkd-q input{color:#e8eefc}
