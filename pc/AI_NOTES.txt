@@ -5377,3 +5377,17 @@ Tab = 3 number wali jagah (naya item) · Tab se aage, Shift+Tab se peeche'.
 - Phone par kuch nahi badla (Enter = agla khana, v2.4.0) — mera handler v2.4.0 se pehle laga hai, PC par `stopImmediatePropagation`.
 - Test: browser harness (asal handler ka code + nakli rows view): search ↓↑, 2 Enter, Tab naye item par, Tab / Shift+Tab, ↑ ↓ raqam same, Enter = search — sab theek.
   Asal app (login wali) mein nahi azmaya. AI nahi.
+
+
+=== v2.340.0 (2026-11-21) — 🕒 IS WAQT KI ENTRIES (waqt.js v1.0, sirf malik) ===
+Malik: 'Naeem ki entry ke neeche time likha hai — us time ki entries ka data do to hum wapis recover kar lein' (haseeb cus ka khata
+'App ko POS jaisa' click se bigra, 16-17 Nov ko kai entries hatin).
+- Settings -> 🗑 Deleted entries: upar '🕒 Waqt se' chip + har hatai entry par '🕒 Is waqt ki' -> waqt.js khirki:
+  tareekh + waqt, ± 10 / 30 / 60 min / 3 ghante, 🗑 Sirf hatai hui. Us dauran jo bhi entry BANI / BADLI / HATAI (sab khate) —
+  waqt (second tak), 🖥 PC ya 📱 app (updatedBy pos-sync / pc-), khata, raqam, POS voucher no, note.
+- Hatai hui par tick (default sab khali) -> '↩ N entries wapas lao' = WAHI save({deleted:false}) (kharcha jora kx dono saath) — PC POS voucher
+  dobara banata hai (purana Wapas layein wala raasta). Transfer / HBL jora / POS purchase bill yahan se wapas nahi (list mein dikhte hain).
+- Data = app ke records ke stamps (createdAt / updatedAt — number ya ISO) — naya Firestore read / rules / PC kaam nahi. AI nahi.
+- Barabar (milan) se bani cheezein wapas = pehle se: khata ⋮ -> 🗑 Din ki entries -> ⚖️ Barabar se bani (tareekh chun kar).
+- Test: node harness (4 namoona entries: hatai / PC ki bani / transfer / daire se bahar) — asal data par malik dekhega.
+- Baqi (malik ka OK nahi aaya, 'filhal 1'): cash purchase ka foran POS voucher + delete ka qaida (app delete -> POS, POS delete -> app nahi).

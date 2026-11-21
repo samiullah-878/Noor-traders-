@@ -8966,3 +8966,16 @@ html body #btRoot .bt-gfull{pointer-events:auto;height:24px!important;min-height
 #btRoot .bt-pat .bt-items li.sel b,#btRoot .bt-pat .bt-items li.sel .bt-q{color:#ff9a9a!important;text-decoration:line-through}
 #btRoot .bt-pat .bt-items li i{color:#fff}
 #btRoot .bt-pat .bt-items li.none{color:#fff!important;font-size:13px!important}
+
+/* v2.340.0: 🕒 Is waqt ki entries (waqt.js) */
+html body #dialogBody .wq-root .dd-r.is-in{border-color:#1b8a4b;background:#f1fbf4}
+html body #dialogBody .wq-root .dd-r.wq-ro{cursor:default}
+html body #dialogBody .wq-root .dd-r.wq-ro input{visibility:hidden}
+html body #dialogBody .wq-root .dd-r.wq-del{border-left:4px solid #c62828}
+html body #dialogBody .wq-root .dd-r.wq-add{border-left:4px solid #1b8a4b}
+html body #dialogBody .wq-root .dd-r.wq-edit{border-left:4px solid #d08a00}
+html body #dialogBody .wq-root .dd-t i{font-style:normal;font-size:13px;color:#445;display:block}
+html body #dialogBody .wq-root .dd-t small{font-size:13px;line-height:1.35;white-space:normal}
+html body #dialogBody .wq-root .wq-go{background:linear-gradient(180deg,#22a35a,#1b8a4b)!important;color:#fff!important;border:0!important}
+html body #dialogBody .wq-root .wq-go[disabled]{opacity:.5}
+html body #dialogBody button.tr-wq{height:28px!important;min-height:0!important;padding:0 10px!important;border-radius:999px!important;border:1px solid #c9d6ee!important;background:linear-gradient(180deg,#fff,#eef3fb)!important;color:#223B6D!important;font-size:12px!important;font-weight:700;white-space:nowrap;vertical-align:middle}
