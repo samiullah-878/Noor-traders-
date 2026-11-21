@@ -106,13 +106,13 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "💧 Paani sirf 9 am – 9 pm · 🌱 Blue Khata mein sabzi ki photo = sirf Claude 30 min (raatband + Sehat lock + Claude break) · 📞 Khaas contacts dobara NAHI bheje (ONCE).",
-       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, msl, mal] + ONCE.get(ver, []),   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "⏸ 📸 Sehat lock RUKA (malik 21 Nov: 'paani wala apps band karne wala abhi pause kar do — main shop par nahi hoon') — apps band nahi hongi; yaad (popup) wahi. Dobara chalu = msl wapas macros mein + off se hatao.",
+       "macros": [mp, mk, ma, mr, mt, mq, mf, ms, mb, mh, mst, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, mal] + ONCE.get(ver, []),   # v62 (21 Nov): msl (📸 Sehat lock) RUKA — malik: 'abhi pause kar do, shop par nahi hoon' (dobara chalu = msl wapas yahan + off se hatao)   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  {"nm": "🤖 Claude Remote 5", "cls": "RegularIntervalTrigger", "set": {"m_seconds": 60}},   # v51 (17 Nov, malik: "5 minute zyada") — Remote har 1 min dekhe (have5 import se pehle likha jata hai, loop nahi)
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
        "vars": vars_,
-       "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧘 10 min break", "Mobiel locked", "⛔ Subah 11 tak"],   # v53: malik ne kaha purana band   # v50 (17 Nov): malik ka apna "Mobiel locked" band (OK diya) — har app / Recents band karta tha   # v48: break malik ne band karwaya
+       "off": ["⌨️ Keyboard haptics ON (Battery saver)", "🧘 10 min break", "Mobiel locked", "⛔ Subah 11 tak", "📸 Sehat lock"],   # v62: Sehat lock malik ke kehne par ruka   # v53: malik ne kaha purana band   # v50 (17 Nov): malik ka apna "Mobiel locked" band (OK diya) — har app / Recents band karta tha   # v48: break malik ne band karwaya
        "del": []}
 os.makedirs(REPO, exist_ok=True)
 s = json.dumps(pkg, ensure_ascii=False, separators=(',', ':'))

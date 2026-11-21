@@ -9229,3 +9229,13 @@ playback (lane 'b', jitni lambi video utna waqt, ~5–8 min fi bill) se banai = 
   (hara ≤ 2 min · peela ≤ 15 min · laal zyada); search ke neeche ek patli line `.bt-rfs`: kitni video · average · ⚡ / 🐢 ginti + average ·
   sab se der. Purani clip (rd nahi) = ≈ (PC ne kab shuru ki — asal se kam). AI: NAHI.
 Agla (malik ko plan bheja, OK ka intezar): gate pass wale bill par godam camera ki video (tick tak) — tally upar + WhatsApp.
+
+
+=== md pkg v62 (2026-11-21 11:10) — ⏸ 📸 SEHAT LOCK RUKA (malik ke kehne par) ===
+Malik: 'wo paani wala apps band karne wala abhi pause kar do — main shop par nahi hoon'.
+- md/tools/pkg.py: msl (📸 Sehat lock) pkg ke macros se bahar + `off` mein '📸 Sehat lock' — Remote 5 (har 1 min) phone par band kar deta hai.
+  Apps band karna SIRF isi macro mein tha (shLock / shDue aur kahin nahi) — paani + coffee / fruit / nuts kisi par bhi apps band nahi hongi.
+  💧 Paani / ☕ Coffee · Fruit · Nuts ki yaad (popup) wahi chalti rahegi (malik ne sirf apps band karne wala kaha).
+- Dobara chalu: pkg.py mein msl wapas macros list mein + off se '📸 Sehat lock' hatao + naya version. 3 ghante se purani baqi photo khud saaf
+  (sehat.py dAge > 10800) — der se chalu ho to foran lock nahi lagega.
+App / PC mein kuch nahi badla. AI: NAHI.
