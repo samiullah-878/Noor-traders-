@@ -9374,3 +9374,27 @@ Malik (photo: Alfa 'PKR 100.0 received from SAMIH ULLAH WMBLP-KKA in your BAF A/
 === md pkg v66 (2026-11-21 23:27) — jaanch: ginti ab bachti hai ✅ ===
 - v65 23:20 par laga (aakhri dafa zero), v66 (koi macro nahi badla) 23:27. v66 ki export: 94 variable sab maujood, tkLeft 25 · fbLeft 25 · ytLeft 120 · taLeft 120 · pnDue / kpAge (23:22 ke) waise hi = naya BUILD + SUM phone par chal gaya. Likhai wale variable masked / khali.
 - Links (bkU / bkK, nbU, ntU / ntK, shK) v65 ke aakhri zero mein khali hue — app (malik login) kholne par khud dobara bharte hain (bank din mein 1 dafa); nigrani = Settings -> PC scripts -> Phone alarm jorein. jgList (jagah ke naam) malik ko dobara dene honge.
+
+
+=== v2.346.0 + rules 2.110 (2026-11-22) — 🏬 GODAM: sab model (har waqie ki video · 🧍 pose · 🙂 chehra · HD) ===
+Malik (21 Nov raat): 'Chalo tm SB model lagao do godam wla cameras me' -> plan -> 'Ok hd kr do ....'. Segment model NAHI, training baad mein (200-300 faisle ke baad). AI ka kharcha nahi — sab PC par.
+PC (manifest 2026-11-22.1):
+- ginti-cam v2.0: lakeer wale camera par (1) YOLOE carton / bori (pehle jaisa) (2) 🧍 YOLO26n-pose (ginti-pose.onnx) — banda kuch utha kar lakeer paar = po / pi (carton na dikhe tab bhi waqia; sirf po/pi = pz shak) (3) 🙂 YuNet (ginti-face-det.onnx, MIT) + SFace (ginti-face-id.onnx, Apache 2.0) — gintiEv.fc [{k, n, g andaza, s, q, im 112px}].
+  HD tukra (1280 tak decode) sirf chehre ke liye, YOLO chhote naap par. Chehra milan cos >= 0.40 naam, 0.30-0.40 'shayad' (g).
+  faceRef (k, n, th) + faceImg/<id> (bari tasveer) -> galRun embedding -> ginti-faces.json cache; ok / why / q wapas faceRef par.
+  gintiEv.fl {i: {k, n, at}} (malik ne ❓ par naam diya) -> faceRef/l-<ev>-<i> (al 1, im + th 112px) = seekhna; flPc nishan.
+  CF.pz / CF.fc (blueAccess/gintiCam) se band / chalu. gintiPc: pose 'ok', face {m, ppl, n, q, err}, cams[].hd / pms.
+- ginti-ai v1.0 (naya, sirf hisaab): posePost / carryOf / headBox / yunetPost / alignFace (Umeyama, REF 5 nuqte) / embed / faceIn / faceFromPhoto. OpenCV ke saath milaya: YuNet dabbe barabar, embedding cos 1.0000.
+- bill-clip v2.20: (a) godam camera ki recording HD (main stream: Dahua subtype 0 / Hik <ch>01) — khud: 📦 Loading ginti ke camera + gate pass godam ke camera (gc); billClip.hdc [{ch, hd 1|0}] (⚙️ Camera setup ka 'HD' chip: auto -> HD -> chhota). Channel ki stream badle = recording dobara shuru. HD = ~15-25 GB / din / camera.
+  (b) har waqie ki video: gintiEv (goods ya pose) -> billClip/gv~<evId> (+ gv~<evId>b doosra camera), 20 s pehle -> 20 s baad (max 6 min), SIRF apni recording se. 📹 0: gintiDoc tn + st kam + camera ki ginti 0 -> gv~d-<docKey> (note se 30 s pehle -> 5 min baad). Meta {x:1, gv:1, ev|dk, g godam, gn, day, out, in, po, pi, segs, pk...} (godam ka field 'g' — 'b' hisson ka bytes hai).
+App:
+- godam-v.js (naya) '🏬 Godam videos' — ☰ #gvNav + Loading ginti ⋮. Apni <dialog id=gvDlg> (gn-* CSS saath: style.css mein :is(#gnDlg,#gvDlg)), phone back ntGvClose.
+  List patli 2 line (⬆ Gaya / ⬇ Aaya / 🧍 Shak / 📹 0 · godam · video haal · chehre); tap = dono camera ki video saath (hissa hissa, paint ke beech chalti) + chehre + ✓ Sahi / 🔢 Ginti / ✕ Ghalat (gintiEv.lb {k, n, nm, by, at} — training ka data; dobara wahi = hata).
+  ❓ chehra (sirf malik) -> 'Yeh kaun hai?' (hazri ke code se naam, ＋ naya naam, 🚫 kisi ka nahi) -> gintiEv.fl.
+  ⋮ -> 👤 Larkon ki tasveerein (sirf malik): hazri codes (blueAccess/hzCodes, k = 'c'+code) + naye naam (k = 'n-<slug>'); 📷 kai tasveerein -> faceImg (800px) + faceRef (th 140px); PC ka ✅ / ✕ wajah har tasveer par. ⋮ 🧍 Pose / 🙂 Chehra band-chalu.
+  CAP nz.gvid (OPT_IN, Nigrani list mein); malik hamesha.
+- cloud.js: gintiLb, gintiFace, listenFaceRef, addFaceRef, delFaceRef, getHzCodes.
+Rules 2.110: gintiEv lb (malik / Full / Nigrani, apna by, doosre ka sirf malik) · fl (malik) · faceRef / faceImg SIRF malik (id p-*, keys hasOnly).
+Test (sandbox): pan.mp4 par pose ⬇2 + chehra 'Larka A' pehchana (faceImg raasta), ❓ par naam -> PC ne seekha; bill-clip HD + gv clip + 📹 0 clip; app screen Chrome mein (list / khula / ⋮ / 👤 / kaun hai).
+License: YuNet MIT, SFace Apache 2.0 (opencv_zoo) — commercial theek. YOLO26-pose / YOLOE = Ultralytics AGPL (dukan ka apna andar ka kaam, code repo public).
+Asal godam camera par NAHI azmaya: chehra camera ki oonchai / roshni par munhasir — pehle hafte malik ke ✓ / ✕ dekh kar qaide (cos, carry) theek karo.

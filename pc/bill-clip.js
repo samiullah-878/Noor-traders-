@@ -67,7 +67,8 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const RD = require('./rec-dir.js');   // v2.16: 💽 recording kahan
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.19';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.20';
+// v2.20 (22 Nov, malik: 'sab model lagao godam wale cameras mein · HD kar do'): 🎞 HD recording — godam ke camera (📦 ginti / 🚪 gate pass / naam se) khud MAIN stream (HD) par record (isHd), malik ⚙️ se har camera HD on/off (billClip.hdc [{ch, hd 0|1}] — list, merge mein poori badalti); counter camera pehle jaisa chhota · HD badla = us channel ki recording naye stream se dobara · 🏬 godam ka HAR WAQIA = video: gintiEv (ginti-cam v2.0: ⬆ / ⬇ maal, 🧍 uthaya) → us godam ke 1-2 camera (gpCam) t0 − 20 s → t1 + 20 s (6 min tak) → billClip/gv~<evId> (+ gv~<evId>b) · 📹 0 (transfer note bana magar camera ne kuch nahi gina) = note ke waqt − 30 s → + 5 min billClip/gv~d-<key> (ms 1) · apni line (gvRun), SIRF apni recording · haal billClipPc.gv.
 // v2.19 (21 Nov, malik: 'aik hi godam par two cameras hain — dono side by side dikha diya karo'): 🚪 har godam par 2 camera (billClip.gc [{g, c, i 1|2}], auto = 📦 ginti + naam se jitne milein, 2 tak) — har camera ki apni clip (doosra = billClip/<SaleID>~g<godam>b, ci 2), dono ka WAHI waqt · WhatsApp (group + 'video <bill>') = EK video mein ek ke upar doosra (640x720), akela = 640x360 · patti camera ki ghari ke neeche (y0 48). gpm mein cam2 / how2 / r2.
 // v2.18 (21 Nov, malik: 'jis item ka gate pass banta hai us item ka godam ka camera — screen ke upar bhi + WhatsApp wali recording mein bhi'): 🚪 gatePass (PC gate-pass.js) ke har godam ka camera (malik ka chuna `billClip.gc` [{g, c}] › 📦 Loading ginti ka camera › naam se) → post se 20 s pehle → us godam ki sab items ✓ ke 1 min baad (✓ na ho = post + 10 min, max 15 min) SIRF apni recording se → billClip/<SaleID>~g<godam> (st wait → ok / err) · 👥 group mein bill video ke baad · 'video <bill>' mein bhi · alag line (gpRun) · haal billClipPc.gp + gpm (har godam ka camera).
 // v2.17 (21 Nov, malik: 'time calculate kar ke dekho fi video kitna time laga'): counter clip ke meta mein `rd` (video tayyar = aakhri likhai ka waqt) + `mk` (PC ne kitne ms mein banai: rd − at) — app 📋 Bills mein har bill ka ⏱ + average.
@@ -93,6 +94,7 @@ function cfApply(d) {
     pre: d.pre === 0 || d.pre === '0' ? 0 : Math.max(10, Math.min(600, Number(d.pre) || 300)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), rk: (Number(d.rkd) > 0 ? Math.max(1, Math.min(90, Math.round(Number(d.rkd)))) : 10) * 1440, rdrv: RD.letter(d.rdrv), keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
     xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v2.10: 📹 mazeed cameras
     ch: (d.ch && typeof d.ch === 'object') ? d.ch : {}, rep: /^\d{1,2}:\d{2}$/.test(String(d.rep || '')) ? String(d.rep) : '20:30', maxs: Math.max(30, Math.min(700, Number(d.maxs) || 630)),
+    hdc: (Array.isArray(d.hdc) ? d.hdc : []).reduce((o, x) => { const ch = Math.floor(Number(x && x.ch) || 0); if (ch > 0 && ch < 1000 && x && (x.hd === 0 || x.hd === 1 || x.hd === '0' || x.hd === '1')) o[ch] = Number(x.hd) ? 1 : 0; return o; }, {}),   // v2.20: 🎞 HD on/off (malik) — na ho = auto (godam camera HD)
     gpv: d.gpv !== false, gc: (Array.isArray(d.gc) ? d.gc : []).reduce((o, x) => { const g = Math.floor(Number(x && x.g) || 0), c = String((x && x.c) || '').trim().slice(0, 30), i = Number(x && x.i) === 2 ? 1 : 0; if (g > 0 && g < 10000 && c) { const k = String(g); o[k] = o[k] || ['', '']; o[k][i] = c; } return o; }, {}) };   // v2.18: 🚪 godam ka camera [{g, c ('-' = koi nahi), i (v2.19: 1 | 2 — doosra camera)}] — list (merge mein poori badalti) → {g: [slot1, slot2]} ('' = auto)
   cfReady = true;
 }
@@ -107,7 +109,7 @@ let ST = { ff: '', err: '', last: '', q: 0 }, T = { day: '', n: 0, ok: 0, err: 0
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const day = dayOf(); if (T.day !== day) T = { day, n: 0, ok: 0, err: 0 };
-  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, ln: ST.ln || null, test: TEST || null, rec: recState(), dk: DISK, rkd: Math.round(CF.rk / 1440), rdrv: CF.rdrv || '', drv: drvOut(), net: NET || null, wg: ST.wg || null, gp: ST.gp || null, gpm: (() => { try { return gpMapOut(); } catch { return []; } })(), cams: (() => { try { return camList().map(c => ({ n: c.n, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('billClipPc').set({ at: Date.now(), ver: VER, host: os.hostname(), on: CF.on, on0: ON0, pcs: (() => { const K = Object.keys(CF.ch || {}).filter(k => Number(CF.ch[k]) > 0); try { return [...new Set(K.map(k => PN.nowName(k)))].slice(0, 12); } catch { return K.slice(0, 12); } })(), ff: ST.ff ? 1 : 0, err: ST.err.slice(0, 160), last: ST.last.slice(0, 120), q: ST.q, today: { ...T }, ln: ST.ln || null, test: TEST || null, rec: recState(), dk: DISK, rkd: Math.round(CF.rk / 1440), rdrv: CF.rdrv || '', drv: drvOut(), net: NET || null, wg: ST.wg || null, gp: ST.gp || null, gv: ST.gv || null, gpm: (() => { try { return gpMapOut(); } catch { return []; } })(), cams: (() => { try { return camList().map(c => ({ n: c.n, ch: c.ch, c: c.c, r: c.r, on: recOn(c.ch) ? 1 : 0, hd: isHd(c.ch) ? 1 : 0, hdx: (CF.hdc || {})[c.ch] === undefined ? 0 : 1 })); } catch { return []; } })() }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
 }
 
 // ---------- ffmpeg (ffmpeg-static — apne folder mein) ----------
@@ -242,7 +244,11 @@ async function rabta() {
 
 // ---------- 🎞 LOCAL RECORDING (v2.0): har camera ki live sub-stream 1-1 min ke tukron mein (clip-rec\ch<N>\s-YYYYMMDD-HHMMSS.mp4) ----------
 const recs = new Map();   // ch → { p, at, errs, restarts, dead, lastErr }
-function liveUrl(ch) { const u = credOf(CF.user), p = credOf(CF.pw); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${CF.sub ? 2 : 1}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${CF.sub}`; }
+function liveUrl(ch) { const u = credOf(CF.user), p = credOf(CF.pw), sub = subOf(ch); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${sub ? 2 : 1}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${sub}`; }
+// v2.20: 🎞 HD — godam ke camera (📦 ginti / 🚪 gate pass / naam se, counter nahi) khud main stream; malik ka hdc har camera par aakhri faisla
+function hdAuto() { const s = new Set(); try { for (const x of GIC) { const c = camFind(x.n); if (c && !c.c) s.add(c.ch); } const gs = new Set([...Object.keys(GN), ...Object.keys(CF.gc || {})].map(Number).filter(g => g > 1)); for (const g of gs) for (const c of gpCam(g).cs) if (!c.c) s.add(c.ch); } catch {} return s; }
+function isHd(ch) { const v = (CF.hdc || {})[ch]; if (v === 1) return true; if (v === 0) return false; return hdAuto().has(Number(ch)); }
+const subOf = ch => isHd(ch) ? 0 : CF.sub;
 function recChannels() { const s = new Set(); for (const v of Object.values(CF.ch)) if (Number(v) > 0) s.add(Number(v)); for (const x of CF.xc || []) if (x.r) s.add(x.ch); return [...s]; }   // v2.10: mazeed camera sirf jab ⏺ recording chalu
 // v2.16: 💽 likhne ki jagah (malik ka drive) + parhne ki sab jagahein
 let RA = { root: REC, d: '', err: '' };
@@ -266,7 +272,7 @@ function recStart(ch) {
     '-f', 'segment', '-segment_time', '60', '-reset_timestamps', '1', '-segment_format', 'mp4', '-segment_format_options', 'movflags=+frag_keyframe+empty_moov+default_base_moof', '-strftime', '1', path.join(dir, 's-%Y%m%d-%H%M%S.mp4'),
     ...(share ? ['-an', '-c:v', 'copy', '-f', 'mpegts', '-flush_packets', '1', `udp://127.0.0.1:${48500 + ch}?pkt_size=1316`] : [])];
   const p = spawn(ff, args, { windowsHide: true }); let err = '';
-  st.p = p; st.at = Date.now(); st.dead = 0; st.lastErr = '';
+  st.p = p; st.at = Date.now(); st.dead = 0; st.lastErr = ''; st.sub = subOf(ch);   // v2.20: kaun sa stream (0 = HD)
   p.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
   p.on('error', e => { err += ' ' + e.message; });
   p.on('close', code => {
@@ -277,13 +283,14 @@ function recStart(ch) {
     log(`🎞 rec ch ${ch} ruk gayi (${st.lastErr}) — ${Math.min(60, 5 * Math.max(1, st.errs))} s baad dobara`);
     setTimeout(() => recSync(), Math.min(60, 5 * Math.max(1, st.errs)) * 1000);
   });
-  log(`🎞 rec ch ${ch} shuru → ${dir}${share ? ' · 🔗 live copy :' + (48500 + ch) : ''}`);
+  log(`🎞 rec ch ${ch} shuru${st.sub === 0 && CF.sub ? ' (HD)' : ''} → ${dir}${share ? ' · 🔗 live copy :' + (48500 + ch) : ''}`);
 }
 function recStopAll(why) { for (const [ch, st] of recs) if (st.p) { try { st.p.kill(); } catch {} st.p = null; } if (why && recs.size) log(`🎞 recording band (${why})`); }
 function recSync() {   // jo channel setting mein hain wahi chalein; baqi band
   if (!cfReady) return;
   const want = CF.on && CF.ip && !AUTHBAD && !NETBAD && ffPath() ? recChannels() : [];
   for (const [ch, st] of recs) if (!want.includes(ch) && st.p) { try { st.p.kill(); } catch {} st.p = null; }
+  for (const [ch, st] of recs) if (want.includes(ch) && st.p && st.sub !== subOf(ch)) { log(`🎞 rec ch ${ch}: ${subOf(ch) === 0 ? 'HD' : 'chhota'} stream par dobara`); st.errs = 0; try { st.p.kill(); } catch {} }   // v2.20: HD badla
   for (const ch of want) recStart(ch);
 }
 function recTick() {   // watchdog + safai (har 30 s)
@@ -341,7 +348,7 @@ function recClean(now) {
   const af = freeOf(ad), can = af && day > 0 ? Math.max(0, (af.free + (USE[ad] || 0) - 25 * GB) / day) : 0;
   DISK = { d: ad, err: RA.err || '', free: af ? r1(af.free / GB) : null, tot: af ? Math.round(af.tot / GB) : null, used: r1(bytes / GB), day: r1(day / GB), est, can: Math.floor(can), old, cut, n: left.length, at: now };
 }
-function recState() { const o = {}; for (const [ch, st] of recs) { const l = segList(ch); const last = l.length ? l[l.length - 1] : null; o[ch] = { on: st.p ? 1 : 0, n: l.length, last: last ? last.t0 : 0, err: st.p ? '' : (st.lastErr || '').slice(0, 120) }; } return o; }
+function recState() { const o = {}; for (const [ch, st] of recs) { const l = segList(ch); const last = l.length ? l[l.length - 1] : null; o[ch] = { on: st.p ? 1 : 0, n: l.length, last: last ? last.t0 : 0, err: st.p ? '' : (st.lastErr || '').slice(0, 120), hd: st.p && st.sub === 0 && CF.sub ? 1 : 0 }; } return o; }
 function recCover(ch, t0, t1) {   // tukre jo [t0, t1] dhakte hon — poora dhaka ho to list, warna null
   const l = segList(ch).filter(x => x.t1 > t0 - 2000 && x.t0 < t1 + 2000); if (!l.length) return null;
   if (l[0].t0 > t0 + 15000) return null; if (l[l.length - 1].t1 < t1 - 15000) return null;
@@ -617,7 +624,7 @@ GPC.where('day', 'in', [dayOf(), dayOf(Date.now() - 86400000)]).onSnapshot(s => 
     for (const g of (Array.isArray(x.gs) ? x.gs : [])) { const nm = String((x.gn || {})[String(g)] || '').trim(); if (nm) GN[g] = nm.slice(0, 30); } });
   gpKick();
 }, e => log('⚠️ gatePass: ' + e.message));
-biz.collection('blueAccess').doc('gintiCam').onSnapshot(s => { const d = s.exists ? s.data() || {} : {}; GIC = (Array.isArray(d.cams) ? d.cams : []).map(c => ({ n: String((c && c.n) || '').trim(), b: Math.floor(Number(c && c.b) || 0) })).filter(c => c.n && c.b > 0); }, () => {});
+biz.collection('blueAccess').doc('gintiCam').onSnapshot(s => { const d = s.exists ? s.data() || {} : {}; GIC = (Array.isArray(d.cams) ? d.cams : []).map(c => ({ n: String((c && c.n) || '').trim(), b: Math.floor(Number(c && c.b) || 0) })).filter(c => c.n && c.b > 0); try { recSync(); } catch {} }, () => {});   // v2.20: ginti camera = HD
 function gpBr() {   // godam ke naam (posStock meta) — setup mein godam gate pass se pehle bhi nazar aaye
   if (Date.now() - brAt < 10 * 60000) return; brAt = Date.now();
   biz.collection('posStock').where('meta', '==', true).get().then(q => { q.forEach(d => { const x = d.data() || {}, b = Number(x.branch != null ? x.branch : (String(d.id).match(/^b(\d+)-/) || [])[1]); if (b > 1 && x.name && !GN[b]) GN[b] = String(x.name).trim().slice(0, 30); }); }).catch(() => {});
@@ -761,6 +768,93 @@ async function mkGVideo(list, out) {
 }
 const gpCap = m => { const nl = Number(m.nl) || (Array.isArray(m.it) ? m.it.length : 0), nt = Number(m.nt) || 0;
   return `🚪 Gate pass · Bill #${m.no || m.sid} · 🏬 ${m.gn || 'Godam'} · ${nl} item${nl === 1 ? '' : 's'} · ${nt && nt === nl ? '✓ sab diya' : nt ? `✓ ${nt}/${nl} diya` : '✓ tick nahi hua'}${m.gb ? ' (' + m.gb + ')' : ''}\n📹 ${(m.cams && m.cams.length ? m.cams.join(' + ') : m.cam) || ''} · ${hm(Number(m.t0) + GPW.pre * 1000)} → ${hm(Number(m.t1) || Number(m.t0) + Number(m.dur) * 1000)}`; };
+
+// ---------- 🏬 v2.20: GODAM KA HAR WAQIA = VIDEO (malik 21 Nov: 'maal aane / jane ki video AI khud banaye — phir hum ✓ / ✕ se training karwayein') ----------
+//   gintiEv/<id> (PC ginti-cam v2.0: lakeer paar — ⬆ out / ⬇ in maal, 🧍 po / pi uthaya, 🙂 fc chehre) → us godam (b) ke 1-2 camera (gpCam — wahi 🚪 wala
+//   chunao; na ho to waqie ka apna camera) ki clip t0 − 20 s → t1 + 20 s (6 min tak) → billClip/gv~<evId> (ci 1) + gv~<evId>b (ci 2).
+//   📹 0 (chhooti): gintiDoc transfer note jahan camera ne kuch nahi gina (out + in = 0, st kam) → note ke waqt − 30 s → + 5 min → billClip/gv~d-<key> (ms 1).
+//   SIRF apni recording (⏺ Rec ON) — NVR par naya rabta NAHI. Apni line (gvRun) — bill / gate pass ki line kabhi na ruke. AI NAHI (yahan sirf clip).
+const GVW = { pre: 20, post: 20, max: 360, back: 6 * 3600000, dPre: 30, dPost: 300 }, gvEv = new Map(), gvDoc = new Map(); let gvBusy = false, gvT = null, gvArm = null, gvArmAt = 0;
+biz.collection('gintiEv').where('day', 'in', [dayOf(), dayOf(Date.now() - 86400000)]).onSnapshot(s => { s.docChanges().forEach(c => { if (c.type === 'removed') gvEv.delete(c.doc.id); else gvEv.set(c.doc.id, c.doc.data() || {}); }); gvKick(); }, e => log('⚠️ gintiEv: ' + e.message));
+biz.collection('gintiDoc').where('day', 'in', [dayOf(), dayOf(Date.now() - 86400000)]).onSnapshot(s => { s.docChanges().forEach(c => { if (c.type === 'removed') gvDoc.delete(c.doc.id); else gvDoc.set(c.doc.id, c.doc.data() || {}); }); gvKick(); }, e => log('⚠️ gintiDoc: ' + e.message));
+function gvCams(b, camN) { const cs = b > 0 ? gpCam(b).cs : []; if (cs.length) return cs.slice(0, 2); const c = camFind(camN); return c ? [c] : []; }
+function gvItems() {
+  const now = Date.now(), out = [], skip = k => k && (k.st === 'ok' || k.st === 'skip' || (k.st === 'err' && (k.fin || k.tries >= 3 || now - k.at < 2 * 60000)) || (k.hold && k.hold > now));
+  if (!gpOn || !cfReady || !CF.on) return out;
+  for (const [eid, e] of gvEv) {
+    const goods = (Number(e.out) || 0) + (Number(e.in) || 0), pose = (Number(e.po) || 0) + (Number(e.pi) || 0), t0e = Number(e.t0) || 0, t1e = Number(e.t1) || t0e;
+    if ((!goods && !pose) || !t0e) continue;
+    const gid = 'gv~' + eid, k = known.get(gid); if (skip(k)) continue;
+    if (!k && now - t1e > GVW.back) continue;
+    const t0 = t0e - GVW.pre * 1000, t1 = Math.min(t1e + GVW.post * 1000, t0 + GVW.max * 1000);
+    out.push({ gid, eid, src: e, b: Number(e.b) || 0, camN: String(e.cam || ''), w: { t0, t1, dur: Math.round((t1 - t0) / 1000), due: t1 + REC_WAIT * 1000 }, k });
+  }
+  for (const [key, d] of gvDoc) {
+    if (d.k !== 'tn' || d.x || d.st !== 'kam' || (Number(d.out) || 0) + (Number(d.in) || 0) > 0) continue;
+    const t = Number(d.t) || 0; if (!t) continue;
+    const gid = 'gv~d-' + key, k = known.get(gid); if (skip(k)) continue;
+    if (!k && now - t > GVW.back) continue;
+    const t0 = t - GVW.dPre * 1000, t1 = t + GVW.dPost * 1000;
+    out.push({ gid, dk: key, src: d, b: Number(d.b) || 0, camN: String(d.cam || ''), ms: 1, w: { t0, t1, dur: Math.round((t1 - t0) / 1000), due: t1 + REC_WAIT * 1000 }, k });
+  }
+  return out;
+}
+async function gvPut(it, id, o) {
+  const x = it.src || {}, gn = String(GN[it.b] || x.bn || 'Godam ' + it.b).slice(0, 30);
+  await within(CLIP.doc(id).set({ x: 1, gv: 1, ...(it.eid ? { ev: it.eid } : { dk: it.dk, ms: 1, no: String(x.no || '') }), g: it.b, gn, day: String(x.day || dayOf(it.w.t0)), out: Number(x.out) || 0, in: Number(x.in) || 0, po: Number(x.po) || 0, pi: Number(x.pi) || 0, at: Date.now(), ...o }, { merge: true }), 30000, 'godam waqia clip');
+}
+function gvKick() { if (!gpOn || gvT) return; gvT = setTimeout(() => { gvT = null; gvRun().catch(e => log('❌ 🏬 ' + (e.stack || e.message))); }, 1500); }
+function gvStat(o) { const day = dayOf(); const p = ST.gv && ST.gv.day === day ? ST.gv : { day, ok: 0, err: 0 }; ST.gv = { ...p, ...o }; }
+async function gvRun() {
+  if (gvBusy) return; gvBusy = true;
+  try {
+    for (let n = 0; n < 200; n++) {
+      const now = Date.now(), L = gvItems();
+      gvStat({ w: L.filter(it => gvCams(it.b, it.camN).length).length });
+      const ready = L.filter(it => it.w.due <= now && gvCams(it.b, it.camN).length).sort((a, b) => a.w.due - b.w.due);
+      if (!ready.length) {   // agla tayyar waqia — usi second
+        let best = 0; for (const it of L) if (it.w.due > now && (!best || it.w.due < best) && gvCams(it.b, it.camN).length) best = it.w.due;
+        if (best && !(gvArm && gvArmAt <= best)) { if (gvArm) clearTimeout(gvArm); gvArmAt = best; gvArm = setTimeout(() => { gvArm = null; gvArmAt = 0; gvKick(); }, Math.min(best - now + 500, 10 * 60000)); }
+        break;
+      }
+      const it = ready[0];
+      try { await gvOne(it); } catch (e) { const kk = known.get(it.gid) || {}; known.set(it.gid, { ...kk, st: 'err', tries: (kk.tries || 0) + 1, at: Date.now() }); log(`✕ 🏬 ${it.gid}: ${e.message}`); }
+      pushSt();
+    }
+  } finally { gvBusy = false; }
+}
+async function gvOne(it) {
+  const { gid, w } = it, kk = known.get(gid) || { tries: 0 }, cs = gvCams(it.b, it.camN);
+  if (Date.now() < w.t1 + 3 * 60000 && cs.some(c => c.r && recs.get(c.ch)?.p && !recCover(c.ch, w.t0, w.t1))) { known.set(gid, { ...kk, st: 'wait', hold: Date.now() + 20000 }); return; }   // aakhri tukra abhi likha ja raha
+  const tries = (kk.tries || 0) + 1, R = [];
+  for (let i = 0; i < cs.length; i++) R.push(await gvClip(it, cs[i], i ? gid + 'b' : gid, i + 1, tries));
+  const ok = R.filter(r => r.ok);
+  if (ok.length) { known.set(gid, { st: 'ok', tries, at: Date.now() }); gvStat({ ok: (ST.gv.ok || 0) + 1, last: `${hm(w.t0 + GVW.pre * 1000)} ${String(GN[it.b] || it.camN)} ${w.dur} s${ok.length > 1 ? ' · 2 camera' : ''}${it.ms ? ' · 📹 0' : ''}` }); }
+  else known.set(gid, { st: 'err', tries, at: Date.now(), fin: R.every(r => r.fin) ? 1 : 0 });
+  if (!ok.length) gvStat({ err: (ST.gv.err || 0) + 1, le: R.map(r => r.why).filter(Boolean).join(' · ').slice(0, 100) });
+}
+async function gvClip(it, c, id, ci, tries) {   // ek camera ki clip → billClip/<id> (hisse <id>_s<i>_<j>) — gpClip jaisa
+  const w = it.w, tA = Date.now(), put = o => gvPut(it, id, { ci, cam: c.n, ch: c.ch, t0: w.t0, t1: w.t1, dur: w.dur, ...o });
+  const fail = async (why, fin) => { await put({ st: 'err', err: String(why).slice(0, 160), fin: fin ? 1 : 0, tries }); log(`✕ 🏬 ${id} (${c.n}): ${why}`); return { ok: false, fin: fin ? 1 : 0, why: `${c.n}: ${why}` }; };
+  if (!c.r) return fail(`"${c.n}" ki ⏺ recording band — ⚙️ Camera setup mein ⏺ Rec ON karein`, 1);
+  const cov = recCover(c.ch, w.t0, w.t1);
+  if (!cov) return fail(recs.get(c.ch)?.p ? 'is waqt ki recording PC mein nahi (recording beech mein ruki thi)' : `"${c.n}" ki recording chal nahi rahi`, 1);
+  const outDir = path.join(TMP, 'v' + id.replace(/[^\w-]/g, '_')); rmDir(outDir); fs.mkdirSync(TMP, { recursive: true });
+  const lst = outDir + '.txt'; fs.writeFileSync(lst, cov.map(y => `file '${y.f.replace(/\\/g, '/').replace(/'/g, "'\\''")}'`).join('\n') + '\n');
+  const rr = await ffSegs(['-f', 'concat', '-safe', '0', '-i', lst], Math.max(0, (w.t0 - cov[0].t0) / 1000), w.dur, outDir); try { fs.unlinkSync(lst); } catch {}
+  if (!rr.ok) { rmDir(outDir); return fail('video nahi bani: ' + String(rr.err).slice(0, 100), tries >= 3); }
+  const segs = [], pk = []; let sz = 0;
+  try {
+    for (let i = 0; i < rr.files.length; i++) {
+      const buf = fs.readFileSync(rr.files[i]); const n = Math.ceil(buf.length / CHUNK);
+      for (let j = 0; j < n; j++) { const did = `${id}_s${i}_${j}`; await within(CLIP.doc(did).set({ b: buf.subarray(j * CHUNK, (j + 1) * CHUNK), i, j, id }), 60000, 'godam waqia hissa'); pk.push(did); }
+      segs.push({ n, sz: buf.length, d: Math.min(60, w.dur - i * 60) }); sz += buf.length;
+    }
+  } finally { rmDir(outDir); }
+  await put({ st: 'ok', v: 2, segs, pk, n: 0, sz, rd: Date.now(), mk: Date.now() - tA, err: FieldValue.delete(), fin: FieldValue.delete() });
+  log(`🏬 ${id} (${c.n} ch ${c.ch}) ${w.dur} s → ${Math.round(sz / 1024)} KB · ${Math.round((Date.now() - tA) / 1000)} s`);
+  return { ok: true, id, sz };
+}
 
 // ---------- 🎥 v2.8: bill ki video WhatsApp par (malik 18 Nov: "bill number likhein to us ki video hamare aur Mubeen ke WhatsApp par full speed se — customer ko wait na karna pare") ----------
 //   billClipWa/<id> {st new, no | sid, by, at, src app|wa, from (wa: maangne wala), byN} → bill dhoondo (aaj / kal / parson ka posSales) →
@@ -1218,6 +1312,7 @@ async function main() {
   setInterval(() => cleanup().catch(() => {}), 60 * 60000); setTimeout(() => cleanup().catch(() => {}), 90000);
   kick(); waOn = true; waKick();   // v2.8
   gpOn = true; gpBr(); gpKick(); setInterval(gpKick, 30000);   // v2.18: 🚪 godam camera ki line
+  gvKick(); setInterval(gvKick, 30000);   // v2.20: 🏬 godam ke waqiat ki video
   setTimeout(gwSweep, 5000); setInterval(gwSweep, 2 * 60000);   // v2.9: 👥 restart ke baad bachi clips
 }
 const lock = net.createServer();

@@ -19,6 +19,14 @@
 //           (sirf malik, app 📦 Loading ginti ⚙️). Haal: blueAccess/gintiPc. Lakeer ki tasveer: blueAccess/gintiSnap-<ck>.
 //  Gahak / kisi aur number ko KABHI kuch nahi. POS mein KUCH nahi likhti. Process ki command line / NVR password kabhi log nahi.
 //  Chalana: ginti-cam-auto.bat (doctor, sirf server). Log: ginti-cam-log.txt · Lock 47846.
+//  v2.0 (22 Nov, malik: "sab model lagao godam wale cameras mein · HD kar do"): ginti-ai.js ke saath —
+//    🧍 POSE (ginti-pose.onnx, YOLO26n-pose): insaan ki ginti alag tracker se (TRP) — maal utha kar (carryOf) lakeer paar = waqia (po ⬆ / pi ⬇),
+//       carton nazar na aaye tab bhi (chhupa maal) — sirf app mein "🧍 shak" (pz 1), WhatsApp alarm NAHI. Khali haath guzra = pp (sirf ginti).
+//    🙂 CHEHRA (ginti-face-det.onnx YuNet MIT + ginti-face-id.onnx SFace Apache 2.0): HD tukron (bill-clip v2.20 godam camera khud HD) se
+//       pose ke sar wale tukre → chehra → 128 number → faceRef (malik ki larkon ki tasveerein, app 🏬 Godam videos → 👤) se milan ≥ 0.40 = naam.
+//       gintiEv.fc [{k, n, g (shayad), s, q, im 112 jpg}] (4 tak) · malik ❓ par naam (gintiEv.fl {i: {k, n, at}}) → yahan faceRef/l-<ev>-<i> (al 1)
+//       = agli dafa wohi chehra pehchana jata hai (seekhna). Embeddings sirf PC ki file ginti-faces.json (Firestore mein sirf tasveer).
+//    Setting gintiCam.pz (pose) / .fc (chehra) — false = band (default chalu). Sab PC par, internet / Gemini NAHI (Gemini sirf purana 🚨 bina note).
 // =========================================================
 const fs = require('fs');
 const os = require('os');
@@ -27,10 +35,13 @@ const path = require('path');
 const { spawn, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 
-const VER = '1.1';   // v1.1 (20 Nov): 💽 recording kisi bhi drive par ho (malik ka chuna, rec-dir.js) — sab jagah se parhta hai
+const VER = '2.0';   // v2.0 (22 Nov): 🧍 pose + 🙂 chehra (ginti-ai.js) · v1.1 (20 Nov): 💽 recording kisi bhi drive par ho (malik ka chuna, rec-dir.js) — sab jagah se parhta hai
 const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47846;
 const MODS = path.join(DIR, 'ginti-mods'), CLIP_MODS = path.join(DIR, 'clip-mods'), REC = path.join(DIR, 'clip-rec'), TMP = path.join(DIR, 'ginti-tmp');
 const MODEL = path.join(DIR, 'ginti-model.onnx'), STATE = path.join(DIR, 'ginti-state.json');
+const POSE = path.join(DIR, 'ginti-pose.onnx'), FDET = path.join(DIR, 'ginti-face-det.onnx'), FID = path.join(DIR, 'ginti-face-id.onnx'), FACES = path.join(DIR, 'ginti-faces.json');
+const AIX = require('./ginti-ai.js');   // v2.0: pose + chehra ka hisaab
+const HDW = 1280;   // v2.0: HD tukra = 1280 chaurai par parho (chehre ke liye) — YOLO ko 512 wali chhoti
 const ORT_PKG = 'onnxruntime-node@1.20.1';
 const IMG = 512, NAMES = ['cardboard box', 'sack', 'crate', 'person'];
 const GOODS = new Set((process.env.GINTI_TEST_CLS || '0,1,2').split(',').map(Number));   // test mein person bhi (3)
@@ -89,15 +100,15 @@ class Tracker {
       if (tUsed.has(ti) || used.has(di)) continue; tUsed.add(ti); used.add(di);
       const k = this.T[ti], d = dets[di], dt = Math.max(0.05, (t - k.t) / 1000);
       k.vx = 0.5 * k.vx + 0.5 * (d.x - k.x) / dt; k.vy = 0.5 * k.vy + 0.5 * (d.y - k.y) / dt;
-      Object.assign(k, { x: d.x, y: d.y, w: d.w, h: d.h, t, hits: k.hits + 1 });
+      Object.assign(k, { x: d.x, y: d.y, w: d.w, h: d.h, t, hits: k.hits + 1 }); d.tid = k.id; if (d.cr) k.crT = t;   // v2.0: 🧍 insaan ka tracker — 'uthaya' ka waqt
       const s = sideOf(ln, d.x, d.y), sd = s > this.M ? 1 : s < -this.M ? -1 : 0;
       if (sd && k.sd && sd !== k.sd && k.hits >= 2) {
         const p = projOf(ln, d.x, d.y), pp = projOf(ln, k.lx, k.ly);
-        if ((p > -0.12 && p < 1.12) || (pp > -0.12 && pp < 1.12)) out.push({ t, dir: sd === ln.out ? 1 : -1, box: [Math.round(d.x), Math.round(d.y), Math.round(d.w), Math.round(d.h)], id: k.id });
+        if ((p > -0.12 && p < 1.12) || (pp > -0.12 && pp < 1.12)) out.push({ t, dir: sd === ln.out ? 1 : -1, box: [Math.round(d.x), Math.round(d.y), Math.round(d.w), Math.round(d.h)], id: k.id, cr: k.crT && t - k.crT < 2500 ? 1 : 0 });
       }
       if (sd) { k.sd = sd; k.lx = d.x; k.ly = d.y; }
     }
-    dets.forEach((d, di) => { if (used.has(di)) return; const s = sideOf(ln, d.x, d.y); this.T.push({ id: ++this.id, x: d.x, y: d.y, w: d.w, h: d.h, vx: 0, vy: 0, t, hits: 1, sd: s > this.M ? 1 : s < -this.M ? -1 : 0, lx: d.x, ly: d.y }); });
+    dets.forEach((d, di) => { if (used.has(di)) return; const s = sideOf(ln, d.x, d.y), nk = { id: ++this.id, x: d.x, y: d.y, w: d.w, h: d.h, vx: 0, vy: 0, t, hits: 1, sd: s > this.M ? 1 : s < -this.M ? -1 : 0, lx: d.x, ly: d.y }; if (d.cr) nk.crT = t; d.tid = nk.id; this.T.push(nk); });
     this.T = this.T.filter(k => t - k.t <= 1600).slice(-80);
     return out;
   }
@@ -125,12 +136,12 @@ function ffRun(args, ms = 60000) {   // [code, stderr]
     p.stderr.on('data', d => { if (er.length < 6000) er += d; }); p.on('error', e => { clearTimeout(t); res([-1, e.message]); }); p.on('close', c => { clearTimeout(t); res([c, er]); });
   });
 }
-const SIZE = new Map();   // ch → {w, h}
+const SIZE = new Map();   // v2.0: tukra (file) → {w, h} — HD / chhoti recording badle to agla tukra khud naya naap (pehle 1 ghanta purana naap rehta)
 async function sizeOf(ch, f) {
-  const s = SIZE.get(ch); if (s && Date.now() - s.at < 3600000) return s;
+  const s = SIZE.get(f); if (s) return s;
   const [, er] = await ffRun(['-hide_banner', '-nostdin', '-i', f], 20000);
   const m = String(er).match(/Video:[^\n]*?,\s(\d{2,5})x(\d{2,5})/); if (!m) return null;
-  const v = { w: +m[1], h: +m[2], at: Date.now() }; SIZE.set(ch, v); return v;
+  const v = { w: +m[1], h: +m[2], at: Date.now() }; SIZE.set(f, v); if (SIZE.size > 200) SIZE.delete(SIZE.keys().next().value); return v;
 }
 // tukre ki har tasveer (fps) → onFrame(rgb, i) (async, ek waqt ek)
 function decode(f, fps, tw, th, onFrame) {
@@ -177,7 +188,20 @@ async function session() {
   try { SESS = await O.InferenceSession.create(MODEL, { intraOpNumThreads: 2, interOpNumThreads: 1, graphOptimizationLevel: 'all', executionMode: 'sequential' }); sessMt = mt; log('🧠 model tayyar'); return SESS; }
   catch (e) { log('✕ model: ' + e.message); SESS = null; return null; }
 }
+// v2.0: 🧍 / 🙂 naye model (har ek apni file) — file badli = naya session, kharab = us mtime tak dobara koshish nahi
+const SX = {};
+async function sessOf(f) {
+  const O = ort(); if (!O) return null;
+  let mt = 0; try { mt = fs.statSync(f).mtimeMs; } catch { return null; }
+  const c = SX[f]; if (c && c.mt === mt) return c.s || null;
+  try { const s = await O.InferenceSession.create(f, { intraOpNumThreads: 2, interOpNumThreads: 1, graphOptimizationLevel: 'all', executionMode: 'sequential', logSeverityLevel: 3 }); SX[f] = { s, mt }; log(`🧠 ${path.basename(f)} tayyar`); return s; }
+  catch (e) { SX[f] = { s: null, mt }; log(`✕ ${path.basename(f)}: ${e.message}`); return null; }
+}
 let TENSOR_BUF = null;
+async function poseRun(sess, tw, th) {   // v2.0: detect() ki WAHI 512 wali tasveer (TENSOR_BUF) par — dobara tayyari nahi
+  const r = await sess.run({ [sess.inputNames[0]]: new ORT.Tensor('float32', TENSOR_BUF, [1, 3, IMG, IMG]) }), o = r[sess.outputNames[0]];
+  return AIX.posePost(o.data, o.dims, tw, th, (IMG - tw) >> 1, (IMG - th) >> 1);
+}
 async function detect(sess, rgb, tw, th, thr) {
   const p = prep(rgb, tw, th, TENSOR_BUF); TENSOR_BUF = p.data;
   const r = await sess.run({ [sess.inputNames[0]]: new ORT.Tensor('float32', p.data, [1, 3, IMG, IMG]) });
@@ -214,7 +238,7 @@ function bestDoc(ev, docs, winMs) {
   return best;
 }
 
-module.exports = { prep, post, iou, Tracker, lineOf, sideOf, nagOf, verdict, bestDoc, segList, decode, sizeOf, ort, session, detect, tiny, diffOf, VER, main };
+module.exports = { prep, post, iou, Tracker, lineOf, sideOf, nagOf, verdict, bestDoc, segList, decode, sizeOf, ort, session, sessOf, poseRun, detect, tiny, diffOf, VER, main };
 if (require.main === module) main();
 
 // =========================================================
@@ -232,12 +256,12 @@ function main() {
   log(`ginti-cam v${VER} shuru (${os.hostname()})`);
 
   // ---------- setting ----------
-  let CF = { on: false, onAt: 0, cams: [], fps: 3, hrs: '09:00-21:30', win: 20, alMax: 20, snapReq: 0, snapCam: '' };
+  let CF = { on: false, onAt: 0, cams: [], fps: 3, hrs: '09:00-21:30', win: 20, alMax: 20, snapReq: 0, snapCam: '', pz: true, fc: true };
   let BC = { ch: {}, xc: [] }, AI = { key: '', model: '' }, MALIK = '', BR = {};
   const cfApply = d => {
     d = d || {};
     const cams = (Array.isArray(d.cams) ? d.cams : []).map(c => ({ n: String((c && c.n) || '').trim().slice(0, 30), b: Math.floor(Number(c && c.b) || 0), bn: String((c && c.bn) || '').slice(0, 30), ln: Array.isArray(c && c.ln) ? c.ln.slice(0, 4).map(v => Math.max(0, Math.min(1000, Number(v) || 0))) : null, out: Number(c && c.out) === -1 ? -1 : 1, al: c && c.al === false ? 0 : 1, on: c && c.on === false ? 0 : 1 })).filter(c => c.n).slice(0, 8);
-    CF = { on: !!d.on, onAt: Number(d.onAt) || 0, cams, fps: Math.max(2, Math.min(6, Math.round(Number(d.fps) || 3))), hrs: /^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(String(d.hrs || '')) ? String(d.hrs) : '09:00-21:30', win: Math.max(5, Math.min(90, Number(d.win) || 20)), alMax: Math.max(0, Math.min(100, d.alMax == null ? 20 : Number(d.alMax) || 0)), snapReq: Number(d.snapReq) || 0, snapCam: String(d.snapCam || '') };
+    CF = { on: !!d.on, onAt: Number(d.onAt) || 0, cams, fps: Math.max(2, Math.min(6, Math.round(Number(d.fps) || 3))), hrs: /^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(String(d.hrs || '')) ? String(d.hrs) : '09:00-21:30', win: Math.max(5, Math.min(90, Number(d.win) || 20)), alMax: Math.max(0, Math.min(100, d.alMax == null ? 20 : Number(d.alMax) || 0)), snapReq: Number(d.snapReq) || 0, snapCam: String(d.snapCam || ''), pz: d.pz !== false, fc: d.fc !== false };   // v2.0: 🧍 pz / 🙂 fc (false = band)
   };
   BA.doc('gintiCam').onSnapshot(s => { cfApply(s.exists ? s.data() : null); kick(); }, e => log('⚠️ setting: ' + e.message));
   BA.doc('billClip').onSnapshot(s => { const d = (s.exists && s.data()) || {}; BC = { ch: d.ch && typeof d.ch === 'object' ? { ...d.ch } : {}, xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').trim(), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0) }; }, e => log('⚠️ camera setting: ' + e.message));   // sirf channel — password yahan kabhi nahi chhua
@@ -327,7 +351,8 @@ function main() {
         const up = { ...(img ? { im: img } : {}), ai, what, alWhy: why, at: Date.now() };
         if (!why) {
           S.al.n++; saveS();
-          const txt = `🚨 *Bina note maal nikla*\n📹 ${e.cam}${cam && cam.bn ? ' (' + cam.bn + ')' : ''} · ${hm(e.t0)}\n📦 ${e.out - e.in} nag bahar gaye — koi transfer note / gate pass nahi mila (±${CF.win} min)` +
+          const who = (Array.isArray(e.fc) ? e.fc : []).map(f => f.n || (f.g ? f.g + '?' : '')).filter(Boolean);   // v2.0: 🙂 chehre se
+          const txt = `🚨 *Bina note maal nikla*\n📹 ${e.cam}${cam && cam.bn ? ' (' + cam.bn + ')' : ''} · ${hm(e.t0)}\n📦 ${e.out - e.in} nag bahar gaye — koi transfer note / gate pass nahi mila (±${CF.win} min)` + (who.length ? `\n🙂 Chehra: ${who.join(', ')} (andaza)` : '') +
             (ai.length ? `\n🤖 AI andaza${what ? ' (' + what + ')' : ''}:\n${ai.map((a, i) => `${i + 1}) ${a.n}`).join('\n')}` : '') + `\n\n↩ Isi paigham par reply: ${ai.length ? '1 / 2 / 3 ya ' : ''}item ka naam · 0 = ghalat alarm`;
           const wid = `gi-${id}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 80);
           try { await OUT.doc(wid).create({ st: 'new', at: Date.now(), to: MALIK, nm: 'Malik', kind: 'gi', eid: wid, ev: id, txt, ...(img ? { im: img } : {}) }); up.alSent = Date.now(); log(`🚨 bina note — ${e.cam} ${hm(e.t0)} · ${e.out - e.in} nag`); }
@@ -405,7 +430,18 @@ function main() {
   }
   // ---------- ↩ malik ka jawab (wa-out → gintiEv.rep) / app ka label ----------
   const repDone = new Set();
+  const flDone = new Set();
+  async function flLearn(id, x) {   // v2.0: 🙂 malik ne ❓ chehre par naam diya (gintiEv.fl {i: {k, n, at}}) → faceRef/l-<ev>-<i> (al 1) = pehchan mein jud gaya
+    const fl = x.fl || {}, fc = Array.isArray(x.fc) ? x.fc : [], put = {};
+    for (const [i, v] of Object.entries(fl)) {
+      const at = Number(v && v.at) || 0, key = `${id}:${i}:${at}`; if (!at || flDone.has(key) || Number((x.flPc || {})[i]) >= at) continue; flDone.add(key);
+      const f = fc[Number(i)], im = f && bytesOf(f.im), k = String((v && v.k) || ''), n = String((v && v.n) || '').slice(0, 40), rid = `l-${id}-${i}`.replace(/[^A-Za-z0-9_-]/g, '').slice(0, 120);
+      try { if (k && im) await FREF.doc(rid).set({ k, n, im, th: im, al: 1, src: 'ev', ev: id, at: Date.now(), by: 'app' }); else await FREF.doc(rid).delete().catch(() => {}); put[i] = at; log(`🙂 seekha: ${hm(x.t0)} ${x.cam} chehra ${i} → ${n || '(koi nahi)'}`); } catch (e) { log('⚠️ seekhna: ' + e.message); }
+    }
+    if (Object.keys(put).length) { try { await EV.doc(id).set({ flPc: put }, { merge: true }); } catch {} }
+  }
   function onEv(id, x) {
+    if (x.fl && typeof x.fl === 'object') flLearn(id, x).catch(e => log('⚠️ seekhna: ' + e.message));
     if (x.lab && x.lab.id && x.lk === 1 && !LEARN.some(l => l.id === id)) { LEARN.unshift({ id, cam: x.cam, lab: x.lab, at: Number(x.labAt) || Date.now() }); LEARN.splice(80); }
     const r = x.rep; if (!r || !r.tx || repDone.has(id + ':' + r.at) || Number(x.repAt || 0) >= Number(r.at || 0)) return;
     repDone.add(id + ':' + r.at); onRep(id, x, r).catch(e => log('⚠️ jawab: ' + e.message));
@@ -421,13 +457,90 @@ function main() {
     log(`↩ jawab: ${x.cam} ${hm(x.t0)} → ${lab.n}`);
   }
 
+  // ---------- 🙂 v2.0: chehron ki pehchan — faceRef (malik ki larkon ki tasveerein + seekhe hue) → 128 number (sirf is PC ki file mein) ----------
+  //   faceRef/<id> {k (larke ki chaabi: hazri code 'c<n>' / naam), n (naam), im (jpg), al (1 = pehle se seedha 112 — event se seekha), at, by}
+  //   PC jawab usi doc par: ok 1 (q, fw) | ok 0 (why) + pcAt. Malik tasveer hataye = pehchan bhi hat jati hai.
+  const FREF = biz.collection('faceRef'), GAL = new Map(); let FCACHE = {}, galQ = [], galBusy = false, FERR = '';
+  try { FCACHE = JSON.parse(fs.readFileSync(FACES, 'utf8')) || {}; } catch {}
+  const saveF = () => { try { fs.writeFileSync(FACES, JSON.stringify(FCACHE)); } catch {} };
+  const bytesOf = v => !v ? null : Buffer.isBuffer(v) ? v : v.toUint8Array ? Buffer.from(v.toUint8Array()) : v instanceof Uint8Array ? Buffer.from(v) : null;
+  FREF.onSnapshot(q => {
+    q.docChanges().forEach(c => {
+      const id = c.doc.id; if (c.type === 'removed') { GAL.delete(id); if (FCACHE[id]) { delete FCACHE[id]; saveF(); } return; }
+      const x = c.doc.data() || {}, at = Number(x.at) || 0, k = String(x.k || ''), n = String(x.n || ''), ch = FCACHE[id];
+      if (!k) return;
+      if (ch && ch.at === at && ch.e) { GAL.set(id, { k, n, e: AIX.s2e(ch.e), at }); if (ch.k !== k || ch.n !== n) { ch.k = k; ch.n = n; saveF(); } return; }
+      if (x.ok === 0 && Number(x.pcAt) >= at) return;   // pehle hi dekha — chehra nahi mila
+      if (!galQ.includes(id)) galQ.push(id);
+    });
+    galRun();
+  }, e => { FERR = 'faceRef: ' + e.message; log('⚠️ faceRef: ' + e.message); });
+  async function imgRGB(buf, maxW) {   // jpg/png → {rgb, w, h} (ffmpeg — naya package nahi)
+    fs.mkdirSync(TMP, { recursive: true }); const f = path.join(TMP, `im-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`); fs.writeFileSync(f, buf);
+    try {
+      const [, er] = await ffRun(['-hide_banner', '-nostdin', '-i', f], 20000); const m = String(er).match(/Video:[^\n]*?,\s(\d{2,5})x(\d{2,5})/); if (!m) return null;
+      let w = +m[1], h = +m[2]; if (w > maxW) { h = Math.round(h * maxW / w / 2) * 2; w = maxW; } w = Math.round(w / 2) * 2; h = Math.round(h / 2) * 2;
+      const o = f + '.rgb'; await ffRun(['-hide_banner', '-loglevel', 'error', '-nostdin', '-i', f, '-vf', `scale=${w}:${h}`, '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-y', o], 30000);
+      let rgb = null; try { rgb = new Uint8Array(fs.readFileSync(o)); } catch {} try { fs.unlinkSync(o); } catch {}
+      return rgb && rgb.length === w * h * 3 ? { rgb, w, h } : null;
+    } finally { try { fs.unlinkSync(f); } catch {} }
+  }
+  async function jpgOf(rgb, w, h) {   // RGB → jpg Buffer (chehre ki chhoti tasveer)
+    fs.mkdirSync(TMP, { recursive: true }); const f = path.join(TMP, `fj-${Date.now().toString(36)}${Math.random().toString(36).slice(2, 6)}`), o = f + '.jpg'; fs.writeFileSync(f, Buffer.from(rgb));
+    await ffRun(['-hide_banner', '-loglevel', 'error', '-nostdin', '-f', 'rawvideo', '-pix_fmt', 'rgb24', '-s', `${w}x${h}`, '-i', f, '-frames:v', '1', '-q:v', '4', '-y', o], 20000);
+    let b = null; try { b = fs.readFileSync(o); } catch {} for (const z of [f, o]) { try { fs.unlinkSync(z); } catch {} }
+    return b && b.length > 300 ? b : null;
+  }
+  async function galRun() {
+    if (galBusy) return; galBusy = true;
+    try {
+      while (galQ.length) {
+        const id = galQ.shift(), sDet = await sessOf(FDET), sId = await sessOf(FID);
+        if (!sDet || !sId) { galQ.unshift(id); FERR = fs.existsSync(FID) ? 'chehre ka model tayyar nahi — ' + (MODS_ST || '…') : 'chehre ki model file abhi nahi aayi (doctor la raha hai)'; setTimeout(galRun, 60000); break; }
+        let sn; try { sn = await FREF.doc(id).get(); } catch (e) { log('⚠️ faceRef parhna: ' + e.message); continue; }
+        if (!sn.exists) continue; const x = sn.data() || {}, at = Number(x.at) || 0; let buf = bytesOf(x.im);
+        if (!buf) { try { const fi = await biz.collection('faceImg').doc(id).get(); if (fi.exists) buf = bytesOf((fi.data() || {}).im); } catch (e) { log('⚠️ faceImg parhna: ' + e.message); } }   // app v2.346.0: bari tasveer alag doc mein (faceRef mein sirf chhota th — app ki list halki)
+        let r = null, why = '';
+        if (!buf) why = 'tasveer nahi';
+        else { const im = await imgRGB(buf, 1280); if (!im) why = 'tasveer parhi nahi gayi';
+          else if (x.al) { const rgb = im.w === AIX.FS && im.h === AIX.FS ? im.rgb : AIX.resizeRGB(im.rgb, im.w, im.h, AIX.FS, AIX.FS); r = { e: await AIX.embed(ORT, sId, rgb), q: 1, fw: AIX.FS }; }
+          else { r = await AIX.faceFromPhoto(ORT, sDet, sId, im.rgb, im.w, im.h); if (!r) why = 'chehra nahi mila — saamne se, roshni mein tasveer lein'; else if (r.fw < 40) { why = 'chehra bohat chhota — qareeb se tasveer lein'; r = null; } } }
+        if (r) { FCACHE[id] = { at, k: String(x.k || ''), n: String(x.n || ''), e: AIX.e2s(r.e), q: r.q }; saveF(); GAL.set(id, { k: String(x.k || ''), n: String(x.n || ''), e: r.e, at }); }
+        try { await FREF.doc(id).set(r ? { ok: 1, q: r.q, fw: r.fw, why: '', pcAt: Date.now() } : { ok: 0, why, pcAt: Date.now() }, { merge: true }); } catch {}
+        log(`🙂 ${x.n || x.k}: ${r ? 'pehchan bani (q ' + r.q + ')' : '✕ ' + why}`); FERR = '';
+      }
+    } catch (e) { FERR = String(e.message).slice(0, 100); log('⚠️ chehre: ' + e.message); }
+    finally { galBusy = false; }
+  }
+  function whoIs(e) {   // 128 number → {k, n, s} sab se qareeb larka (har larke ki sab tasveeron mein sab se behtar)
+    const by = new Map(); for (const g of GAL.values()) { const s = AIX.cos(e, g.e); const o = by.get(g.k); if (!o || s > o.s) by.set(g.k, { k: g.k, n: g.n, s }); }
+    let best = null; for (const v of by.values()) if (!best || v.s > best.s) best = v; return best;
+  }
   // ---------- 🎞 tukre ka kaam ----------
   const TR = new Map(), PREV = new Map(), GRP = new Map(), NOISE = new Map();   // ck → Tracker / pichhli chhoti tasveer / khula waqia / camera ki apni jhilmil
+  const TRP = new Map(), FB = new Map(), FTRY = new Map(), RECENT = new Map();   // v2.0: ck → insaan ka tracker / tid → behtareen chehra / aakhri koshish / haal ke khali haath guzre
+  const newGrp = t => ({ t0: t, t1: t, out: 0, in: 0, xs: [], po: 0, pi: 0, pp: 0, ps: [], tids: new Set() });
+  async function facesOf(ck, g) {   // v2.0: waqie ke insaanon ke behtareen chehre → pehchan + chhoti tasveer (4 tak, ek banda ek dafa)
+    const L = [];
+    for (const tid of g.tids) { const f = FB.get(ck + ':' + tid); if (f && f.e) L.push(f); }
+    L.sort((a, b) => b.q - a.q); const keep = [];
+    for (const f of L) { if (keep.some(k => AIX.cos(k.e, f.e) > 0.6)) continue; keep.push(f); if (keep.length >= 4) break; }
+    const out = [];
+    for (const f of keep) {
+      const m = whoIs(f.e), im = await jpgOf(f.rgb, AIX.FS, AIX.FS); if (!im) continue;
+      const s = m ? Math.round(m.s * 100) / 100 : 0;
+      out.push({ k: m && s >= 0.40 ? m.k : '', n: m && s >= 0.40 ? m.n : '', g: m && s >= 0.30 && s < 0.40 ? m.n : '', s, q: f.q, im });
+    }
+    return out;
+  }
   async function flushGroup(cam, force, now) {
     const ck = ckOf(cam.n), g = GRP.get(ck); if (!g) return;
     if (!force && now - g.t1 < GAP) return; GRP.delete(ck);
-    const id = `${ck}-${g.t0}`, d = { cam: cam.n, ck, b: cam.b, bn: cam.bn || BR[cam.b] || '', day: dayOf(g.t0), t0: g.t0, t1: g.t1, out: g.out, in: g.in, xs: JSON.stringify(g.xs.slice(0, 60)), st: 'wait', at: Date.now(), v: VER };
-    try { await EV.doc(id).set(d, { merge: true }); EVS.set(id, { ...d }); log(`📦 ${cam.n} ${hm(g.t0)} — ⬆ ${g.out} · ⬇ ${g.in}`); } catch (e) { log('⚠️ waqia: ' + e.message); }
+    const id = `${ck}-${g.t0}`, pz = g.out + g.in === 0 ? 1 : 0;
+    let fc = []; try { fc = await facesOf(ck, g); } catch (e) { log('⚠️ chehre: ' + e.message); }
+    const d = { cam: cam.n, ck, b: cam.b, bn: cam.bn || BR[cam.b] || '', day: dayOf(g.t0), t0: g.t0, t1: g.t1, out: g.out, in: g.in, xs: JSON.stringify(g.xs.slice(0, 60)), po: g.po, pi: g.pi, pp: g.pp, ps: JSON.stringify(g.ps.slice(0, 40)), pz, fc, st: 'wait', at: Date.now(), v: VER };
+    try { await EV.doc(id).set(d, { merge: true }); EVS.set(id, { ...d }); log(`📦 ${cam.n} ${hm(g.t0)} — ⬆ ${g.out} · ⬇ ${g.in}${g.po + g.pi ? ` · 🧍 ⬆ ${g.po} ⬇ ${g.pi}` : ''}${fc.length ? ' · 🙂 ' + fc.map(f => f.n || (f.g ? f.g + '?' : '❓')).join(', ') : ''}`); } catch (e) { log('⚠️ waqia: ' + e.message); }
+    const old = now - 10 * 60000; for (const [k, f] of FB) if (k.startsWith(ck + ':') && f.t < old) { FB.delete(k); FTRY.delete(k); }
   }
   async function doSeg(cam, ch, seg) {
     const sess = await session(); if (!sess) return { wait: !fs.existsSync(MODEL) ? 'model file abhi nahi aayi (doctor la raha hai)' : 'model / onnxruntime tayyar nahi — ' + (MODS_ST || '…') };
@@ -435,21 +548,50 @@ function main() {
     const tw = sz.w >= sz.h ? IMG : Math.round(IMG * sz.w / sz.h / 2) * 2, th = sz.w >= sz.h ? Math.round(IMG * sz.h / sz.w / 2) * 2 : IMG;
     const ck = ckOf(cam.n), ln = lineOf(cam); if (!ln) return { skip: 'lakeer nahi lagi' };
     let tr = TR.get(ck); if (!tr || tr.ln.x1 !== ln.x1 || tr.ln.dx !== ln.dx || tr.ln.out !== ln.out || (tr.last && seg.t0 - tr.last > 10000)) { tr = new Tracker(ln); TR.set(ck, tr); }
-    const fps = CF.fps, t0 = Date.now(); let inf = 0, ms = 0, lastInf = 0;
-    const r = await decode(seg.f, fps, tw, th, async (rgb, i) => {
+    let trp = TRP.get(ck); if (!trp || trp.ln !== tr.ln) { trp = new Tracker(tr.ln); trp.id = (Date.now() % 1e9) * 10; TRP.set(ck, trp); }   // v2.0: 🧍 insaan alag (id waqt se — chehre ki yaad mein takrao nahi)
+    // v2.0: 🧍 pose + 🙂 chehra — model hon to; chehre ke liye HD tukra 1280 par parho (YOLO / pose ko 512 wali chhoti)
+    const sPose = CF.pz ? await sessOf(POSE) : null, sDet = CF.fc && sPose ? await sessOf(FDET) : null, sId = sDet ? await sessOf(FID) : null, wantFace = !!(sPose && sDet && sId);
+    const hd = wantFace && sz.w > 800, dw = hd ? Math.min(HDW, Math.round(sz.w / 2) * 2) : tw, dh = hd ? Math.round(sz.h * dw / sz.w / 2) * 2 : th;
+    const mkGrp = t => { const g = newGrp(t); for (const z of RECENT.get(ck) || []) if (t - z[0] < 30000) g.tids.add(z[1]); return g; };
+    const fps = CF.fps, t0 = Date.now(); let inf = 0, ms = 0, lastInf = 0, small = null, npose = 0, pms = 0, nface = 0;
+    const r = await decode(seg.f, fps, dw, dh, async (full, i) => {
+      const rgb = hd ? (small = AIX.resizeRGB(full, dw, dh, tw, th, small)) : full;
       const t = seg.t0 + Math.round(i * 1000 / fps), g = tiny(rgb, tw, th), mv = diffOf(PREV.get(ck), g); PREV.set(ck, g);
       const base = NOISE.has(ck) ? NOISE.get(ck) : mv, thr = Math.max(2.2, base * 1.5 + 1);   // raat / sasta camera = jhilmil zyada → had bhi upar
-      if (mv < thr && !tr.busy() && t - lastInf < 4000) { NOISE.set(ck, 0.95 * base + 0.05 * Math.min(mv, 40)); return; }   // harkat nahi = model nahi
-      lastInf = t; const a = Date.now(), dets = (await detect(sess, rgb, tw, th, 0.3)).filter(d => GOODS.has(d.c)); ms += Date.now() - a; inf++;
-      if (!dets.length && !tr.busy()) NOISE.set(ck, 0.9 * base + 0.1 * Math.min(mv, 40));
+      if (mv < thr && !tr.busy() && !trp.busy() && t - lastInf < 4000) { NOISE.set(ck, 0.95 * base + 0.05 * Math.min(mv, 40)); return; }   // harkat nahi = model nahi
+      lastInf = t; const a = Date.now(), all = await detect(sess, rgb, tw, th, 0.3), dets = all.filter(d => GOODS.has(d.c)), ppl = all.filter(d => d.c === 3); ms += Date.now() - a; inf++;
+      if (!dets.length && !ppl.length && !tr.busy()) NOISE.set(ck, 0.9 * base + 0.1 * Math.min(mv, 40));
+      // 🧍 insaan: pose (jor) → 'uthaya' → apna tracker (lakeer paar)
+      let P = [];
+      if (sPose && (ppl.length || trp.busy())) { const b = Date.now(); try { P = await poseRun(sPose, tw, th); } catch (e) { P = []; } pms += Date.now() - b; npose++; for (const p of P) p.cr = AIX.carryOf(p, dets); }
+      else if (ppl.length) P = ppl.map(d => ({ ...d, kp: null, cr: AIX.carryOf({ ...d, kp: [] }, dets) }));
+      const crossP = trp.step(P, t);
+      // 🙂 chehra: har insaan ka behtareen (har ~0.7 s ek koshish, fi tasveer 2, achha mil gaya = bas)
+      if (hd && P.length) {
+        let n = 0;
+        for (const p of P) {
+          if (n >= 2 || !p.kp || !p.tid) continue; const key = ck + ':' + p.tid, best = FB.get(key);
+          if ((best && best.q >= 0.8) || t - (FTRY.get(key) || 0) < 700) continue;
+          const hb = AIX.headBox(p, dw, dh); if (!hb) continue; FTRY.set(key, t); n++; nface++;
+          try { const f = await AIX.faceIn(ORT, sDet, sId, full, dw, dh, hb); if (f && (!best || f.q > best.q)) FB.set(key, { ...f, t }); } catch (e) { log('⚠️ chehra: ' + e.message); }
+        }
+      }
       for (const x of tr.step(dets, t)) {
         let g2 = GRP.get(ck); if (g2 && t - g2.t1 > GAP) { await flushGroup(cam, true, t); g2 = null; }
-        if (!g2) { g2 = { t0: t, t1: t, out: 0, in: 0, xs: [] }; GRP.set(ck, g2); }
+        if (!g2) { g2 = mkGrp(t); GRP.set(ck, g2); }
         g2.t1 = t; if (x.dir > 0) g2.out++; else g2.in++; g2.xs.push([t, x.dir, x.box]);
+        for (const p of P) if (p.tid && Math.abs(p.x - x.box[0]) < Math.max(p.w * 1.2, 60)) g2.tids.add(p.tid);   // jo banda maal ke saath tha
+      }
+      for (const x of crossP) {   // 🧍 insaan ne lakeer paar ki
+        let g2 = GRP.get(ck); if (g2 && t - g2.t1 > GAP) { await flushGroup(cam, true, t); g2 = null; }
+        if (!g2 && !x.cr) { const R = (RECENT.get(ck) || []).filter(z => t - z[0] < 30000); R.push([t, x.id]); RECENT.set(ck, R.slice(-20)); continue; }   // khali haath — waqia nahi, chehra yaad
+        if (!g2) { g2 = mkGrp(t); GRP.set(ck, g2); }
+        if (x.cr) { g2.t1 = t; if (x.dir > 0) g2.po++; else g2.pi++; } else g2.pp++;
+        g2.ps.push([t, x.dir, x.box, x.cr]); g2.tids.add(x.id);
       }
     });
     tr.last = seg.t1; await flushGroup(cam, false, seg.t1);
-    const took = Date.now() - t0, c = ST.cams[ck] = ST.cams[ck] || {}; Object.assign(c, { n: cam.n, ch, segs: (c.segs || 0) + 1, inf: (c.inf || 0) + inf, ms: inf ? Math.round(ms / inf) : (c.ms || 0), took, sz: `${sz.w}x${sz.h}` });
+    const took = Date.now() - t0, c = ST.cams[ck] = ST.cams[ck] || {}; Object.assign(c, { n: cam.n, ch, segs: (c.segs || 0) + 1, inf: (c.inf || 0) + inf, ms: inf ? Math.round(ms / inf) : (c.ms || 0), took, sz: `${sz.w}x${sz.h}`, hd: hd ? 1 : 0, pose: npose, pms: npose ? Math.round(pms / npose) : 0, face: nface });
     if (!r.ok) return { skip: r.err || 'decode nahi hua' };
     return { ok: 1, n: r.n, inf, took };
   }
@@ -502,9 +644,12 @@ function main() {
   let stSig = '', stAt = 0;
   function pushSt() {
     const today = dayOf(Date.now()), cams = {};
-    for (const [ck, c] of Object.entries(ST.cams)) if (CF.cams.some(x => ckOf(x.n) === ck)) cams[ck] = { n: c.n, ch: c.ch || 0, st: String(c.st || '').slice(0, 120), lag: c.lag || 0, ms: c.ms || 0, took: c.took || 0, sz: c.sz || '', last: c.last || 0 };
-    let o = 0, i = 0, b = 0; for (const e of EVS.values()) { o += e.out || 0; i += e.in || 0; if (e.st === 'bina') b++; }
-    const d = { v: VER, host: os.hostname(), on: CF.on ? 1 : 0, mods: MODS_ST || (ORT ? 'ok' : ''), model: fs.existsSync(MODEL) ? 1 : 0, err: ST.err, cams, today: { day: today, out: o, in: i, bina: b, al: S.al.day === today ? S.al.n : 0 }, fps: CF.fps };
+    for (const [ck, c] of Object.entries(ST.cams)) if (CF.cams.some(x => ckOf(x.n) === ck)) cams[ck] = { n: c.n, ch: c.ch || 0, st: String(c.st || '').slice(0, 120), lag: c.lag || 0, ms: c.ms || 0, took: c.took || 0, sz: c.sz || '', last: c.last || 0, hd: c.hd || 0, pms: c.pms || 0 };
+    let o = 0, i = 0, b = 0, po = 0, pi = 0; for (const e of EVS.values()) { o += e.out || 0; i += e.in || 0; po += e.po || 0; pi += e.pi || 0; if (e.st === 'bina') b++; }
+    const mf = f => fs.existsSync(f) ? (SX[f] ? (SX[f].s ? 'ok' : '✕ file kharab') : '⏳') : '⏳ file abhi nahi aayi';
+    const ppl = new Set([...GAL.values()].map(g => g.k));
+    const d = { v: VER, host: os.hostname(), on: CF.on ? 1 : 0, mods: MODS_ST || (ORT ? 'ok' : ''), model: fs.existsSync(MODEL) ? 1 : 0, err: ST.err, cams, today: { day: today, out: o, in: i, po, pi, bina: b, al: S.al.day === today ? S.al.n : 0 }, fps: CF.fps,
+      pose: CF.pz ? mf(POSE) : 'band', face: CF.fc ? { m: fs.existsSync(FID) && fs.existsSync(FDET) ? (SX[FID] && SX[FID].s ? 'ok' : '⏳') : '⏳ file abhi nahi aayi', ppl: ppl.size, n: GAL.size, q: galQ.length, err: FERR.slice(0, 120) } : 'band' };   // v2.0
     const sig = JSON.stringify(d); if (sig === stSig && Date.now() - stAt < 5 * 60000) return; stSig = sig; stAt = Date.now();
     BA.doc('gintiPc').set({ ...d, at: Date.now() }).catch(e => log('⚠️ haal: ' + e.message));
   }

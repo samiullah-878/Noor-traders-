@@ -6,8 +6,8 @@
 // Yahan: list (aaj / kal) · 🚨 bina note ki 4 tasveerein + AI ka andaza → malik item chune (gintiLabel — PC agli dafa Gemini ko misaal deta hai) ·
 //   ⚙️ Setup (sirf malik): camera · godam · lakeer (tasveer par 2 tap + bahar ki taraf) · alarm · waqt — blueAccess/gintiCam.
 // Dekhna: malik + CAP nz.ginti (OPT_IN). AI app mein NAHI (PC: naam ke liye sirf 🚨 tasveer par Gemini).
-import { saleStock } from './pos-stock.js?v=2.345.0';
-import { smartFind } from './dukan/dhoond.js?v=2.345.0';
+import { saleStock } from './pos-stock.js?v=2.346.0';
+import { smartFind } from './dukan/dhoond.js?v=2.346.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -65,7 +65,7 @@ function head() {
   const t = view === 'set' ? '⚙️ Ginti setup' : view === 'line' ? '➖ Lakeer — ' + esc(lineCam) : view === 'ev' ? '🚨 Bina note' : '📦 Loading ginti';
   const back = view === 'list' ? '' : `<button type="button" class="gn-chip gn-bk" data-gn-back="1">‹</button>`;
   return `<div class="gn-head">${back}<b class="gn-t">${t}</b><span class="gn-hx">${view === 'list' ? `<button type="button" class="gn-chip gn-day" data-gn-menu="1">${dayN ? '📅 Kal' : '📅 Aaj'} ⋮</button>` : ''}<button type="button" class="gn-x" data-gn-close="1" aria-label="Band">×</button></span>
-    ${menu ? `<div class="gn-menu">${[['0', '📅 Aaj'], ['1', '📅 Kal']].map(([k, n]) => `<button type="button" class="gn-mi${String(dayN) === k ? ' is-in' : ''}" data-gn-day="${k}">${n}</button>`).join('')}${own ? '<button type="button" class="gn-mi" data-gn-set="1">⚙️ Setup — camera · lakeer · alarm</button>' : ''}<button type="button" class="gn-mi" data-gn-help="1">❓ Kaise kaam karta hai</button></div>` : ''}</div>`;
+    ${menu ? `<div class="gn-menu">${[['0', '📅 Aaj'], ['1', '📅 Kal']].map(([k, n]) => `<button type="button" class="gn-mi${String(dayN) === k ? ' is-in' : ''}" data-gn-day="${k}">${n}</button>`).join('')}${own ? '<button type="button" class="gn-mi" data-gn-set="1">⚙️ Setup — camera · lakeer · alarm</button>' : ''}${window.ntGodamV ? '<button type="button" class="gn-mi" data-gn-gv="1">🏬 Godam videos (har waqie ki video)</button>' : ''}<button type="button" class="gn-mi" data-gn-help="1">❓ Kaise kaam karta hai</button></div>` : ''}</div>`;
 }
 function patHTML() {
   const today = pc && pc.today && pc.today.day === dayOf(Date.now()) ? pc.today : null;
@@ -254,6 +254,7 @@ function onClick(ev) {
   if (g('[data-gn-menu]')) { menu = !menu; paint(); return; }
   if (menu && !g('.gn-menu')) { menu = false; paint(); return; }
   const dy = g('[data-gn-day]'); if (dy) { dayN = Number(dy.dataset.gnDay) || 0; menu = false; evs = []; docs = []; watch(); paint(); return; }
+  if (g('[data-gn-gv]')) { menu = false; $('gnDlg')?.close(); try { window.ntGodamV && window.ntGodamV(); } catch {} return; }   // v2.346.0
   if (g('[data-gn-set]')) { menu = false; view = 'set'; edit = null; paint(); return; }
   if (g('[data-gn-help]')) { menu = false; help = !help; paint(); return; }
   const ok = g('[data-gn-ok]'); if (ok) { const id = ok.dataset.gnOk, d = docs.find(x => x.id === id); if (!d) return; busy.set(id, '⏳'); paint(); cloud.gintiDocOk(id, !d.ok).then(() => busy.set(id, '✅')).catch(e => busy.set(id, '✕ ' + (e?.message || e))).finally(() => { paint(); setTimeout(() => { busy.delete(id); paint(); }, 2000); }); return; }
