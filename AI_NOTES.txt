@@ -9239,3 +9239,21 @@ Malik: 'wo paani wala apps band karne wala abhi pause kar do — main shop par n
 - Dobara chalu: pkg.py mein msl wapas macros list mein + off se '📸 Sehat lock' hatao + naya version. 3 ghante se purani baqi photo khud saaf
   (sehat.py dAge > 10800) — der se chalu ho to foran lock nahi lagega.
 App / PC mein kuch nahi badla. AI: NAHI.
+
+
+=== v2.337.0 (2026-11-21) — 🚪 GATE PASS WALE BILL PAR GODAM KA CAMERA (PC bill-clip v2.18) ===
+Malik (21 Nov): 'jis item ka gate pass banta hai us item ka godam ka camera — screen ke upar bhi nazar aaye' + 'WhatsApp wali recording mein bhi' → plan → 'Ok ha gate pass wala bill'.
+- PC bill-clip v2.18: gatePass/<SaleID> (PC gate-pass.js — posted bill ki godam lines l[].g, ✓ de diya = g.<k>.t serverTimestamp) sunta hai (aaj + kal).
+  Har godam (gs) ka camera: ① malik ka chuna billClip.gc [{g, c}] ('-' = koi nahi; LIST — merge mein poori badalti) ② 📦 Loading ginti (blueAccess/gintiCam cams b)
+  ③ naam se (camera ke naam mein godam ka naam, 'Godam 2 gate' — 'Godam 22' nahi). Khirki: post se 20 s pehle → us godam ki SAB items ✓ ke 1 min baad;
+  ✓ na ho = post + 10 min; zyada se zyada 15 min. SIRF apni recording (camera ⏺ Rec ON) — NVR par naya rabta NAHI.
+  billClip/<SaleID>~g<godam> {x 1, gp 1, sid, g, gn, cam, st wait (pehli nazar, due) → ok | err (fin = pakki) | skip (cancel), it [{n, q, qs (1 ctn + 2), ok}], nt / nl, gb (kis ne diya), t0 / t1 / dur, segs / pk, rd / mk}.
+  Apni alag line gpRun (bill ki clips kabhi na rukein) + timer gpArm + har 30 s gpKick. Pehli dafa 3 ghante se purana gate pass nahi (restart ka bojh nahi).
+  👥 group: godam video bill ki video ke BAAD (gwQ mein bill pehle ho to godam peeche) — eid bv-gp<SaleID>-<g>, din ki hadd mein ginti.
+  📲 'video <bill>' (app / WhatsApp): counter video ke baad har tayyar godam video (bv-<id>-g<g>-1/2); ban rahi ho to caption mein '🚪 … abhi ban rahi'.
+  Patti: 'Godam 2 gate pass' · Bill # · items × tadad (carton 1ctn+2) · 'diya: Zeeshan'. Haal billClipPc.gp {ok, err, w, le} + gpm [{g, n, cam, how, r}].
+- tally.js: counter video ke UPAR chhota dabba #btGp (har godam ek tile — apna waqt, counter video ke saath sync NAHI); ⏳ / ✓ sab diya · Zeeshan / ✕ wajah;
+  neeche items ki patli line; tap = ruk / chal, ⛶ poori screen; hisse khud agle. 📋 Bills list mein bill number ke saath 🚪.
+  ⚙️ Camera setup: '🚪 Gate pass — godam ka camera' ON / Band (gpv) + har godam ka select (Auto / camera / ✕ Koi nahi) + recording ka haal + aaj ki ginti.
+- Sandbox test (nakli Firestore + nakli recording): godam clip 194 s bani, 'Godam 22 back' nahi pakra, camera na ho = koi doc nahi, ✓ nahi = wait,
+  group mein pehle bill phir godam, 'video 138900' = counter + godam dono malik + Mubeen. AI: NAHI. Rules: koi tabdeeli nahi (billClip parhna pehle se).
