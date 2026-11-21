@@ -9324,3 +9324,6 @@ Malik (haseeb cus ki screenshot: wapas laye 16-Sep ke transfer sab se upar): 'is
 - khDated(rows): pehle entry ki tareekh (naya din upar), ek hi din mein banne ka waqt (createdAt). khOrdered + runningOf dono isi se
   -> screen / table / PDF / thermal parchi sab tareekh-war, har qatar ka baqaya bhi tareekh ki tarteeb se. ↕ (naya / purana upar) wahi.
 - Pehle tarteeb sirf banne ke waqt se thi — purani tareekh ki nayi bani entry (wapas layi / barabar se bani) upar aa jati thi.
+
+=== md pkg v63 (21 Nov 2026 raat) — ▶ 📸 Sehat lock wapas CHALU ===
+Malik: 'yaar wo paani wala on kar do'. v62 mein ruka tha. Ab msl (📸 Sehat lock) wapas pkg macros mein + 'off' list se hata — Remote import (Overwrite by ID, m_enabled true) se phone par chalu. Waqt wahi: lock 11:00–20:59, paani yaad 9–9. Kuch aur nahi badla.
