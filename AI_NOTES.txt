@@ -9370,3 +9370,7 @@ Malik (photo: Alfa 'PKR 100.0 received from SAMIH ULLAH WMBLP-KKA in your BAF A/
 - Ilaaj: remote.py BUILD `if (!full)` = backup ke maujooda variables (qeemat samet, try/catch) + naye. SUM: nt-now.txt mein top-level variables ki m_stringValue = '<lambai>', dictionary khali (ab qeemat bachti hai to link / chaabi email mein na jaye). Trigger 60 s remote.py mein; pkg.py se Remote 5 ka patch HATA (wahi-ID dohri copy).
 - pkg diff: sirf '🤖 Claude Remote 5' badla + patch se us ki line; off / del / vars wahi. Koi macro band / delete nahi. Naya Remote 6 nahi banana pada (malik ko bataya).
 - v65 lagte waqt purana code ek aakhri dafa zero karega. Phone / BeanShell par azmaya NAHI — jaanch agli export se.
+
+=== md pkg v66 (2026-11-21 23:27) — jaanch: ginti ab bachti hai ✅ ===
+- v65 23:20 par laga (aakhri dafa zero), v66 (koi macro nahi badla) 23:27. v66 ki export: 94 variable sab maujood, tkLeft 25 · fbLeft 25 · ytLeft 120 · taLeft 120 · pnDue / kpAge (23:22 ke) waise hi = naya BUILD + SUM phone par chal gaya. Likhai wale variable masked / khali.
+- Links (bkU / bkK, nbU, ntU / ntK, shK) v65 ke aakhri zero mein khali hue — app (malik login) kholne par khud dobara bharte hain (bank din mein 1 dafa); nigrani = Settings -> PC scripts -> Phone alarm jorein. jgList (jagah ke naam) malik ko dobara dene honge.
