@@ -9310,3 +9310,10 @@ Malik (screenshot 16 Nov 3:55 pm: 15 hatai, sab '🖥 PC' ne — purane server w
   ('wapas = dohra — Farq screen se App ko POS jaisa'). Wajah: PC restore par NAYA voucher banata hai (link voucherId 0), twin jaanch nahi —
   purane server ne app se hataya tha magar asal POS mein voucher reh gaya ho sakta hai. posLines na ho = ijazat (nishan nahi).
 - Test: node harness (POS mein hai = rok · nahi = ✓ · transfer ok). Asal data / asal PC par nahi azmaya — malik pehle EK entry wapas la kar POS milan dekhe.
+
+
+=== v2.342.0 (2026-11-21) — tareekh / waqt ka khana likhte waqt nahi toot-ta (waqt.js v1.2 + Deleted entries) ===
+Malik (PC, screenshot '11/16/0020'): 'date time nahi likhna ho raha'. Wajah: date input ke har change par poori khirki dobara banti thi
+(PC Chrome har hisse — mahina / din / saal ka har hindsa — par change deta hai) -> saal ka pehla hindsa likhte hi focus gaya.
+- waqt.js: paint() ab sirf list (data-wq-body) badalta hai, tareekh / waqt ke khane wahi rehte; chips par poora paint. Saal < 2020 = intezar.
+- Deleted entries ki 'Is tareekh se': saal adhoora = kuch nahi; poori tareekh ke 1.1 s baad list taza (trashFromT).

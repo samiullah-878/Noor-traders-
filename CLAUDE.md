@@ -353,6 +353,8 @@ Ye file har kaam se pehle parho. Koi naya qaida mile to yahan aur `AI_NOTES.txt`
 
 - **↩ Entry wapas = POS mein dohra na bane (v2.341.0, waqt.js v1.1)**: hatai entry wapas lane par PC NAYA POS voucher banata hai — is liye pehle dekho us ka purana voucher POS mein abhi hai ya nahi (`posHas`, posLines): ho to wapas ROK (raasta = Farq screen '📱 App ko POS jaisa'). ⇄ Transfer wapas = naya transfer + note mein '↩<id>' nishan (`trDoneOf`). Entry wapas lane ka koi naya raasta banao to yehi do hifazatein.
 
+- **📅 Tareekh / waqt ka khana likhte waqt dobara mat banao (v2.342.0, ghalti 21 Nov)**: PC par `<input type=date|time>` har hindse par `change` deta hai — us par poori khirki paint ki to saal '0020' reh jata hai aur focus toot-ta hai. Change par sirf LIST badlo (khana wahi rahe), saal adhoora (< 2020) ho to intezar. Naya date / time filter banao to PC keyboard se poori tareekh likh kar dekho.
+
 ## 4. POS / PC — KHATARNAK, dhyan se
 - POS = Cognitive Solutions (SQL Server). Jo script POS mein **likhti** hai (item-post, purchase-post, transfer-sync, sale-post…) us mein **koi value kabhi 0/khali na jaye jis se POS divide karta ho** — khas taur par **PackQty (carton pcs) kam az kam 1**. (18 Oct 2026: "kala tail khula" ka PackQty 0 gaya → counter sale "Divide by zero", bill band.)
 - Parhne wali scripts (rack, irep, stats) POS mein kabhi kuch nahi likhti.

@@ -1,4 +1,4 @@
-// waqt.js — v1.1 (2026-11-21, app v2.341.0: ⇄ transfer bhi wapas (naya transfer, dono khate) + 🖥 POS mein voucher abhi ho to wapas ROK — dohra na bane) · v1.0 (app v2.340.0): 🕒 IS WAQT KI ENTRIES — sirf malik.
+// waqt.js — v1.2 (app v2.342.0: tareekh / waqt ka khana likhte waqt dobara nahi banta) · v1.1 (2026-11-21, app v2.341.0: ⇄ transfer bhi wapas (naya transfer, dono khate) + 🖥 POS mein voucher abhi ho to wapas ROK — dohra na bane) · v1.0 (app v2.340.0): 🕒 IS WAQT KI ENTRIES — sirf malik.
 // Malik (21 Nov): "Naeem ki entry ke neeche time likha hai — us time ki entries ka data do to hum wapis recover kar lein".
 // Tareekh + waqt (± 10 / 30 / 60 min · 3 ghante) -> us dauran jo bhi khata entry BANI / BADLI / HATAI gayi (sab khate) ek list mein.
 // Data = app ke apne records (createdAt / updatedAt stamps) — koi naya Firestore read / PC kaam nahi. Hatai hui par ☐ tick -> ↩ Wapas lao
@@ -52,12 +52,14 @@ function rows() {
   }
   return out.sort((a, b) => a.t - b.t).slice(0, 400);
 }
-function html() {
+function html() { return `<div class="dd-root wq-root" data-wq-root="1">${barHTML()}<div data-wq-body="1">${bodyHTML()}</div></div>`; }
+function barHTML() {
+  return `<div class="dd-bar"><input type="date" data-wq-day value="${esc(dayOf(W.at))}"><input type="time" data-wq-time value="${esc(hmOf(W.at))}">${WINS.map(([m, t]) => `<button type="button" data-wq-win="${m}" class="${W.win === m ? 'is-in' : ''}">${t}</button>`).join('')}<button type="button" data-wq-only class="${W.only === 'del' ? 'is-in' : ''}">🗑 Sirf hatai hui</button></div>`;
+}
+function bodyHTML() {
   const L = rows(), ok = L.filter(x => x.act === 'del' && !why(x.e) && posHas(x.e) !== undefined && !W.st[x.e.id]), n = ok.filter(x => W.sel.has(x.e.id)).length;
   const nd = L.filter(x => x.act === 'del').length;
-  return `<div class="dd-root wq-root" data-wq-root="1">
-<div class="dd-bar"><input type="date" data-wq-day value="${esc(dayOf(W.at))}"><input type="time" data-wq-time value="${esc(hmOf(W.at))}">${WINS.map(([m, t]) => `<button type="button" data-wq-win="${m}" class="${W.win === m ? 'is-in' : ''}">${t}</button>`).join('')}<button type="button" data-wq-only class="${W.only === 'del' ? 'is-in' : ''}">🗑 Sirf hatai hui</button></div>
-<p class="stat-note dd-note">${L.length} entries${L.length >= 400 ? ' (pehli 400)' : ''} · 🗑 ${nd} hatai · ➕ ${L.filter(x => x.act === 'add').length} bani · ✏️ ${L.filter(x => x.act === 'edit').length} badli${ok.length ? ` · <b>✓ ${n}/${ok.length}</b>` : ''}</p>
+  return `<p class="stat-note dd-note">${L.length} entries${L.length >= 400 ? ' (pehli 400)' : ''} · 🗑 ${nd} hatai · ➕ ${L.filter(x => x.act === 'add').length} bani · ✏️ ${L.filter(x => x.act === 'edit').length} badli${ok.length ? ` · <b>✓ ${n}/${ok.length}</b>` : ''}</p>
 <div class="dd-list">${L.map(x => {
     const e = x.e, w = x.act === 'del' ? why(e) : '', s = W.st[e.id], ph = x.act === 'del' ? posHas(e) : null, can = x.act === 'del' && !w && !s && ph !== undefined, on = can && W.sel.has(e.id);
     const pc = /^(pos-sync|pc-)/.test(String(e.updatedBy || '')) ? '🖥 PC' : '📱 app';
@@ -65,9 +67,10 @@ function html() {
     return `<label class="dd-r wq-${x.act}${can ? '' : ' wq-ro'}${on ? ' is-in' : ''}${s === '✅' ? ' done' : ''}"><input type="checkbox" data-wq-pick="${esc(e.id)}"${on ? ' checked' : ''}${can ? '' : ' disabled'}><span class="dd-a ${C.red(e) ? 'red' : 'green'}">${ACT[x.act][0]} ${esc(C.money(e.amount))}</span><span class="dd-t"><b>${esc(pname(e) || '—')}</b><i>${esc(C.label(e))}</i><small>${esc(sub)}</small></span>${s ? `<em class="dd-s">${esc(s)}</em>` : ''}</label>`;
   }).join('') || '<p class="stat-note">Is waqt ke aas paas koi entry nahi mili — waqt ka daira (± ) bara karein</p>'}</div>
 <button type="button" class="dd-go wq-go" data-wq-go${n && !W.busy ? '' : ' disabled'}>↩ ${n} entries wapas lao</button>
-<p class="stat-note dd-note">Sirf 🗑 hatai hui entry par tick lagta hai (default sab khali). Wapas aane par entry apne khate mein aa jati hai aur shop PC us ka POS voucher dobara bana deta hai (1–2 min) — baad mein khate ka ⚖️ POS milan dekh lein. ⇄ Transfer = naya transfer banta hai (dono khaton mein, ek tick kaafi). Jis voucher ka POS mein ABHI hona nazar aaye us par tick band hai (dohra na bane).</p></div>`;
+<p class="stat-note dd-note">Sirf 🗑 hatai hui entry par tick lagta hai (default sab khali). Wapas aane par entry apne khate mein aa jati hai aur shop PC us ka POS voucher dobara bana deta hai (1–2 min) — baad mein khate ka ⚖️ POS milan dekh lein. ⇄ Transfer = naya transfer banta hai (dono khaton mein, ek tick kaafi). Jis voucher ka POS mein ABHI hona nazar aaye us par tick band hai (dohra na bane).</p>`;
 }
-function paint() { const r = document.querySelector('#dialogBody [data-wq-root]'); if (r) r.outerHTML = html(); void posLoad(); }
+// v1.2: tareekh / waqt likhte waqt khana dobara nahi banta (sirf list) — warna saal likhte hi focus toot-ta tha ('11/16/0020')
+function paint(full) { const r = document.querySelector('#dialogBody [data-wq-root]'); if (r) { const b = r.querySelector('[data-wq-body]'); if (full || !b) r.outerHTML = html(); else b.innerHTML = bodyHTML(); } void posLoad(); }
 export function wqOpen(at) {
   if (!C || !C.owner()) return;
   const t = tOf(at) || Date.now();
@@ -97,7 +100,7 @@ document.addEventListener('click', e => {
   if ('wqGo' in b.dataset) { void go(); return; }
   if (W.busy) return;
   if (b.dataset.wqWin) W.win = Number(b.dataset.wqWin) || 30; else W.only = W.only === 'del' ? '' : 'del';
-  W.sel.clear(); paint();
+  W.sel.clear(); paint(true);
 });
 document.addEventListener('change', e => {
   const t = e.target; if (!W || !t?.closest?.('[data-wq-root]')) return;
@@ -106,6 +109,7 @@ document.addEventListener('change', e => {
   if ('wqDay' in t.dataset || 'wqTime' in t.dataset) {
     const r = t.closest('[data-wq-root]'), d = r.querySelector('[data-wq-day]')?.value, tm = r.querySelector('[data-wq-time]')?.value;
     if (!/^\d{4}-\d{2}-\d{2}$/.test(d || '') || !/^\d{2}:\d{2}/.test(tm || '')) return;
+    if (Number(d.slice(0, 4)) < 2020) return;
     const ms = new Date(d + 'T' + tm.slice(0, 5) + ':00').getTime(); if (!Number.isFinite(ms)) return;
     W.at = ms; W.sel.clear(); W.st = {}; paint();
   }
