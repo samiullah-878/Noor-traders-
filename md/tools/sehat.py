@@ -163,6 +163,7 @@ ASKP = [
     ELSE, END,
     expr("shAsk", NOW + "-18"),
 ]
+NOT_T4 = dict(trig(112233445566764, "Phone khula"), m_not=True)   # v67: yeh daur phone kholne se NAHI chala
 SCRON = next(copy.deepcopy(v) for v in SHOWOK if v['m_classType'] == 'ScreenOnOffConstraint')
 SCROFF = copy.deepcopy(SCRON); SCROFF['m_screenOn'] = not SCRON.get('m_screenOn', True)
 KINDS = (("paani", "💧 Paani"), ("coffee", "☕ Coffee"), ("fruit", "🍎 Fruit"), ("nuts", "🥜 Nuts"))
@@ -210,17 +211,13 @@ la = [
             END,
           END,
         END,
-        # v57 (malik: "lock on hone par bhi picture ka option de dein"): lock shuru hote hi popup — phone band ho to agli dafa kholte hi (shLkA, ek dafa)
+        # v67 (22 Nov, malik: 'phone unlock karne par paani ki photo do wala popup khatam kar do'): phone KHOLNE par photo ka koi popup nahi.
+        #   Lock shuru hote hi (phone istemal mein ho) ek dafa popup wahi; phone band tha / unlock par lock laga = popup nahi (shLkA saaf) — bell + band app kholne par popup + app ka ☰ 📸 wahi.
         expr("askAge", NOW + "-{v=shAsk}", True),
-        iff([gt("lLeft", 0, True), lt("emL", 1, True), gt("askAge", 20, True)] + copy.deepcopy(SHOWOK)),
-          iffor([gt("shLkA", 0), trig(T4, "Phone khula")]),                 # v58: lock shuru (pehli dafa) YA har dafa phone kholte hi
-            expr("lMin", "({v=shLock}-" + NOW + ")/60", True), *ASK,
-          END,
+        iff([gt("lLeft", 0, True), lt("emL", 1, True), gt("askAge", 20, True), gt("shLkA", 0), NOT_T4] + copy.deepcopy(SHOWOK)),
+          expr("lMin", "({v=shLock}-" + NOW + ")/60", True), *ASK,
         END,
-        expr("dAge", NOW + "-{v=shDue}", True), expr("askAge", NOW + "-{v=shAsk}", True),
-        iff([trig(T4, "Phone khula"), gt("shDue", 0), lt("lLeft", 1, True), lt("dAge", 0, True), gt("askAge", 20, True)] + copy.deepcopy(SHOWOK)),
-          expr("dMin", "(0-{lv=dAge})/60+1", True), *ASKP,
-        END,
+        sint("shLkA", 0),
         # v58 (malik: 'apps 1-2 minute khuli rehti hain · shorts bhi foran band nahi'): lock + screen on = har 2 s chowkidar (ek hi loop — shGd dil ki dhadkan);
         #   app khuli ka trigger chook jaye / 30 s ki jaanch phone late kare tab bhi 2 s mein Home. MacroDroid ki apni khirki (popup) ke 20 s nahi chherta (askAge).
         expr("gdAge", NOW + "-{v=shGd}", True),

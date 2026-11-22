@@ -9410,3 +9410,9 @@ Malik (22 Nov 10:38): 'Ai KO filhal band Kar do or script mein on Karna Ka optio
 - App: Settings → 🖥️ PC scripts → '🤖 Camera AI (godam)' patli line (pc-drives.js v1.1, #pcAi khud #pcDrv se pehle banta) — switch (malik), chalu par confirm,
   chip ⏳ / ✅ Chalu / ⚫ Band / 🔴 PC chup / ⚠️ Loading ginti ⚙️ mein camera BAND (gintiPc.ai se). Loading ginti + Godam videos ki patti par '🤖 AI band — PC scripts se chalu'.
 - Rules nahi badle (blueAccess malik ka). Test: ginti-cam off = koi waqia / pehchan nahi, gintiPc ai 0; on = pose + chehra wahi; bill-clip off = HD nahi, gv clip nahi.
+
+=== md pkg v67 (2026-11-22) — 📸 phone kholne par photo ka popup hata ===
+- Malik: 'phone mein macro mein lock dabane par unlock karne par paani ki photo do — us ko khatam kar do'. Sawal (3 raaste) -> 'Sirf unlock wala popup'.
+- sehat.py (📸 Sehat lock): DeviceUnlocked (T4) par aane wale dono popup hate — lock ke dauran har unlock ka ASK aur 'photo baqi' ASKP. Lock shuru ka ek popup sirf jab daur unlock se na chala ho (NOT_T4 = TriggerThatInvoked m_not) + SHOWOK; shLkA usi daur mein 0.
+- Wahi: paani 40 min ki yaad + '📸 Photo do' button, 10 min -> lock 10/30/60, band app kholne par popup, 2 s chowkidar, bell, app ka ☰ 📸. T4 trigger macro mein hai (lock ka hisaab unlock par bhi chale).
+- pkg diff: sirf '📸 Sehat lock' badla. Phone par azmaya nahi; ginti ab update par bachti hai (v65).
