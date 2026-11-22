@@ -9133,3 +9133,8 @@ html body .pm-lfx.wait{background:linear-gradient(#fff,#fff6e3)!important;border
 html body .pm-lfx.ok{background:linear-gradient(#fff,#e7f8ee)!important;border-color:#9fd8b6!important;color:#0f6b3d!important}
 html body button.pm-lfx.bad{background:linear-gradient(#fff,#fdf0ef)!important;border-color:#f0b4ae!important;color:#b3261e!important;cursor:pointer}
 html body button.pm-lfu{height:30px;width:30px;min-height:0!important;min-width:0!important;padding:0!important;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2fa)!important;color:#1d3a6e!important;font-size:14px!important;margin:6px 0 2px;box-shadow:none!important}
+
+/* v2.352.0: 🧾 Sale report — ➕➖ items se hisaab */
+html body dialog.sr-dlg .sr-ml .sr-tab{flex:none;min-height:34px!important;padding:3px 10px!important;border-radius:999px!important;border:1px solid #c9d4e8!important;background:#f4f7fc!important;color:#24365e!important;font-size:12.5px!important;font-weight:700;white-space:nowrap}
+html body dialog.sr-dlg .sr-ml .sr-tab.is-in{background:linear-gradient(135deg,#2b4a8a,#1d3567)!important;color:#fff!important;border-color:#1d3567!important}
+html body dialog.sr-dlg .sr-ml{flex-wrap:wrap}

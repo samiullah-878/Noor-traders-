@@ -5511,3 +5511,16 @@ bottle 15 minute'. Sawal (4) -> jawab: sirf 8 baje · nuts 20 · har chhooti bot
 - Test: /tmp/sim69.py jaisa Python simulator (lock macro ki action list chala kar) — 17 jaanch: 160 min · 50 min · sab poora 0 · dobara hisaab nahi ·
   8 ke baad photo se nahi khulta · zaroori 10 min · agle din ginti nayi · din mein purane shLock se kuch band nahi. Block balance + har variable declared.
   ASAL PHONE PAR NAHI AZMAYA — pehli raat 8 baje ka nateeja malik se poochho. AI sirf photo dekhne mein (pehle jaisa).
+
+=== app v2.352.0 + PC pos-sales-dekho v2.12 (2026-11-22) — ➕ / ➖ ITEMS SE HISAAB (Sale ki poori report mein naya hissa) ===
+Malik (Daily ki screenshot, galla Rs 1,552.5 minus): "jitne bhi bill hain un mein total raqam ke bajaye plus wali all items ka data nikalein,
+  minus wali alehda, udhaar wala bill bhi plus mein — phir pata chale kya sahi hai kya ghalat". Plan diya, OK mila.
+PC: itAgg / itemsWrite — aaj ke sab sale bill (cancel + 'stock fraq' bahar) ki har line (Qty x Rate): plus item-war (cash bill / udhaar bill alag),
+  bill ke andar minus item-war, wapsi ki items (retFor ke _it; cash / udhaar) -> posSales/<din>-it {day, at, tot{P,Pc,Pu,M,T,RTc,RTu,Rc,Ru,nb,nl,nr},
+  np, nm, nrt, pl, mn, rt (JSON text)}. Peeche ki lane mein, 60 s mein ek dafa (har 5 min zaroor), sirf badle to. Purana din = blueAccess/saleItReq
+  {day, at} (malik, cloud.requestPosItems) -> PC usi din ka hisaab. POS mein kuch nahi likhta. Rules nahi badle (posSales/{day} parhna pehle se).
+App sale-rep.js v1.2: section '➕➖ Items se hisaab' — Plus kul (cash / udhaar), minus, wapsi, udhaar baqi, discount / gol (bill total - lines) +
+  TEEN nateeje (plus - minus - wapsi · plus - sirf minus · sirf plus) har ek ke saath 'app se farq' aur 'galle mein hona' + tabs ➕ Plus / ➖ Minus /
+  ↩ Wapsi (smartFind search, likhte waqt khirki dobara nahi) + PDF tables + thermal lines. itSafe: is hisse ki ghalti poori report na roke.
+SIRF DIKHANA — Daily Sale / auto sale ka qaida nahi badla (malik nateeja dekh kar A / B / C chunega, alag OK).
+Test: node — itAgg namoona data (PASS), report html / itCalc / search / PDF / slip (PASS). Asal POS / phone par nahi azmaya. AI nahi.

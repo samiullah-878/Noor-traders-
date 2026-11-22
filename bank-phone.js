@@ -6,7 +6,7 @@
 //  Chaabi + link REPO MEIN NAHI: app (malik) din mein ek dafa Falcon wale webhook ke device par `nt_bank` ko bkU (Firestore link) + bkK
 //  (blueAccess/bankKey) bhejti hai — phone par khamoshi se (koi paigham nahi). no-cors: jawab nahi parh sakte. AI nahi.
 // =========================================================
-import { firebaseConfig as F } from './config.js?v=2.351.0';
+import { firebaseConfig as F } from './config.js?v=2.352.0';
 const today = () => { const d = new Date(); return d.getFullYear() + '-' + (d.getMonth() + 1) + '-' + d.getDate(); };
 export async function bankPhoneSend(cloud, force = false) {
   try {

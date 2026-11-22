@@ -1,4 +1,5 @@
 // =========================================================
+//  v2.12 (2026-11-22): ➕ / ➖ ITEMS SE HISAAB — posSales/<din>-it (har item ka plus / minus / wapsi ka jor; cancel + stock fraq bahar; SIRF dikhana) + blueAccess/saleItReq (purana din).
 //  pos-sales-dekho.js  v2.14 (2026-11-17: counter ka naam = PC ka apna naam (pc-names v1.1 — Mithu / Abdurehman / Bilal jaise naam nahi; 🔗 app ke jore hue naam)) · v2.13 (2026-11-16: counter ka naam NT-PRINT ki setting se — pc-names.js) · v2.12 (2026-11-14: cancel bills ki RAQAM bhi — sum.cxRs; malik: 'POS report 21 lakh, app 11 lakh — farq kyun' · sirf dikhane ke liye, sale ka hisaab wahi)
 //  v2.11 (2026-11-13: ↩ MINUS ITEMS — malik: "minus wali items ka hisaab dikhao, kahan kaun se bill mein" — sum.rtd mein har wapsi ki items (it) + sum.mn = sale bill ke andar minus tadad wali lines; SIRF dikhana, auto sale ka hisaab WAHI) · v2.10 (2026-11-11: 🖥 POS REPORT ka kul — sum.g (kul bikri) / gc (cash bills) / gu (udhaar bills) / un (udhaar jo cash nahi mila); sirf dikhane ke liye, Daily ki auto sale WAHI) · v2.9 (2026-11-10: 🖥 posLive/_want — dekhe ja rahe counter ko batao, NT-PRINT POS screen ki tasveer bheje) · v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
 //  v2.7 (2026-11-10: 🎥 AAKHRI item ka waqt `lt` (bill-clip video pehli se aakhri item tak — malik: "6 items ke baad video phir se shuru") + 🔴 live patti par BANTA HUA bill (counter ke POS login CreatedBy se — "at PC:" print par aata hai) · v2.6 (2026-11-09: 🔴🧾 LIVE BILL — Live camera dekhte waqt us counter ka bante hue bill ki lines har 1 s posLive/<counter> mein (sirf parhna) · v2.5 (2026-11-09: 🎥 bill ki PEHLI ITEM ka waqt `ft` — POS har scan par SaleDetail likhta hai (save se pehle), PC har 1 s naye SaleID ki pehli line dekh kar waqt yaad (pos-first-seen.json); bill-clip clip pehli item se shuru karta hai (malik: "pehli item ka time likh le to kaisa rahe")) · v2.4 (2026-11-08: 🎥 bill ka `ct` = BANANE / PRINT ka waqt (SystemNotes "Created & Printed By:… On:… at PC:") — Bill tally ki clip post ke waqt se nahi, bill banane ke waqt se (malik: "Abdurehman ne jis time bill bana kar print kiya, PC us time se peeche jaye, posting se nahi")) · v2.3 (2026-11-06: 🔎 JAANCH malik: "jo wapsi bill ke andar minus ho chuki wo dobara nahi" — har wapsi ke saath juda SaleID, us bill ka TotalSale aur
@@ -225,6 +226,63 @@ async function minusFor(p, d0, d1) {   // v2.11: 🧾 aaj ke SALE bill ke andar 
     return rs.filter(r => Number(r.DocStatusID) !== 3).slice(0, 80).map(r => [String(r.SaleNo || r.SaleID).trim(), String(r.ItemName || '?').trim().slice(0, 30), Math.round((Number(r.Qty) || 0) * 1000) / 1000, Math.round((Number(r.Rate) || 0) * 100) / 100]);
   } catch (e) { log('Minus lines nahi parhi: ' + e.message); return null; }
 }
+// v2.12 (2026-11-22): ➕ / ➖ ITEMS SE HISAAB — malik: "jitne bhi bill hain un mein total raqam ke bajaye plus wali all items ka data nikalein, minus wali
+//   alehda, udhaar wala bill bhi plus mein — phir pata chale kya sahi hai kya ghalat". SIRF PARHNA + SIRF DIKHANA (Daily ka hisaab is se nahi badalta).
+//   posSales/<din>-it {day, at, tot{…}, pl, mn, rt (JSON text)} — cancel + stock fraq bahar; raqam RUPAY (Qty × Rate).
+function itAgg(rows, rets) {
+  const R2 = x => Math.round((Number(x) || 0) * 100) / 100, Q3 = x => Math.round((Number(x) || 0) * 1000) / 1000;
+  const pl = new Map(), mn = new Map(), rt = new Map(), seen = new Set();
+  const tot = { P: 0, Pc: 0, Pu: 0, M: 0, T: 0, nb: 0, nl: 0, Rc: 0, Ru: 0, RTc: 0, RTu: 0, nr: 0 };
+  const add = (m, k, nm, q, a, no, f) => { let o = m.get(k); if (!o) { o = { n: nm, q: 0, a: 0, c: 0, u: 0, b: [] }; m.set(k, o); } o.q += q; o.a += a; if (f) o[f] += a; if (no && o.b.length < 8 && !o.b.includes(no)) o.b.push(no); o.nb = (o.nb || 0) + 1; };
+  for (const r of rows || []) {
+    if (isFarqName(r.PartyName)) continue;
+    const sid = Number(r.SaleID) || 0, no = String(r.SaleNo || sid).trim(), cr = r.IsCreditSale === true || Number(r.IsCreditSale) === 1;
+    if (!seen.has(sid)) { seen.add(sid); tot.T += Number(r.T) || 0; tot.nb++; }
+    const q = Number(r.Qty) || 0; if (!q || r.ItemID == null) continue;
+    const a = q * (Number(r.Rate) || 0), nm = String(r.ItemName || '?').trim().slice(0, 40), k = String(r.ItemID);
+    tot.nl++;
+    if (q > 0) { tot.P += a; if (cr) tot.Pu += a; else tot.Pc += a; add(pl, k, nm, q, a, no, cr ? 'u' : 'c'); }
+    else { tot.M += -a; add(mn, k, nm, -q, -a, no, ''); }
+  }
+  for (const r of rets || []) {
+    if (Number(r.DocStatusID) === 3 || isFarqName(r.PartyName)) continue;
+    const t = Number(r.TotalSaleReturn) || 0; if (!(t > 0)) continue;
+    const cr = (r.IsCreditRturn === true || Number(r.IsCreditRturn) === 1) && !isWsName(r.PartyName), no = String(r.SaleReturnNo || r.SaleReturnID).trim();
+    tot.nr++; if (cr) tot.RTu += t; else tot.RTc += t;
+    for (const x of r._it || []) { const q = Math.abs(Number(x.Qty) || 0), a = q * (Number(x.Rate) || 0), nm = String(x.ItemName || '?').trim().slice(0, 40); if (!q) continue; if (cr) tot.Ru += a; else tot.Rc += a; add(rt, nm.toLowerCase(), nm, q, a, no, cr ? 'u' : 'c'); }
+  }
+  for (const k of Object.keys(tot)) if (!/^n/.test(k)) tot[k] = R2(tot[k]);
+  const out = (m, max, f) => [...m.values()].sort((x, y) => y.a - x.a).slice(0, max).map(f);
+  return { tot,
+    pl: out(pl, 1500, o => [o.n, Q3(o.q), R2(o.a), R2(o.c), R2(o.u), o.nb, o.b.join(',')]),
+    mn: out(mn, 400, o => [o.n, Q3(o.q), R2(o.a), o.nb, o.b.join(',')]),
+    rt: out(rt, 400, o => [o.n, Q3(o.q), R2(o.a), R2(o.u), o.nb, o.b.join(',')]),
+    np: pl.size, nm: mn.size, nrt: rt.size };
+}
+let lastItAt = 0, lastItHash = '';
+async function itemsWrite(p, d0, d1, day, rets, force) {
+  if (!force && Date.now() - lastItAt < 60000) return;
+  const rs = (await p.request().input('a', sql.DateTime, d0).input('b', sql.DateTime, d1).query(`
+    SELECT s.SaleID, s.SaleNo, s.IsCreditSale, CAST(s.TotalSale AS FLOAT) AS T, pt.PartyName, d.ItemID, i.ItemName, CAST(d.Qty AS FLOAT) AS Qty, CAST(d.Rate AS FLOAT) AS Rate
+    FROM dbo.Sale s LEFT JOIN dbo.Party pt ON pt.PartyID = s.PartyID LEFT JOIN dbo.SaleDetail d ON d.SaleID = s.SaleID LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID
+    WHERE s.SaleDate >= @a AND s.SaleDate < @b AND ISNULL(s.DocStatusID, 0) <> 3`)).recordset;
+  const g = itAgg(rs, rets === undefined ? await retFor(p, d0, d1) : rets);
+  let pl = JSON.stringify(g.pl); if (pl.length > 600000) pl = JSON.stringify(g.pl.slice(0, 700));
+  const body = { day, tot: g.tot, np: g.np, nm: g.nm, nrt: g.nrt, pl, mn: JSON.stringify(g.mn), rt: JSON.stringify(g.rt) }, h = day + JSON.stringify(body);
+  lastItAt = Date.now();
+  if (!force && h === lastItHash) return;
+  await col.doc(day + '-it').set({ ...body, at: Date.now() });
+  if (day === dayOf(new Date())) lastItHash = h;
+}
+// app ka hukum: blueAccess/saleItReq {day 'YYYY-MM-DD', at} (malik) -> us din ka item hisaab (purana din bhi)
+try { db.collection('businesses').doc(BUSINESS_ID).collection('blueAccess').doc('saleItReq').onSnapshot(async sn => {
+  try {
+    const x = sn.exists ? (sn.data() || {}) : {}, m = /^(\d{4})-(\d{2})-(\d{2})$/.exec(String(x.day || ''));
+    if (!m || !(Date.now() - (Number(x.at) || 0) < 10 * 60000)) return;
+    const d0 = new Date(Number(m[1]), Number(m[2]) - 1, Number(m[3])), d1 = new Date(d0); d1.setDate(d1.getDate() + 1);
+    await itemsWrite(await getPool(), d0, d1, m[0], undefined, true); log('➕➖ Item hisaab (hukum): ' + m[0]);
+  } catch (e) { log('Item hisaab (hukum) masla: ' + e.message); }
+}, e => log('saleItReq nahi parha: ' + e.message)); } catch (e) { log('saleItReq: ' + e.message); }
 async function crvFor(p, d0, d1) {   // v1.6: udhaar bill ke saath usi bill ka CRV (cash) — SaleID -> raqam
   const m = new Map();
   try {
@@ -393,12 +451,13 @@ async function slow() {
   if (!slowDirty && !fullLines) return;
   slowRun = true; slowDirty = false;
   try {
-    const p = await getPool(), rows = [...cache.values()], sm = saleSum(rows, await crvFor(p, d0, d1), await retFor(p, d0, d1));
+    const p = await getPool(), rows = [...cache.values()], rets = await retFor(p, d0, d1), sm = saleSum(rows, await crvFor(p, d0, d1), rets);
     const sum = { amt: sm.amt, n: sm.n, cx: sm.cx, cxRs: sm.cxRs || 0, fq: sm.fq, fqRs: sm.fqRs, ws: sm.ws, wsRs: sm.wsRs, wsCash: sm.wsCash, rt: sm.rt, rtRs: sm.rtRs, rtU: sm.rtU, rtL: sm.rtL, rtA: sm.rtA, rtd: JSON.stringify(sm.rtd || []), auto: AUTO, g: sm.g, gc: sm.gc, gu: sm.gu, un: sm.un };
     const mn = await minusFor(p, d0, d1); if (mn) sum.mn = JSON.stringify(mn);   // v2.11: bill ke andar minus lines (JSON text)   // v2.3: rtd JSON text (list ke andar list nahi)   // v2.2: ↩ wapsi   // v1.8: app milane ke liye (ginti nahi)
     const sh = day + JSON.stringify(sum);
     if (sh !== lastSumHash) { await col.doc(day).set({ sum }, { merge: true }); lastSumHash = sh; }
     await writeSale(day, sm).catch(e => log('POS sale (auto) masla: ' + e.message));   // v1.5 · v1.6 wholesale CRV · v1.8 band = hata
+    await itemsWrite(p, d0, d1, day, rets, fullLines).catch(e => log('Item hisaab masla: ' + e.message));   // v2.12
     if (fullLines) lastLinesFull = Date.now();
     const ids = rows.map(r => Number(r.SaleID) || 0).sort((a, b) => b - a);
     await syncLines(p, d0, d1, day, fullLines ? 0 : (ids[Math.min(39, ids.length - 1)] || 0)).catch(e => log('Items masla: ' + e.message));   // v1.9: aam chakkar = sirf aakhri 40 bills ke items, har 5 min sab
@@ -413,7 +472,7 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v2.5 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
+  log('pos-sales-dekho v2.12 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
