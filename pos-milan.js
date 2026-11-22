@@ -5,7 +5,7 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const money = n => 'Rs ' + (Math.abs(Number(n) || 0) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
-import { skipsBalance, cashPaysBill } from './model.js?v=2.347.0';
+import { skipsBalance, cashPaysBill } from './model.js?v=2.348.0';
 const TOL = 100, PRE_FROM = '2026-09-15';   // v2.0: PC LINES_FROM / START_DATE jaisa
 const OPEN_RX = /opening|shuru ka baqaya|sabqa baqaya/i;   // v1.7 = PC autoMilan OPEN_RX   // paisa — Rs 1 tak farq = theek (POS 2 decimal rounding)
 let C = null, st = { f: 'farq', q: '' };
@@ -70,8 +70,8 @@ export function pmLineHTML(p) {   // khate ki screen ke upar — chhoti chip; ta
   const am = autoToday()[p.id], rob = am && am.n ? (big ? ` · 🤖 PC ne aaj khud barabar kiya${am.txt ? ' (' + esc(String(am.txt).split(' | ')[0].slice(0, 90)) + ')' : ''}` : ' 🤖') : '';
   if (r.state === 'wait') return `<button type="button" class="pm-line none${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⏳${big ? ' nayi entry POS mein ja rahi hai — chand second' : ''}</button>`;   // v2.169.0
   const pxT = big && r.px ? ` · 🚫 POS se bahar ${money(Math.abs(r.px))} (milan mein nahi gina)` : '';
-  if (r.state === 'ok') return `<button type="button" class="pm-line ok${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ✓${big ? ` baqaya ${money(r.pos)} ${sideTxt(r.pos)} · barabar` : ''}${pxT}${rob}</button>`;
-  return `<span class="pm-lw"><button type="button" class="pm-line bad${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⚠ ${money(r.farq)}${big ? ` farq · POS ${money(r.pos)} ${sideTxt(r.pos)} · app ${money(r.app)} ${sideTxt(r.app)}` : ''}${pxT}</button>${big ? `<button type="button" class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq</button>` : ''}</span>`;
+  if (r.state === 'ok') return `<span class="pm-lw"><button type="button" class="pm-line ok${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ✓${big ? ` baqaya ${money(r.pos)} ${sideTxt(r.pos)} · barabar` : ''}${pxT}${rob}</button>${lnFixHTML(p, r)}</span>`;   // v2.348.0: ✅ + ↩ (abhi barabar kiya ho to)
+  return `<span class="pm-lw"><button type="button" class="pm-line bad${big ? ' big' : ''}" data-pm-tog="${esc(p.id)}">🖥 POS ⚠ ${money(r.farq)}${big ? ` farq · POS ${money(r.pos)} ${sideTxt(r.pos)} · app ${money(r.app)} ${sideTxt(r.app)}` : ''}${pxT}</button>${lnFixHTML(p, r)}${big ? `<button type="button" class="pm-dbtn" data-pm-diff="${esc(p.id)}">🔍 Farq</button>` : ''}</span>`;   // v2.348.0: ⚖️ POS = App seedha khate par
 }
 export function pmCount() { if (!C || !led()) return 0; let n = 0; for (const p of C.parties()) { if (p.bank) continue; if (pmRow(p).state === 'farq') n++; } return n; }
 const agoTxt = t => { if (!t) return ''; const m = Math.round((Date.now() - t) / 60000); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : m < 1440 ? Math.round(m / 60) + ' ghante pehle' : Math.round(m / 1440) + ' din pehle'; };
@@ -433,6 +433,52 @@ async function fixGo(dir) {
 const miss = new Map();   // pid -> { at, ids: Set|null, busy }
 const sent = new Map();   // entry id -> { at, jid, pid }
 const cardJobs = new Map();   // pid -> { stop, L }
+// ---------- ⚖️ v2.348.0: KHATE KE UPAR EK CLICK = POS APP JAISA (malik 22 Nov: 'jitna bi khata ha · uper aik chip · aik click ma POS apps jaise kar ke barabar kar de ·
+//   aik hi voucher · alehda alehda entries nahi · khata ka oper screen pr hi · only malik'). WAHI milanJobs ['@balance'] (PC pos-khata-sync w6: POS mein SIRF EK JV
+//   khata ↔ Equity, app mein kuch nahi banta, app-only entries posNo + balFix). Ek sawal (raqam dikha kar) → bhejo → ⏳ → ✅ POS barabar (+ ↩ 30 min). PC raqam khud POS
+//   se dobara nikalta hai (app ka farq purana ho to bhi asal). Sirf malik, bank khata nahi. AI nahi.
+const lnSent = new Map();   // pid -> {status:'new', at, ids} (PC ka jawab aane tak)
+function lnJob(pid) {
+  const w = cardJobs.get(pid), L = ((w && w.L) || []).filter(j => Array.isArray(j.ids) && (j.ids[0] === '@balance' || j.ids[0] === '@undo-balance') && j.ids[1] !== 'dry').sort((a, b) => (Number(b.at) || 0) - (Number(a.at) || 0));
+  const s = lnSent.get(pid); if (s && (!L[0] || (Number(L[0].at) || 0) < s.at - 5000)) return s;
+  return L[0] || null;
+}
+function lnFixHTML(p, r) {
+  if (!C || !C.owner() || !C.addJob || bankP(p)) return '';
+  const s0 = lnSent.get(p.id); if (r.state === 'farq' || s0) cardWatch(p.id); else if (!cardJobs.has(p.id)) return '';
+  const j = lnJob(p.id), age = j ? Date.now() - (Number(j.doneAt || j.at) || 0) : 1e12, und = j && j.ids && j.ids[0] === '@undo-balance';
+  if (j && j.status !== 'done' && age < 15 * 60000) return `<span class="pm-lfx wait">⏳ ${und ? 'Wapas ho raha…' : 'POS barabar ho raha…'}</span>`;
+  if (j && j.status === 'done' && age < 30 * 60000) {
+    if (j.stopped) return r.state === 'farq' ? `<button type="button" class="pm-lfx go" data-pm-lfix="${esc(p.id)}">⚖️ POS = App</button>` : '';
+    if (j.fail) return r.state === 'farq' ? `<button type="button" class="pm-lfx bad" data-pm-lfix="${esc(p.id)}" title="${esc(String((j.log || []).slice(-1)[0] || ''))}">✕ Nahi hua · 🔁</button>` : '';
+    if (und) return r.state === 'farq' ? `<span class="pm-lfx">↩ Wapas ho gaya</span><button type="button" class="pm-lfx go" data-pm-lfix="${esc(p.id)}">⚖️ POS = App</button>` : '<span class="pm-lfx">↩ Wapas ho gaya</span>';
+    const undo = j.id && Number(j.done) > 0 && !j.undoneAt ? `<button type="button" class="pm-lfu" data-pm-lfu="${esc(p.id)}" data-pm-lfj="${esc(j.id)}" title="Yeh voucher POS se hatao">↩</button>` : '';
+    if (r.state !== 'farq') return `<span class="pm-lfx ok">✅ POS barabar</span>${undo}`;
+    if (Number(j.done) > 0 && (Number(led()?.at) || 0) < (Number(j.doneAt) || 0)) return `<span class="pm-lfx wait">⏳ POS ka naya baqaya aa raha…</span>${undo}`;
+  }
+  if (r.state !== 'farq') return '';
+  return `<button type="button" class="pm-lfx go" data-pm-lfix="${esc(p.id)}">⚖️ POS = App</button>`;
+}
+async function lnFixGo(pid) {
+  const p = C.parties().find(x => x.id === pid); if (!p || !C.owner()) return; const r = pmRow(p);
+  if (r.state !== 'farq') { C.notice('✓ POS pehle se barabar'); return; }
+  if (!confirm(`⚖️ ${p.name}\n\nApp ka baqaya: ${money(r.app)} ${sideTxt(r.app)}\nPOS ka baqaya: ${money(r.pos)} ${sideTxt(r.pos)}\nFarq: ${money(r.farq)}\n\nPOS mein sirf EK voucher (JV) banega — POS ka baqaya app jaisa ho jayega.\nApp mein koi entry nahi banegi, alag alag entries POS mein nahi jayengi.\n(Asal raqam shop PC POS se dobara nikal kar lagata hai.)\n\nTheek hai?`)) return;
+  lnSent.set(pid, { status: 'new', at: Date.now(), ids: ['@balance'] }); rerender();
+  try { await C.addJob({ partyId: p.id, dir: 'pos', ids: ['@balance'], n: 1, amt: r.farq }); C.notice('⏳ Shop PC ko kaha — 1–2 min'); }
+  catch (err) { lnSent.delete(pid); rerender(); C.notice('Nahi gaya: ' + (err?.message || err)); }
+}
+async function lnUndo(pid, jid) {
+  const p = C.parties().find(x => x.id === pid); if (!p || !C.owner() || !jid) return;
+  if (!confirm(`↩ ${p.name}\n\nAbhi wala barabar karne ka voucher POS se hata dein? (entries ka nishan bhi wapas)`)) return;
+  lnSent.set(pid, { status: 'new', at: Date.now(), ids: ['@undo-balance', jid] }); rerender();
+  try { await C.addJob({ partyId: p.id, dir: 'pos', ids: ['@undo-balance', String(jid)], n: 1, amt: 0 }); C.notice('⏳ Shop PC ko kaha — 1–2 min'); }
+  catch (err) { lnSent.delete(pid); rerender(); C.notice('Nahi gaya: ' + (err?.message || err)); }
+}
+document.addEventListener('click', e => {
+  if (!C) return; const b = e.target.closest?.('[data-pm-lfix],[data-pm-lfu]'); if (!b) return;
+  e.stopPropagation(); e.preventDefault();
+  if (b.dataset.pmLfix) lnFixGo(b.dataset.pmLfix); else lnUndo(b.dataset.pmLfu, b.dataset.pmLfj);
+}, true);
 const rowMemo = new Map();
 const typing = () => { const a = document.activeElement; return !!(a && a.matches && a.matches('input,textarea,select')); };
 function rerender() { if (typing()) return; try { C.rerender && C.rerender(); } catch {} }

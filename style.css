@@ -9101,3 +9101,27 @@ html body #dialogBody button.pai-sw.is-in i{left:21px}
 html body #dialogBody button.pai-sw:disabled{opacity:.55}
 html body #dialogBody .pai-note{margin:0;font-size:12px;color:#5b6577;line-height:1.35}
 html.dk body #dialogBody .pai-box{background:linear-gradient(#222d44,#1b2438);border-color:#3b4a6b}html.dk body #dialogBody .pai-nm b{color:#dfe8ff}html.dk body #dialogBody .pai-st{background:#1b2438}
+
+/* v2.348.0: 🏬 Live — sab godam cameras ek video (live.js #lvMo) */
+#lvDlg.is-mo .lv-bill,#lvDlg.is-mo .lv-shot{display:none!important}
+#lvDlg.is-mo .lv-body video{max-height:none!important;aspect-ratio:auto!important;height:100%!important;width:100%!important;flex:1 1 auto!important}
+#lvDlg .lv-mo{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;pointer-events:none;container-type:size;z-index:2}
+#lvDlg .lv-mog{display:grid;width:min(100cqw,calc(100cqh * var(--arw) / var(--arh)));height:min(100cqh,calc(100cqw * var(--arh) / var(--arw)))}
+#lvDlg .lv-mog>*{min-width:0;min-height:0}
+html body #lvDlg button.lv-mot{pointer-events:auto;position:relative;display:block;width:100%;height:100%;min-height:0!important;padding:0!important;margin:0;border:1px solid #ffffff1f!important;border-radius:0!important;background:transparent!important;box-shadow:none!important;cursor:pointer}
+html body #lvDlg button.lv-mot:active{background:#ffffff14!important}
+#lvDlg .lv-mot span{position:absolute;left:6px;top:6px;max-width:calc(100% - 12px);padding:2px 9px;border-radius:999px;background:#000a;color:#fff;font-size:12px;font-weight:700;line-height:1.5;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff2e}
+html body #lvDlg .lv-chips button.lv-gd{background:linear-gradient(180deg,#1e3a8a,#172554)!important;color:#dbeafe!important;border:1px solid #60a5fa66!important}
+html body #lvDlg .lv-chips button.lv-gd.is-in{background:linear-gradient(180deg,#3b82f6,#1d4ed8)!important;color:#fff!important}
+html body #lvDlg .lv-tools button.lv-mob{border-radius:999px;padding:0 12px;white-space:nowrap;background:linear-gradient(180deg,#1e3a8a,#172554)!important;color:#fff!important;border:1px solid #60a5fa77!important}
+#lvDlg .lv-tools,#lvDlg .lv-st{z-index:3}
+#lvDlg.is-mo .lv-bt{display:none!important}
+
+/* v2.348.0: ⚖️ khate ke upar 'POS = App' chip (pos-milan.js lnFixHTML, sirf malik) */
+html body .pm-lw{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:100%}
+html body .pm-lfx{display:inline-flex;align-items:center;gap:4px;height:30px;min-height:0!important;padding:0 12px!important;border-radius:999px!important;font-size:12.5px!important;font-weight:800;white-space:nowrap;line-height:1;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2fa)!important;color:#1d3a6e!important;box-shadow:none!important;margin:6px 0 2px}
+html body button.pm-lfx.go{background:linear-gradient(180deg,#3d7bff,#1d52d6)!important;border-color:#1d52d6!important;color:#fff!important;box-shadow:0 2px 8px #1d52d655!important;cursor:pointer}
+html body .pm-lfx.wait{background:linear-gradient(#fff,#fff6e3)!important;border-color:#efd39b!important;color:#8a5a00!important}
+html body .pm-lfx.ok{background:linear-gradient(#fff,#e7f8ee)!important;border-color:#9fd8b6!important;color:#0f6b3d!important}
+html body button.pm-lfx.bad{background:linear-gradient(#fff,#fdf0ef)!important;border-color:#f0b4ae!important;color:#b3261e!important;cursor:pointer}
+html body button.pm-lfu{height:30px;width:30px;min-height:0!important;min-width:0!important;padding:0!important;border-radius:999px!important;border:1px solid #c9d3e6!important;background:linear-gradient(#fff,#eef2fa)!important;color:#1d3a6e!important;font-size:14px!important;margin:6px 0 2px;box-shadow:none!important}

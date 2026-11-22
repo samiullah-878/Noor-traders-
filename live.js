@@ -8,6 +8,9 @@
 // v2.219.0: 🧾 LIVE BILL PATTI — malik: "camera ke upar transparent patti, ek side par item ke naam — jis waqt NT print par item aaye usi waqt camera par bhi".
 //   PC pos-sales-dekho v2.6 dekhe ja rahe counter ka aakhri bill har 1 s posLive/<counter> mein → yahan daayein taraf patti: naya item hara chamke,
 //   hataya laal kata (12 s), tadad badli peeli; upar #bill + ⏳ ban raha / 🖨 Print ✓ / 📌 Post ✓; neeche items + Kul. 🧾 chip = patti chhupao / dikhao (phone yaad).
+// v2.348.0: 🏬 GODAM — SAB EK SAATH (malik 22 Nov: 'live ma godam ka cameras akhetha chahie'): pehla chip '🏬 Godam' → liveReq pc '@godam' → PC live-cam v1.9
+//   saare godam cameras jor kar EK video (2 = aamne saamne, 3-4 = 2x2, 5-6 = 3x2) + jawab mo {c, r, n}. Video ke upar har khane par naam (#lvMo, container units —
+//   html zoom se farq nahi); khane par tap = wohi camera akela, '‹ 🏬 Sab' / phone back = wapas sab. Godam par bill patti / POS screen nahi (counter nahi). AI nahi.
 // v2.321.0: 🖐 POS screen ka dabba KHISKAO + chhota / bara (malik 18 Nov: 'background nazar nahi aa raha — movable, hum khud aage peeche karein'):
 //   landscape / PC par dabbe ki upar wali patti pakar kar ghaseeto, neeche daayein kone (◢) se naap; jagah + naap har phone / PC par yaad (sam-lv-shotpos,
 //   lv-body ke hisse % mein — html zoom se farq nahi). ↺ = pehli jagah. Phone seedha (portrait) = pehle jaisa (dabba video ke neeche). AI nahi.
@@ -15,21 +18,25 @@ const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
 let xcs = [];   // v2.329.0: 📹 mazeed cameras (chip par 📹)
+const GD = '@godam'; let MO = null, moBack = false;   // v2.348.0: 🏬 sab godam cameras ek video
+const lvLbl = p => p === GD ? '🏬 Godam (sab)' : `${xcs.includes(p) ? '📹' : '🖥'} ${esc(p)}`, lvName = p => p === GD ? 'Godam cameras' : p;
 let cloud = null, notice = () => {}, list = [], cur = '', S = null, pcSt = null, pcStop = null, VP8 = false;   // VP8: v2.223.0 phone H.264 na chala sake to
 let B = { un: null, sid: 0, prev: new Map(), del: [], fl: new Map(), recv: 0, doc: null, t: null, cnt: 0 };
 const bOn = () => { try { return localStorage.getItem('sam-lv-bill') !== '0'; } catch { return true; } };
 
 export function openLive(o) {
-  cloud = o.cloud; notice = o.notice || notice; xcs = Array.isArray(o.xc) ? o.xc : []; list = (o.list || []).filter(Boolean); cur = o.cur && list.includes(o.cur) ? o.cur : (list[0] || '');
+  cloud = o.cloud; notice = o.notice || notice; xcs = Array.isArray(o.xc) ? o.xc : []; list = (o.list || []).filter(Boolean); list = [GD, ...list.filter(x => x !== GD)]; MO = null; moBack = false; cur = o.cur && list.includes(o.cur) ? o.cur : (list[1] || list[0] || '');
   let d = $('lvDlg');
   if (!d) { d = document.createElement('dialog'); d.id = 'lvDlg'; d.className = 'lv-dlg'; document.body.append(d); d.addEventListener('cancel', ev => { ev.preventDefault(); closeLive(); }); }
-  d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}">${xcs.includes(p) ? '📹' : '🖥'} ${esc(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
+  d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}${p === GD ? ' lv-gd' : ''}">${lvLbl(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
     <div class="lv-body"><video id="lvVid" playsinline muted autoplay></video><div class="lv-st" id="lvSt">⏳ jor raha…</div><div class="lv-shot" id="lvShot" hidden></div><div class="lv-bill" id="lvBill" ${bOn() ? '' : 'hidden'}></div>
-      <div class="lv-tools"><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
+      <div class="lv-tools"><button type="button" class="lv-mob" id="lvMoB" data-lv-mob="1" hidden>‹ 🏬 Sab</button><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
   d.onclick = ev => {
     const t = ev.target;
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
-    const c = t.closest('[data-lv-pc]'); if (c) { cur = c.dataset.lvPc; d.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x === c)); start(); return; }
+    const c = t.closest('[data-lv-pc]'); if (c) { cur = c.dataset.lvPc; moBack = false; d.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x === c)); start(); return; }
+    const mt = t.closest('[data-lv-mo]'); if (mt) { moGo(mt.dataset.lvMo); return; }   // v2.348.0: khane par tap = wohi camera akela
+    if (t.closest('[data-lv-mob]')) { moGo(GD); return; }
     if (t.closest('[data-lv-re]')) { start(); return; }
     const qb = t.closest('[data-lv-q]'); if (qb) { notice(qb.dataset.why || ''); return; }   // v2.322.0: 🩺 poori baat
     if (Date.now() - SPM < 450) return;   // v2.321.0: khiskane ke foran baad wala click (bara / chhota nahi)
@@ -52,15 +59,30 @@ function stop(sendEnd) {
   if (sendEnd && s.id && cloud.liveEnd) cloud.liveEnd(s.id).catch(() => {});
   const v = $('lvVid'); if (v) v.srcObject = null;
 }
-export function closeLive() { RES = false; billStop(); stop(true); const d = $('lvDlg'); try { d?.close(); } catch { d?.removeAttribute('open'); } try { pcStop && pcStop(); } catch {} pcStop = null; }
-window.ntLvClose = () => { const d = $('lvDlg'); if (!d?.open) return false; closeLive(); return true; };
+export function closeLive() { RES = false; MO = null; moBack = false; billStop(); stop(true); const d = $('lvDlg'); try { d?.close(); } catch { d?.removeAttribute('open'); } try { pcStop && pcStop(); } catch {} pcStop = null; }
+window.ntLvClose = () => { const d = $('lvDlg'); if (!d?.open) return false; if (moBack && cur !== GD) { moGo(GD); return true; } closeLive(); return true; };   // v2.348.0: pehle wapas sab godam
+function moGo(p) {   // v2.348.0
+  if (p === GD) moBack = false; else moBack = true; cur = p;
+  $('lvDlg')?.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x.dataset.lvPc === p)); start();
+}
+function moPaint(mo) {   // v2.348.0: video ke upar har khane par naam — tap = wohi camera
+  const body = $('lvDlg')?.querySelector('.lv-body'); if (!body) return; let e = $('lvMo');
+  if (!mo || !Array.isArray(mo.n) || !mo.n.length) { if (e) e.remove(); return; }
+  const c = Math.max(1, Number(mo.c) || 1), r = Math.max(1, Number(mo.r) || 1), sig = JSON.stringify([c, r, mo.n]);
+  if (e && e.dataset.sig === sig) return;
+  if (!e) { e = document.createElement('div'); e.id = 'lvMo'; e.className = 'lv-mo'; const v = $('lvVid'); v ? v.after(e) : body.append(e); }
+  e.dataset.sig = sig; e.style.setProperty('--arw', String(c * 448)); e.style.setProperty('--arh', String(r * 252));
+  let h = ''; for (let i = 0; i < c * r; i++) h += i < mo.n.length ? `<button type="button" class="lv-mot" data-lv-mo="${esc(mo.n[i])}"><span>${esc(mo.n[i])}</span></button>` : '<i></i>';
+  e.innerHTML = `<div class="lv-mog" style="grid-template-columns:repeat(${c},1fr);grid-template-rows:repeat(${r},1fr)">${h}</div>`;
+}
 let RES = false;   // v2.226.0: app peeche ja kar wapas aaye (popup / call) = KHUD dobara (malik: "jab bhi on karein foran aana chahiye")
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (S) { stop(true); RES = true; stat('⏸ App peeche gayi — wapas aate hi khud jur jayega'); } } else if (RES && $('lvDlg')?.open && cur) { RES = false; start(); } });
 
 async function start() {
-  stop(true); billStart(); { const qe = $('lvQ'); if (qe) qe.hidden = true; }   // v2.322.0: naya rabta = 🩺 nayi ginti
+  stop(true); { const gd = cur === GD, dl = $('lvDlg'); dl?.classList.toggle('is-mo', gd); MO = null; moPaint(null); if (gd) billStop(); else billStart(); const mb = $('lvMoB'); if (mb) mb.hidden = !(moBack && !gd); }   // v2.348.0: godam = bill patti / POS screen nahi
+  { const qe = $('lvQ'); if (qe) qe.hidden = true; }   // v2.322.0: naya rabta = 🩺 nayi ginti
   if (!cloud?.liveStart) { stat('✕ App update karein', true); return; }
-  if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + cur + ' ka camera jor raha…');
+  if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + lvName(cur) + (cur === GD ? ' jor raha… (pehli dafa 10-15 s)' : ' ka camera jor raha…'));
   const s = S = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pc: new RTCPeerConnection({ iceServers: STUN }), ok: 0 };
   const v = $('lvVid');
   const tr = s.pc.addTransceiver('video', { direction: 'recvonly' });
@@ -68,7 +90,7 @@ async function start() {
   s.pc.ontrack = e => { if (S !== s) return; v.srcObject = e.streams[0] || new MediaStream([e.track]); v.play().catch(() => {}); };
   s.pc.onconnectionstatechange = () => {
     if (S !== s) return; const st = s.pc.connectionState;
-    if (st === 'connected') { s.ok = 1; stat('🟢 Live · ' + cur); setTimeout(() => { if (S === s && s.ok) $('lvSt').hidden = true; }, 2500); }
+    if (st === 'connected') { s.ok = 1; stat('🟢 Live · ' + lvName(cur)); setTimeout(() => { if (S === s && s.ok) $('lvSt').hidden = true; }, 2500); }
     else if (st === 'failed') stat('✕ Rabta nahi bana — is internet par seedha rabta band hai. Wi-Fi / doosra internet try karein, ya 🔄', true);
     else if (st === 'disconnected') stat('⏳ Rabta kamzor — wapas jor raha…');
   };
@@ -83,7 +105,7 @@ async function start() {
   } catch (e) { if (S === s) stat('✕ Shuru nahi hua: ' + (e?.message || e), true); return; }
   let answered = false;
   s.unsub = cloud.liveWatch(s.id, async r => {
-    if (S !== s || !r) return; s.r = r; qPaint(s);
+    if (S !== s || !r) return; s.r = r; qPaint(s); if (cur === GD && r.mo) { MO = r.mo; moPaint(r.mo); }   // v2.348.0
     if (r.warn && r.st !== 'err' && !r.rtp) stat('⚠ ' + r.warn, true);   // v2.223.0: PC ki asal wajah
     if (r.st === 'err') { stat('✕ ' + (r.err || 'PC ne mana kiya'), true); return; }
     if (r.st === 'ok' && r.ans && !answered) { answered = true; clearTimeout(s.to); stat('⏳ Video aa rahi…'); try { await s.pc.setRemoteDescription({ type: 'answer', sdp: r.ans }); } catch (e) { stat('✕ ' + (e?.message || e), true); } }

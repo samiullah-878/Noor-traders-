@@ -9416,3 +9416,19 @@ Malik (22 Nov 10:38): 'Ai KO filhal band Kar do or script mein on Karna Ka optio
 - sehat.py (📸 Sehat lock): DeviceUnlocked (T4) par aane wale dono popup hate — lock ke dauran har unlock ka ASK aur 'photo baqi' ASKP. Lock shuru ka ek popup sirf jab daur unlock se na chala ho (NOT_T4 = TriggerThatInvoked m_not) + SHOWOK; shLkA usi daur mein 0.
 - Wahi: paani 40 min ki yaad + '📸 Photo do' button, 10 min -> lock 10/30/60, band app kholne par popup, 2 s chowkidar, bell, app ka ☰ 📸. T4 trigger macro mein hai (lock ka hisaab unlock par bhi chale).
 - pkg diff: sirf '📸 Sehat lock' badla. Phone par azmaya nahi; ginti ab update par bachti hai (v65).
+
+
+=== v2.348.0 (2026-11-22) — 🏬 Live: sab godam cameras ek saath + ⚖️ khate ke upar 'POS = App' chip ===
+1) Malik: 'Acha ab mja live ma godam ka cameras akhetha chahie' -> plan -> 'Ok ha'.
+- PC live-cam v1.9: liveReq pc '@godam' = startMosaic — godam cameras (billClip.gc gate pass godam camera › gintiCam cams › xc naam mein 'godam', max 6,
+  chOf se channel, dohra channel nahi) EK ffmpeg: har input recording wali udp copy (srcs subs mein ek forwarder -> 127.0.0.1:48900+i h264 / 48910+i vp8)
+  ya recording band = RTSP sub-stream; filter moFilter (fps 8, khana 448x252 pad, xstack; khali khana gehra rang; 1 camera = null) -> H.264/VP8 RTP -> werift.
+  Jawab liveReq.mo {c, r, n} (restart par moTell). Chowkidar: 15 s RTP nahi = ffmpeg kill -> dobara (3 dafa). Probe 1 s / 1 MB (inputs ek ek khulte; default = 4 camera ~25 s).
+  liveCamPc.mo = naam (pushSt). Test: fake recording udp + fake Firestore + werift client — 3 camera 2x2, ans 0.3 s, video ~12 s mein, RTP chalti rahi.
+- App live.js: pehla chip '🏬 Godam (sab)' (GD '@godam'; default pehle jaisa counter), #lvMo grid naam (container units cqw/cqh — video ke andar asal khane par),
+  khane par tap = wohi camera akela (moBack) · '‹ 🏬 Sab' / phone back = wapas; godam par bill patti / POS screen / 🧾 chip nahi (#lvDlg.is-mo).
+2) Malik: 'jitna bi khata ha · uper aik chip · aik click ma POS apps jaise kar ke barabar · aik hi voucher · alehda entries nahi · khata ka oper screen pr hi · only malik' -> plan -> 'Ok'.
+- pos-milan.js lnFixHTML: khate ki pm-line ke saath '⚖️ POS = App' (sirf malik, bank nahi, sirf farq par) -> ek confirm (app / POS / farq raqam) -> WAHI milanJobs ['@balance']
+  (PC w6: POS mein SIRF EK JV khata ↔ Equity, app mein kuch nahi) -> ⏳ -> ✅ POS barabar + ↩ (30 min, ['@undo-balance', job]). cardWatch(pid) se job ka haal.
+  PC raqam POS se khud dobara nikalta hai. Farq screen ka purana 🔎 Jaanch / ✅ Pakka wahi.
+Rules / PC pos-khata-sync nahi badle. AI nahi (dono mein).

@@ -1,6 +1,6 @@
 {
- "version": "2026-11-22.2",
- "note": "ginti-cam v2.1 + bill-clip v2.21 (🤖 godam camera ki AI default BAND — app Settings → PC scripts se chalu; band = model / HD / waqia video ruke)",
+ "version": "2026-11-22.3",
+ "note": "live-cam v1.9 (🏬 Live: sab godam cameras EK video — 2 / 2x2 / 3x2, recording ki copy se)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -101,7 +101,7 @@
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
   "bill-clip.js": "f5ac88347234989c18d66f698dded7e9b66e4a880332e53ad3abd52b9e9cc91d",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
-  "live-cam.js": "ec3589ec0ab36f328159175912177102d8ab8e57e8ff75e67bd6970c612368ed",
+  "live-cam.js": "39459a6054862c4c693e9c4e4e771f3a41a2a6982c64b6e673ab5a8ce2249930",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
   "pc-vault.js": "6c27772a3b21166eecabdf7079615a394b1a9831a11e3622330809d5ecdf3abd",
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",

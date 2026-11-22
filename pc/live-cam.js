@@ -1,5 +1,9 @@
 // =========================================================
-//  live-cam.js  v1.8 (2026-11-19: 📹 mazeed cameras — billClip.xc [{n, ch, r}] (counter ke ilawa, app ⚙️ Camera setup): live ka naam counter na ho to
+//  live-cam.js  v1.9 (2026-11-22, malik: 'live ma godam ka cameras akhetha chahie'): 🏬 liveReq pc '@godam' = sab godam cameras EK video (ffmpeg xstack:
+//    2 = aamne saamne, 3-4 = 2x2, 5-6 = 3x2, khana 448x252, 8 fps) — kaun se: billClip.gc (gate pass godam camera) › gintiCam cams (📦 Loading ginti) ›
+//    xc naam mein 'godam' (zyada se zyada 6). Har camera recording wali udp copy se (127.0.0.1 par apne port 48900+ ko aage — NVR par naya rabta NAHI),
+//    recording band = RTSP seedha. Jawab mein mo {c, r, n:[naam]} — app har khane par naam + tap = wohi camera akela. Ek camera ruke = 15 s mein dobara.
+//    Haal liveCamPc.mo = godam cameras ke naam (app chip). · v1.8 (2026-11-19: 📹 mazeed cameras — billClip.xc [{n, ch, r}] (counter ke ilawa, app ⚙️ Camera setup): live ka naam counter na ho to
 //    xc se channel; recording (r) wale ki copy bhi udp se (bill-clip v2.10 bhejta), r band = RTSP seedha (pehle jaisa).) · v1.7 (2026-11-18: malik ki screenshot RN6QU6D — video grey / dhundli (tukre gum): recording ki line ki UDP aur RTP socket ka dabba 8 MB
 //    (Windows ka chhota dabba = PC thora busy ho to tukre girte), ffmpeg `discardcorrupt` (gira hua tukra = grey dhabba nahi, pichhli saaf tasveer ruki
 //    rahe jab tak naya keyframe), 🩺 liveReq.q {d: NVR→PC decode ghaltiyan, g: PC ke andar gire tukre, r: RTP gire, at} har 10 s (badle to) — app chip.)
@@ -30,9 +34,10 @@ const os = require('os');
 const dgram = require('dgram');
 const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
+if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.8';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '1.9';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -67,10 +72,11 @@ biz.collection('blueAccess').doc('billClip').onSnapshot(s => {
   const d = s.exists ? s.data() || {} : {};
   CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), ch: (d.ch && typeof d.ch === 'object') ? d.ch : {},
-    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16) };   // v1.8
+    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v1.8
+    gc: (Array.isArray(d.gc) ? d.gc : []).map(x => ({ g: Math.floor(Number(x && x.g) || 0), c: String((x && x.c) || '').trim().slice(0, 30), i: Number(x && x.i) === 2 ? 2 : 1 })).filter(x => x.g > 0 && x.c && x.c !== '-') };   // v1.9: 🏬 gate pass godam camera
   const sig = [CF.kind, CF.ip, CF.port, CF.user, CF.pw, Number(d.at) || 0].join('|');
   if (sig !== cfSig) { cfSig = sig; AUTHBAD = 0; for (const p of pipes.values()) stopPipe(p, 'setting badli'); }
-  srcSync();
+  srcSync(); try { pushSt(true); } catch {}   // v1.9: godam cameras ki list (mo) app tak
   log(`⚙️ setting: ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length}`);
 }, e => log('⚠️ setting: ' + e.message));
 const credOf = x => String(x || '').replace(/[\s/?#]/g, c => encodeURIComponent(c));   // bill-clip v1.4 jaisa: ffmpeg %-decode nahi karta
@@ -159,8 +165,76 @@ function startPipe(ch, codec) {
   return p;
 }
 function closePipe(p) { try { p.sock && p.sock.close(); } catch {} p.sock = null; pipes.delete(p.ch + '|' + p.codec); }
-function stopPipe(p, why) { p.stopped = true; try { p.ff && p.ff.kill(); } catch {} closePipe(p); if (why) log(`🎞 live ch ${p.ch} band (${why})`); }
+function stopPipe(p, why) { p.stopped = true; try { p.ff && p.ff.kill(); } catch {} if (p.mo) moUnfw(p); closePipe(p); if (why) log(`🎞 live ch ${p.ch} band (${why})`); }
 function failViewers(p, why) { for (const [id, v] of viewers) if (v.pipe === p) { REQ.doc(id).set({ st: 'err', err: why, doneAt: Date.now() }, { merge: true }).catch(() => {}); endViewer(id, ''); } }
+
+// ---------- 🏬 v1.9: Godam — sab cameras EK video (xstack) ----------
+const MO_T = { w: 448, h: 252 }, MO_MAX = 6, MO_FPS = 8, MO_PORT = { h264: 48900, vp8: 48910 };
+let GIC = [];   // 📦 Loading ginti ke camera (gintiCam.cams[].n)
+biz.collection('blueAccess').doc('gintiCam').onSnapshot(s => { const d = s.exists ? s.data() || {} : {}; GIC = (Array.isArray(d.cams) ? d.cams : []).map(c => String((c && c.n) || '').trim()).filter(Boolean); try { pushSt(true); } catch {} }, () => {});
+function moList() {
+  const out = [], sN = new Set(), sC = new Set();
+  const add = n => { n = String(n || '').trim(); const k = n.toLowerCase(); if (!n || n === '-' || sN.has(k)) return; sN.add(k); const ch = chOf(n); if (!ch || sC.has(ch)) return; sC.add(ch); out.push({ n, ch }); };
+  (CF.gc || []).slice().sort((a, b) => a.g - b.g || a.i - b.i).forEach(x => add(x.c));
+  GIC.forEach(add);
+  (CF.xc || []).forEach(x => { if (/go?dd?a+m|gudam|gdm|store/i.test(x.n)) add(x.n); });
+  return out.slice(0, MO_MAX);
+}
+function moGrid(n) { return n <= 1 ? [1, 1] : n === 2 ? [2, 1] : n <= 4 ? [2, 2] : [3, 2]; }
+function moFilter(n, w, h, fps) {   // har camera = ek khana (barabar naap, kaali patti), khali khane = gehra rang
+  const [c, r] = moGrid(n), parts = [], lab = [], lay = [];
+  for (let i = 0; i < c * r; i++) {
+    if (i < n) parts.push(`[${i}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x0b0f16,setsar=1[v${i}]`);
+    else parts.push(`color=c=0x0b0f16:s=${w}x${h}:r=${fps}[v${i}]`);
+    lab.push(`[v${i}]`); lay.push(`${(i % c) * w}_${Math.floor(i / c) * h}`);
+  }
+  parts.push(c * r === 1 ? `[v0]null[out]` : `${lab.join('')}xstack=inputs=${c * r}:layout=${lay.join('|')}[out]`);
+  return { c, r, f: parts.join(';') };
+}
+function moUnfw(p) { for (const f of p.fw || []) { try { const x = srcs.get(f.ch); x && x.subs.delete(f.obj); } catch {} try { f.sock.close(); } catch {} } p.fw = []; }
+function moTell(p) { const mo = { c: p.grid.c, r: p.grid.r, n: p.list.map(x => x.n) }, sig = JSON.stringify(mo); for (const [id, v] of viewers) if (v.pipe === p && v.moSig !== sig) { v.moSig = sig; REQ.doc(id).set({ mo }, { merge: true }).catch(() => {}); } }
+function startMosaic(codec) {
+  const key = 'mo|' + codec; let p = pipes.get(key); if (p && p.ff) return p;
+  p = p || { ch: 'mo', mo: 1, codec, tracks: new Set(), tries: 0, err: '' }; pipes.set(key, p); p.stopped = false;
+  const ff = ffPath(); if (!ff) { p.err = 'ffmpeg abhi nahi (bill-clip install kar raha)'; return p; }
+  const L = moList(); if (!L.length) { p.err = 'Godam ka koi camera ⚙️ Camera setup mein nahi (gate pass godam camera / 📦 Loading ginti / naam mein "godam")'; pipes.delete(key); return p; }
+  const { c, r, f } = moFilter(L.length, MO_T.w, MO_T.h, MO_FPS); p.list = L; p.grid = { c, r };
+  const sock = dgram.createSocket('udp4'); p.sock = sock; p.pk = 0; p.pkSeen = 0; p.pkAt = Date.now(); p.sq = undefined;
+  sock.on('message', m => { p.pk++; for (const t of p.tracks) { try { t.writeRtp(m); } catch {} } });
+  sock.bind(0, '127.0.0.1', () => {
+    try { sock.setRecvBufferSize(BUF); } catch {}
+    const port = sock.address().port, inArgs = [], how = []; moUnfw(p);
+    L.forEach((x, i) => {
+      const pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt'];   // probe 1 s: inputs ek ek khulte hain (default = 4 camera ~25 s intezar, ab ~7 s)
+      if (process.env.LIVE_TEST_SRC) { inArgs.push('-re', '-f', 'lavfi', '-i', `testsrc=size=704x576:rate=15`); how.push('test'); return; }
+      if (shareOk(x.ch)) {   // recording wali copy → is ffmpeg ke apne udp port par aage (ek ffmpeg ki stdin ek hi hoti hai)
+        const fp = MO_PORT[codec] + i, fs2 = dgram.createSocket('udp4'); fs2.on('error', () => {});
+        const obj = { writable: true, writableLength: 0, write: m => { try { fs2.send(m, fp, '127.0.0.1'); } catch {} } };
+        srcs.get(x.ch).subs.add(obj); p.fw.push({ ch: x.ch, obj, sock: fs2 });
+        inArgs.push(...pre, '-f', 'mpegts', '-i', `udp://127.0.0.1:${fp}?fifo_size=1000000&overrun_nonfatal=1&buffer_size=8388608`); how.push('rec');
+      } else { inArgs.push(...pre, '-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(x.ch, false)); how.push('rtsp'); }
+    });
+    const br = Math.round(400 + 220 * L.length);
+    const enc = codec === 'vp8' ? ['-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', br + 'k', '-g', String(MO_FPS * 2), '-error-resilient', '1']
+      : ['-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-g', String(MO_FPS * 2), '-bf', '0', '-b:v', br + 'k', '-maxrate', Math.round(br * 1.3) + 'k', '-bufsize', Math.round(br * 0.7) + 'k'];
+    const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', ...inArgs, '-filter_complex', f, '-map', '[out]', '-an', ...enc, '-f', 'rtp', '-payload_type', '96', '-pkt_size', '1200', `rtp://127.0.0.1:${port}`];
+    const proc = spawn(ff, args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] }); p.ff = proc; p.at = Date.now(); let err = '';
+    proc.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
+    proc.on('error', e => { err += ' ' + e.message; });
+    proc.on('close', code => {
+      moUnfw(p); p.ff = null; const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
+      if (p.stopped) return;
+      if (/401/.test(why)) { AUTHBAD = Date.now(); p.err = why; log('⛔ live godam: 401 — ruka (setting badlein)'); failViewers(p, why); closePipe(p); return; }
+      if (p.pk > 100) p.tries = 0;
+      p.tries++; p.err = why; log(`🎞 live godam ruki (${why})`); try { p.sock && p.sock.close(); } catch {} p.sock = null;
+      warnViewers(p, `Godam cameras: ${why} — dobara koshish ${p.tries}/3`);
+      if (p.tracks.size && p.tries <= 3) setTimeout(() => { if (p.tracks.size && !p.stopped) { startMosaic(codec); moTell(p); } }, 2000);
+      else { failViewers(p, why); closePipe(p); }
+    });
+    log(`🏬 live godam (${codec}) shuru — ${L.length} camera ${c}x${r}: ${L.map((x, i) => x.n + ' ch' + x.ch + '/' + how[i]).join(', ')}`);
+  });
+  return p;
+}
 
 // ---------- dekhne wale ----------
 const viewers = new Map();   // reqId → {pc, track, pipe, hb}
@@ -174,12 +248,13 @@ async function answer(id, r) {
   const fail = why => REQ.doc(id).set({ st: 'err', err: why, doneAt: Date.now() }, { merge: true }).catch(() => {});
   if (!CF.on || !CF.ip) return fail('Camera setup band / NVR ka IP nahi (malik ⚙️)');
   if (AUTHBAD) return fail('NVR ka user / password ghalat (401) — malik ⚙️ mein theek karein');
-  const ch = chOf(r.pc); if (!ch) return fail(`"${r.pc || '?'}" counter ka camera channel ⚙️ mein nahi`);
+  const isMo = r.pc === '@godam';   // v1.9: 🏬 sab godam cameras ek saath
+  const ch = isMo ? 'mo' : chOf(r.pc); if (!ch) return fail(`"${r.pc || '?'}" counter ka camera channel ⚙️ mein nahi`);
   if (viewers.size >= MAX_V) return fail(`Abhi ${MAX_V} log dekh rahe hain — thori der baad`);
   const w = werift(); if (!w) return fail('WebRTC abhi install ho raha hai — 1-2 min baad dobara');
   const offer = String(r.offer || ''); if (!/^v=0/.test(offer)) return fail('ghalat offer');
   const codec = /H264/i.test(offer) ? 'h264' : 'vp8';
-  const p = startPipe(ch, codec); if (!p.ff && !p.sock) return fail(p.err || 'video shuru nahi hui');
+  const p = isMo ? startMosaic(codec) : startPipe(ch, codec); if (!p.ff && !p.sock) return fail(p.err || 'video shuru nahi hui');
   const pc = new w.RTCPeerConnection({ codecs: { video: [codec === 'vp8' ? w.useVP8() : w.useH264()], audio: [] }, iceServers: STUN });
   const track = new w.MediaStreamTrack({ kind: 'video' });
   pc.addTransceiver(track, { direction: 'sendonly' });
@@ -189,7 +264,8 @@ async function answer(id, r) {
   const v = { pc, track, pipe: p, hb: Date.now(), pcName: r.pc, ch };
   viewers.set(id, v); p.tracks.add(track); p.idleAt = 0;
   pc.connectionStateChange.subscribe(s => { if (s === 'failed' || s === 'closed') { if (viewers.has(id)) REQ.doc(id).set({ st: s === 'failed' ? 'err' : 'end', err: s === 'failed' ? 'rabta toot gaya / nahi bana (network)' : '', doneAt: Date.now() }, { merge: true }).catch(() => {}); endViewer(id, s); } });
-  await REQ.doc(id).set({ ans: pc.localDescription.sdp, st: 'ok', codec, okAt: Date.now() }, { merge: true });
+  const moD = isMo && p.list ? { mo: { c: p.grid.c, r: p.grid.r, n: p.list.map(x => x.n) } } : {}; if (isMo) v.moSig = JSON.stringify(moD.mo || null);
+  await REQ.doc(id).set({ ans: pc.localDescription.sdp, st: 'ok', codec, okAt: Date.now(), ...moD }, { merge: true });
   log(`🔴 ${r.pc} (ch ${ch}) dekhne wala jur raha · ${viewers.size}`); pushSt(true);
 }
 const seen = new Set();
@@ -212,6 +288,7 @@ setInterval(() => {
   for (const p of [...pipes.values()]) if (!p.tracks.size && p.idleAt && now - p.idleAt > 120000) stopPipe(p, 'koi nahi dekh raha');
   for (const p of pipes.values()) {   // v1.1: 🩺 video aa rahi hai ya nahi — app ko batao
     if (!p.tracks.size) continue;
+    if (p.mo) { if (p.pk !== p.pkSeen) { p.pkSeen = p.pk; p.pkAt = now; } else if (p.ff && now - (p.at || now) > 15000 && now - (p.pkAt || now) > 15000) { log('🏬 live godam: 15 s se video nahi — dobara (koi camera ruka)'); try { p.ff.kill(); } catch {} } }   // v1.9
     if (p.share && p.ff && now - (p.at || now) > 8000 && !shareOk(p.ch)) { log(`🔗 live ch ${p.ch}: recording ki line ruk gayi — dobara`); try { p.ff.kill(); } catch {} continue; }   // v1.2
     { const x = p.share ? srcs.get(p.ch) : null, gT = x ? (x.gap || 0) + (x.drop || 0) : 0;   // v1.7: 🩺 pichhle 10 s mein tukre kahan gire — app chip
       const fresh = now - (p.at || now) < 8000;   // shuru ke pehle pal (beech GOP se jurna) ki ghaltiyan nahi gintay
@@ -221,7 +298,7 @@ setInterval(() => {
       if (d >= 2 || g || r) log(`🩺 live ch ${p.ch}: 10 s mein NVR→PC ghalti ${d} · PC ke andar gire ${g} · RTP gire ${r}`);
       for (const [id, v] of viewers) if (v.pipe === p && (v.qs !== sig || sig)) { v.qs = sig; REQ.doc(id).set({ q: { d, g, r, at: now } }, { merge: true }).catch(() => {}); } }
     if (p.pk > 0) { for (const [id, v] of viewers) if (v.pipe === p && !v.rtp) { v.rtp = 1; v.warn = ''; REQ.doc(id).set({ rtp: 1, warn: '' }, { merge: true }).catch(() => {}); } }
-    else if (p.ff && now - (p.at || now) > (p.share ? 20000 : 12000)) warnViewers(p, `Camera ch ${p.ch}: NVR se jur gaya par video nahi aa rahi — ye channel NVR par chal raha hai? (⚙️ mein counter ka channel dekhein)`);
+    else if (p.ff && now - (p.at || now) > (p.share || p.mo ? 20000 : 12000)) warnViewers(p, p.mo ? 'Godam cameras: abhi video nahi aa rahi — kisi camera ki recording ruki hai? (⚙️ Setup → 🎞 Recording)' : `Camera ch ${p.ch}: NVR se jur gaya par video nahi aa rahi — ye channel NVR par chal raha hai? (⚙️ mein counter ka channel dekhein)`);
   }
 }, 10000);
 setInterval(async () => { try { const s = await REQ.where('at', '<', Date.now() - 6 * 3600000).limit(200).get(); if (s.size) { const b = db.batch(); s.forEach(d => b.delete(d.ref)); await b.commit(); } } catch {} }, 60 * 60000);
@@ -231,7 +308,7 @@ let ST = { err: '' }, stAt = 0;
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const cams = [...pipes.values()].map(p => ({ ch: p.ch, n: p.tracks.size, on: p.ff ? 1 : 0, err: p.err || '' }));
-  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }
+  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams, mo: moList().map(x => x.n) }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }   // v1.9: mo = godam cameras
 }
 
 function main() {
