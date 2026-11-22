@@ -1,4 +1,4 @@
-// sale-rep.js v1.0 (app v2.345.0) — 🧾 SALE KI POORI REPORT (Daily Sale ke "➕ Sale+Wasooli+Kal" chip par tap)
+// sale-rep.js v1.1 (app v2.350.0: 🔎 POS report se milao — malik POS ka Total Sale likhe, app bataye kaun sa hisaab milta hai) · v1.0 (app v2.345.0) — 🧾 SALE KI POORI REPORT (Daily Sale ke "➕ Sale+Wasooli+Kal" chip par tap)
 // malik (21 Nov 2026): "is ki poori report banao — itna bill, itna cancel, itna return, minus · poori screen · sale wale chip par click ·
 //   poora bill with return aur without return — phir pata chale sahi kya hai"
 // Data WAHI: posSales/<din> {bills[], sum} (PC pos-sales-dekho — nayi SQL nahi, PC ki koi file nahi badli). SIRF DIKHANA — Daily Sale ka hisaab is se nahi badalta.
@@ -56,6 +56,52 @@ const ln = (a, b, c) => `<div class="sr-ln ${c || ''}"><span>${a}</span><b>${b}<
 const sec = (key, ic, title, right, body, open) => `<details class="sr-sec" data-sr-sec="${key}"${open ? ' open' : ''}><summary><span>${ic} ${title}</span><b>${right}</b><i>▾</i></summary><div class="sr-body">${body}</div></details>`;
 const billRow = b => `<div class="sr-row${b.x ? ' x' : ''}"><span><b>#${E(b.no || b.id)}</b> ${E(b.p || '')}${b.cr ? ' <u>udhaar</u>' : ''}</span><small>${E(tm(b.tm))}${b.pc ? ' · 🖥 ' + E(b.pc) : ''}${b.by ? ' · ' + E(b.by) : ''}${b.n ? ' · ' + b.n + ' item' : ''}</small><em>${R(b.t)}</em></div>`;
 const more = (l, n) => l.length > n ? `<small class="sr-more">… aur ${l.length - n} (PDF mein sab)</small>` : '';
+// v1.1: 🔎 POS REPORT SE MILAO — malik POS ki Sale Register ka 'Total Sale' likhta hai; app bataye wo kis hisaab se bana (return kaat kar / baghair). Sirf dikhana.
+const mlKey = () => 'sam-sr-pos:' + DAY;
+const mlGet = () => { try { const v = Number(localStorage.getItem(mlKey())); return v > 0 ? v : 0; } catch { return 0; } };
+const R2 = x => 'Rs ' + (Math.round((Number(x) || 0) * 100) / 100).toLocaleString('en-PK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+function milan(k) {
+  const s = k.s, sm = l => l.reduce((n, b) => n + (Number(b.t) || 0), 0);
+  const full = k.has && !k.capped, S = full ? sm(k.live) : k.g, F = full ? sm(k.fq) : (Number(s.fqRs) || 0);
+  const rAll = k.rtd.reduce((n, r) => n + (Number(r.t) || 0), 0), neg = k.live.filter(b => (Number(b.t) || 0) < 0);
+  const c = [
+    { k: 'a', t: 'Sirf sale ke bill (return kaate BAGHAIR)', v: S, ret: 0 },
+    { k: 'b', t: 'Bill − cash wapsi', v: S - k.rt, ret: 1 },
+    { k: 'c', t: 'Bill − SAB wapsi (udhaar wali bhi)', v: S - rAll, ret: 1 },
+    { k: 'd', t: 'Bill + stock fraq (return kaate baghair)', v: S + F, ret: 0 },
+    { k: 'e', t: 'Bill + stock fraq − sab wapsi', v: S + F - rAll, ret: 1 }
+  ].filter((x, i, a) => a.findIndex(y => Math.abs(y.v - x.v) < 0.005) === i);
+  const pos = mlGet(); let best = null, hint = '';
+  if (pos) {
+    for (const x of c) { x.d = pos - x.v; if (!best || Math.abs(x.d) < Math.abs(best.d)) best = x; }
+    if (best && Math.abs(best.d) >= 2) {   // bacha hua farq kis ek bill / wapsi ke barabar hai?
+      const d = Math.abs(best.d), eq = v => Math.abs(Math.abs(Number(v) || 0) - d) < 1.01, out = [];
+      for (const b of k.live) if (eq(b.t)) out.push('bill #' + (b.no || b.id) + ' ' + (b.p || ''));
+      for (const b of k.cx) if (eq(b.t)) out.push('⛔ cancel bill #' + (b.no || b.id));
+      for (const b of k.fq) if (eq(b.t)) out.push('⚖️ fraq bill #' + (b.no || b.id));
+      for (const r of k.rtd) if (eq(r.t)) out.push('↩ wapsi #' + r.no);
+      hint = out.slice(0, 4).join(' · ');
+    }
+  }
+  return { c, pos, best, ok: !!best && Math.abs(best.d) < 2, hint, neg, negRs: sm(neg), full };
+}
+function mlHTML(k) {
+  const m = milan(k), E2 = x => E(x);
+  const inp = `<div class="sr-ml"><input type="text" inputmode="decimal" data-sr-mlv="1" placeholder="POS ka Total Sale" value="${m.pos ? E2(String(m.pos)) : ''}"><button type="button" data-sr-ml="1">🔎 Milao</button></div>
+    <small class="sr-note">POS → Sale Register Summary ke AAKHRI safhe ka "Total Sale" yahan likhein (isi tareekh ka).</small>`;
+  let res = '';
+  if (m.pos) {
+    const b = m.best;
+    res = m.ok
+      ? `<div class="sr-mlr ok"><b>✓ Mil gaya: ${E2(b.t)}</b><small>${b.ret ? 'POS ka Total return KAAT KAR bana hai — yani POS ka Total = galle ki sale. App bhi return ek hi dafa kaat-ti hai.' : 'POS ke Total mein return KATA NAHI hai (qatarein sirf dikhane ko). App return alag se EK dafa kaat-ti hai — dobara nahi.'}</small></div>`
+      : `<div class="sr-mlr bad"><b>≈ Sab se qareeb: ${E2(b.t)}</b><small>Farq ${R2(Math.abs(b.d))} (POS ${b.d > 0 ? 'zyada' : 'kam'})${m.hint ? ' — itni raqam: ' + E2(m.hint) : ' — kisi ek bill / wapsi ke barabar nahi (bill baad mein badla ho sakta hai)'}.</small></div>`;
+    res += m.c.map(x => ln((m.ok && x === b ? '✓ ' : '') + x.t, R2(x.v), x === b ? 'tot' : 'sub')).join('');
+  }
+  const ng = m.neg.length
+    ? `<div class="sr-mlr bad"><b>⚠ Sale ke khate mein ${m.neg.length} MINUS bill (${R2(m.negRs)})</b><small>In bills mein wapsi pehle se kati ho sakti hai — agar yehi wapsi '↩ Return' mein bhi hai to do dafa kat rahi hai. Screenshot bhejein.</small></div>` + m.neg.slice(0, 20).map(billRow).join('')
+    : (k.has ? `<small class="sr-note">✓ Sale ke khate mein koi minus total wala bill nahi — wapsi sirf '↩ Return' mein hai (ek hi dafa kat-ti hai).</small>` : '');
+  return { right: m.pos ? (m.ok ? '✓ mil gaya' : '≈ farq ' + R2(Math.abs(m.best.d))) : 'Total likhein ›', body: inp + res + ng };
+}
 function html() {
   const head = `<div class="sr-hd"><div><b>🧾 Sale ki report</b><small>${E(dayTxt(DAY))}${DAY === C.today() ? ' · Aaj' : ''}</small></div><span class="sr-hb"><button type="button" data-sr-pdf="1" title="PDF">📄 PDF</button><button type="button" data-sr-print="1" title="Dukan printer">🖨</button><button type="button" class="cl" data-sr-close="1" aria-label="Band">✕</button></span></div>`;
   if (DOC === undefined) return head + '<p class="sr-none">⏳ POS ka hisaab aa raha hai…</p>';
@@ -76,6 +122,7 @@ function html() {
   const mnB = k.mn.length ? `<small class="sr-note">Yeh minus bill ke TOTAL mein pehle se shamil hai (bill utna kam bana) — dobara minus nahi hota.</small>` + [...byNo].map(([no, l]) => `<div class="sr-ret"><div class="sr-row"><span><b>🧾 Bill #${E(no)}</b></span><small>${l.length} minus line</small><em>− ${R(l.reduce((n, a) => n + Math.abs(a[2]) * a[3], 0))}</em></div>${l.map(a => `<div class="sr-it"><span>${E(a[1])}</span><b>− ${q3(a[2])} × ${R(a[3])}</b></div>`).join('')}</div>`).join('') : `<p class="sr-none">${s.mn == null ? 'Minus items ki list PC se nahi aayi.' : 'Kisi bill mein minus item nahi.'}</p>`;
   return head + `<div class="sr-scroll">${top}
    ${sec('kul', '🧾', 'Kul bill · ' + (s.n || 0), R(k.g), kul, true)}
+   ${(ml => sec('ml', '🔎', 'POS report se milao', ml.right, ml.body))(mlHTML(k))}
    ${sec('cx', '⛔', 'Cancel · ' + (s.cx || 0), R(s.cxRs), '<small class="sr-note">Cancel bill kisi hisaab mein shamil nahi.</small>' + cxB)}
    ${sec('rt', '↩', 'Return · ' + k.rtd.length, R(k.rt + k.rtUdhRs), rtB)}
    ${sec('mn', '➖', 'Bill ke andar minus · ' + k.mn.length, '− ' + R(k.mnRs), mnB)}
@@ -103,10 +150,11 @@ function slipText(k) {
     ...(k.rtd.length ? ['', '*RETURN*', ...k.rtd.map(r => '#' + r.no + ' ' + String(r.p || '').slice(0, 16) + ' ' + n(r.t))] : [])].join('\n');
 }
 async function onClick(e) {
-  const t = e.target.closest?.('[data-sr-open],[data-sr-close],[data-sr-pdf],[data-sr-print]'); if (!t || !C) return;
+  const t = e.target.closest?.('[data-sr-open],[data-sr-close],[data-sr-pdf],[data-sr-print],[data-sr-ml]'); if (!t || !C) return;
   const d = t.dataset;
   if (d.srOpen) { srOpen(C.day()); return; }
   if (d.srClose) { dlg()?.close(); return; }
+  if (d.srMl) { const v = Number(String(dlg()?.querySelector('[data-sr-mlv]')?.value || '').replace(/[^0-9.]/g, '')); try { if (v > 0) localStorage.setItem(mlKey(), String(v)); else localStorage.removeItem(mlKey()); } catch {} paint(); return; }
   const k = DOC ? calc() : null; if (!k) { C.notice('Report abhi tayyar nahi'); return; }
   if (d.srPdf) { dlg()?.close(); C.pdf(pdfHTML(k), 'Sale report ' + DAY); return; }
   if (d.srPrint) {

@@ -5487,3 +5487,13 @@ Malik (parchi ki photo): "is par bill ki photo bhi aani chahiye". purchaseSlip: 
 === md pkg v68 (2026-11-22) — ⏸ 📸 Sehat lock RUKA (malik: 'wo off kar do paani coffee wala'). App / PC nahi badle. ===
 msl pkg ke macros se bahar + off mein (v62 jaisa). Apps band hona (paani / coffee / fruit / nuts) ruka; yaad ke popup (💧 Paani, ☕ Coffee · Fruit · Nuts) wahi.
 Malik 'chalu karo' kahe tabhi wapas (msl macros mein + off se hatao). Yaad ke popup bhi band karne hon to malik se poochha hai — jawab ka intezar.
+===== v2.350.0 (22 Nov 2026) — 🔎 POS report se milao (sale-rep.js v1.1) =====
+Malik ne POS ki 'Sale Register Summary' (21 Nov) ki photo bheji: report mein return ki minus qatarein (-150, -84, -1,530, -1,799) hain, aakhri
+'Total Sale' 3,130,090.15; app ki line 'POS report' 3,130,271 (farq Rs 181), app us se Rs 53,779 return minus karti hai = 3,076,492.
+Sawal: 'POS minus kar raha hai ke nahi' — yani return do dafa to nahi kat raha? Totals se tay nahi hua -> plan -> 'Ok'.
+- 🧾 Sale ki poori report mein naya hissa '🔎 POS report se milao': malik POS ka Total Sale likhe (phone par yaad 'sam-sr-pos:<din>') -> app 5 hisaab
+  banati hai (sirf bill · bill − cash wapsi · bill − sab wapsi · bill + fraq · bill + fraq − sab wapsi; bill ka jor posSales bills[].t se paise tak) ->
+  Rs 2 ke andar mile = '✓ Mil gaya' + saaf likhai (POS Total return kaat kar bana / kate baghair); na mile = sab se qareeb + bacha farq kis ek
+  bill / cancel / fraq / wapsi ke barabar hai. Saath: sale ke khate mein MINUS total wale bill hon to ⚠ (wahi wapsi '↩ Return' mein bhi ho = do dafa).
+- PC ki koi file nahi badli (plan mein PC jaanch likhi thi — app ke paas data pehle se tha, is liye PC nahi chhera). Daily ka hisaab nahi badla.
+- Test: node harness (5 raqmein: mil gaya a / b / d, Rs 181 ka farq = bill #). Asal data par malik dekhega. AI nahi.
