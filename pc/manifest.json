@@ -1,6 +1,6 @@
 {
- "version": "2026-11-22.1",
- "note": "ginti-cam v2.0 + ginti-ai v1.0 + bill-clip v2.20 (🏬 godam: har waqie ki video · 🧍 pose (uthaya) · 🙂 chehra pehchan · godam camera HD recording)",
+ "version": "2026-11-22.2",
+ "note": "ginti-cam v2.1 + bill-clip v2.21 (🤖 godam camera ki AI default BAND — app Settings → PC scripts se chalu; band = model / HD / waqia video ruke)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -99,7 +99,7 @@
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
   "wa-out.js": "2b9a572b8c24c50a5364faf21f3669c80c2e4c9ea352c536e4c24690a3e5cfe0",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
-  "bill-clip.js": "b52fe74ee4a0ba65d628a3715a4ec01ea308bba24b0787979cbdd7a13b9a52df",
+  "bill-clip.js": "f5ac88347234989c18d66f698dded7e9b66e4a880332e53ad3abd52b9e9cc91d",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
   "live-cam.js": "ec3589ec0ab36f328159175912177102d8ab8e57e8ff75e67bd6970c612368ed",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
@@ -107,7 +107,7 @@
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",
   "pc-names.js": "927a9d5c344705f4397c6de058c4df2e950985eba1c813edccbee5522ce6424a",
   "fac-voice.js": "742e6a4b674d827d2ba6f754b4040834879d221fb3e188299b79372b20c4b429",
-  "ginti-cam.js": "1bcbe85e7cda4b00b96f966a4770791ae2b7dc79a0fab948c606f245e29991e1",
+  "ginti-cam.js": "4d8ee003c2a208a877e374850c855ed42cd9d7a41f40abea2ef60e523ba5d93b",
   "ginti-cam-auto.bat": "a8ae2c822c216c9baed2bdc60b84f6c01f8779f67e48568113f8768954eb0464",
   "ginti-model.onnx": "9165d7df0307f609dce6f96fdf42f6063d70eaef08dfaf5b8b9dc69d8e3d42fc",
   "rec-dir.js": "53bac4de5a3bc05eacbad37209a1ff2c71ae5adca765d15852b93b344f4feb04",

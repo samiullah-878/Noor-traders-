@@ -67,8 +67,9 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const RD = require('./rec-dir.js');   // v2.16: 💽 recording kahan
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.20';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.21';
 // v2.20 (22 Nov, malik: 'sab model lagao godam wale cameras mein · HD kar do'): 🎞 HD recording — godam ke camera (📦 ginti / 🚪 gate pass / naam se) khud MAIN stream (HD) par record (isHd), malik ⚙️ se har camera HD on/off (billClip.hdc [{ch, hd 0|1}] — list, merge mein poori badalti); counter camera pehle jaisa chhota · HD badla = us channel ki recording naye stream se dobara · 🏬 godam ka HAR WAQIA = video: gintiEv (ginti-cam v2.0: ⬆ / ⬇ maal, 🧍 uthaya) → us godam ke 1-2 camera (gpCam) t0 − 20 s → t1 + 20 s (6 min tak) → billClip/gv~<evId> (+ gv~<evId>b) · 📹 0 (transfer note bana magar camera ne kuch nahi gina) = note ke waqt − 30 s → + 5 min billClip/gv~d-<key> (ms 1) · apni line (gvRun), SIRF apni recording · haal billClipPc.gv.
+// v2.21 (22 Nov, malik: 'AI ko filhal band kar do'): gintiCam.ai (1 = chalu) na ho = godam camera ka AUTO HD band (halki recording) + 🏬 waqie ki nayi video nahi. Malik ka 🎞 HD chip (hdc) phir bhi chalta hai. Recording / bill / gate pass video wahi.
 // v2.19 (21 Nov, malik: 'aik hi godam par two cameras hain — dono side by side dikha diya karo'): 🚪 har godam par 2 camera (billClip.gc [{g, c, i 1|2}], auto = 📦 ginti + naam se jitne milein, 2 tak) — har camera ki apni clip (doosra = billClip/<SaleID>~g<godam>b, ci 2), dono ka WAHI waqt · WhatsApp (group + 'video <bill>') = EK video mein ek ke upar doosra (640x720), akela = 640x360 · patti camera ki ghari ke neeche (y0 48). gpm mein cam2 / how2 / r2.
 // v2.18 (21 Nov, malik: 'jis item ka gate pass banta hai us item ka godam ka camera — screen ke upar bhi + WhatsApp wali recording mein bhi'): 🚪 gatePass (PC gate-pass.js) ke har godam ka camera (malik ka chuna `billClip.gc` [{g, c}] › 📦 Loading ginti ka camera › naam se) → post se 20 s pehle → us godam ki sab items ✓ ke 1 min baad (✓ na ho = post + 10 min, max 15 min) SIRF apni recording se → billClip/<SaleID>~g<godam> (st wait → ok / err) · 👥 group mein bill video ke baad · 'video <bill>' mein bhi · alag line (gpRun) · haal billClipPc.gp + gpm (har godam ka camera).
 // v2.17 (21 Nov, malik: 'time calculate kar ke dekho fi video kitna time laga'): counter clip ke meta mein `rd` (video tayyar = aakhri likhai ka waqt) + `mk` (PC ne kitne ms mein banai: rd − at) — app 📋 Bills mein har bill ka ⏱ + average.
@@ -246,7 +247,7 @@ async function rabta() {
 const recs = new Map();   // ch → { p, at, errs, restarts, dead, lastErr }
 function liveUrl(ch) { const u = credOf(CF.user), p = credOf(CF.pw), sub = subOf(ch); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${sub ? 2 : 1}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${sub}`; }
 // v2.20: 🎞 HD — godam ke camera (📦 ginti / 🚪 gate pass / naam se, counter nahi) khud main stream; malik ka hdc har camera par aakhri faisla
-function hdAuto() { const s = new Set(); try { for (const x of GIC) { const c = camFind(x.n); if (c && !c.c) s.add(c.ch); } const gs = new Set([...Object.keys(GN), ...Object.keys(CF.gc || {})].map(Number).filter(g => g > 1)); for (const g of gs) for (const c of gpCam(g).cs) if (!c.c) s.add(c.ch); } catch {} return s; }
+function hdAuto() { const s = new Set(); if (!GAI) return s; try { for (const x of GIC) { const c = camFind(x.n); if (c && !c.c) s.add(c.ch); } const gs = new Set([...Object.keys(GN), ...Object.keys(CF.gc || {})].map(Number).filter(g => g > 1)); for (const g of gs) for (const c of gpCam(g).cs) if (!c.c) s.add(c.ch); } catch {} return s; }
 function isHd(ch) { const v = (CF.hdc || {})[ch]; if (v === 1) return true; if (v === 0) return false; return hdAuto().has(Number(ch)); }
 const subOf = ch => isHd(ch) ? 0 : CF.sub;
 function recChannels() { const s = new Set(); for (const v of Object.values(CF.ch)) if (Number(v) > 0) s.add(Number(v)); for (const x of CF.xc || []) if (x.r) s.add(x.ch); return [...s]; }   // v2.10: mazeed camera sirf jab ⏺ recording chalu
@@ -617,14 +618,14 @@ async function one(b, lane) {   // v2.12: lane 'a' = sirf apni recording (NVR ka
 //   SIRF PC ki apni recording (camera ⏺ Rec ON) — NVR par naya rabta NAHI. billClip/<SaleID>~g<godam> {st wait|ok|err|skip, x 1, gp 1, sid, g, gn, cam, it [{n, q, qs, ok}], nt / nl, gb, …}
 //   → app tally (counter video ke upar chhoti) · 👥 group mein bill video ke BAAD · 'video <bill>' mein bhi. Apni alag line (gpRun) — bill ki clips kabhi na rukein. AI NAHI.
 const GPC = biz.collection('gatePass'), GPW = { pre: 20, after: 60, wait: 600, max: 900, back: 3 * 3600000 };
-const gpDocs = new Map(), GN = {}, gpMeta = new Map(); let GIC = [], gpOn = false, gpBusy = false, gpT = null, armG = null, armGAt = 0, brAt = 0;
+const gpDocs = new Map(), GN = {}, gpMeta = new Map(); let GIC = [], GAI = false, gpOn = false, gpBusy = false, gpT = null, armG = null, armGAt = 0, brAt = 0;
 const gpTs = v => typeof v === 'number' ? v : v && typeof v.toMillis === 'function' ? v.toMillis() : v && v._seconds ? v._seconds * 1000 : 0;
 GPC.where('day', 'in', [dayOf(), dayOf(Date.now() - 86400000)]).onSnapshot(s => {
   s.docChanges().forEach(c => { if (c.type === 'removed') { gpDocs.delete(c.doc.id); return; } const x = c.doc.data() || {}; gpDocs.set(c.doc.id, x);
     for (const g of (Array.isArray(x.gs) ? x.gs : [])) { const nm = String((x.gn || {})[String(g)] || '').trim(); if (nm) GN[g] = nm.slice(0, 30); } });
   gpKick();
 }, e => log('⚠️ gatePass: ' + e.message));
-biz.collection('blueAccess').doc('gintiCam').onSnapshot(s => { const d = s.exists ? s.data() || {} : {}; GIC = (Array.isArray(d.cams) ? d.cams : []).map(c => ({ n: String((c && c.n) || '').trim(), b: Math.floor(Number(c && c.b) || 0) })).filter(c => c.n && c.b > 0); try { recSync(); } catch {} }, () => {});   // v2.20: ginti camera = HD
+biz.collection('blueAccess').doc('gintiCam').onSnapshot(s => { const d = s.exists ? s.data() || {} : {}; GIC = (Array.isArray(d.cams) ? d.cams : []).map(c => ({ n: String((c && c.n) || '').trim(), b: Math.floor(Number(c && c.b) || 0) })).filter(c => c.n && c.b > 0); GAI = !!d.on && Number(d.ai) === 1; try { recSync(); } catch {} }, () => {});   // v2.20: ginti camera = HD · v2.21: sirf jab AI chalu (GAI)
 function gpBr() {   // godam ke naam (posStock meta) — setup mein godam gate pass se pehle bhi nazar aaye
   if (Date.now() - brAt < 10 * 60000) return; brAt = Date.now();
   biz.collection('posStock').where('meta', '==', true).get().then(q => { q.forEach(d => { const x = d.data() || {}, b = Number(x.branch != null ? x.branch : (String(d.id).match(/^b(\d+)-/) || [])[1]); if (b > 1 && x.name && !GN[b]) GN[b] = String(x.name).trim().slice(0, 30); }); }).catch(() => {});
@@ -803,7 +804,7 @@ async function gvPut(it, id, o) {
   const x = it.src || {}, gn = String(GN[it.b] || x.bn || 'Godam ' + it.b).slice(0, 30);
   await within(CLIP.doc(id).set({ x: 1, gv: 1, ...(it.eid ? { ev: it.eid } : { dk: it.dk, ms: 1, no: String(x.no || '') }), g: it.b, gn, day: String(x.day || dayOf(it.w.t0)), out: Number(x.out) || 0, in: Number(x.in) || 0, po: Number(x.po) || 0, pi: Number(x.pi) || 0, at: Date.now(), ...o }, { merge: true }), 30000, 'godam waqia clip');
 }
-function gvKick() { if (!gpOn || gvT) return; gvT = setTimeout(() => { gvT = null; gvRun().catch(e => log('❌ 🏬 ' + (e.stack || e.message))); }, 1500); }
+function gvKick() { if (!gpOn || !GAI || gvT) return; gvT = setTimeout(() => { gvT = null; gvRun().catch(e => log('❌ 🏬 ' + (e.stack || e.message))); }, 1500); }
 function gvStat(o) { const day = dayOf(); const p = ST.gv && ST.gv.day === day ? ST.gv : { day, ok: 0, err: 0 }; ST.gv = { ...p, ...o }; }
 async function gvRun() {
   if (gvBusy) return; gvBusy = true;

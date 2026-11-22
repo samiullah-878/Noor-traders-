@@ -6,8 +6,8 @@
 // Yahan: list (aaj / kal) · 🚨 bina note ki 4 tasveerein + AI ka andaza → malik item chune (gintiLabel — PC agli dafa Gemini ko misaal deta hai) ·
 //   ⚙️ Setup (sirf malik): camera · godam · lakeer (tasveer par 2 tap + bahar ki taraf) · alarm · waqt — blueAccess/gintiCam.
 // Dekhna: malik + CAP nz.ginti (OPT_IN). AI app mein NAHI (PC: naam ke liye sirf 🚨 tasveer par Gemini).
-import { saleStock } from './pos-stock.js?v=2.346.0';
-import { smartFind } from './dukan/dhoond.js?v=2.346.0';
+import { saleStock } from './pos-stock.js?v=2.347.0';
+import { smartFind } from './dukan/dhoond.js?v=2.347.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -73,7 +73,8 @@ function patHTML() {
   const live = pc && Date.now() - Number(pc.at || 0) < 12 * 60000, cams = pc && pc.cams ? Object.values(pc.cams) : [];
   const lag = cams.length ? Math.max(...cams.map(c => Number(c.lag) || 0)) : 0;
   const st = !own ? '' : !pc ? '<span class="gn-pc off">🖥 PC: abhi nahi chala</span>' : !pc.on ? '<span class="gn-pc off">⏸ Band</span>' : !live ? `<span class="gn-pc off">🔴 PC chup (${ago(pc.at)})</span>` : `<span class="gn-pc on">🟢 PC · ${lag ? Math.round(lag / 60) + ' min peeche' : 'taza'}</span>`;
-  return `<div class="gn-pat" id="gnPat">${st}<span class="gn-k">⬆ ${o}</span><span class="gn-k">⬇ ${i}</span>${b ? `<span class="gn-k al">🚨 ${b}</span>` : ''}${today && today.al ? `<span class="gn-k">📲 ${today.al}</span>` : ''}</div>`;
+  const aiB = own && cfg && Number(cfg.ai) !== 1 ? '<span class="gn-k al" title="Settings → 🖥️ PC scripts → 🤖 Camera AI">🤖 AI band — PC scripts se chalu</span>' : '';   // v2.347.0
+  return `<div class="gn-pat" id="gnPat">${aiB}${st}<span class="gn-k">⬆ ${o}</span><span class="gn-k">⬇ ${i}</span>${b ? `<span class="gn-k al">🚨 ${b}</span>` : ''}${today && today.al ? `<span class="gn-k">📲 ${today.al}</span>` : ''}</div>`;
 }
 function paintPat() { const p = $('gnPat'); if (p) p.outerHTML = patHTML(); }
 

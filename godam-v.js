@@ -53,7 +53,7 @@ function watch() {
   unsubs.push(cloud.listenBillClips([day], (rows, e) => { if (e) return; clips = new Map((rows || []).filter(x => x && x.gv).map(x => [x.id, x])); if (view === 'list') paint(); }));
   if (own) {
     unsubs.push(cloud.listenGintiPc(x => { pc = x; if (view !== 'pick') paintPat(); }));
-    unsubs.push(cloud.listenGintiCam(x => { gcfg = x || {}; }));
+    unsubs.push(cloud.listenGintiCam(x => { gcfg = x || {}; if (view === 'list') paintPat(); }));
     unsubs.push(cloud.listenFaceRef((rows, e) => { if (e) return; faces = rows || []; if (view === 'face' || view === 'pick') paint(); }));
     cloud.getHzCodes().then(d => { const m = d.m || {}, nm = d.nm || {}; hz = Object.entries(m).map(([ph, n]) => ({ k: 'c' + n, n: String(nm[ph] || ('Code ' + n)).trim(), code: Number(n) })).sort((a, b) => a.code - b.code); if (view !== 'list') paint(); }).catch(() => {});
   }
@@ -77,7 +77,8 @@ function patHTML() {
   const live = pc && Date.now() - Number(pc.at || 0) < 12 * 60000, f = pc && typeof pc.face === 'object' ? pc.face : null;
   const st = !own ? '' : !pc ? '<span class="gn-pc off">🖥 PC: abhi nahi chala</span>' : !live ? `<span class="gn-pc off">🔴 PC chup (${ago(pc.at)})</span>` : `<span class="gn-pc on">🟢 PC v${esc(pc.v || '?')}</span>`;
   const ai = !own || !pc ? '' : `<span class="gn-k" title="PC ka model: pose · chehra">🤖 pose ${pc.pose === 'ok' ? '✓' : esc(String(pc.pose || '⏳')).slice(0, 14)} · 🙂 ${f ? (f.m === 'ok' ? `${f.ppl} larke` : esc(String(f.m)).slice(0, 14)) : esc(String(pc.face || '⏳')).slice(0, 14)}</span>`;
-  return `<div class="gn-pat" id="gvPat">${st}<span class="gn-k">⬆ ${o}</span><span class="gn-k">⬇ ${i}</span>${p ? `<span class="gn-k">🧍 ${p}</span>` : ''}<span class="gn-k">✓ ${lb}/${R.length}</span>${ai}</div>`;
+  const aiB = own && gcfg && Number(gcfg.ai) !== 1 ? '<span class="gn-k al" title="Settings → 🖥️ PC scripts → 🤖 Camera AI">🤖 AI band — PC scripts se chalu</span>' : '';   // v2.347.0
+  return `<div class="gn-pat" id="gvPat">${aiB}${st}<span class="gn-k">⬆ ${o}</span><span class="gn-k">⬇ ${i}</span>${p ? `<span class="gn-k">🧍 ${p}</span>` : ''}<span class="gn-k">✓ ${lb}/${R.length}</span>${ai}</div>`;
 }
 function paintPat() { const p = $('gvPat'); if (p) p.outerHTML = patHTML(); }
 function helpHTML() {

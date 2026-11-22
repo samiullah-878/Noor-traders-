@@ -9084,3 +9084,20 @@ html.dk .sr-note,html.dk .sr-row small,html.dk .sr-it,html.dk .sr-card small,htm
 #gvDlg .gv-th .gv-del{position:absolute;right:4px;top:4px;width:26px;height:26px;min-height:0;padding:0;border-radius:999px;border:0;background:#000a;color:#fff;font-size:13px}
 #gvDlg .gv-add{position:relative;overflow:hidden}#gvDlg .gv-add input{position:absolute;inset:0;opacity:0;cursor:pointer}
 html.dk #gvDlg .gv-fc,html.dk #gvDlg .gv-pb{background:linear-gradient(#26324d,#1b2438);border-color:#3b4a6b;color:#dfe8ff}
+
+/* v2.347.0: 🤖 Camera AI ki line — Settings → 🖥️ PC scripts (pc-drives.js #pcAi) */
+html body #dialogBody .pai-box{border:1px solid #d7deea;border-radius:16px;padding:8px 12px;margin:0 0 10px;background:linear-gradient(#fff,#f3f6fc);display:grid;gap:4px;min-width:0}
+html body #dialogBody .pai-r{display:flex;align-items:center;gap:8px;min-width:0}
+html body #dialogBody .pai-ic{flex:none;width:30px;height:30px;border-radius:999px;display:inline-flex;align-items:center;justify-content:center;background:linear-gradient(#eef3ff,#dce6fb);font-size:16px}
+html body #dialogBody .pai-nm{flex:1;min-width:0;display:grid}
+html body #dialogBody .pai-nm b{font-size:15px;color:#1d3b6e;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .pai-nm small{font-size:11.5px;color:#5b6577;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+html body #dialogBody .pai-st{flex:none;max-width:42%;font-size:12px;font-weight:700;color:#5b6577;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;padding:3px 9px;border-radius:999px;border:1px solid #d7deea;background:#fff}
+html body #dialogBody .pai-st.g{color:#0f6b3d;border-color:#9fd8b6;background:#ecf9f1}html body #dialogBody .pai-st.r{color:#b3261e;border-color:#f0b4ae;background:#fdf0ef}html body #dialogBody .pai-st.w{color:#8a5a00;border-color:#efd39b;background:#fff8e8}
+html body #dialogBody button.pai-sw{position:relative;flex:none;width:46px!important;height:28px!important;min-height:0!important;min-width:0!important;padding:0!important;border:0!important;border-radius:999px!important;background:linear-gradient(180deg,#d7deea,#c3ccdb)!important;box-shadow:inset 0 1px 3px rgba(20,40,80,.28)!important;transition:background .18s}
+html body #dialogBody button.pai-sw i{position:absolute;top:3px;left:3px;width:22px;height:22px;border-radius:50%;background:linear-gradient(180deg,#ffffff,#e9eef6);box-shadow:0 1px 3px rgba(20,40,80,.35);transition:left .18s}
+html body #dialogBody button.pai-sw.is-in{background:linear-gradient(180deg,#3d8bff,#1f6fe6)!important;box-shadow:inset 0 1px 3px rgba(10,40,110,.35),0 0 8px rgba(60,140,255,.5)!important}
+html body #dialogBody button.pai-sw.is-in i{left:21px}
+html body #dialogBody button.pai-sw:disabled{opacity:.55}
+html body #dialogBody .pai-note{margin:0;font-size:12px;color:#5b6577;line-height:1.35}
+html.dk body #dialogBody .pai-box{background:linear-gradient(#222d44,#1b2438);border-color:#3b4a6b}html.dk body #dialogBody .pai-nm b{color:#dfe8ff}html.dk body #dialogBody .pai-st{background:#1b2438}

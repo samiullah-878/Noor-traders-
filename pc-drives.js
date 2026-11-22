@@ -5,8 +5,12 @@
 //  PC bill-clip v2.16 → blueAccess/billClipPc.drv (har drive: khali / kul / recording) + dk (asal jagah, roz kitne GB, kitne din aa sakte).
 //  Chunao → blueAccess/billClip {rdrv, rkd} (setBillClipPart — bina `at`, PC Rabta test / recording dobara nahi chalata).
 //  Purani jagah ki recording move NAHI hoti — wahin parhi jati hai aur din pure kar ke khud mitti hai. AI nahi.
+//  v1.1 (app v2.347.0, 22 Nov, malik: 'AI ko filhal band kar do aur script mein on karne ka option'): upar 🤖 Camera AI ki patli line (#pcAi) —
+//    switch → blueAccess/gintiCam.ai 1 / 0 (saveGintiCam) · PC ginti-cam v2.1 jawab gintiPc.ai → ⏳ / ✅ / ⚫ chip. Default BAND.
 // =========================================================
 let A = {}, wired = false, stop = null, pc = null, cfg = null, want = '', wantD = 0, busy = '';
+let gc = null, gp = null, aiStop = null, aiWant = null, aiBusy = false;   // v1.1: 🤖 Camera AI (gintiCam / gintiPc)
+const aiBox = () => document.getElementById('pcAi');
 const box = () => document.getElementById('pcDrv');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ago = t => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : Math.floor(m / 60) + ' ghante pehle'; };
@@ -21,10 +25,12 @@ export function setup(deps) {
     const k = t.dataset.pdv;
     if (k === 'd') pickDrive(t.dataset.d); else if (k === 'k') pickDays(Number(t.dataset.n)); else if (k === 'ref') open(true);
   });
+  document.addEventListener('click', e => { const t = e.target.closest?.('[data-pai]'); if (t && aiBox()?.contains(t)) aiToggle(); });
 }
 
 export async function open(force) {
   if (!box()) return;
+  aiOpen();
   paint();
   try { cfg = await A.cloud.getBillClipCfg(); } catch { cfg = cfg || {}; }
   paint();
@@ -94,4 +100,41 @@ async function pickDays(n) {
   try { await A.cloud.setBillClipPart({ rkd: n }); cfg = { ...(cfg || {}), rkd: n }; A.notice?.(`✓ Recording ${n} din rakhi jayegi`); }
   catch (e) { wantD = 0; A.notice?.('✕ ' + (e?.message || e)); }
   busy = ''; paint();
+}
+
+// ---------- 🤖 v1.1: Camera AI (godam) — band / chalu (sirf malik) ----------
+function aiOpen() {
+  if (!aiBox()) { const b = box(); if (!b) return; const d = document.createElement('div'); d.id = 'pcAi'; b.before(d); }
+  aiPaint();
+  if (aiStop || !A.cloud?.listenGintiCam) return;
+  const u1 = A.cloud.listenGintiCam(d => { if (!aiBox()) return aiOff(); gc = d || {}; if (aiWant != null && (Number(gc.ai) === 1) === aiWant) aiWant = null; aiPaint(); });
+  const u2 = A.cloud.listenGintiPc ? A.cloud.listenGintiPc(d => { if (!aiBox()) return aiOff(); gp = d; aiPaint(); }) : () => {};
+  aiStop = () => { try { u1(); } catch {} try { u2(); } catch {} };
+}
+function aiOff() { try { aiStop && aiStop(); } catch {} aiStop = null; }
+function aiOn() { return aiWant != null ? aiWant : !!(gc && Number(gc.ai) === 1); }
+function aiChip() {
+  if (!gc) return '<span class="pai-st w">⏳</span>';
+  const on = aiOn();
+  if (aiBusy || aiWant != null) return `<span class="pai-st w">⏳ ${on ? 'chalu' : 'band'} ho rahi…</span>`;
+  if (!gp || !gp.at) return `<span class="pai-st w">${on ? '⏳ PC ka jawab nahi' : '⚫ Band'}</span>`;
+  if (Date.now() - Number(gp.at) > 12 * 60000) return `<span class="pai-st r">🔴 PC chup (${esc(ago(Number(gp.at)))})</span>`;
+  if (gp.ai == null) return '<span class="pai-st w">⏳ PC update (3-5 min)</span>';
+  if ((Number(gp.ai) === 1) !== on) return `<span class="pai-st w">⏳ PC ${on ? 'chalu' : 'band'} kar raha…</span>`;
+  if (on && !gc.on) return '<span class="pai-st r">⚠️ Loading ginti ⚙️ mein camera BAND</span>';
+  return on ? '<span class="pai-st g">✅ Chalu</span>' : '<span class="pai-st">⚫ Band</span>';
+}
+function aiPaint() {
+  const b = aiBox(); if (!b) return; const on = aiOn();
+  b.innerHTML = `<div class="pai-box"><div class="pai-r"><span class="pai-ic">🤖</span><span class="pai-nm"><b>Camera AI (godam)</b><small>carton ginti · 🧍 pose · 🙂 chehra · 🚨 bina note · HD</small></span>${aiChip()}
+    <button type="button" class="pai-sw${on ? ' is-in' : ''}" data-pai="t" aria-label="Camera AI ${on ? 'band karo' : 'chalu karo'}"${aiBusy || !gc ? ' disabled' : ''}><i></i></button></div>
+    <p class="pai-note">${on ? 'PC ka apna model chalta hai (internet nahi). Band karo to CPU / hard halki — recording, bill video, live waise hi.' : 'Abhi band hai — recording, bill video, gate pass video, live sab chal rahe hain. Switch dabayein to AI chalu (PC 1 min mein).'}</p></div>`;
+}
+async function aiToggle() {
+  if (aiBusy || !gc) return; const nx = !aiOn();
+  if (nx && !confirm('🤖 Godam camera ki AI chalu karein?\n\nCarton ginti, 🧍 pose, 🙂 chehra, 🚨 bina note alarm aur godam camera ki HD recording shuru ho jayegi (PC ka CPU aur hard zyada lagegi).')) return;
+  aiBusy = true; aiWant = nx; aiPaint();
+  try { await A.cloud.saveGintiCam({ ai: nx ? 1 : 0 }); A.notice?.(nx ? '🤖 Camera AI chalu — PC 1 min mein' : '⚫ Camera AI band — PC 1 min mein'); }
+  catch (e) { aiWant = null; A.notice?.('✕ ' + (e?.message || e)); }
+  aiBusy = false; aiPaint();
 }

@@ -27,6 +27,9 @@
 //       gintiEv.fc [{k, n, g (shayad), s, q, im 112 jpg}] (4 tak) · malik ❓ par naam (gintiEv.fl {i: {k, n, at}}) → yahan faceRef/l-<ev>-<i> (al 1)
 //       = agli dafa wohi chehra pehchana jata hai (seekhna). Embeddings sirf PC ki file ginti-faces.json (Firestore mein sirf tasveer).
 //    Setting gintiCam.pz (pose) / .fc (chehra) — false = band (default chalu). Sab PC par, internet / Gemini NAHI (Gemini sirf purana 🚨 bina note).
+//  v2.1 (22 Nov, malik: 'AI ko filhal band kar do, script mein on karne ka option'): gintiCam.ai — 1 = AI chalu, na ho / 0 = BAND (default).
+//    Band = koi tukra nahi parhta, model / onnxruntime load nahi, note milan / 🚨 alarm / chehron ki pehchan nahi (sab ruka, data wahi).
+//    Lakeer ki 📸 tasveer phir bhi milti hai. Chalu = app Settings → 🖥️ PC scripts → '🤖 Camera AI'. gintiPc.ai = 0 / 1.
 // =========================================================
 const fs = require('fs');
 const os = require('os');
@@ -35,7 +38,7 @@ const path = require('path');
 const { spawn, exec } = require('child_process');
 const { pathToFileURL } = require('url');
 
-const VER = '2.0';   // v2.0 (22 Nov): 🧍 pose + 🙂 chehra (ginti-ai.js) · v1.1 (20 Nov): 💽 recording kisi bhi drive par ho (malik ka chuna, rec-dir.js) — sab jagah se parhta hai
+const VER = '2.1';   // v2.1 (22 Nov): 🤖 AI ka switch gintiCam.ai (default BAND) · v2.0 (22 Nov): 🧍 pose + 🙂 chehra (ginti-ai.js) · v1.1 (20 Nov): 💽 recording kisi bhi drive par ho (malik ka chuna, rec-dir.js) — sab jagah se parhta hai
 const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47846;
 const MODS = path.join(DIR, 'ginti-mods'), CLIP_MODS = path.join(DIR, 'clip-mods'), REC = path.join(DIR, 'clip-rec'), TMP = path.join(DIR, 'ginti-tmp');
 const MODEL = path.join(DIR, 'ginti-model.onnx'), STATE = path.join(DIR, 'ginti-state.json');
@@ -256,14 +259,16 @@ function main() {
   log(`ginti-cam v${VER} shuru (${os.hostname()})`);
 
   // ---------- setting ----------
-  let CF = { on: false, onAt: 0, cams: [], fps: 3, hrs: '09:00-21:30', win: 20, alMax: 20, snapReq: 0, snapCam: '', pz: true, fc: true };
+  let CF = { on: false, onAt: 0, cams: [], fps: 3, hrs: '09:00-21:30', win: 20, alMax: 20, snapReq: 0, snapCam: '', pz: true, fc: true, ai: false };
   let BC = { ch: {}, xc: [] }, AI = { key: '', model: '' }, MALIK = '', BR = {};
   const cfApply = d => {
     d = d || {};
     const cams = (Array.isArray(d.cams) ? d.cams : []).map(c => ({ n: String((c && c.n) || '').trim().slice(0, 30), b: Math.floor(Number(c && c.b) || 0), bn: String((c && c.bn) || '').slice(0, 30), ln: Array.isArray(c && c.ln) ? c.ln.slice(0, 4).map(v => Math.max(0, Math.min(1000, Number(v) || 0))) : null, out: Number(c && c.out) === -1 ? -1 : 1, al: c && c.al === false ? 0 : 1, on: c && c.on === false ? 0 : 1 })).filter(c => c.n).slice(0, 8);
     CF = { on: !!d.on, onAt: Number(d.onAt) || 0, cams, fps: Math.max(2, Math.min(6, Math.round(Number(d.fps) || 3))), hrs: /^\d{1,2}:\d{2}-\d{1,2}:\d{2}$/.test(String(d.hrs || '')) ? String(d.hrs) : '09:00-21:30', win: Math.max(5, Math.min(90, Number(d.win) || 20)), alMax: Math.max(0, Math.min(100, d.alMax == null ? 20 : Number(d.alMax) || 0)), snapReq: Number(d.snapReq) || 0, snapCam: String(d.snapCam || ''), pz: d.pz !== false, fc: d.fc !== false };   // v2.0: 🧍 pz / 🙂 fc (false = band)
   };
-  BA.doc('gintiCam').onSnapshot(s => { cfApply(s.exists ? s.data() : null); kick(); }, e => log('⚠️ setting: ' + e.message));
+  BA.doc('gintiCam').onSnapshot(s => { const was = CF.ai; cfApply(s.exists ? s.data() : null); CF.ai = !!(s.exists && Number((s.data() || {}).ai) === 1);
+    if (was !== CF.ai) { log(CF.ai ? '🤖 AI CHALU (malik ne PC scripts se kiya)' : '🤖 AI BAND — tukre / model / milan sab ruka'); if (CF.ai) { ort(); galRun(); } pushSt(); }
+    kick(); }, e => log('⚠️ setting: ' + e.message));   // v2.1: ai (1 = chalu) — cfApply ke baad, warna har setting par mit jata
   BA.doc('billClip').onSnapshot(s => { const d = (s.exists && s.data()) || {}; BC = { ch: d.ch && typeof d.ch === 'object' ? { ...d.ch } : {}, xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').trim(), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0) }; }, e => log('⚠️ camera setting: ' + e.message));   // sirf channel — password yahan kabhi nahi chhua
   BA.doc('aiConfig').onSnapshot(s => { const d = (s.exists && s.data()) || {}; AI = { key: String(d.key || ''), model: String(d.model || '') }; }, () => {});
   BA.doc('waParchi').onSnapshot(s => { const d = (s.exists && s.data()) || {}; const p = Array.isArray(d.prFrom) ? d.prFrom[0] : d.prFrom; MALIK = String(p || '').replace(/\D/g, ''); }, () => {});
@@ -304,7 +309,7 @@ function main() {
   }
   let milanBusy = false;
   async function milan() {
-    if (milanBusy || !CF.on) return; milanBusy = true;
+    if (milanBusy || !CF.on || !CF.ai) return; milanBusy = true;   // v2.1: AI band = milan bhi nahi (warna har note '📹 0' ban jata)
     try {
       listen(); const now = Date.now(), winMs = T_WIN || CF.win * 60000, nd = noteDocs(), batch = db.batch(); let n = 0;
       const ndMap = new Map(nd.map(d => [d.key, d]));
@@ -492,7 +497,7 @@ function main() {
     return b && b.length > 300 ? b : null;
   }
   async function galRun() {
-    if (galBusy) return; galBusy = true;
+    if (galBusy || !CF.ai) return; galBusy = true;   // v2.1: AI band = tasveeron ki pehchan baad mein (chalu hote hi)
     try {
       while (galQ.length) {
         const id = galQ.shift(), sDet = await sessOf(FDET), sId = await sessOf(FID);
@@ -601,6 +606,7 @@ function main() {
     busy = true; busyAt = Date.now();
     try {
       if (!CF.on) return;
+      if (!CF.ai) { for (const cam of CF.cams) { const ck = ckOf(cam.n), c = ST.cams[ck] = ST.cams[ck] || { n: cam.n }; c.st = '🤖 AI band — PC scripts se chalu karein'; } return; }   // v2.1
       listen(); const now = Date.now();
       for (const cam of CF.cams) {
         const ck = ckOf(cam.n), c = ST.cams[ck] = ST.cams[ck] || { n: cam.n }; if (!cam.on) { c.st = 'band'; continue; }
@@ -648,15 +654,15 @@ function main() {
     let o = 0, i = 0, b = 0, po = 0, pi = 0; for (const e of EVS.values()) { o += e.out || 0; i += e.in || 0; po += e.po || 0; pi += e.pi || 0; if (e.st === 'bina') b++; }
     const mf = f => fs.existsSync(f) ? (SX[f] ? (SX[f].s ? 'ok' : '✕ file kharab') : '⏳') : '⏳ file abhi nahi aayi';
     const ppl = new Set([...GAL.values()].map(g => g.k));
-    const d = { v: VER, host: os.hostname(), on: CF.on ? 1 : 0, mods: MODS_ST || (ORT ? 'ok' : ''), model: fs.existsSync(MODEL) ? 1 : 0, err: ST.err, cams, today: { day: today, out: o, in: i, po, pi, bina: b, al: S.al.day === today ? S.al.n : 0 }, fps: CF.fps,
-      pose: CF.pz ? mf(POSE) : 'band', face: CF.fc ? { m: fs.existsSync(FID) && fs.existsSync(FDET) ? (SX[FID] && SX[FID].s ? 'ok' : '⏳') : '⏳ file abhi nahi aayi', ppl: ppl.size, n: GAL.size, q: galQ.length, err: FERR.slice(0, 120) } : 'band' };   // v2.0
+    const d = { v: VER, host: os.hostname(), on: CF.on ? 1 : 0, ai: CF.ai ? 1 : 0, mods: MODS_ST || (ORT ? 'ok' : ''), model: fs.existsSync(MODEL) ? 1 : 0, err: ST.err, cams, today: { day: today, out: o, in: i, po, pi, bina: b, al: S.al.day === today ? S.al.n : 0 }, fps: CF.fps,
+      pose: !CF.ai ? 'AI band' : CF.pz ? mf(POSE) : 'band', face: !CF.ai ? 'AI band' : CF.fc ? { m: fs.existsSync(FID) && fs.existsSync(FDET) ? (SX[FID] && SX[FID].s ? 'ok' : '⏳') : '⏳ file abhi nahi aayi', ppl: ppl.size, n: GAL.size, q: galQ.length, err: FERR.slice(0, 120) } : 'band' };   // v2.0
     const sig = JSON.stringify(d); if (sig === stSig && Date.now() - stAt < 5 * 60000) return; stSig = sig; stAt = Date.now();
     BA.doc('gintiPc').set({ ...d, at: Date.now() }).catch(e => log('⚠️ haal: ' + e.message));
   }
   let kT = null; function kick() { clearTimeout(kT); kT = setTimeout(() => { milan().then(snaps).catch(() => {}); }, 1500); }
 
   learnLoad();
-  setTimeout(() => { ort(); }, 5000);
+  setTimeout(() => { if (CF.ai) ort(); }, 5000);   // v2.1: AI band ho to model ka saaman load hi nahi (memory bachao)
   setInterval(ZINDA.guard ? ZINDA.guard(tick, 10 * 60000, 'tick') : tick, 15000);
   setTimeout(tick, 8000);
   // purani tmp files
