@@ -5534,3 +5534,17 @@ Malik: 'YouTube ki videos mein bohat se alfaz Hindi mein hain, samajh nahi aati 
 - Fallback: HTTP 400 = pehle mediaResolution, phir video_metadata, phir JSON mime hata kar dobara; 404 = agla model; 429 = saaf paigham; 4 min hadd.
 - TEST: sirf helpers (link / waqt / JSON parse) node se. Asal Gemini video call aur phone ki Urdu awaz yahan se azmai NAHI — malik ki pehli video ka nateeja poochho.
 - AI: HAAN (Gemini).
+
+=== v2.354.0 (23 Nov 2026) — 🎓 Video samjhao v1.1: guftagu + Gemini ki awaz (background) + khud load + 📤 Reader ===
+Malik: 'pehla 15 minute ka part aaye, sunna start kar dun, baqi parts background mein load hote rahein · podcast jaisa, Raj aurat ki awaz, doctor mard ki ·
+  background mein nahi chalti — hal · Gemini ki awaz hi chalegi · aur wo doosri app reader wali'. (Raj / doctor ki ASAL awaz ki naqal se inkaar kiya — malik ne maan liya.)
+- Likhai ab guftagu: part.d = [[A|B, Roman, Urdu harf]] (A mezban = zanana awaz 'Kore', B mehman = mardana 'Charon'), sp = naam; har 1-2 min ka hissa,
+  un ke andaz mein MUKHTASAR (lafz-ba-lafz transcript nahi), Hindi lafz ki jagah Urdu. Purane saved parts (r / u) bhi chalte hain (linesOf).
+- Agle 15-15 minute khud load (MAXAUTO 8 tukre fi dafa, '⏹ Load roko', phir '➡ Aage 15 min').
+- Awaz = Gemini TTS: model /v1beta/models ki list se (naam mein 'tts' + generateContent; naya flash pehle; fallback TTS_FALL), generateContent
+  responseModalities AUDIO + multiSpeakerVoiceConfig -> inlineData PCM -> WAV (wavBytes) -> <audio> + Media Session (screen band / doosri app mein chalti hai,
+  notification ke button). Audio IndexedDB 'nt-vs' (key id:second:lines) — dobara paisa nahi; video list se hate to audio bhi.
+- Gemini awaz na bane (3 dafa / hadd / key) = notice + phone ki speechSynthesis (pitch A 1.2 / B 0.75, sirf screen khuli ho to).
+- 📤 Reader = navigator.share (Urdu likhai) -> koi bhi parhne wali app; na ho to copy.
+- TEST: sirf helpers node se (parse d / purani shakal / ttsText / WAV header). Asal Gemini video + TTS call, Urdu talaffuz, background chalna phone par azmaya NAHI.
+- AI: HAAN (Gemini likhai + awaz, paise wali key). Rules / PC / Firestore: kuch nahi.
