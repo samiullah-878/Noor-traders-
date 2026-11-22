@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.348.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.348.0';
-import { blurScore, blurText } from './pic-check.js?v=2.348.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.349.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.349.0';
+import { blurScore, blurText } from './pic-check.js?v=2.349.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -1079,7 +1079,7 @@ export function ppOpenFrom(en) {
   cart = []; edit = null; editNav = null; navCur = 0; editSnap = ''; aiRows = null; openKey = ''; lineFilter = 'all';
   supplier = String(en.partyId); supOpen = false; supQuery = ''; day = ''; invoiceNo = ''; note = '';
   fromEntry = { id: String(en.id), partyId: String(en.partyId), amount: Number(en.amount) || 0, via: en.via === 'gaari' ? 'gaari' : en.via === 'supply' ? 'supply' : '', kind: en.kind || '', date: en.date || '' };
-  if (Array.isArray(en.pics) && en.pics.length) { billPics = en.pics.slice(0, 4); billIx = 0; billPin = true; billHide = false; }   // v2.129.0: larke ki tasveer upar chipki (malik)
+  if (Array.isArray(en.pics) && en.pics.length) { billPics = en.pics.slice(0, 4); billIx = 0; billZoom = zDef(); billPin = true; billHide = false; }   // v2.129.0: larke ki tasveer upar chipki (malik)
   keepDraft(); return true;
 }
 const fromBarHTML = () => fromEntry && fromEntry.partyId === String(supplier) ? `<div class="pp-from" data-mn-keep="1"><span>📎 Larke ki entry <b>Rs ${num(fromEntry.amount / 100)}</b> · ${fromEntry.date}${fromEntry.via === 'gaari' ? ' · 🚚 apni gaari' : fromEntry.via === 'supply' ? ' · 📦 supplier ki supply' : ''}<small>POS bill bhejte hi yahi entry is bill se jur jayegi (do dafa nahi ginti)</small></span><button type="button" data-pp-fromx="1" title="Entry se alag karo">✕</button></div>` : '';
@@ -1429,7 +1429,7 @@ document.addEventListener('click', async e => {
     if (d.ppBhide != null) { billHide = true; rerender(); }
     else if (d.ppBshow != null) { billHide = false; rerender(); }
     else if (d.ppPin != null) { billPin = !billPin; billHide = false; rerender(); }
-    else if (d.ppZoom != null) { billZoom = Math.min(3, Math.max(1, billZoom + Number(d.ppZoom) * 0.5)); rerender(); }
+    else if (d.ppZoom != null) { billZoom = Math.min(3, Math.max(posMode() ? 1 : 0.5, billZoom + Number(d.ppZoom) * 0.5)); rerender(); }
     else if (d.ppNextpic != null) { billIx = (billIx + 1) % billPics.length; rerender(); }
     else if (d.ppVzoom != null) { zStep(Number(d.ppVzoom)); }
     else if (d.ppVnext != null) { billIx = (billIx + 1) % billPics.length; zFocus = 0; billView(); }
@@ -1552,13 +1552,14 @@ document.addEventListener('click', async e => {
 // v1.99.0: har line par bill ka naam aur system ka naam — Yaad kar lo / Badlein
 let aiBusy = false, aiRows = null, aiBillInfo = null;
 // v2.2.0: bill ki tasveerein — sirf is waqt ke liye (object URL, memory mein; kahin save nahi hoti)
-let billPics = [], billPin = false, billIx = 0, billZoom = 1, billHide = false;   // v2.146.0: billHide = tasveer chhupi (patli patti)   // v2.19: billPics ab data-URL (mehfooz) — shuru mein blob
+function zDef() { try { return posMode() ? 1 : 0.5; } catch { return 1; } }
+let billPics = [], billPin = false, billIx = 0, billZoom = zDef(), billHide = false;   // v2.146.0: billHide = tasveer chhupi (patli patti)   // v2.19: billPics ab data-URL (mehfooz) — shuru mein blob
 function setBillPics(files) {          // v2.19: foran dikhe (blob), phir chhoti ho kar phone mein mehfooz (IndexedDB)
   const list = [...(files || [])];
   for (const u of oldBlobs) { try { URL.revokeObjectURL(u); } catch {} }
   oldBlobs = billPics.filter(u => String(u).startsWith('blob:'));
   billPics = list.map(f => { try { return URL.createObjectURL(f); } catch { return ''; } }).filter(Boolean);
-  billIx = 0; billZoom = 1;
+  billIx = 0; billZoom = zDef();
   const seq = ++picSeq;
   if (!list.length) { picDel('draft'); return; }
   Promise.all(list.slice(0, 6).map(shrinkPic)).then(arr => {
@@ -1572,7 +1573,7 @@ export function ppShowPics(pics, opt = {}) {   // opt: { pin: true, open: true (
   const pin = opt === false ? false : opt.pin !== false; if (opt && opt.open) { lineView = 'all'; openKey = ''; }
   const L = (pics || []).filter(u => typeof u === 'string' && u.startsWith('data:image/')).slice(0, 6); if (!L.length) return false;
   for (const u of oldBlobs) { try { URL.revokeObjectURL(u); } catch {} } oldBlobs = [];
-  billPics = L; billIx = 0; billZoom = 1; picSeq++; billPin = !!pin; billHide = false; picPut('draft', { pics: L, at: Date.now() });
+  billPics = L; billIx = 0; billZoom = zDef(); picSeq++; billPin = !!pin; billHide = false; picPut('draft', { pics: L, at: Date.now() });
   return true;
 }
 // ---------- v2.19: bill ki TASVEER — phone (IndexedDB) + bill ke sath cloud (entryPhotos/<bill id>, 3 tak) ----------

@@ -715,6 +715,9 @@ footer button:not(.give):not(.got){background:linear-gradient(180deg,#27437c,#17
   box-shadow:0 2px 10px rgba(15,23,42,.06)}
 .pp-billwrap{max-height:42vh;overflow:auto;border-radius:12px;background:#f2f4f9}
 .pp-billbar img{width:100%;display:block;transform-origin:top left}
+/* v2.349.0 (malik 22 Nov: 'zoom nahi — poori asal tasveer aaye, chahein to zoom karein'): phone par pehle POORI tasveer (0.5 = fit), + se bari */
+.pp-billbar[data-zoom="0.5"] .pp-billwrap{overflow:hidden;text-align:center}
+.pp-billbar[data-zoom="0.5"] img{width:auto;max-width:100%;max-height:inherit;margin:0 auto;object-fit:contain}
 .pp-billbar[data-zoom="1.5"] img{width:150%}
 .pp-billbar[data-zoom="2"] img{width:200%}
 .pp-billbar[data-zoom="2.5"] img{width:250%}

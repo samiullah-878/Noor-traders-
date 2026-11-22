@@ -5475,3 +5475,5 @@ Malik (22 Nov 10:38): 'Ai KO filhal band Kar do or script mein on Karna Ka optio
   (PC w6: POS mein SIRF EK JV khata ↔ Equity, app mein kuch nahi) -> ⏳ -> ✅ POS barabar + ↩ (30 min, ['@undo-balance', job]). cardWatch(pid) se job ka haal.
   PC raqam POS se khud dobara nikalta hai. Farq screen ka purana 🔎 Jaanch / ✅ Pakka wahi.
 Rules / PC pos-khata-sync nahi badle. AI nahi (dono mein).
+
+=== app v2.349.0 (2026-11-22) — POS Purchase phone: chipki bill tasveer pehle poori. PC ki koi file nahi badli, manifest wahi. ===

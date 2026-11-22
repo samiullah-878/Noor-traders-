@@ -9432,3 +9432,10 @@ Malik (22 Nov 10:38): 'Ai KO filhal band Kar do or script mein on Karna Ka optio
   (PC w6: POS mein SIRF EK JV khata ↔ Equity, app mein kuch nahi) -> ⏳ -> ✅ POS barabar + ↩ (30 min, ['@undo-balance', job]). cardWatch(pid) se job ka haal.
   PC raqam POS se khud dobara nikalta hai. Farq screen ka purana 🔎 Jaanch / ✅ Pakka wahi.
 Rules / PC pos-khata-sync nahi badle. AI nahi (dono mein).
+
+=== v2.349.0 (2026-11-22) — 🖼 POS Purchase (phone): chipki bill tasveer pehle POORI ===
+- Malik (screenshot): 'yahan par zoom nahi, pic ki original picture aani chahiye · agar hum chahein to zoom kar sakein'. Pehle tasveer dabbe ki poori chaurai par thi (lambi parchi ka sirf upar ka hissa, bara).
+- purchase.js: zDef() (phone 0.5 = fit, PC posMode 1); setBillPics / larke ki tasveer / shuru = zDef(); + / − ki kam se kam had phone 0.5.
+- style.css: .pp-billbar[data-zoom="0.5"] (img width auto, max-height inherit = dabbe jitni, beech mein). pcm.css dobara bana (tools/pcm.py).
+- Jaanch: Chromium 400px — 900x1600 tasveer fit mein 151x269 (poori), zoom 1 par 337 chauri (pehle jaisi). Asal phone par nahi dekha.
+- Version 2.348.0 doosri chat ne le liya tha -> 2.349.0. AI nahi. PC ki koi file nahi badli.
