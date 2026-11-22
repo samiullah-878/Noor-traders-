@@ -2,6 +2,7 @@
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
 //  2026-11-17 (x): 🖨 Daily print — app v2.317.0 ne closing cash HATA di (malik: 'closing cash ki ab zaroorat nahi'): J.nc = 1 ho to
 //    'Closing cash' line / KAM-ZYADA / 'CLOSING GINTI BAQI' nahi — sirf 'GALLE MEIN HONA CHAHIYE Rs …'. Purana app (nc nahi) = pehle jaisa.
+//  2026-11-22 (w7): 🧾 Purchase parchi (cash + udhar) par BILL ki pehli tasveer bhi (samaan ki tasveer ke neeche, poori, 480 dots tak) — malik: "is par bill ki photo bhi aani chahiye". 12 Oct ka 'Bill ki tasveer NAHI' mansookh.
 //  2026-11-17 (w6): ⚖️ Ek voucher (@balance) = SIRF EK JV (khata ↔ Equity) — transfer pehle milanSendOne se alag voucher jate the, ab nahi (malik: "aik hi voucher · sab entries nahi"); transfer ki dono taraf posNo + balFix. App ka ✕ Rok do = status 'stop' (yeh script sirf 'new' uthati hai).
 //  2026-11-17 (w5): 🚫 app v2.313.0 'POS mein na bhejo' (entry posNo + posX) — voucher pehle se nahi banta (posNo); ab milanDiffPc bhi posX ko gin-ta nahi, taake ⚖️ Barabar (@balance) / 🤖 autoMilan us ki raqam POS mein na daalein.
 //  2026-11-16 (w4): ↩ 🤖 PC ke KHUD barabar (autoMilan, dir 'auto') wale kaam bhi wapas — har voucher ki taraf log se (app mein likh diya = POS ka asal + app copy; baqi = [app: wala POS voucher / opening JV). Bill jaanch wale 'auto' kabhi nahi.
@@ -1659,15 +1660,16 @@ async function printExpenses() {
 
 // ---------- 2026-10-12: 🛒 APP PURCHASE KI PARCHI + samaan ki chhoti tasveer (malik) ----------
 // App ke Purchase screen ki entry (purchase:true, purchaseCash = cash / borrow = udhar), aaj ki, posPrintedAt / posPrintErr nahi.
-// Samaan ki tasveer (goodsPhotos[0] — entry par ya entryPhotos/<id>) chhoti (aadha kaghaz) parchi ke neeche. Bill ki tasveer NAHI.
+// Samaan ki tasveer (goodsPhotos[0] — entry par ya entryPhotos/<id>) chhoti (aadha kaghaz) parchi ke neeche. (w7) Bill ki pehli tasveer bhi, us ke neeche.
 // Tasveer abhi upload ho rahi ho (pn > 0, 3 min tak) to agle chakkar tak ruko. Dobara = printJobs id 'PUR:<entryId>'.
 let PH = null; try { PH = require('./photo-print.js'); } catch (e) { log('photo-print.js nahi mili — purchase parchi tasveer ke baghair'); }
 // 2026-10-21: 📷 party entry ki tasveer (app v2.105.8 — entryPhotos/<id>.photos) har voucher parchi ke neeche (entry-photo.js)
 let EP = null; try { EP = require('./entry-photo.js')({ biz, PH, log }); } catch (e) { log('entry-photo.js nahi mili — voucher parchi tasveer ke baghair'); }
 const epTxt = async (txt, e) => (EP && e && !e.transferId && ((Number(e.pn && e.pn.photos) || 0) > 0 || (Array.isArray(e.photos) && e.photos.length))) ? EP.withPhoto(txt, e) : txt;
-async function goodsPhoto(e) {
-  let a = Array.isArray(e.goodsPhotos) ? e.goodsPhotos : [];
-  if (!a.length) { try { const d = await biz.collection('entryPhotos').doc(String(e.id)).get(); a = (d.exists && Array.isArray(d.data().goodsPhotos)) ? d.data().goodsPhotos : []; } catch {} }
+async function goodsPhoto(e, key) {
+  const K = key || 'goodsPhotos';
+  let a = Array.isArray(e[K]) ? e[K] : [];
+  if (!a.length) { try { const d = await biz.collection('entryPhotos').doc(String(e.id)).get(); a = (d.exists && Array.isArray(d.data()[K])) ? d.data()[K] : []; } catch {} }
   return a.find(x => /^data:image\/jpe?g;base64,/i.test(String(x))) || '';
 }
 async function purchaseSlip(e, copy) {
@@ -1677,11 +1679,14 @@ async function purchaseSlip(e, copy) {
     lines: [{ pid: e.partyId, name: (p && p.name) || 'Supplier', label: cash ? 'Cash diya (maal liya)' : 'Udhar maal liya', amount: rupees(e.amount),
       before: e.partyId ? rupees(appBalance(e.partyId, new Set([e.id]))) : null, after: e.partyId ? rupees(appBalance(e.partyId)) : null }],
     note: String(e.note || '').trim(), copy, pay });
-  let photo = '';
+  let photo = '', bill = '';
   if (PH) { const u = await goodsPhoto(e); if (u) photo = PH.photoRaster(u); }   // 2026-10-27: photo-print v2 (poori chaurai, saaf)
-  if (!photo) return { text: txt, photo: false };
+  // (w7) 2026-11-22 malik: "is par bill ki photo bhi aani chahiye" — bill ki PEHLI tasveer, poori (kaat nahi), lambai 480 dots (~6.8 cm) tak
+  if (PH) { try { const b = await goodsPhoto(e, 'billPhotos'); if (b) bill = PH.photoRaster(b, 512, 480, { crop: 0 }); } catch (x) { log('bill tasveer nahi bani: ' + (x && x.message)); } }
+  if (!photo && !bill) return { text: txt, photo: false, bill: false };
+  const add = (photo ? 'Samaan ki tasveer:\r\n' + photo + '\r\n' : '') + (bill ? 'Bill ki tasveer:\r\n' + bill + '\r\n' : '');
   const cut = '\x1dV\x42\x00', k = txt.lastIndexOf(cut);
-  return { text: k >= 0 ? txt.slice(0, k) + 'Samaan ki tasveer:\r\n' + photo + '\r\n' + txt.slice(k) : txt + photo, photo: true };
+  return { text: k >= 0 ? txt.slice(0, k) + add + txt.slice(k) : txt + add, photo: !!photo, bill: !!bill };
 }
 async function printPurchases() {
   if (DRY || !AUTO_PRINT) return;
@@ -1690,7 +1695,8 @@ async function printPurchases() {
     if (e.type !== 'entry' || e.purchase !== true || !['purchaseCash', 'borrow'].includes(e.kind) || e.deleted || e.date !== day || e.posPrintedAt || e.posPrintErr) continue;
     const age = Date.now() - tsOf(e.createdAt); if (age > 20 * 3600000) continue;
     const sl = await purchaseSlip(e);
-    if (!sl.photo && (Number(e.pn && e.pn.goodsPhotos) || 0) > 0 && age < 3 * 60000) continue;   // tasveer abhi aa rahi hai (2026-10-21: pn object hai — pehle Number(e.pn) = NaN, kabhi nahi rukta tha)
+    if (!sl.photo && (Number(e.pn && e.pn.goodsPhotos) || 0) > 0 && age < 3 * 60000) continue;
+    if (!sl.bill && (Number(e.pn && e.pn.billPhotos) || 0) > 0 && age < 3 * 60000) continue;   // (w7) bill ki tasveer abhi aa rahi hai   // tasveer abhi aa rahi hai (2026-10-21: pn object hai — pehle Number(e.pn) = NaN, kabhi nahi rukta tha)
     const ok = await printReceipt(sl.text, true);   // (q) nayi entry = printer mein aage
     if (ok) await markApp([e.id], { posPrintedAt: Date.now(), posPrintErr: '' });
     else await markApp([e.id], { posPrintErr: (lastPrintErr || 'print nahi hua').slice(0, 160), posPrintTry: Date.now() });

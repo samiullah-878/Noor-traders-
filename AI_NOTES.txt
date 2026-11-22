@@ -9439,3 +9439,9 @@ Rules / PC pos-khata-sync nahi badle. AI nahi (dono mein).
 - style.css: .pp-billbar[data-zoom="0.5"] (img width auto, max-height inherit = dabbe jitni, beech mein). pcm.css dobara bana (tools/pcm.py).
 - Jaanch: Chromium 400px — 900x1600 tasveer fit mein 151x269 (poori), zoom 1 par 337 chauri (pehle jaisi). Asal phone par nahi dekha.
 - Version 2.348.0 doosri chat ne le liya tha -> 2.349.0. AI nahi. PC ki koi file nahi badli.
+
+=== PC pos-khata-sync w7 (2026-11-22) — Purchase parchi par BILL ki tasveer bhi. App nahi badli (v2.349.0 wahi). ===
+Malik (parchi ki photo): "is par bill ki photo bhi aani chahiye". purchaseSlip: samaan ki tasveer ke neeche 'Bill ki tasveer:' =
+  billPhotos[0] (entry par ya entryPhotos/<id>), photoRaster(512, 480, crop 0) — bill kaata nahi jata, lambai ~6.8 cm tak.
+  goodsPhoto(e, key) ab key leta hai. printPurchases: pn.billPhotos > 0 aur tasveer na aayi = 3 min intezar. Dobara print mein bhi.
+  12 Oct ka 'Bill ki tasveer NAHI' mansookh. Kaghaz ~6-7 cm zyada (malik ko bataya, OK). Asal printer par nahi azmaya. AI nahi.

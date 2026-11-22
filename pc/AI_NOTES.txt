@@ -5477,3 +5477,9 @@ Malik (22 Nov 10:38): 'Ai KO filhal band Kar do or script mein on Karna Ka optio
 Rules / PC pos-khata-sync nahi badle. AI nahi (dono mein).
 
 === app v2.349.0 (2026-11-22) — POS Purchase phone: chipki bill tasveer pehle poori. PC ki koi file nahi badli, manifest wahi. ===
+
+=== PC pos-khata-sync w7 (2026-11-22) — Purchase parchi par BILL ki tasveer bhi. App nahi badli (v2.349.0 wahi). ===
+Malik (parchi ki photo): "is par bill ki photo bhi aani chahiye". purchaseSlip: samaan ki tasveer ke neeche 'Bill ki tasveer:' =
+  billPhotos[0] (entry par ya entryPhotos/<id>), photoRaster(512, 480, crop 0) — bill kaata nahi jata, lambai ~6.8 cm tak.
+  goodsPhoto(e, key) ab key leta hai. printPurchases: pn.billPhotos > 0 aur tasveer na aayi = 3 min intezar. Dobara print mein bhi.
+  12 Oct ka 'Bill ki tasveer NAHI' mansookh. Kaghaz ~6-7 cm zyada (malik ko bataya, OK). Asal printer par nahi azmaya. AI nahi.
