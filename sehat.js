@@ -241,7 +241,7 @@ async function bg(j) {
   }
   try { await logAdd({ d: j.d || ymd(), t: j.at || Date.now(), k: j.kind, th: j.th || '' }); } catch {}
   loadCnt();
-  note(j.okT || `✅ ${j.i} ${j.t} — shabash!`, j.okB || (j.app ? 'Phone ko bata diya — lock ho to 10–20 sec mein khulega' : '10–20 sec mein phone ki apps khul jayengi'), j.kind, true);
+  note(j.okT || `✅ ${j.i} ${j.t} — shabash!`, j.okB || (j.app ? 'Gin li — raat 8 baje ke hisaab mein shamil' : 'Gin li — raat 8 baje ke hisaab mein shamil'), j.kind, true);
 }
 
 async function zaroori() {

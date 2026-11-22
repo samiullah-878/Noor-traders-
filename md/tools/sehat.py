@@ -12,15 +12,25 @@
 #   Photo: popup / lock ka "📸 Photo do" = Blue Khata #sehat=<kind>.<shN> (sehat.js): sirf live camera → 🤖 Gemini (app ki AI) → sahi = app webhook
 #   `nt_sehat?shOk=<shN>` → yahan shOk == shN = sab saaf (lock bhi foran khatam, ginti shuru se). `nt_sehat?shZ=1` = 🚨 10 min zaroori (din mein 1).
 #   Bell = MacroDroid ki aam notification (chhoti si awaaz). Webhook link repo mein NAHI (app Falcon wale fxCfg.wh se banati hai).
+#   v69 (22 Nov 2026, malik: 'in par mobile apps 8 baje · fruit 20 · coffee 30 · nuts 20 · paani hadaf 6 bottle, har kam bottle 15 min · paani ki yaad 1 ghanta'):
+#   DIN MEIN APPS BAND NAHI — sirf yaad + photo (8 baje se pehle kisi bhi waqt). RAAT 8 BAJE HISAAB (TimerTrigger 20:00, na chale to 20:00-20:59 ki pehli
+#   jaanch): jo reh gaya us ke minute jor kar shLock = abhi + minute -> wohi purana chowkidar (raat wali list ki apps band). 8 baje ke baad photo se lock
+#   NAHI khulta (malik ko bataya). Din ki pehchan sirf '{dayofmonth}' string se (pnDay / shEmDay jaisa azmaya tareeqa) — din ka hisaab (dNum) par bharosa nahi.
+#   Purana 10 min -> 10/30/60 lock (shDue / LOCKNOW) HATA.
 import json, os, copy
 from cb import expr, lt, gt, strne, trig, iff, END, ELSE, HOME, var, lvar, NOW, tod, pause, sstr, sint, inc
 from raatband import PK, NM, FG, clx
 D = os.path.dirname(os.path.abspath(__file__))
 APP = "https://samiullah-878.github.io/Noor-traders-/#sehat="
-WIN = (11, 0, 20, 59)          # photo / lock ka waqt — raat 12 se 11 tak raatband pehle se band karta hai · v61: raat 9 ke baad kuch nahi
-PWIN = (9, 0, 20, 59)          # v61 (20 Nov, malik: 'raat 9 ke baad subah 9 tak paani ka notification na de, na zaroorat'): paani ki yaad sirf 9 am – 9 pm
+WIN = (20, 0, 23, 59)          # v69: lock sirf raat 8 ke hisaab ke baad (zyada se zyada 160 min = 10:40) — is waqt ke bahar lock kabhi nahi kaat-ta · pehle: photo / lock ka waqt — raat 12 se 11 tak raatband pehle se band karta hai · v61: raat 9 ke baad kuch nahi
+PWIN = (9, 0, 19, 59)          # v69: paani ki yaad 9 am – 8 pm (8 baje hisaab) · pehle 20:59: v61 (20 Nov, malik: 'raat 9 ke baad subah 9 tak paani ka notification na de, na zaroorat'): paani ki yaad sirf 9 am – 9 pm
 CL_SEC = 1800                  # v61 (malik: '30 minute tak'): 🌱 sabzi ki sahi photo = Claude 30 min (baqi apps pehle jaisi band)
-GAP_PAANI = 2400               # 40 min
+GAP_PAANI = 3600               # v69 (malik: 'time aik ghanta ka kar do') — pehle 40 min
+RWIN = (11, 0, 19, 59)         # v69: coffee / fruit / nuts ki yaad ka popup sirf 8 baje se pehle
+GOAL = 6                       # v69: paani ka hadaf (bottle / din) — malik ne chuna
+PER = 15                       # v69: har kam bottle = 15 min
+FINE = (('coffee', 30, '☕ Coffee'), ('fruit', 20, '🍎 Fruit'), ('nuts', 20, '🥜 Nuts'))   # v69: saza ke minute (malik)
+DAY = '{dayofmonth}'
 PHOTO_SEC = 600                # popup ke baad 10 min
 LOCKS = (600, 1800, 3600)      # 10 → 30 → 60 min
 
@@ -67,9 +77,9 @@ def dlg(title, text, yes, no, sec=120):
 #   shAsk = abhi + 110: lock wala macro reminder ke popup (MacroDroid ki khirki) ko 130 s tak Home se nahi hatata.
 def pending(kind, label):
     return [
-        iff([lt("shDue", 1)]), expr("shDue", NOW + "+" + str(PHOTO_SEC)), rnd("shN"), END,
+        iff([lt("shN", 1)]), rnd("shN"), END,
         sstr("shK", kind), expr("shAsk", NOW + "+110"),
-        bell("📸 " + label + " — 10 min mein photo do", "Photo na di to phone ki apps band (10 → 30 → 60 min). Popup ka 📸 dabayein."),
+        bell("📸 " + label + " — photo do", "Raat 8 baje se pehle photo de dein. 8 baje hisaab: jo reh gaya us ke minute apps band."),
     ]
 
 # ---------------------------------------------------------------- 1) 💧 Paani (purana macro badla)
@@ -81,14 +91,14 @@ _due = _a[11]; assert _due['m_classType'] == 'IfConditionAction' and _due['m_con
 _due['m_constraintList'].append(tod(*PWIN))                      # v61: sirf 9 am – 9 pm (raat 9 ke baad paani ki yaad / photo nahi)
 _d = next(i for i, x in enumerate(_a) if x.get('m_classType') == 'ElseIfConfirmedThenAction'); assert _a[_d - 1]['m_classType'] == 'IfConditionAction'
 _dl = _a[_d]; _dl['positiveText'] = '📸 Photo do'; _dl['negativeText'] = '⏰ Baad mein'
-_dl['text'] = _dl['text'].replace('{v=qoul}<br><br>', '{v=qoul}<br><br>📸 <b>10 min mein paani ke glass ki photo</b> — warna apps band.<br>')
+_dl['text'] = _dl['text'].replace('{v=qoul}<br><br>', '{v=qoul}<br><br>📸 <b>Photo = 1 bottle</b> (hadaf ' + str(GOAL) + '). Raat 8 baje: har kam bottle = ' + str(PER) + ' min apps band.<br>')
 _e = next(i for i in range(_d, len(_a)) if _a[i]['m_classType'] == 'ElseAction'); _end = next(i for i in range(_e, len(_a)) if _a[i]['m_classType'] == 'EndIfAction')
 assert _a[_d + 1].get('m_intValueIncrement') and _a[_d + 1]['m_variable']['m_name'] == 'pnCount'
 _yes = [*OPEN, expr("pnDue", NOW + "+" + str(GAP_PAANI)), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "pnSnz", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False}]
 _no = [expr("pnDue", NOW + "+" + str(GAP_PAANI)), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "pnSnz", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False},
-       toast("⏳ 10 min mein photo — warna apps band")]
+       toast("⏰ Theek — 8 baje se pehle photo de dein")]
 _a[_d - 1:_end] = pending("paani", "💧 Paani") + [_a[_d - 1], _dl] + _yes + [_a[_e]] + _no   # pnCount ab sirf sahi photo par (lock macro, webhook)
-PA['macro']['m_description'] = "💧 Har 40 min paani (9 am – 9 pm). Popup ka 📸 = Blue Khata ka live camera + AI. 10 min mein photo nahi = 📸 Sehat lock. Glass ki ginti sirf sahi photo par."
+PA['macro']['m_description'] = "💧 Har 1 ghanta paani (9 am – 8 pm). Popup ka 📸 = Blue Khata ka live camera + AI. Sahi photo = 1 bottle. Raat 8 baje hisaab (📸 Sehat lock)."
 PA['globalVariables'] += [var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shOp", 2)]
 
 # ---------------------------------------------------------------- 2) ☕ Coffee · 🍎 Fruit · 🥜 Nuts
@@ -102,7 +112,7 @@ assert len(SHOWOK) == 4
 #   (Pakistan din = (system_time+18000)/86400) -> us din us cheez ka reminder nahi.
 ka = [expr("dNum", "(" + NOW + "+18000)/86400", True)] + [expr("ag" + kd, "{lv=dNum}-{v=kd" + kd + "}", True) for kd in ("coffee", "fruit", "nuts")]
 for k, h, mi, kind, t, msg in ITEMS:
-    ka += [iff([trig(k, f"{h % 12 or 12}:{mi:02d} PM"), gt("ag" + kind, 0, True)]), sstr("kpK", kind), sstr("kpT", t), sstr("kpM", msg),
+    ka += [iff([trig(k, f"{h % 12 or 12}:{mi:02d} PM"), strne("sd" + kind, DAY)]), sstr("kpK", kind), sstr("kpT", t), sstr("kpM", msg),
            {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": True},
            expr("kpSetAt", NOW), END]
 ka += [
@@ -110,48 +120,61 @@ ka += [
     iff([{"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_booleanValue": True}, gt("kpAge", 10800)]),
       {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False},   # 3 ghante purani yaad = chhor do
     END,
-    iff([{"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_booleanValue": True}, strne("kpK", ""), tod(*WIN)] + copy.deepcopy(SHOWOK)),
+    iff([{"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_booleanValue": True}, strne("kpK", ""), tod(*RWIN)] + copy.deepcopy(SHOWOK)),
       {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False},
       *[x for x in pending("{v=kpK}", "{v=kpT}")],
-      iff([never()]), dlg("{v=kpT}", "{v=kpM}<br><br>📸 <b>10 min mein photo</b> — warna apps band (10 → 30 → 60 min).", "📸 Photo do", "⏰ Baad mein"),
+      iff([never()]), dlg("{v=kpT}", "{v=kpM}<br><br>📸 <b>8 baje se pehle photo</b> — warna raat 8 baje is ke minute apps band.", "📸 Photo do", "⏰ Baad mein"),
         *OPEN,
-      ELSE, toast("⏳ 10 min mein photo — warna apps band"), END,
+      ELSE, toast("⏰ Theek — 8 baje se pehle photo de dein"), END,
     END,
 ]
 KH = {"macroExportVersion": 1, "macro": {
     "m_name": "☕ Coffee · Fruit · Nuts",
-    "m_description": "2:00 coffee · 2:30 fruit · 4:00 nuts — bell + popup '📸 Photo do' (Blue Khata live camera + AI). 10 min mein photo nahi = 📸 Sehat lock. Khana / 5:30 hata. Bolta nahi.",
+    "m_description": "2:00 coffee · 2:30 fruit · 4:00 nuts — bell + popup '📸 Photo do' (Blue Khata live camera + AI). Photo 8 baje se pehle; na di = raat 8 baje ke hisaab mein minute. Bolta nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lvar("never", 0), lvar("dNum"), lvar("agcoffee"), lvar("agfruit"), lvar("agnuts")],
     "m_triggerList": [{"m_classType": "TimerTrigger", "m_SIGUID": k, "m_hour": h, "m_minute": mi, "m_daysOfWeek": [True] * 7, "m_useAlarm": True} for k, h, mi, *_ in ITEMS]
                      + [{"m_classType": "RegularIntervalTrigger", "m_SIGUID": K4, "m_seconds": 60, "m_useAlarm": True},
                         {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": K5}],
     "m_actionList": ka, "m_constraintList": []},
-    "globalVariables": [var("kpK", 2), var("kpT", 2), var("kpM", 2), var("kpPend", 0), var("kpSetAt"), var("kpAge"), var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shOp", 2), var("kdcoffee"), var("kdfruit"), var("kdnuts")],
+    "globalVariables": [var("kpK", 2), var("kpT", 2), var("kpM", 2), var("kpPend", 0), var("kpSetAt"), var("kpAge"), var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shOp", 2), var("kdcoffee"), var("kdfruit"), var("kdnuts"), var("sdcoffee", 2), var("sdfruit", 2), var("sdnuts", 2)],
     "userIcons": None}
 
 # ---------------------------------------------------------------- 3) 📸 Sehat lock
-T1, T2, T3, T4 = 112233445566761, 112233445566762, 112233445566763, 112233445566764
+T1, T2, T3, T4, T5 = 112233445566761, 112233445566762, 112233445566763, 112233445566764, 112233445566765
 WH = {"m_classType": "WebHookTrigger", "m_SIGUID": T3, "identifier": "nt_sehat", "variableWhiteListEnabled": True, "variableWhiteList": ["shOk", "shZ", "shT"]}
-OKDONE = [sint("shDue", 0), sint("shLock", 0), sint("shLv", 0), sint("shN", 0), FTHIDE,
-          iff([streq("shK", "paani")]), inc("pnCount"), END,
-          bell("✅ Shabash! Photo ho gayi", "Phone khula hai. Agli yaad par phir photo.", silent=True),
-          *patti("✅ Shabash! Photo sahi — phone khul gaya")]
-LOCKNOW = [
-    iff([lt("shLv", 1)]), expr("shLock", NOW + "+" + str(LOCKS[0])), END,
-    iff([gt("shLv", 0), lt("shLv", 2)]), expr("shLock", NOW + "+" + str(LOCKS[1])), END,
-    iff([gt("shLv", 1)]), expr("shLock", NOW + "+" + str(LOCKS[2])), END,
-    expr("shDue", "{v=shLock}+" + str(PHOTO_SEC)),                 # lock ke baad phir 10 min ka mauqa — phir bhi nahi = agla (lamba) lock
-    iff([lt("shLv", 2)]), inc("shLv"), END,
-    sint("shLkA", 1),                                              # v57: lock lagte hi photo ka sawal (abhi ya agli dafa phone kholte hi)
-    expr("lMin", "({v=shLock}-" + NOW + ")/60", True),
-    bell("⛔ Apps band — {lv=lMin} min", "Photo nahi di. 📸 Photo do to abhi khul jayega (Blue Khata)."),
-    *patti("⛔ Apps {lv=lMin} min band — 📸 photo do to khulega"),
+# v69: aaj ki bottle ki apni ginti (shPc, din shPd) — pnCount paani ke popup par reset hota hai, is par 8 baje ka hisaab nahi chhorte
+PCINC = [iff([strne("shPd", DAY)]), sint("shPc", 0), sstr("shPd", DAY), END, inc("shPc")]
+# v69: sahi photo = sirf GINTI (shLock ko NAHI chhuta — 8 baje ke baad photo se lock nahi khulta)
+OKDONE = [sint("shDue", 0), sint("shN", 0), FTHIDE,
+          iff([streq("shK", "paani")]), inc("pnCount"), *PCINC, END,
+          *[y for k, _m, _l in FINE for y in (iff([streq("shK", k)]), sstr("sd" + k, DAY), END)],
+          bell("✅ Shabash! Photo gin li", "Raat 8 baje ke hisaab mein shamil.", silent=True),
+          *patti("✅ Shabash! Photo gin li")]
+EMG = [iff([strne("shEmDay", DAY)]), expr("shEm", NOW + "+600"), sstr("shEmDay", DAY), *patti("🚨 10 min sab khula — aaj ka zaroori"),
+       ELSE, *patti("🚨 Aaj ka zaroori pehle ho chuka"), END]
+# v69: RAAT 8 BAJE KA HISAAB — din mein ek dafa (shHd). pMin = reh gayi cheezon ke minute; shWhy = wajah (popup / patti mein).
+HISAAB = [
+    sstr("shHd", DAY), expr("pMin", "0", True), sstr("shWhy", ""),
+    *[y for k, m, l in FINE for y in (iff([strne("sd" + k, DAY)]), expr("pMin", "{lv=pMin}+" + str(m), True), sstr("shWhy", "{v=shWhy} " + l + " " + str(m) + " ·"), END)],
+    iff([strne("shPd", DAY)]), sint("shPc", 0), END,
+    expr("pMs", str(GOAL) + "-{v=shPc}", True),
+    iff([gt("pMs", 0, True)]), expr("pMin", "{lv=pMin}+{lv=pMs}*" + str(PER), True), sstr("shWhy", "{v=shWhy} 💧 {lv=pMs} bottle kam {lv=pMs}x" + str(PER) + " ·"), END,
+    iff([gt("pMin", 0, True)]),
+      iff([gt("pMin", 170, True)]), expr("pMin", "170", True), END,          # hifazat: kabhi 170 min se zyada nahi (asal zyada se zyada 160)
+      expr("shLock", NOW + "+{lv=pMin}*60"), sint("shLkA", 1),
+      bell("⛔ Apps {lv=pMin} min band", "Aaj reh gaya:{v=shWhy} — minute poore hone par khud khul jayengi."),
+      *patti("⛔ Apps {lv=pMin} min band —{v=shWhy}"),
+    ELSE,
+      sint("shLock", 0),
+      bell("✅ Aaj sab poora — shabash!", "Coffee, fruit, nuts aur " + str(GOAL) + " bottle paani. Koi app band nahi.", silent=True),
+      *patti("✅ Aaj sab poora — koi app band nahi"),
+    END,
 ]
 ASK = [   # band app khuli: popup — "📸 Photo do" (camera + 🚨 zaroori wahi Blue Khata mein). Timeout / Theek hai = kuch nahi.
     expr("shAsk", NOW), sint("shLkA", 0),
-    iff([never()]), dlg("⛔ Sehat lock — {lv=lMin} min baqi", "{v=shK} ki photo nahi di.<br>📸 <b>Photo do</b> = abhi khul jayega.<br>🚨 Zaroori kaam ho to Blue Khata mein 10 min ka button.", "📸 Photo do", "Theek hai", 15),
-      *OPEN,
+    iff([never()]), dlg("⛔ Sehat lock — {lv=lMin} min baqi", "Aaj reh gaya:{v=shWhy}<br>Minute poore hone par apps khud khul jayengi.<br>🚨 Zaroori kaam = 10 min (din mein 1 dafa).", "🚨 10 min zaroori", "Theek hai", 15),
+      *EMG,
     ELSE, END,
     expr("shAsk", NOW + "-18"),   # v58: popup band hote hi sirf 2 s ki chhoot (MacroDroid ki khirki ke liye 20 s ka qaida popup KHULA rehne tak)
 ]
@@ -173,18 +196,17 @@ for _k, _l in KINDS:
     APPOK += [iff([streq("shOk", "a:" + _k), lt("tAge", 181, True), gt("tAge", -181, True)]), sstr("shOk", ""), sint("shT", 0),
                 iff([gt("shN", 0), streq("shK", _k)]), *OKDONE,
                 ELSE,
-                  *([inc("pnCount")] if _k == "paani" else []),
+                  *([inc("pnCount"), *PCINC] if _k == "paani" else []),
                   iff([gt("shN", 0)]), *patti("✅ " + _l + " gin li — {v=shK} ki photo abhi baqi"),
-                  ELSE, *patti("✅ " + _l + (" gin liya — agli yaad 40 min baad" if _k == "paani" else " — aaj is ki yaad nahi aayegi")), END,
+                  ELSE, *patti("✅ " + _l + (" gin liya — agli yaad 1 ghanta baad" if _k == "paani" else " — aaj is ki yaad nahi aayegi")), END,
                 END,
                 *([expr("pnDue", NOW + "+" + str(GAP_PAANI)), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "pnSnz", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False}] if _k == "paani"
-                  else [expr("kd" + _k, "{lv=dNum}"), iff([streq("kpK", _k)]), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False}, END]),
+                  else [expr("kd" + _k, "{lv=dNum}"), sstr("sd" + _k, DAY), iff([streq("kpK", _k)]), {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "kpPend", "m_type": 0, "isLocalVar": False}, "m_newBooleanValue": False}, END]),
               END]
 la = [
     iff([trig(T3, "Webhook")]),
       iff([streq("shZ", "1")]), sstr("shZ", ""),
-        iff([strne("shEmDay", "{dayofmonth}")]), expr("shEm", NOW + "+600"), sstr("shEmDay", "{dayofmonth}"), *patti("🚨 10 min sab khula — aaj ka zaroori"),
-        ELSE, *patti("🚨 Aaj ka zaroori pehle ho chuka"), END,
+        *EMG,
       END,
       iff([gt("shN", 0), streq("shOk", "{v=shN}")]), sstr("shOk", ""), *OKDONE, END,
       *APPOK,
@@ -195,11 +217,8 @@ la = [
         *patti("🌱 Claude 30 minute khuli — baqi apps pehle jaisi"),
       END,
     ELSE,
+      iff([tod(20, 0, 20, 59), strne("shHd", DAY)]), *HISAAB, END,     # v69: raat 8 baje ka hisaab (din mein ek dafa)
       iff([tod(*WIN)]),
-        expr("dAge", NOW + "-{v=shDue}", True),
-        iff([gt("shDue", 0), gt("dAge", 10800, True)]), sint("shDue", 0), sint("shLock", 0), sint("shLv", 0), sint("shN", 0), END,   # raat / purani yaad = saaf
-        expr("dAge", NOW + "-{v=shDue}", True), expr("lLeft", "{v=shLock}-" + NOW, True),
-        iff([gt("shDue", 0), gt("dAge", -1, True), lt("lLeft", 1, True)]), *LOCKNOW, END,
         expr("lLeft", "{v=shLock}-" + NOW, True), expr("emL", "{v=shEm}-" + NOW, True),
         iff([gt("lLeft", 0, True), lt("emL", 1, True)]),
           pause(1),
@@ -207,7 +226,7 @@ la = [
             expr("askAge", NOW + "-{v=shAsk}", True),
             iff([gt("askAge", 20, True), lt("cx", 1, True)]),
               HOME, expr("lMin", "({v=shLock}-" + NOW + ")/60", True),
-              iff([trig(T2, "App khuli")]), *ASK, ELSE, *patti("⛔ Apps band — 📸 photo do to khulega"), END,
+              iff([trig(T2, "App khuli")]), *ASK, ELSE, *patti("⛔ Apps band — {lv=lMin} min baqi"), END,
             END,
           END,
         END,
@@ -241,14 +260,15 @@ la = [
 ]
 SL = {"macroExportVersion": 1, "macro": {
     "m_name": "📸 Sehat lock",
-    "m_description": "Paani / coffee / fruit / nuts ki photo 10 min mein nahi = SIRF raat wali list ki apps band 10 → 30 → 60 min (WhatsApp, call, bank, Chrome, Blue Khata khuli). Blue Khata mein sahi photo (AI) = foran khul jata hai. 🚨 din mein 1 dafa 10 min. 11 am – 9 pm. 🌱 Sabzi ki sahi photo = sirf Claude 30 min.",
+    "m_description": "Din mein apps band nahi. Raat 8 baje hisaab: coffee nahi 30 · fruit nahi 20 · nuts nahi 20 · paani hadaf 6 bottle, har kam bottle 15 min = utne minute SIRF raat wali list ki apps band (WhatsApp, call, bank, Chrome, Blue Khata khuli). 8 baje ke baad photo se nahi khulta. 🚨 din mein 1 dafa 10 min. 🌱 Sabzi ki sahi photo = sirf Claude 30 min.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [lvar("dAge"), lvar("lLeft"), lvar("emL"), lvar("askAge"), lvar("lMin"), lvar("never", 0), lvar("dMin"), lvar("gdAge"), lvar("tAge"), lvar("dNum"), lvar("okL"), lvar("cx")],
+    "localVariables": [lvar("dAge"), lvar("lLeft"), lvar("emL"), lvar("askAge"), lvar("lMin"), lvar("never", 0), lvar("dMin"), lvar("gdAge"), lvar("tAge"), lvar("dNum"), lvar("okL"), lvar("cx"), lvar("pMin"), lvar("pMs")],
     "m_triggerList": [{"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 30, "m_useAlarm": False},
                       {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "isAllApps": False, "m_packageNameList": PK, "m_applicationNameList": NM},
-                      WH, {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T4}],
+                      WH, {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T4},
+                      {"m_classType": "TimerTrigger", "m_SIGUID": T5, "m_hour": 20, "m_minute": 0, "m_daysOfWeek": [True] * 7, "m_useAlarm": True}],
     "m_actionList": la, "m_constraintList": []},
-    "globalVariables": [var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shLock"), var("shLv"), var("shOk", 2), var("shZ", 2), var("shEm"), var("shEmDay", 2), var("pnCount"), var("shOp", 2), var("shLkA"), var("shT"), var("shGd"), var("pnDue"), var("pnSnz", 0), var("kpPend", 0), var("kpK", 2), var("kdcoffee"), var("kdfruit"), var("kdnuts"), var("clOk"), var("clEm")],
+    "globalVariables": [var("shDue"), var("shN"), var("shK", 2), var("shAsk"), var("shLock"), var("shLv"), var("shOk", 2), var("shZ", 2), var("shEm"), var("shEmDay", 2), var("pnCount"), var("shOp", 2), var("shLkA"), var("shT"), var("shGd"), var("pnDue"), var("pnSnz", 0), var("kpPend", 0), var("kpK", 2), var("kdcoffee"), var("kdfruit"), var("kdnuts"), var("clOk"), var("clEm"), var("shHd", 2), var("shWhy", 2), var("shPc"), var("shPd", 2), var("sdcoffee", 2), var("sdfruit", 2), var("sdnuts", 2)],
     "userIcons": None}
 
 if __name__ == '__main__':

@@ -5497,3 +5497,17 @@ Sawal: 'POS minus kar raha hai ke nahi' — yani return do dafa to nahi kat raha
   bill / cancel / fraq / wapsi ke barabar hai. Saath: sale ke khate mein MINUS total wale bill hon to ⚠ (wahi wapsi '↩ Return' mein bhi ho = do dafa).
 - PC ki koi file nahi badli (plan mein PC jaanch likhi thi — app ke paas data pehle se tha, is liye PC nahi chhera). Daily ka hisaab nahi badla.
 - Test: node harness (5 raqmein: mil gaya a / b / d, Rs 181 ka farq = bill #). Asal data par malik dekhega. AI nahi.
+
+===== v2.351.0 + md pkg v69 (22 Nov 2026 raat) — 📸 Sehat lock: raat 8 baje ka hisaab =====
+Malik: 'paani wala — time aik ghanta · on kar do' phir 'coffee / fruit · in par mobile apps 8 baje · fruit 20 · coffee 30 · paani jitna kam utne minute ·
+bottle 15 minute'. Sawal (4) -> jawab: sirf 8 baje · nuts 20 · har chhooti bottle 15 min · hadaf 6 bottle -> plan -> 'Ok dehan se banana'.
+- md/tools/sehat.py: DIN MEIN APPS BAND NAHI (purana 10 min -> 10/30/60 lock, shDue / LOCKNOW hata). Paani ki yaad har 1 ghanta (9 am - 8 pm).
+  Sahi photo = sirf ginti: paani shPc (din shPd), coffee / fruit / nuts sd<kind> = '{dayofmonth}'. Din ki pehchan sirf {dayofmonth} string se.
+- 📸 Sehat lock macro: naya TimerTrigger 20:00 (alarm) -> HISAAB (din mein ek dafa shHd; timer chooke to 20:00-20:59 ki pehli jaanch):
+  coffee nahi 30 + fruit nahi 20 + nuts nahi 20 + (6 - bottle) x 15 -> shLock = abhi + minute (hadd 170) -> WAHI purana chowkidar (raatband.PK list).
+  Sab poora = koi app band nahi. 8 baje ke baad photo gin li jati hai magar lock NAHI khulta. Lock ka popup: wajah (shWhy) + '🚨 10 min zaroori' (din mein 1).
+  Lock sirf 20:00-23:59 ke andar kaat-ta hai (WIN). 🌱 Sabzi = Claude 30 min wahi.
+- pkg v69: msl wapas macros mein, off se hata. App: sehat.js / sw.js ki likhai 'Gin li — raat 8 baje ke hisaab mein shamil'.
+- Test: /tmp/sim69.py jaisa Python simulator (lock macro ki action list chala kar) — 17 jaanch: 160 min · 50 min · sab poora 0 · dobara hisaab nahi ·
+  8 ke baad photo se nahi khulta · zaroori 10 min · agle din ginti nayi · din mein purane shLock se kuch band nahi. Block balance + har variable declared.
+  ASAL PHONE PAR NAHI AZMAYA — pehli raat 8 baje ka nateeja malik se poochho. AI sirf photo dekhne mein (pehle jaisa).
