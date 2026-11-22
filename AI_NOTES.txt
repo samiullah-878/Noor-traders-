@@ -9486,3 +9486,13 @@ App sale-rep.js v1.2: section '➕➖ Items se hisaab' — Plus kul (cash / udha
   ↩ Wapsi (smartFind search, likhte waqt khirki dobara nahi) + PDF tables + thermal lines. itSafe: is hisse ki ghalti poori report na roke.
 SIRF DIKHANA — Daily Sale / auto sale ka qaida nahi badla (malik nateeja dekh kar A / B / C chunega, alag OK).
 Test: node — itAgg namoona data (PASS), report html / itCalc / search / PDF / slip (PASS). Asal POS / phone par nahi azmaya. AI nahi.
+
+=== v2.353.0 (22 Nov 2026) — 🎓 VIDEO SAMJHAO (video-sam.js v1.0) ===
+Malik: 'YouTube ki videos mein bohat se alfaz Hindi mein hain, samajh nahi aati · har 2-3 minute ke hisaab se explain karo · kal ko aur videos bhi hain · saath audio mein aa jaye'.
+- ☰ 🎓 Video samjhao (#vsNav, sirf malik) -> video-sam.js apni <dialog id=vsDlg> (window.ntVsClose).
+- YouTube link + 'kahan se' (53:44) -> Gemini generateContent (app ki AI key, shAiCfg) ko link SEEDHA (file_data.file_uri + video_metadata start/end offset) -> 15 minute ka tukra, har 2-3 minute ka hissa: r Roman Urdu (screen) · u Urdu harf (sirf awaz) · w mushkil lafz = matlab. '➡ Aage 15 min' agla tukra.
+- 🔊 awaz = phone ki apni speechSynthesis (ur-PK) — ▶ har hissa / ▶ Sab sunao / ⏸ / raftar chip (Aahista · Aam · Tez). Kisi ki awaz ki naqal nahi; audio file nahi banti.
+- Samjhi hui videos sirf isi phone par (localStorage sam-vs-list, aakhri 12). Firestore / rules / PC: kuch nahi. Video download / repo mein upload KAHIN nahi.
+- Fallback: HTTP 400 = pehle mediaResolution, phir video_metadata, phir JSON mime hata kar dobara; 404 = agla model; 429 = saaf paigham; 4 min hadd.
+- TEST: sirf helpers (link / waqt / JSON parse) node se. Asal Gemini video call aur phone ki Urdu awaz yahan se azmai NAHI — malik ki pehli video ka nateeja poochho.
+- AI: HAAN (Gemini).
