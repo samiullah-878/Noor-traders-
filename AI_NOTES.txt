@@ -9445,3 +9445,7 @@ Malik (parchi ki photo): "is par bill ki photo bhi aani chahiye". purchaseSlip: 
   billPhotos[0] (entry par ya entryPhotos/<id>), photoRaster(512, 480, crop 0) — bill kaata nahi jata, lambai ~6.8 cm tak.
   goodsPhoto(e, key) ab key leta hai. printPurchases: pn.billPhotos > 0 aur tasveer na aayi = 3 min intezar. Dobara print mein bhi.
   12 Oct ka 'Bill ki tasveer NAHI' mansookh. Kaghaz ~6-7 cm zyada (malik ko bataya, OK). Asal printer par nahi azmaya. AI nahi.
+
+=== md pkg v68 (2026-11-22) — ⏸ 📸 Sehat lock RUKA (malik: 'wo off kar do paani coffee wala'). App / PC nahi badle. ===
+msl pkg ke macros se bahar + off mein (v62 jaisa). Apps band hona (paani / coffee / fruit / nuts) ruka; yaad ke popup (💧 Paani, ☕ Coffee · Fruit · Nuts) wahi.
+Malik 'chalu karo' kahe tabhi wapas (msl macros mein + off se hatao). Yaad ke popup bhi band karne hon to malik se poochha hai — jawab ka intezar.
