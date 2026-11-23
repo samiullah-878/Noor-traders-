@@ -5626,3 +5626,5 @@ PC: live-cam v2.3 — blueAccess/sabRec {on, g, gn, kd, st, end}; srStart = ek f
     bill-clip v2.22 / kh-wa v1.16: billClip.rkd < 1 = ghante (0.125 = 3 ghante, min 180 min). wa-out v1.34 sirf dobara shuru.
 App: tally.js openWg mein sbHTML / sbSave / sbPaintSt (ON = confirm + rkd 0.125) · cloud getSabRec / setSabRec · pc-drives DAYS mein '3 ghante' + kam karne par confirm · Camera setup Save rkd 0.125 nahi bigarta.
 Azmaya: node --check, ffmpeg (2 TCP mpegts -> xstack -> segment, 'q' se saaf band, moov pehle). Asal NVR / WhatsApp group / PC ka CPU bojh nahi azmaya. AI nahi. Rules nahi badle.
+
+=== 2026-11-23 (app v2.368.0) — PC koi file nahi badli (Live dabbe + Video samjhao sirf app). ===

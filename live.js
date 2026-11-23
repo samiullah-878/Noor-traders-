@@ -22,6 +22,9 @@ const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
 let xcs = [];   // v2.329.0: 📹 mazeed cameras (chip par 📹)
+// v2.368.0: 🎛 DABBE SCREEN KE HISAAB SE (malik 23 Nov: 'dabbon ka size screen ke mutabiq adjust · upar neeche aur chhota bara apni marzi se'): PC ki EK mosaic video
+//   app mein har camera ka alag dabba (canvas, `TL`) — video ke us hisse se khinchta hai. ▦ chip = Auto (sab dabbe bina scroll ke sab se bare) · 1 · 2 · 3 fi qatar
+//   ('sam-lv-cols'); dabba daba kar rakho = ▲ ▼ ✓ (tarteeb 'sam-lv-ord:<@sab|@godam>', sirf is phone par). Tap = wohi camera akela (pehle jaisa). PC nahi badla.
 const GD = '@godam', ALL = '@sab', isMoP = p => p === GD || p === ALL; let MO = null, moBack = false, moHome = GD;   // v2.348.0: 🏬 sab godam cameras ek video
 const lvLbl = p => p === ALL ? '🎛 Sab cameras' : p === GD ? '🏬 Godam (sab)' : `${xcs.includes(p) ? '📹' : '🖥'} ${esc(p)}`, lvName = p => p === ALL ? 'Sab cameras' : p === GD ? 'Godam cameras' : p;
 let cloud = null, notice = () => {}, list = [], cur = '', S = null, pcSt = null, pcStop = null, VP8 = false;   // VP8: v2.223.0 phone H.264 na chala sake to
@@ -35,12 +38,14 @@ export function openLive(o) {
   if (!d) { d = document.createElement('dialog'); d.id = 'lvDlg'; d.className = 'lv-dlg'; document.body.append(d); d.addEventListener('cancel', ev => { ev.preventDefault(); closeLive(); }); }
   d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}${isMoP(p) ? ' lv-gd' : ''}">${lvLbl(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
     <div class="lv-body"><video id="lvVid" playsinline muted autoplay></video><div class="lv-st" id="lvSt">⏳ jor raha…</div><div class="lv-shot" id="lvShot" hidden></div><div class="lv-bill" id="lvBill" ${bOn() ? '' : 'hidden'}></div>
-      <div class="lv-tools"><button type="button" class="lv-mob" id="lvMoB" data-lv-mob="1" hidden>‹ 🏬 Sab</button><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
+      <div class="lv-tools"><button type="button" class="lv-mob" id="lvMoB" data-lv-mob="1" hidden>‹ 🏬 Sab</button><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" class="lv-cols" id="lvCols" data-lv-cols="1" hidden>▦ Auto</button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
   d.onclick = ev => {
     const t = ev.target;
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
     const c = t.closest('[data-lv-pc]'); if (c) { cur = c.dataset.lvPc; moBack = false; if (isMoP(cur)) moHome = cur; d.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x === c)); start(); return; }
-    const mt = t.closest('[data-lv-mo]'); if (mt) { moGo(mt.dataset.lvMo); return; }   // v2.348.0: khane par tap = wohi camera akela
+    const mv = t.closest('[data-lv-mv]'); if (mv) { const b = mv.closest('.lv-mot'); if (b) tlMove(b, Number(mv.dataset.lvMv)); return; }   // v2.368.0
+    if (t.closest('[data-lv-cols]')) { const L = ['a', '1', '2', '3'], nx = L[(L.indexOf(tlCols()) + 1) % L.length]; try { localStorage.setItem(TL_K, nx); } catch {} tlLayout(); return; }
+    const mt = t.closest('[data-lv-mo]'); if (mt) { if (Date.now() - TL.lpT < 700) return; if (TL.arr) { tlMove(TL.arr, 0); return; } moGo(mt.dataset.lvMo); return; }   // v2.348.0: khane par tap = wohi camera akela
     if (t.closest('[data-lv-mob]')) { moGo(moHome); return; }
     if (t.closest('[data-lv-re]')) { start(); return; }
     const qb = t.closest('[data-lv-q]'); if (qb) { notice(qb.dataset.why || ''); return; }   // v2.322.0: 🩺 poori baat
@@ -64,7 +69,7 @@ function stop(sendEnd) {
   if (sendEnd && s.id && cloud.liveEnd) cloud.liveEnd(s.id).catch(() => {});
   const v = $('lvVid'); if (v) v.srcObject = null;
 }
-export function closeLive() { RES = false; MO = null; moBack = false; tbStop(); billStop(); stop(true); const d = $('lvDlg'); try { d?.close(); } catch { d?.removeAttribute('open'); } try { pcStop && pcStop(); } catch {} pcStop = null; }
+export function closeLive() { RES = false; MO = null; moBack = false; tlStop(); tbStop(); billStop(); stop(true); const d = $('lvDlg'); try { d?.close(); } catch { d?.removeAttribute('open'); } try { pcStop && pcStop(); } catch {} pcStop = null; }
 window.ntLvClose = () => { const d = $('lvDlg'); if (!d?.open) return false; if (moBack && !isMoP(cur)) { moGo(moHome); return true; } closeLive(); return true; };   // v2.348.0: pehle wapas sab godam
 function moGo(p) {   // v2.348.0
   if (isMoP(p)) { moBack = false; moHome = p; } else moBack = true; cur = p;
@@ -72,14 +77,62 @@ function moGo(p) {   // v2.348.0
 }
 function moPaint(mo) {   // v2.348.0: video ke upar har khane par naam — tap = wohi camera
   const body = $('lvDlg')?.querySelector('.lv-body'); if (!body) return; let e = $('lvMo');
-  if (!mo || !Array.isArray(mo.n) || !mo.n.length) { if (e) e.remove(); tbStop(); return; }
+  if (!mo || !Array.isArray(mo.n) || !mo.n.length) { if (e) e.remove(); tlStop(); tbStop(); const cb = $('lvCols'); if (cb) cb.hidden = true; return; }
   const c = Math.max(1, Number(mo.c) || 1), r = Math.max(1, Number(mo.r) || 1), sig = JSON.stringify([c, r, mo.n, mo.k || 0, mo.g || 0]), K = Array.isArray(mo.k) ? mo.k : [];
   if (e && e.dataset.sig === sig) return;
-  if (!e) { e = document.createElement('div'); e.id = 'lvMo'; e.className = 'lv-mo'; const v = $('lvVid'); v ? v.after(e) : body.append(e); }
-  e.dataset.sig = sig; e.style.setProperty('--arw', String(c * (Number(mo.tw) || 448))); e.style.setProperty('--arh', String(r * (Number(mo.th) || 252)));
-  let h = ''; for (let i = 0; i < c * r; i++) h += i < mo.n.length ? `<button type="button" class="lv-mot" data-lv-mo="${esc(mo.n[i])}"><span>${K[i] === 'c' ? '🖥 ' : K[i] === 'g' ? '🏬 ' : K.length ? '📹 ' : ''}${esc(mo.n[i])}</span><div class="lv-tb" data-tb="${i}"></div></button>` : '<i></i>';
-  e.innerHTML = `<div class="lv-mog" style="grid-template-columns:repeat(${c},1fr);grid-template-rows:repeat(${r},1fr)">${h}</div>`;
+  if (!e) { e = document.createElement('div'); e.id = 'lvMo'; e.className = 'lv-mo tl'; const v = $('lvVid'); v ? v.after(e) : body.append(e); tlWire(e); }
+  e.dataset.sig = sig; TL.mo = mo; TL.c = c; TL.r = r;
+  e.innerHTML = `<div class="lv-tlg">${tlOrder(mo).map(i => `<button type="button" class="lv-mot" data-lv-mo="${esc(mo.n[i])}" data-i="${i}"><canvas></canvas><span>${K[i] === 'c' ? '🖥 ' : K[i] === 'g' ? '🏬 ' : K.length ? '📹 ' : ''}${esc(mo.n[i])}</span><div class="lv-tb" data-tb="${i}"></div><div class="lv-mv"><b data-lv-mv="-1">▲</b><b data-lv-mv="1">▼</b><b data-lv-mv="0">✓</b></div></button>`).join('')}</div>`;
+  const cb = $('lvCols'); if (cb) cb.hidden = false;
+  tlLayout(); tlDraw();
+  try { if (!localStorage.getItem('sam-lv-tlh')) { localStorage.setItem('sam-lv-tlh', '1'); notice('💡 Dabba daba kar rakhein = ▲ ▼ se upar neeche · ▦ = ek qatar mein kitne dabbe'); } } catch {}
   tbSync(cur === ALL ? mo : null);
+}
+
+// ---------- 🎛 v2.368.0: dabbe — PC ki ek mosaic video se har camera ka alag canvas ----------
+const TL_K = 'sam-lv-cols', tlOrdK = () => 'sam-lv-ord:' + cur;
+let TL = { mo: null, c: 1, r: 1, t: 0, ro: null, lpT: 0, arr: null };
+const tlCols = () => { try { const v = localStorage.getItem(TL_K) || 'a'; return ['a', '1', '2', '3'].includes(v) ? v : 'a'; } catch { return 'a'; } };
+function tlOrder(mo) {   // dikhane ki tarteeb = mosaic ke index; nayi camera aakhir mein
+  let ord = []; try { ord = JSON.parse(localStorage.getItem(tlOrdK()) || '[]'); } catch {} if (!Array.isArray(ord)) ord = [];
+  const pos = i => { const j = ord.indexOf(mo.n[i]); return j < 0 ? 1e6 + i : j; };
+  return mo.n.map((_, i) => i).sort((a, b) => pos(a) - pos(b));
+}
+function tlStop() { clearTimeout(TL.t); try { TL.ro && TL.ro.disconnect(); } catch {} TL = { mo: null, c: 1, r: 1, t: 0, ro: null, lpT: 0, arr: null }; }
+function tlLayout() {   // Auto = sab dabbe bina scroll ke sab se bare · 1 / 2 / 3 = itne fi qatar (poori chaurai, zaroorat ho to scroll)
+  const e = $('lvMo'), g = e && e.querySelector('.lv-tlg'), mo = TL.mo; if (!g || !mo) return;
+  const n = mo.n.length, ar = (Number(mo.th) || 252) / (Number(mo.tw) || 448), gap = 3, W = Math.max(120, e.clientWidth - 6), H = Math.max(120, e.clientHeight - 56), set = tlCols();
+  let best = 1, bw = 0;
+  if (set === 'a') { for (let c = 1; c <= Math.min(n, 4); c++) { const rows = Math.ceil(n / c), w = Math.min((W - gap * (c - 1)) / c, (H - gap * (rows - 1)) / rows / ar); if (w > bw + 0.5) { bw = w; best = c; } } }
+  else { best = Math.min(n, Number(set)); bw = (W - gap * (best - 1)) / best; }
+  bw = Math.max(90, Math.floor(bw));
+  g.style.gridTemplateColumns = `repeat(${best},${bw}px)`; g.style.setProperty('--th', Math.round(bw * ar) + 'px');
+  const cb = $('lvCols'); if (cb) cb.textContent = '▦ ' + (set === 'a' ? 'Auto' : set);
+}
+function tlDraw() {   // ~10 dafa fi second video ke har hisse ko us ke dabbe mein (PC 6-8 fps bhejta hai)
+  clearTimeout(TL.t); const mo = TL.mo, e = $('lvMo'), v = $('lvVid'); if (!mo || !e || !v) return;
+  if (!document.hidden && v.videoWidth && v.videoHeight) {
+    const sw = v.videoWidth / TL.c, sh = v.videoHeight / TL.r, W = Math.round(sw), H = Math.round(sh);
+    for (const b of e.querySelectorAll('.lv-mot')) { const i = Number(b.dataset.i), cv = b.firstElementChild; if (!cv || cv.tagName !== 'CANVAS') continue;
+      if (cv.width !== W || cv.height !== H) { cv.width = W; cv.height = H; }
+      try { cv.getContext('2d', { alpha: false }).drawImage(v, (i % TL.c) * sw, Math.floor(i / TL.c) * sh, sw, sh, 0, 0, W, H); } catch {} }
+  }
+  TL.t = setTimeout(tlDraw, 100);
+}
+function tlWire(e) {   // lamba dabana (½ s) = ▲ ▼ ✓
+  let tm = 0, x0 = 0, y0 = 0; const cancel = () => { clearTimeout(tm); tm = 0; };
+  e.addEventListener('pointerdown', ev => { const b = ev.target.closest('.lv-mot'); if (!b || ev.target.closest('[data-lv-mv]')) return; x0 = ev.clientX; y0 = ev.clientY; cancel();
+    tm = setTimeout(() => { tm = 0; TL.lpT = Date.now(); e.querySelectorAll('.lv-mot.is-ar').forEach(x => x.classList.remove('is-ar')); b.classList.add('is-ar'); TL.arr = b; try { navigator.vibrate && navigator.vibrate(25); } catch {} }, 520); });
+  e.addEventListener('pointermove', ev => { if (tm && Math.hypot(ev.clientX - x0, ev.clientY - y0) > 10) cancel(); });
+  e.addEventListener('pointerup', cancel); e.addEventListener('pointercancel', cancel); e.addEventListener('contextmenu', ev => ev.preventDefault());
+  try { TL.ro = new ResizeObserver(() => tlLayout()); TL.ro.observe(e); } catch {}
+}
+function tlMove(b, dir) {
+  if (!dir) { b.classList.remove('is-ar'); TL.arr = null; return; }
+  const g = b.parentElement; if (!g) return;
+  if (dir < 0) { const pv = b.previousElementSibling; if (pv) g.insertBefore(b, pv); } else { const nx = b.nextElementSibling; if (nx) g.insertBefore(nx, b); }
+  try { localStorage.setItem(tlOrdK(), JSON.stringify([...g.children].map(x => TL.mo && TL.mo.n[Number(x.dataset.i)]).filter(Boolean))); } catch {}
+  try { b.scrollIntoView({ block: 'nearest' }); } catch {}
 }
 
 // ---------- 🎛 v2.360.0: har khane ka apna data — counter = bill + POS screen · godam = gate pass ----------

@@ -9596,3 +9596,14 @@ Azmaya: node --check, ffmpeg (2 TCP mpegts -> xstack -> segment, 'q' se saaf ban
 === md pkg v73 (23 Nov 2026 raat) — 🧠 Falsafa / recording popup wapas (GHALTI) ===
 Malik: 'Paani wale ke saath tum ne wo recording wala pop bhi band kar diya hai'. Wajah: v72 mein Paani + Coffee macro band -> pnDue aage nahi barhta -> qaide.py ki shart 'Paani 2 min se door' hamesha jhooti -> Falsafa + 'Sona hai?' popup kabhi nahi aata.
 Hal: qaide.py PAANI_ON = False -> Paani wali sharten nahi (sirf unlock par popup). Paani / Coffee dobara chalu karo to PAANI_ON = True. Phone par azmaya nahi. AI nahi.
+
+=== v2.368.0 (23 Nov 2026 raat) — 🎛 Live dabbe screen ke hisaab se + 🎓 Video samjhao: link ka waqt khud, purana save ===
+Live (malik: 'dabbon ka size screen ke mutabiq adjust · upar neeche aur chhota bara apni marzi se'): live.js TL — PC ki EK mosaic video (Sab cameras / Godam) ke har khane ka app mein alag dabba
+  (canvas, har 100 ms video ke us hisse se drawImage; video neeche chalti rehti hai, dabbe upar). ▦ chip (lv-tools) = Auto (sab dabbe bina scroll sab se bare) · 1 · 2 · 3 fi qatar ('sam-lv-cols').
+  Dabba ½ s daba kar rakho = ▲ ▼ ✓ (tarteeb 'sam-lv-ord:<@sab|@godam>', sirf is phone par). Tap = wohi camera akela (pehle jaisa); bill / gate pass ki patti (lv-tb) wahi.
+  PC (live-cam) nahi badla. Test: Chrome + nakli 3x2 rangeen video — har dabbe mein sahi rang, ▲ se tarteeb, Auto / 1 / 2 / landscape 3. Asal NVR video par nahi azmaya.
+Video samjhao v1.6 (malik: 'naya link paste karein to time bhi khud us hisaab se aaye · purana save hi rahe apps mein'): link likhte / paste karte hi `urlAuto` — ?t= / start= ho to wohi waqt,
+  pehle samjhi video = khud khul jaye (AI nahi) + khana khali (= '🎬 Aage samjhao', jahan tak bani wahan se), nayi = 0:00. GHALTI theek: pehle waqt alag ho to 🎬 purani guftagu mita deta tha
+  (parts = []) aur saved video ki jagah khali likh deta tha — ab `mergeIn` (naya hissa purane mein, sirf usi waqt ke purane hisse badalte). Bani hui jagah ka waqt = wohi hissa khule (AI nahi).
+  Doosri video load ho rahi ho to nayi qatar mein (`S.queue`). Jagah bhar jaye to purani video hatti hai (pehle poori save chup-chaap fail). KEEP 25. ⋮ 📚 Purani videos.
+  Node test tOf / mergeIn PASS; asal phone par nahi azmaya. AI: wahi (Gemini sirf samjhane / awaz mein).
