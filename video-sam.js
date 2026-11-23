@@ -1,4 +1,9 @@
-// video-sam.js v1.2 (app v2.355.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// video-sam.js v1.3 (app v2.356.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// v1.3 (malik: 'yeh bhi video 15 minute ki hi hai, is se aage ki nahi'): AI 15 min ke tukre ke khatam hone ko 'video khatam' keh deta tha -> ab 'end' sirf tab
+//   maana jata hai jab tukra khali ho YA aakhri line tukre ke khatam se 90 s pehle ruke; purani ruki video par chip '▶ Video aage bhi hai'.
+//   🔊 Gemini awaz (malik: 'pehle sahi thi, ab ek hi hai'): do bolne wale pehchane jane ke baad do-awaz wali darkhwast 400 deti thi ('speech_metadata.speaker for each
+//   text part') -> ab har line alag part + speechMetadata.speaker (Gemini 3.x), na chale to purani shakal, phir bhi na chale to har bolne wale ki baat ek-awaz wale
+//   raaste se bana kar PCM jor dete hain. ⋮ → 🔊 Awaz chuno (sawal wala / jawab wala, 2 larki + 2 larka, dabao = chun li + namoona) — 'sam-vs-voice'.
 // v1.2 (malik 23 Nov, screenshot: har line 'Raj:' + English jumle + ek hi awaz · 'baar baar agla click na karna pare — auto banta rahe' · 'jis line par hon wo peeli'):
 //   bolne wala ab NAAM se (sp mein se) -> A / B · English / Hindi jumle ka TARJUMA Roman Urdu (English zyada / Urdu harf = ek dafa dobara maango) ·
 //   poori video khud load (MAXAUTO 40, ghalti par 3 dafa khud dobara) · chalti line peeli (.is-on — audio ke waqt se andaza, phone awaz mein pakki) ·
@@ -16,7 +21,10 @@ const API = 'https://generativelanguage.googleapis.com/v1beta';
 const LS = 'sam-vs-list', STEP = 900, KEEP = 12, MAXAUTO = 40;
 const FALLBACK = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.8-flash'];
 const TTS_FALL = ['gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
-const VOICE = { A: 'Kore', B: 'Charon' };          // A = zanana, B = mardana (Gemini ki bani banai awazein)
+// v1.3: awaz malik chunta hai (⋮ → 🔊 Awaz) — Gemini ki bani banai awazein, kisi asal insaan ki naqal nahi. Yaad 'sam-vs-voice' (is phone par).
+const VOICES = [['Kore', '👩 Larki 1'], ['Aoede', '👩 Larki 2'], ['Charon', '👨 Larka 1'], ['Puck', '👨 Larka 2']], VDEF = { A: 'Kore', B: 'Charon' };
+const voGet = () => { let o = {}; try { o = JSON.parse(localStorage.getItem('sam-vs-voice') || '{}') || {}; } catch {} const ok = x => VOICES.some(v => v[0] === x); return { A: ok(o.A) ? o.A : VDEF.A, B: ok(o.B) ? o.B : VDEF.B }; };
+const voKey = () => { const v = voGet(); return v.A === VDEF.A && v.B === VDEF.B ? '' : '|' + v.A + v.B; };
 const SPK = { A: 'Mezban', B: 'Mehman' };
 let A = null, S = null, AU = null;
 const $ = id => document.getElementById(id);
@@ -73,7 +81,7 @@ function audioBlob(b64, mime) {
   return new Blob([wavBytes(u, rate)], { type: 'audio/wav' });
 }
 const ttsText = p => linesOf(p).map(l => SPK[l[0]] + ': ' + (l[2] || l[1])).join('\n');
-export const _t = { vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt };
+export const _t = { vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt, pcmOf: (...a) => pcmOf(...a), ttsBody: (...a) => ttsBody(...a), voGet };
 
 const load = () => { try { const o = JSON.parse(localStorage.getItem(LS) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } };
 function store(v) {
@@ -90,7 +98,7 @@ const drop = id => { try { const o = load(); delete o[id]; localStorage.setItem(
 let DBP = null;
 const idb = () => DBP || (DBP = new Promise(res => { try { const r = indexedDB.open('nt-vs', 1); r.onupgradeneeded = () => r.result.createObjectStore('a'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch { res(null); } }));
 const hsh = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(36); };
-const aKey = (id, p) => id + ':' + Math.round(p.s) + ':' + hsh(ttsText(p));
+const aKey = (id, p) => id + ':' + Math.round(p.s) + ':' + hsh(ttsText(p) + voKey());
 const idbGet = async k => { const db = await idb(); if (!db) return null; return new Promise(res => { try { const q = db.transaction('a').objectStore('a').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch { res(null); } }); };
 const idbPut = async (k, v) => { const db = await idb(); if (!db) return; try { db.transaction('a', 'readwrite').objectStore('a').put(v, k); } catch {} };
 async function idbDropVid(id) { const db = await idb(); if (!db) return; try { const st = db.transaction('a', 'readwrite').objectStore('a'), q = st.openKeyCursor(); q.onsuccess = () => { const c = q.result; if (!c) return; if (String(c.key).startsWith(id + ':')) st.delete(c.key); c.continue(); }; } catch {} }
@@ -111,7 +119,7 @@ const PROMPT = (a, b, why) => [
   '- Roman line aur w mein Devanagari ya Urdu harf KABHI nahi (sirf a-z). Urdu harf sirf teesre khane mein.',
   '- w = us tukre ke zyada se zyada 3 mushkil lafz (English / Hindi) aur un ka aasaan matlab, dono Roman mein. Na hon to [].',
   '- Ishtihar / sponsor ka hissa ek line mein.',
-  `- Agar video ${fmt(b)} se pehle khatam ho jaye to "end": 1. Agar ${fmt(a)} par video pehle hi khatam ho chuki ho to "p": [] aur "end": 1.`,
+  `- "end": 1 SIRF tab jab POORI video (us ki asal lambai) ${fmt(b)} se pehle khatam ho jaye. Aap ko sirf yeh hissa diya gaya hai — hisse ka khatam hona video ka khatam hona NAHI; video aage chalti ho to "end": 0. Agar ${fmt(a)} par video pehle hi khatam ho chuki ho to "p": [] aur "end": 1.`,
   ...(why && STRICT[why] ? [STRICT[why]] : [])
 ].join('\n');
 
@@ -169,29 +177,86 @@ async function ttsModels(key) {
   try { localStorage.setItem('sam-vs-tts', JSON.stringify({ at: Date.now(), m })); } catch {}
   return m;
 }
-async function tts(p) {
-  const cfg = await A.aiCfg(); if (!cfg?.key) throw Object.assign(Error('AI key nahi'), { off: 1 });
-  const both = linesOf(p).some(l => l[0] === 'B');
-  const vc = k => ({ prebuiltVoiceConfig: { voiceName: VOICE[k] } });
-  const body = {
-    contents: [{ parts: [{ text: 'TTS the following ' + (both ? 'podcast conversation between ' + SPK.A + ' and ' + SPK.B : 'text') + ' in Urdu (Pakistan), natural calm pace. Do not read the speaker names aloud.\n' + ttsText(p) }] }],
-    generationConfig: { responseModalities: ['AUDIO'], speechConfig: both ? { multiSpeakerVoiceConfig: { speakerVoiceConfigs: [{ speaker: SPK.A, voiceConfig: vc('A') }, { speaker: SPK.B, voiceConfig: vc('B') }] } } : { voiceConfig: vc('A') } }
-  };
-  if (!both) body.contents[0].parts[0].text = 'Say in Urdu (Pakistan), natural calm pace:\n' + linesOf(p).map(l => l[2] || l[1]).join('\n');
-  const models = S.ttsM || (S.ttsM = await ttsModels(cfg.key));
+// v1.3: Gemini ke jawab ki audio -> kachi PCM (jorne ke liye). wav = header kaat kar; mp3 / ogg jor nahi sakte = null.
+function pcmOf(b64, mime) {
+  const bin = atob(b64), u = new Uint8Array(bin.length); for (let i = 0; i < bin.length; i++) u[i] = bin.charCodeAt(i);
+  const m = String(mime || '').toLowerCase(), riff = u.length > 44 && u[0] === 82 && u[1] === 73 && u[2] === 70 && u[3] === 70;
+  if (riff) {
+    const v = new DataView(u.buffer); let o = 12, rate = 24000;
+    while (o + 8 <= u.length) {
+      const id = String.fromCharCode(u[o], u[o + 1], u[o + 2], u[o + 3]), n = v.getUint32(o + 4, true);
+      if (id === 'fmt ') rate = v.getUint32(o + 12, true) || rate;
+      if (id === 'data') return { pcm: u.subarray(o + 8, Math.min(u.length, o + 8 + n)), rate };
+      o += 8 + n + (n & 1);
+    }
+    return null;
+  }
+  if (/mpeg|mp3|ogg|opus/.test(m)) return null;
+  return { pcm: u, rate: Number((/rate=(\d+)/.exec(m) || [])[1]) || 24000 };
+}
+const ttsData = r => { const part = (r.j.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data || x.inline_data?.data); return part?.inlineData || part?.inline_data || null; };
+const ttsFmtGet = () => { try { return JSON.parse(localStorage.getItem('sam-vs-ttsf') || '{}') || {}; } catch { return {}; } };
+const ttsFmtSet = (m, f) => { try { const o = ttsFmtGet(); o[m] = f; localStorage.setItem('sam-vs-ttsf', JSON.stringify(o)); } catch {} };
+// do awazon wali darkhwast ki 3 shaklein: 'n' = har line alag part + speechMetadata (Gemini 3.x ka naya tareeqa) · 'm' = wohi bina style · 'o' = purana (ek likhai, 'Naam: line')
+function ttsBody(L, f, vo) {
+  const vc = k => ({ prebuiltVoiceConfig: { voiceName: vo[k] } });
+  const cfg = { responseModalities: ['AUDIO'], speechConfig: { multiSpeakerVoiceConfig: { speakerVoiceConfigs: [{ speaker: SPK.A, voiceConfig: vc('A') }, { speaker: SPK.B, voiceConfig: vc('B') }] } } };
+  if (f === 'o') return { contents: [{ parts: [{ text: 'TTS the following podcast conversation between ' + SPK.A + ' and ' + SPK.B + ' in Urdu (Pakistan), natural calm pace. Do not read the speaker names aloud.\n' + L.map(l => SPK[l[0]] + ': ' + (l[2] || l[1])).join('\n') }] }], generationConfig: cfg };
+  return { contents: [{ role: 'user', parts: L.map(l => ({ text: l[2] || l[1], speechMetadata: { speaker: SPK[l[0]], ...(f === 'n' ? { style: 'natural, calm, Urdu (Pakistan)' } : {}) } })) }], generationConfig: cfg };
+}
+const ttsOneBody = (text, voice) => ({ contents: [{ parts: [{ text: 'Say in Urdu (Pakistan), natural calm pace:\n' + text }] }], generationConfig: { responseModalities: ['AUDIO'], speechConfig: { voiceConfig: { prebuiltVoiceConfig: { voiceName: voice } } } } });
+async function ttsOne(text, voice, models, key) {
   let last = null;
   for (const m of models.slice(0, 2)) {
-    const r = await post(m, body, cfg.key, 70000);
-    if (r.ok) {
-      const part = (r.j.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data || x.inline_data?.data), d = part?.inlineData || part?.inline_data;
-      if (d?.data) { if (S.ttsM[0] !== m) S.ttsM = [m, ...S.ttsM.filter(x => x !== m)]; return audioBlob(d.data, d.mimeType || d.mime_type); }
-      last = Error('awaz khali aayi'); continue;
-    }
+    const r = await post(m, ttsOneBody(text, voice), key, 70000);
+    if (r.ok) { const d = ttsData(r); if (d?.data) return d; last = Error('awaz khali aayi'); continue; }
     last = Error(r.msg);
     if (r.status === 429) throw Object.assign(Error('Google ki awaz ki hadd poori ho gayi'), { off: 1 });
     if (r.status === 401 || r.status === 403) throw Object.assign(last, { off: 1 });
   }
   throw Object.assign(last || Error('awaz nahi bani'), { all: 1 });
+}
+async function tts(p) {
+  const cfg = await A.aiCfg(); if (!cfg?.key) throw Object.assign(Error('AI key nahi'), { off: 1 });
+  const L = linesOf(p), vo = voGet(), both = L.some(l => l[0] === 'B') && L.some(l => l[0] === 'A');
+  const models = S.ttsM || (S.ttsM = await ttsModels(cfg.key));
+  if (!both) { const d = await ttsOne(L.map(l => l[2] || l[1]).join('\n'), vo[L[0]?.[0] === 'B' ? 'B' : 'A'], models, cfg.key); return audioBlob(d.data, d.mimeType || d.mime_type); }
+  let last = null;
+  if (!S.ttsNoMulti) {
+    const known = ttsFmtGet();
+    for (const m of models.slice(0, 2)) {
+      const order = [known[m], 'n', 'm', 'o'].filter((x, i, a) => x && a.indexOf(x) === i);
+      for (const f of order) {
+        const r = await post(m, ttsBody(L, f, vo), cfg.key, 70000);
+        if (r.ok) { const d = ttsData(r); if (d?.data) { ttsFmtSet(m, f); if (S && S.ttsM[0] !== m) S.ttsM = [m, ...S.ttsM.filter(x => x !== m)]; return audioBlob(d.data, d.mimeType || d.mime_type); } last = Error('awaz khali aayi'); continue; }
+        last = Error(r.msg);
+        if (r.status === 429) throw Object.assign(Error('Google ki awaz ki hadd poori ho gayi'), { off: 1 });
+        if (r.status === 401 || r.status === 403) throw Object.assign(last, { off: 1 });
+        if (r.status !== 400) break;
+      }
+    }
+    if (S) S.ttsNoMulti = String(last?.message || 'do awazon wali darkhwast nahi chali');
+  }
+  // aakhri raasta: har bolne wale ki baat ALAG (ek-awaz wala raasta, jo chalta hai) -> PCM jor kar ek WAV
+  const runs = []; for (const l of L) { const t = l[2] || l[1], z = runs[runs.length - 1]; if (z && z.k === l[0]) z.t += '\n' + t; else runs.push({ k: l[0], t }); }
+  const bits = []; let rate = 0;
+  for (const z of runs) {
+    const d = await ttsOne(z.t, vo[z.k], models, cfg.key), x = pcmOf(d.data, d.mimeType || d.mime_type);
+    if (!x) throw Object.assign(Error('awaz ke tukre jor nahi sake'), { all: 1 });
+    if (rate && x.rate !== rate) throw Object.assign(Error('awaz ke tukron ki raftar alag'), { all: 1 });
+    rate = x.rate; bits.push(x.pcm, new Uint8Array(Math.round(rate * 0.35) * 2));
+  }
+  const n = bits.reduce((a, b) => a + b.length, 0), all = new Uint8Array(n); let o = 0; for (const b of bits) { all.set(b, o); o += b.length; }
+  return new Blob([wavBytes(all, rate || 24000)], { type: 'audio/wav' });
+}
+// 🔊 namoona: chuni awaz ka chhota jumla (yaad mein, ek dafa)
+const SAMP = {};
+async function sample(voice) {
+  try {
+    if (!SAMP[voice]) { const cfg = await A.aiCfg(); if (!cfg?.key) return; const models = S.ttsM || (S.ttsM = await ttsModels(cfg.key)); const d = await ttsOne('السلام علیکم۔ میں اس آواز میں آپ کو ویڈیو سمجھاؤں گی۔'.replace('گی', /Larka/.test((VOICES.find(v => v[0] === voice) || [])[1] || '') ? 'گا' : 'گی'), voice, models, cfg.key); SAMP[voice] = URL.createObjectURL(audioBlob(d.data, d.mimeType || d.mime_type)); }
+    if (!S || S.cur >= 0) return;
+    const a = S.smp || (S.smp = new Audio()); a.src = SAMP[voice]; await a.play();
+  } catch (e) { A.notice?.('🔊 Namoona nahi bana (' + String(e?.message || e).slice(0, 80) + ')'); }
 }
 const audOf = i => (S && S.aud[i]) || null;
 function badge(i) {
@@ -327,6 +392,12 @@ html body dialog.vs-dlg .vs-chip{flex:none;min-height:38px!important;padding:4px
 html body dialog.vs-dlg .vs-go{flex:1;min-height:40px!important;border-radius:999px!important;border:1px solid #2b4a8a!important;background:linear-gradient(135deg,#2f55a0,#1d3160)!important;color:#fff!important;font-size:15px!important;font-weight:800;white-space:nowrap}
 html body dialog.vs-dlg button:disabled{opacity:.55}
 .vs-note{font-size:13px;color:#5b6885;line-height:1.4}
+.vs-hb{display:flex;gap:6px;flex:none}
+.vs-menu{border:1px solid #c9d4e8;border-radius:16px;background:linear-gradient(180deg,#fff,#f3f6fc);padding:10px 12px;margin-bottom:10px;display:grid;gap:8px}
+.vs-mt{font-weight:800;font-size:15px;color:#1d3160}.vs-mt small{font-weight:600;color:#5b6885;font-size:12.5px;margin-left:6px}
+.vs-mr{display:grid;gap:5px}.vs-mr b{font-size:14px;color:#243f77}.vs-mv{display:flex;gap:6px;overflow-x:auto;padding-bottom:2px}
+html body dialog.vs-dlg .vs-menu .vs-chip{min-height:34px!important;padding:3px 11px!important;font-size:13.5px!important}
+html body dialog.vs-dlg .vs-menu .vs-chip.is-in{background:linear-gradient(135deg,#2a4a8c,#1d3160)!important;color:#fff!important;border-color:#1d3160!important}
 .vs-st{border-radius:12px;padding:8px 11px;font-size:14px;font-weight:700;background:#eef4ff;border:1.5px solid #c9d8f5}
 .vs-st.bad{background:#fff3f1;border-color:#f1c2bb;color:#8f231b}
 .vs-ttl{font-size:15.5px;font-weight:800;line-height:1.3}
@@ -367,13 +438,17 @@ function paint() {
     <div class="vs-row"><input class="vs-in t" id="vsFrom" type="text" inputmode="numeric" placeholder="0:00" value="${esc(S.from || '')}"><button type="button" class="vs-go" data-vs="go"${S.busy ? ' disabled' : ''}>🎬 Samjhao</button></div>
     ${v ? '' : '<div class="vs-note">"Kahan se" = waqt, jaise <b>53:44</b>. Khali = shuru se. Pehle 15 minute aate hi sunna shuru karein — poori video ke agle hisse peeche khud aate rehte hain, chalti line peeli hoti hai. 🤖 AI (Gemini: likhai + awaz) — kabhi ghalat bhi samajh sakta hai.</div>'}</div>`;
   const st = S.busy ? `<div class="vs-st" id="vsSt">⏳ ${esc(S.msg || 'AI video sun raha hai…')}${v && v.parts.length ? '' : '<div class="vs-note">1-3 minute lag sakte hain.</div>'}</div>` : (S.err ? `<div class="vs-st bad">✕ ${esc(S.err)}</div>` : '');
-  const body = v ? `<div class="vs-ttl">${esc(v.t || 'Video')}</div>${partsHTML(v)}${!v.parts.length && !S.busy ? '<div class="vs-note">Is hisse mein kuch nahi mila.</div>' : ''}${st}${v.end ? '<div class="vs-note">✅ Video yahan khatam.</div>' : ''}${!S.busy ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="list">‹ Doosri video</button></div>' : ''}` : st + oldHTML();
-  d.innerHTML = `<div class="vs-hd"><div><b>🎓 Video samjhao</b><small>YouTube ki video — aasaan Roman Urdu mein + 🔊 awaz</small></div><button type="button" class="vs-x" data-vs="x" aria-label="Band">✕</button></div>
-    <div class="vs-scroll">${form}${body}</div><div class="vs-bar" id="vsBar"></div>`;
+  const body = v ? `<div class="vs-ttl">${esc(v.t || 'Video')}</div>${partsHTML(v)}${!v.parts.length && !S.busy ? '<div class="vs-note">Is hisse mein kuch nahi mila.</div>' : ''}${st}${v.end ? '<div class="vs-note">✅ Video yahan khatam.</div>' + (!S.busy && v.parts.length ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="force">▶ Video aage bhi hai — aage samjhao</button></div>' : '') : ''}${!S.busy ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="list">‹ Doosri video</button></div>' : ''}` : st + oldHTML();
+  d.innerHTML = `<div class="vs-hd"><div><b>🎓 Video samjhao</b><small>YouTube ki video — aasaan Roman Urdu mein + 🔊 awaz</small></div><span class="vs-hb"><button type="button" class="vs-x" data-vs="menu" aria-label="Awaz chuno">⋮</button><button type="button" class="vs-x" data-vs="x" aria-label="Band">✕</button></span></div>
+    <div class="vs-scroll">${S.menu ? menuHTML() : ''}${form}${body}</div><div class="vs-bar" id="vsBar"></div>`;
   const sc = d.querySelector('.vs-scroll'); if (sc) sc.scrollTop = y;
   if (v) v.parts.forEach((_, i) => badge(i));
   if (S.ln) { const k = S.ln; S.ln = ''; const [a, b] = k.split(':').map(Number); const el = d.querySelector(`[data-vs-ln="${k}"]`); if (el) { el.classList.add('is-on'); S.ln = k; } }
   paintBar();
+}
+function menuHTML() {
+  const vo = voGet(), sp = S.v?.sp || [], row = (k, nm) => `<div class="vs-mr"><b>${esc(nm)}</b><div class="vs-mv">${VOICES.map(v => `<button type="button" class="vs-chip${vo[k] === v[0] ? ' is-in' : ''}" data-vs-vo="${k}:${v[0]}">${S.smpW === k + v[0] ? '⏳ ' : (vo[k] === v[0] ? '✓ ' : '')}${v[1]}</button>`).join('')}</div></div>`;
+  return `<div class="vs-menu"><div class="vs-mt">🔊 Awaz chuno <small>dabao = chun li + namoona</small></div>${row('A', sp[0] || 'Sawal wala')}${row('B', sp[1] || 'Jawab wala')}<div class="vs-note">Gemini ki bani banai awazein (kisi asal insaan ki nahi). Awaz badalne par is video ki awaz dobara banti hai.${S.ttsOff ? '<br>⚠️ Gemini ki awaz abhi nahi ban rahi: ' + esc(S.ttsOff.slice(0, 110)) : ''}</div></div>`;
 }
 function paintBar() {
   const b = $('vsBar'); if (!b || !S) return; const v = S.v;
@@ -401,7 +476,8 @@ async function run(id, a, n = 0, tryN = 0) {
     if (out.title && !v.t) v.t = out.title;
     if (out.sp.length && !(v.sp && v.sp.length)) v.sp = out.sp;
     const first = v.parts.length;
-    v.parts.push(...out.parts); v.end = out.end || (!out.parts.length ? 1 : 0); v.next = out.end && out.parts.length ? Math.max(a, ...out.parts.map(p => p.e)) : b;
+    const lastE = out.parts.length ? Math.max(a, ...out.parts.map(p => p.e)) : a, fin = !out.parts.length || (out.end && lastE < b - 90) ? 1 : 0;
+    v.parts.push(...out.parts); v.end = fin; v.next = fin && out.parts.length ? lastE : b;
     store(v); S.busy = false;
     const more = !v.end && !S.halt && n + 1 < MAXAUTO;
     if (first === 0 || !more) paint(); else { append(first); }
@@ -424,18 +500,28 @@ async function share() {
 }
 async function onClick(e) {
   const d = dlg(); if (!d || !S) return;
-  const t = e.target.closest?.('[data-vs],[data-vs-say],[data-vs-old],[data-vs-del]'); if (!t || !d.contains(t)) return;
+  const t = e.target.closest?.('[data-vs],[data-vs-say],[data-vs-old],[data-vs-del],[data-vs-vo]'); if (!t || !d.contains(t)) return;
   const k = t.dataset;
+  const keep = () => { S.url = $('vsUrl')?.value || ''; S.from = $('vsFrom')?.value || ''; };
   if (k.vsSay != null) { const i = Number(k.vsSay); if (S.cur === i) toggle(); else { S.all = true; playPart(i); } return; }
   if (k.vsOld) { const o = load()[k.vsOld]; if (!o || S.busy) return; stopPlay(); freeAud(); S.v = { id: o.id, t: o.t, sp: o.sp || [], parts: o.parts || [], next: o.next || 0, end: o.end }; S.url = 'https://youtu.be/' + o.id; S.from = fmt(o.next || 0); S.err = ''; paint(); pump(); return; }
   if (k.vsDel) { if (confirm('Yeh samjhi hui video (aur us ki awaz) list se hata dein?')) { drop(k.vsDel); paint(); } return; }
-  const keep = () => { S.url = $('vsUrl')?.value || ''; S.from = $('vsFrom')?.value || ''; };
+  if (k.vs === 'menu') { keep(); S.menu = !S.menu; paint(); if (S.menu) d.querySelector('.vs-scroll')?.scrollTo?.({ top: 0 }); return; }
+  if (k.vsVo) {
+    const [w, name] = k.vsVo.split(':'); if (!VOICES.some(v => v[0] === name) || (w !== 'A' && w !== 'B')) return;
+    const vo = voGet(), ch = vo[w] !== name; keep();
+    if (ch) { vo[w] = name; try { localStorage.setItem('sam-vs-voice', JSON.stringify(vo)); } catch {} stopPlay(); freeAud(); S.ttsOff = ''; S.ttsFail = 0; }
+    S.smpW = w + name; paint(); if (ch) pump();
+    sample(name).finally(() => { if (S && S.smpW === w + name) { S.smpW = ''; const sc = d.querySelector('.vs-scroll'), y = sc?.scrollTop || 0; if (S.menu) { S.url = $('vsUrl')?.value || S.url; S.from = $('vsFrom')?.value || S.from; paint(); const s2 = d.querySelector('.vs-scroll'); if (s2) s2.scrollTop = y; } } });
+    return;
+  }
   if (k.vs === 'x') { close(); return; }
   if (k.vs === 'paste') { try { const x = await navigator.clipboard.readText(); if (x) { keep(); S.url = x.trim(); paint(); } } catch { A.notice?.('Paste ki ijazat nahi mili — link khane mein khud paste karein'); } return; }
   if (k.vs === 'list') { keep(); stopPlay(); freeAud(); S.v = null; S.err = ''; paint(); return; }
   if (k.vs === 'rate') { S.rate = (S.rate + 1) % RATES.length; try { localStorage.setItem('sam-vs-rate', String(S.rate)); } catch {} if (AU) AU.playbackRate = RATES[S.rate][0]; paintBar(); return; }
   if (k.vs === 'all') { if (S.waitNew) { S.waitNew = false; paintBar(); } else if (S.cur >= 0) toggle(); else { S.all = true; playPart(0); } return; }
   if (k.vs === 'halt') { S.halt = true; clearTimeout(S.retry); S.retry = 0; t.disabled = true; t.textContent = '⏹ Ruk raha…'; return; }
+  if (k.vs === 'force') { if (S.v && !S.busy) { S.v.end = 0; S.err = ''; run(S.v.id, S.v.next || 0); } return; }
   if (k.vs === 'more') { if (S.v && !S.v.end) run(S.v.id, S.v.next); return; }
   if (k.vs === 'share') { share(); return; }
   if (k.vs === 'go') {
@@ -444,7 +530,7 @@ async function onClick(e) {
     run(id, a);
   }
 }
-function shut() { if (!S) return; clearTimeout(S.retry); stopPlay(); freeAud(); try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
+function shut() { if (!S) return; clearTimeout(S.retry); stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
 function close() { const d = dlg(); shut(); if (d) { try { d.close(); } catch {} d.remove(); } if (window.ntVsClose) window.ntVsClose = null; }
 export function open(ctx) {
   A = ctx || {};
@@ -452,7 +538,7 @@ export function open(ctx) {
   let d = dlg(); if (d) d.remove();
   d = document.createElement('dialog'); d.id = 'vsDlg'; d.className = 'vs-dlg'; document.body.appendChild(d);
   let rate = 1; try { const r = Number(localStorage.getItem('sam-vs-rate')); if (r >= 0 && r < RATES.length) rate = r; } catch {}
-  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null };
+  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null, ttsNoMulti: '', menu: false, smpW: '', smp: null };
   audioSetup();
   d.addEventListener('click', onClick);
   d.addEventListener('close', () => { shut(); d.remove(); });
