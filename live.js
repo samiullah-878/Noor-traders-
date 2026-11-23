@@ -125,20 +125,23 @@ function tbFollow(img) {   // POS list mein nayi item neeche judti hai — sab s
     for (let y = 0; y < H; y++) { let nw = 0; for (let j = y * W * 4, e = j + W * 4; j < e; j += 4) if (d[j] < 232 || d[j + 1] < 232 || d[j + 2] < 232) nw++;
       if (nw <= W * 0.03) { if (!run) rs = y; run++; if (run > best) { best = run; bs = rs; } } else run = 0; }
     box.scrollTop = best >= H * 0.1 && bs >= 0 ? Math.max(0, bs / H * img.clientHeight - box.clientHeight + 4) : 0;
+    return best >= H * 0.88;   // v2.363.0: poori screen khali (bill chhap chuka) = sach
   } catch {}
+  return false;
 }
 function tbPaint(i) {
   const mo = TB.mo, e = mo && $('lvMo')?.querySelector(`[data-tb="${i}"]`); if (!e) return;
   const k = mo.k[i], n = mo.n[i], now = Date.now(); let h = '', img = '';
   if (k === 'c') {
-    const b = TB.bill.get(n), sh = TB.shot.get(n), d = b && b.d;
-    if (d && d.sid) {
+    const b = TB.bill.get(n), sh = TB.shot.get(n), d = b && b.d, shOn = !!(sh && sh.url && !sh.empty && now - sh.at < 45000);   // v2.363.0: khali screen = tasveer nahi, bill ki items
+    if (shOn) h = '<div class="lv-tbh nw">⏳ bill ban raha…</div>';
+    else if (d && d.sid) {
       const L = b.L || [], sum = L.reduce((a, x) => a + (Number(x[2]) || 0) * (Number(x[3]) || 0), 0), tot = (d.pr || Number(d.st) === 2) && Number(d.t) > 0 ? Number(d.t) : sum;
       const st = Number(d.st) === 3 ? '✕' : Number(d.st) === 2 ? '📌' : d.pr ? '🖨' : '⏳';
       h = `<div class="lv-tbh">${st} #${escB(d.no || d.sid)} · Rs ${nf(tot)}</div>`;
-      if (!(sh && sh.url && now - sh.at < 45000)) h += [...L].reverse().slice(0, 3).map(x => `<div class="lv-tbr">${escB(x[1])} <b>×${q3(x[2])}</b></div>`).join('') + (L.length > 3 ? `<div class="lv-tbr m">+${L.length - 3} items</div>` : '');
+      h += [...L].reverse().slice(0, 5).map(x => `<div class="lv-tbr">${escB(x[1])} <b>×${q3(x[2])}</b></div>`).join('') + (L.length > 5 ? `<div class="lv-tbr m">+${L.length - 5} items</div>` : '');
     }
-    if (sh && sh.url && now - sh.at < 45000) img = sh.url;
+    if (shOn) img = sh.url;
   } else if (k === 'g') {
     const G = tbGate(i);
     if (G.length) {
@@ -149,7 +152,7 @@ function tbPaint(i) {
   }
   const sig = h + '|' + img; if (e.dataset.sig === sig) return; e.dataset.sig = sig;
   e.innerHTML = h + (img ? '<div class="lv-tsh"><img alt=""></div>' : '');
-  if (img) { const im = e.querySelector('img'); im.onload = () => tbFollow(im); im.src = img; }
+  if (img) { const im = e.querySelector('img'), sh0 = TB.shot.get(n); im.onload = () => { if (tbFollow(im) && sh0 && TB.shot.get(n) === sh0) { sh0.empty = 1; tbPaint(i); } }; im.src = img; }
 }
 let RES = false;   // v2.226.0: app peeche ja kar wapas aaye (popup / call) = KHUD dobara (malik: "jab bhi on karein foran aana chahiye")
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (S) { stop(true); RES = true; stat('⏸ App peeche gayi — wapas aate hi khud jur jayega'); } } else if (RES && $('lvDlg')?.open && cur) { RES = false; start(); } });

@@ -1,6 +1,6 @@
 {
- "version": "2026-11-23.4",
- "note": "pos-sales-dekho v2.16 (Bills tez: jaanch 0.15 s + badle bill ka chhota tez doc)",
+ "version": "2026-11-23.5",
+ "note": "live-cam v2.2 (Sab cameras: khane ka naam counter ka aaj ka naam — bill / POS screen ab aaye)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -101,7 +101,7 @@
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
   "bill-clip.js": "f5ac88347234989c18d66f698dded7e9b66e4a880332e53ad3abd52b9e9cc91d",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
-  "live-cam.js": "35e49f9e436e461058743cee77669250d526e03a8387f627550988e09a8f35a2",
+  "live-cam.js": "c3695778c7c6c7732677f0d3543c4b28bf20f734303db1e1c448b8c5c5ab98f5",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
   "pc-vault.js": "6c27772a3b21166eecabdf7079615a394b1a9831a11e3622330809d5ecdf3abd",
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",

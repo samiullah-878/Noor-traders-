@@ -9132,6 +9132,7 @@ html body #lvDlg button.lv-mot{container-type:size;overflow:hidden}
 #lvDlg .lv-tb:empty{display:none}
 #lvDlg .lv-tbh{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff8c;border-radius:6px;padding:0 4px;flex:0 0 auto}
 #lvDlg .lv-tbh.gp{border-color:#fbbf24;color:#fde68a}
+#lvDlg .lv-tbh.nw{border-color:#4ade80;color:#bbf7d0}
 #lvDlg .lv-tbh.gp.un{border-color:#60a5fa;color:#bfdbfe}
 #lvDlg .lv-tbr{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto;padding:0 3px}
 #lvDlg .lv-tbr b{color:#fde047}

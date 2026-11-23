@@ -9560,3 +9560,8 @@ Malik: 'is ko aur tez kar do jitna kar sakte ho' (🧾 Bills, PC par).
 PC pos-sales-dekho v2.16: EVERY 150 ms · fastPut (posSales/<din>-f: sirf badle bill, 5 s ki khirki) + bigPut (poori list) — dono apni line, aakhri wala, jaanch nahi rukti.
 App: cloud.listenPosSales = poori list + tez doc ka milan (meta.fast) · sale.js nbH (likhai na badle to list dobara nahi).
 Jaanch: nakli Firestore (poori list 300 ms, tez 40 ms): tez doc 140 ms mein, poori list 400 ms baad; app milana PASS. Asal PC / internet par azmaya nahi. Rules nahi badle (posSales/{day} read). AI nahi.
+
+=== v2.363.0 (23 Nov 2026) — 🎛 Sab cameras: naam + khali screen ===
+Malik ki screenshot: Sab cameras chal rahe, magar khanon par purane naam (Abdurehman / Bilal (server)) aur items nahi; ek khane par safed dabba.
+Wajah: live-cam allList ne CF.ch ki purani chaabi naam bana di -> app posLive/<purana naam> sunti rahi. live-cam v2.2: PN.nowName. Safed dabba = bill chhapne ke baad POS screen khali.
+App: screen chalti = '⏳ bill ban raha' + tasveer; khali = bill + 5 items. Node test (tile logic) + syntax. Asal PC par azmaya nahi. AI nahi.
