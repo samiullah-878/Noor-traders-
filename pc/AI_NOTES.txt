@@ -5576,3 +5576,9 @@ Gemini awaz ki hadd (429): har chhote hisse ki awaz pehle se ban rahi thi. Ab 15
 
 === 2026-11-23 — pos-khata-sync (y): 🖨 khaton ki list (app v2.359.0) ===
 khataPrints j.k 'list' {t:'c'|'s', R:[[naam, DD-MM-YY, aakhri raqam paisa, baqaya paisa]]} -> listSlip (Font A naam + baqaya mota, Font B aakhri entry, Kul lene / dene). Dispatch runKhataPrints: lst -> rep -> day -> khata. Purana PC (y se pehle) is job ko khata samajh kar khali parchi chhapega — PC 3-5 min mein update.
+
+=== v2.360.0 (23 Nov 2026) — 🎛 Sab cameras ek screen ===
+Malik: 'aik screen jis par sab cameras aik saath · gate pass bane to godam wali par gate pass, bill wali par bill ki screen live'.
+App live.js: chip '🎛 Sab cameras' (CAP nz.sab, shuru band) -> liveReq pc '@sab'; har khane par .lv-tb: counter = posLive (#bill, Rs, items) + POS screen tasveer; godam = gatePass (🚪 #no, gahak, ☐/✓ items). Tap = wohi camera akela.
+PC live-cam v2.0: allList (counter CF.ch -> godam -> xc, 9 tak), moGrid 3x3, mo {n,k,g,tw,th}, startMosaic(codec, kind), port 48920+/48930+. pos-sales-dekho v2.15: '@sab' = mo.k 'c' wale counter (6 tak).
+Jaanch: ffmpeg 8 input 3x3 filter (1152x648) chala; tile logic node test (bill, shot, gate pass ✓, naam se godam, purana / off nahi). Asal NVR / phone par azmaya nahi. Rules nahi badle. AI nahi.

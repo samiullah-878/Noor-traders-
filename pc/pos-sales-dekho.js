@@ -1,4 +1,5 @@
 // =========================================================
+//  v2.15 (2026-11-23): 🎛 Live 'Sab cameras' (liveReq pc '@sab') = us video ke sab counter (mo.k 'c') ka banta bill + POS screen ka hukum (6 counter tak); '@godam' / '@sab' khud counter nahi.
 //  v2.12 (2026-11-22): ➕ / ➖ ITEMS SE HISAAB — posSales/<din>-it (har item ka plus / minus / wapsi ka jor; cancel + stock fraq bahar; SIRF dikhana) + blueAccess/saleItReq (purana din).
 //  pos-sales-dekho.js  v2.14 (2026-11-17: counter ka naam = PC ka apna naam (pc-names v1.1 — Mithu / Abdurehman / Bilal jaise naam nahi; 🔗 app ke jore hue naam)) · v2.13 (2026-11-16: counter ka naam NT-PRINT ki setting se — pc-names.js) · v2.12 (2026-11-14: cancel bills ki RAQAM bhi — sum.cxRs; malik: 'POS report 21 lakh, app 11 lakh — farq kyun' · sirf dikhane ke liye, sale ka hisaab wahi)
 //  v2.11 (2026-11-13: ↩ MINUS ITEMS — malik: "minus wali items ka hisaab dikhao, kahan kaun se bill mein" — sum.rtd mein har wapsi ki items (it) + sum.mn = sale bill ke andar minus tadad wali lines; SIRF dikhana, auto sale ka hisaab WAHI) · v2.10 (2026-11-11: 🖥 POS REPORT ka kul — sum.g (kul bikri) / gc (cash bills) / gu (udhaar bills) / un (udhaar jo cash nahi mila); sirf dikhane ke liye, Daily ki auto sale WAHI) · v2.9 (2026-11-10: 🖥 posLive/_want — dekhe ja rahe counter ko batao, NT-PRINT POS screen ki tasveer bheje) · v2.8 (2026-11-10: 🔴 live patti — BANTA bill ab aakhri chhape bill ke baad ke khule bills se (tareekh ki shart nahi, login → counter naqsha, andaza + 🩺 dg), har 0.6 s)
@@ -83,19 +84,19 @@ const liveW = new Map(), liveLast = new Map(), liveUsers = new Map(); let liveRu
 function liveWatchStart() {
   db.collection('businesses').doc(BUSINESS_ID).collection('liveReq').where('st', '==', 'ok').onSnapshot(s => {
     const now = Date.now();
-    s.docChanges().forEach(c => { if (c.type === 'removed') liveW.delete(c.doc.id); else liveW.set(c.doc.id, { pc: String((c.doc.data() || {}).pc || ''), seen: now }); });
+    s.docChanges().forEach(c => { if (c.type === 'removed') liveW.delete(c.doc.id); else { const dd = c.doc.data() || {}, mo = dd.mo || {}; liveW.set(c.doc.id, { pc: String(dd.pc || ''), cs: dd.pc === '@sab' && Array.isArray(mo.n) ? mo.n.filter((x, i) => (mo.k || [])[i] === 'c').map(String) : null, seen: now }); } });   // v2.15: 🎛 '@sab' = us video ke sab counter
   }, e => log('live bill listener: ' + e.message));
 }
 function liveHosts() {
   const now = Date.now(), names = pcNames(), want = new Set();
-  for (const [id, w] of liveW) { if (now - w.seen > 45000) { liveW.delete(id); continue; } if (w.pc) want.add(w.pc); }
+  for (const [id, w] of liveW) { if (now - w.seen > 45000) { liveW.delete(id); continue; } if (w.cs) w.cs.forEach(n => n && want.add(n)); else if (w.pc && w.pc[0] !== '@') want.add(w.pc); }
   const out = [];
   for (const nm of want) {
     let host = Object.keys(names).find(h => names[h] === nm) || (/^DESKTOP-/i.test(nm) ? nm : 'DESKTOP-' + nm);
     host = String(host).replace(/[^A-Za-z0-9.-]/g, '');
     if (host) out.push([nm, host]);
   }
-  return out.slice(0, 4);
+  return out.slice(0, 6);   // v2.15: 🎛 sab cameras = 6 counter tak
 }
 // v2.9: 🖥 counter PCs (NT-PRINT v1.28) ko batao kaun sa counter Live dekha ja raha hai -> wo apni POS screen ki tasveer bhejte hain (posLive/<naam>__shot).
 //   posLive/_want {hosts: {HOST: naam}, at} — badle to foran, warna dekhte waqt har 20 s (counter 75 s chup = khud band).
@@ -472,7 +473,7 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v2.12 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
+  log('pos-sales-dekho v2.15 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }

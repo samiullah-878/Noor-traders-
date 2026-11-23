@@ -9126,6 +9126,19 @@ html body #lvDlg .lv-chips button.lv-gd.is-in{background:linear-gradient(180deg,
 html body #lvDlg .lv-tools button.lv-mob{border-radius:999px;padding:0 12px;white-space:nowrap;background:linear-gradient(180deg,#1e3a8a,#172554)!important;color:#fff!important;border:1px solid #60a5fa77!important}
 #lvDlg .lv-tools,#lvDlg .lv-st{z-index:3}
 #lvDlg.is-mo .lv-bt{display:none!important}
+/* v2.360.0: 🎛 Sab cameras — har khane par bill / gate pass (sirf kinara + kaale kinare wali likhai, rang / blur nahi) */
+html body #lvDlg button.lv-mot{container-type:size;overflow:hidden}
+#lvDlg .lv-tb{position:absolute;right:3px;top:3px;bottom:3px;width:50%;display:flex;flex-direction:column;gap:1px;pointer-events:none;text-align:left;font-size:clamp(8px,4.6cqw,16px);line-height:1.22;color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000,1px 0 2px #000,0 0 6px #000}
+#lvDlg .lv-tb:empty{display:none}
+#lvDlg .lv-tbh{font-weight:800;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;border:1px solid #ffffff8c;border-radius:6px;padding:0 4px;flex:0 0 auto}
+#lvDlg .lv-tbh.gp{border-color:#fbbf24;color:#fde68a}
+#lvDlg .lv-tbh.gp.un{border-color:#60a5fa;color:#bfdbfe}
+#lvDlg .lv-tbr{font-weight:700;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;flex:0 0 auto;padding:0 3px}
+#lvDlg .lv-tbr b{color:#fde047}
+#lvDlg .lv-tbr.ok{color:#86efac}
+#lvDlg .lv-tbr.m{opacity:.85;font-weight:600}
+#lvDlg .lv-tsh{flex:1 1 auto;min-height:0;overflow:hidden;border:1px solid #ffffff8c;border-radius:5px;background:#fff}
+#lvDlg .lv-tsh img{display:block;width:100%;height:auto}
 
 /* v2.348.0: ⚖️ khate ke upar 'POS = App' chip (pos-milan.js lnFixHTML, sirf malik) */
 html body .pm-lw{display:inline-flex;align-items:center;flex-wrap:wrap;gap:6px;max-width:100%}

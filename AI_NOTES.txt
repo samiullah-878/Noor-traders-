@@ -9542,3 +9542,9 @@ Gemini awaz ki hadd (429): har chhote hisse ki awaz pehle se ban rahi thi. Ab 15
   Test: node rowsOf + listSlip (stubs) PASS. Asal printer par nahi azmaya.
 🎓 VIDEO SAMJHAO v1.5 (malik: 'sab bana do'): ▶ wahin se shuru (sam-vs-pos, sam-vs-last — khirki kholte hi pichhli video, ▶ Wahin se (mm:ss)) · 😴 so jaun to band 15/30/60 (sleepSet / sleepDue) · ⭐ line par tap (sam-vs-star, ⋮ list) · 📖 lafzon ki copy (sam-vs-words, search) · 📄 PDF (A.pdf = openReportPreview; khirki band hoti hai) · YouTube Share -> Blue Khata (manifest.webmanifest share_target GET; app.js ?text / ?url mein YouTube link -> vsGo; app dobara install karna par sakta hai) · 📌 Khulasa (video khatam par khud, sumMake, 🔊 ttsOne) · ✅ Mere kaam ki baatein (actMake, ☐ store) · ❓ Sawal poochho (qaAsk, aakhri 10). AI (Gemini) sirf khulasa / kaam / sawal — likhai (txOf) se, video dobara nahi. Sab ⋮ ke andar; cards guftagu ke NEECHE.
   Test: node helpers PASS (posIdx, sumOf, actOf, romOnly, pdfHTML). Asal Gemini / phone / share target par nahi azmaya.
+
+=== v2.360.0 (23 Nov 2026) — 🎛 Sab cameras ek screen ===
+Malik: 'aik screen jis par sab cameras aik saath · gate pass bane to godam wali par gate pass, bill wali par bill ki screen live'.
+App live.js: chip '🎛 Sab cameras' (CAP nz.sab, shuru band) -> liveReq pc '@sab'; har khane par .lv-tb: counter = posLive (#bill, Rs, items) + POS screen tasveer; godam = gatePass (🚪 #no, gahak, ☐/✓ items). Tap = wohi camera akela.
+PC live-cam v2.0: allList (counter CF.ch -> godam -> xc, 9 tak), moGrid 3x3, mo {n,k,g,tw,th}, startMosaic(codec, kind), port 48920+/48930+. pos-sales-dekho v2.15: '@sab' = mo.k 'c' wale counter (6 tak).
+Jaanch: ffmpeg 8 input 3x3 filter (1152x648) chala; tile logic node test (bill, shot, gate pass ✓, naam se godam, purana / off nahi). Asal NVR / phone par azmaya nahi. Rules nahi badle. AI nahi.
