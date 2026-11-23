@@ -30,6 +30,7 @@ const bOn = () => { try { return localStorage.getItem('sam-lv-bill') !== '0'; } 
 
 export function openLive(o) {
   cloud = o.cloud; notice = o.notice || notice; xcs = Array.isArray(o.xc) ? o.xc : []; list = (o.list || []).filter(Boolean); list = [...(o.sab ? [ALL] : []), GD, ...list.filter(x => !isMoP(x))]; MO = null; moBack = false; cur = o.cur && list.includes(o.cur) ? o.cur : (list.find(x => !isMoP(x)) || list[0] || '');
+  { let last = ''; try { last = localStorage.getItem('sam-lv-last') || ''; } catch {} if (isMoP(last) && list.includes(last)) { cur = last; moHome = last; } }   // v2.361.0: pichhli dafa 'Sab cameras' / 'Godam' tha = seedha wohi (khirki khulte hi jurna shuru)
   let d = $('lvDlg');
   if (!d) { d = document.createElement('dialog'); d.id = 'lvDlg'; d.className = 'lv-dlg'; document.body.append(d); d.addEventListener('cancel', ev => { ev.preventDefault(); closeLive(); }); }
   d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}${isMoP(p) ? ' lv-gd' : ''}">${lvLbl(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
@@ -154,10 +155,11 @@ let RES = false;   // v2.226.0: app peeche ja kar wapas aaye (popup / call) = KH
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (S) { stop(true); RES = true; stat('⏸ App peeche gayi — wapas aate hi khud jur jayega'); } } else if (RES && $('lvDlg')?.open && cur) { RES = false; start(); } });
 
 async function start() {
+  try { localStorage.setItem('sam-lv-last', moBack ? moHome : cur); } catch {}
   stop(true); { const gd = isMoP(cur), dl = $('lvDlg'); dl?.classList.toggle('is-mo', gd); MO = null; moPaint(null); if (gd) billStop(); else billStart(); const mb = $('lvMoB'); if (mb) { mb.hidden = !(moBack && !gd); mb.textContent = moHome === ALL ? '‹ 🎛 Sab' : '‹ 🏬 Sab'; } }   // v2.348.0: godam = bill patti / POS screen nahi
   { const qe = $('lvQ'); if (qe) qe.hidden = true; }   // v2.322.0: naya rabta = 🩺 nayi ginti
   if (!cloud?.liveStart) { stat('✕ App update karein', true); return; }
-  if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + lvName(cur) + (isMoP(cur) ? ' jor raha… (pehli dafa 10-20 s)' : ' ka camera jor raha…'));
+  if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + lvName(cur) + (isMoP(cur) ? ' jor raha…' : ' ka camera jor raha…'));
   const s = S = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pc: new RTCPeerConnection({ iceServers: STUN }), ok: 0 };
   const v = $('lvVid');
   const tr = s.pc.addTransceiver('video', { direction: 'recvonly' });

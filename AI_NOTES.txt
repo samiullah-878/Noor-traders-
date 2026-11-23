@@ -9548,3 +9548,9 @@ Malik: 'aik screen jis par sab cameras aik saath · gate pass bane to godam wali
 App live.js: chip '🎛 Sab cameras' (CAP nz.sab, shuru band) -> liveReq pc '@sab'; har khane par .lv-tb: counter = posLive (#bill, Rs, items) + POS screen tasveer; godam = gatePass (🚪 #no, gahak, ☐/✓ items). Tap = wohi camera akela.
 PC live-cam v2.0: allList (counter CF.ch -> godam -> xc, 9 tak), moGrid 3x3, mo {n,k,g,tw,th}, startMosaic(codec, kind), port 48920+/48930+. pos-sales-dekho v2.15: '@sab' = mo.k 'c' wale counter (6 tak).
 Jaanch: ffmpeg 8 input 3x3 filter (1152x648) chala; tile logic node test (bill, shot, gate pass ✓, naam se godam, purana / off nahi). Asal NVR / phone par azmaya nahi. Rules nahi badle. AI nahi.
+
+=== v2.361.0 (23 Nov 2026) — ⚡ Sab cameras tez ===
+Malik: 'speed tez ka rasta nikalo · PC par bojh na pare' (Sab cameras 10-20 s mein khulte the).
+PC live-cam v2.1: ring (har recording line ke aakhri 3.5 s, keyframe se) + mosaic ke input TCP 127.0.0.1 (moTcp) = ffmpeg foran shuru; na chale = purana UDP (MO_FASTBAD); mosaic 5 min garam.
+App live.js: pichhla chip yaad (sam-lv-last) — Sab cameras tha to khirki khulte hi wohi.
+Jaanch (sandbox, nakli cameras): 6 camera purana 20.7 s, naya 0.6 s; asal code ke functions se 8 camera 3x3 = 0.7 s, koi decode ghalti nahi. Asal NVR / PC par azmaya nahi. 'Hamesha chalu' nahi lagaya (bojh). AI nahi.
