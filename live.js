@@ -88,7 +88,7 @@ const tbMs = v => typeof v === 'number' ? v : v?.toMillis ? v.toMillis() : v?.se
 const tbDay = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 function tbStop() { for (const f of TB.un) { try { f && f(); } catch {} } for (const o of TB.shot.values()) { try { o.url && URL.revokeObjectURL(o.url); } catch {} } clearInterval(TB.t); TB = { un: [], t: null, bill: new Map(), shot: new Map(), gp: null, mo: null, cv: null }; }
 function tbSync(mo) {
-  tbStop(); if (!mo || !Array.isArray(mo.k) || !cloud) return; TB.mo = mo;
+  tbStop(); if (!mo || !Array.isArray(mo.k) || !cloud) return; TB.mo = mo; TB.t0 = Date.now();
   mo.n.forEach((n, i) => {
     if (mo.k[i] !== 'c') return;
     if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive(n, (d, err) => { if (err || !d || TB.mo !== mo) return; let L = []; try { L = JSON.parse(d.j || '[]'); } catch {} TB.bill.set(n, { d, L, at: Date.now() }); tbPaint(i); }));
@@ -142,6 +142,7 @@ function tbPaint(i) {
       h += [...L].reverse().slice(0, 5).map(x => `<div class="lv-tbr">${escB(x[1])} <b>×${q3(x[2])}</b></div>`).join('') + (L.length > 5 ? `<div class="lv-tbr m">+${L.length - 5} items</div>` : '');
     }
     if (shOn) img = sh.url;
+    if (!h && now - (TB.t0 || now) > 12000) h = '<div class="lv-tbh un">⚠ is naam ka bill / screen nahi mil rahi</div><div class="lv-tbr m">⚙️ Camera setup mein ⚪ ' + escB(n) + ' ko 🔗 se asal PC se jorein</div>';   // v2.366.0: khamosh nahi
   } else if (k === 'g') {
     const G = tbGate(i);
     if (G.length) {

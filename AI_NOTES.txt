@@ -9573,3 +9573,7 @@ Hal: CAP_SCR ka fallback CAPS se. Sirf app (PC nahi badla). AI nahi.
 === v2.365.0 (23 Nov 2026) — 🧾 Sale ki report: Wholesale hissa, Items se hisaab chhupa ===
 Malik: wholesale ke bill jama kar ke dikhao; stock fraq add nahi; plus minus nazar na aaye.
 sale-rep.js: naya hissa 📦 Wholesale ke bill (ginti, kul, cash mila, list) + PDF / thermal; IT_ON=false (➕➖ Items se hisaab chhupa). Stock fraq pehle jaisa alag, kisi total mein nahi. Sirf app. AI nahi.
+
+=== v2.366.0 (23 Nov 2026) — 🎛 Sab cameras: khali counter khane par wajah ===
+Malik: live bill ban raha, items nahi aa rahe. Photo: khana KEIME1D (purana PC naam), chips mein RN6QU6D alag = pcAlias 🔗 nahi juda (andaza — malik ke 🔗 ke baad pakka hoga).
+App: 12 s tak bill / screen na aaye to khane par '⚠ ... ⚙️ Camera setup mein 🔗'. PC nahi badla. AI nahi.
