@@ -5614,3 +5614,6 @@ App: 12 s tak bill / screen na aaye to khane par '⚠ ... ⚙️ Camera setup me
 
 === md pkg v71 (23 Nov 2026 raat) — 📸 Sehat lock RUKA ===
 Malik: 'wo paani wala droid band kar do abhi'. msl macros se bahar + off mein. Yaad ke popup wahi. App / PC nahi badle. Phone 1-2 min mein khud le leta hai.
+
+=== md pkg v72 (23 Nov 2026 raat) ===
+Malik: 'wo bhi band' -> 💧 Paani + ☕ Coffee · Fruit · Nuts ki yaad ke macro band (pkg macros se bahar + off). off list: Keyboard haptics, Mobiel locked, Sehat lock, Paani, Coffee (5 ki hadd; 10 min break / Subah 11 tak nikle - phone par pehle se band, pkg mein nahi). Chalu sirf malik ke kehne par. Phone par azmaya nahi. AI nahi.
