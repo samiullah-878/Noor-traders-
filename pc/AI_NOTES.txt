@@ -5628,3 +5628,6 @@ App: tally.js openWg mein sbHTML / sbSave / sbPaintSt (ON = confirm + rkd 0.125)
 Azmaya: node --check, ffmpeg (2 TCP mpegts -> xstack -> segment, 'q' se saaf band, moov pehle). Asal NVR / WhatsApp group / PC ka CPU bojh nahi azmaya. AI nahi. Rules nahi badle.
 
 === 2026-11-23 (app v2.368.0) — PC koi file nahi badli (Live dabbe + Video samjhao sirf app). ===
+
+
+=== 2026-11-24 (app v2.369.0) — PC koi file nahi badli (Video samjhao v1.7 sirf app). ===

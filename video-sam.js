@@ -1,4 +1,12 @@
-// video-sam.js v1.6 (app v2.368.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// video-sam.js v1.7 (app v2.369.0, 24 Nov 2026) — 🎓 VIDEO SAMJHAO
+// v1.7 (malik 24 Nov: 'baar baar ruk jati hai — aankhein band hoti hain, khol kar dabana parta hai · auto kar do'): wajahein + ilaaj —
+//   ① awaz ka intezar (agla page / Google ki minute wali hadd / AI ka agla hissa) mein <audio> RUK jata tha -> screen band par Android page so jata, phir play() mana.
+//      Ab intezar mein wahi <audio> ek na sunai dene wali dhun (22 Hz, 12 s loop — `keep`) chalata rehta hai: page jaagta, notification par '⏳ …', awaz aate hi seedha.
+//   ② screen band ho to phone ki awaz (speechSynthesis) chalti hi nahi aur atak jati thi -> ab screen band = phone ki awaz NAHI: Google ki awaz ka intezar
+//      (hadd 65 s baad khud) / screen khulte hi wahin se (`onVis`). Phone ki awaz ke waqt screen khud on rehti hai (wake lock).
+//   ③ AI ka agla hissa 429 (minute wali hadd) par foran BAND ho jata tha (stop) -> ab 65 s baad khud dobara (8 dafa); roz ki hadd ho tabhi band. Doosri ghalti par
+//      5 s → 1 min tak 6 dafa. Bani hui guftagu khatam aur agla hissa nahi aa raha = sunte sunte khud mangwa leti hai (⏹ na dabaya ho).
+//   ④ purana play() ka AbortError naye hisse ko 'ruka hua' bana deta tha (isi liye ⏸ / ▶ ulta) — ab nahi. Notification / earphone ka ▶ har haal mein chalata hai.
 // v1.6 (malik 23 Nov: 'naya link paste karein to time bhi khud us hisaab se aaye · purana save hi rahe apps mein'): link likhte / paste karte hi
 //   waqt khud (`urlAuto`): link mein ?t= ho to wohi, pehle samjhi video = khud khul jaye + khana khali (= jahan tak bani wahan se aage), nayi = 0:00.
 //   Pehle 🎬 dabane par waqt alag ho to purani bani guftagu MIT jati thi (S.v.parts = []) — ab kabhi nahi: naya hissa purane mein JURTA hai (`mergeIn`).
@@ -187,7 +195,7 @@ async function ask(id, a, b) {
       if (!r.ok) {
         last = Error(r.msg);
         if (r.status === -1) throw Error('AI ne 4 minute mein jawab nahi diya — internet dekhein, phir dobara.');
-        if (r.status === 429) throw Object.assign(Error('Google ki hadd poori ho gayi — kuch der baad dobara koshish karein.'), { stop: 1 });
+        if (r.status === 429) { const day = /per\s*day|perday|daily/i.test(r.msg || ''); throw Object.assign(Error(day ? 'Google ki aaj ki hadd poori ho gayi — kal dobara (ya Google AI Studio mein billing).' : 'Google ki minute wali hadd'), day ? { stop: 1 } : { q: 1 }); }
         if (r.status === 403 && /permission|private|not\s*(?:public|available)/i.test(r.msg)) throw Object.assign(Error('Yeh video AI nahi dekh sakta (private / pabandi wali). Sirf public video chalti hai.'), { stop: 1 });
         if (r.status === 404 || /not found|no longer available|not supported for/i.test(r.msg)) break;
         if (r.status === 400) continue;
@@ -342,8 +350,8 @@ async function pumpOne() {
           if (e?.q) {
             S.tts429 = (S.tts429 || 0) + 1;
             if (S.tts429 >= 3) ttsStop('Google ki awaz ki aaj ki hadd poori ho gayi');
-            else { hold = true; S.ttsHold = Date.now() + 65000; A.notice?.('🔊 Google ki awaz ki hadd — 1 minute baad khud dobara (tab tak phone ki awaz)'); clearTimeout(S.holdT);
-              S.holdT = setTimeout(() => { if (!S || S.v !== v) return; for (const k of Object.keys(S.aud)) if (S.aud[k]?.h && Number(k) !== S.cur) delete S.aud[k]; pump(); }, 66000); }
+            else { hold = true; S.ttsHold = Date.now() + 65000; A.notice?.('🔊 Google ki awaz ki hadd — 1 minute baad khud dobara' + (hid() ? '' : ' (tab tak phone ki awaz)')); clearTimeout(S.holdT);
+              S.holdT = setTimeout(() => { if (!S || S.v !== v) return; for (const k of Object.keys(S.aud)) if (S.aud[k]?.h && (Number(k) !== S.cur || S.wait === S.cur)) delete S.aud[k]; pump(); }, 66000); }
           } else if (e?.off) ttsStop(String(e?.message || e));
           else {
             S.ttsFail = (S.ttsFail || 0) + 1;
@@ -379,23 +387,52 @@ function markLine(i, k) {
   try { const q = S.v?.parts[i]; if (q && S.cur === i) posSet(S.v.id, q.s, k); } catch {}
   const el = d.querySelector(`[data-vs-ln="${key}"]`); if (el) { el.classList.add('is-on'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
 }
-function phoneTalk(i) {
+// ---------- v1.7: intezar mein page jaagta rahe (khamosh dhun) · screen ka haal · wake lock ----------
+const hid = () => typeof document !== 'undefined' && document.visibilityState === 'hidden';
+const setMs = st => { try { if (navigator.mediaSession) navigator.mediaSession.playbackState = st; } catch {} };
+let SIL = '';
+// 12 s, 8000 Hz, 22 Hz ki bohat halki dhun (-61 dBFS) — kaan / earphone par sunai nahi deti, magar Android page ko 'awaz chal rahi' maan kar sulata nahi
+function silUrl() {
+  if (SIL) return SIL;
+  const rate = 8000, n = rate * 12, pcm = new Uint8Array(n * 2), dv = new DataView(pcm.buffer);
+  for (let x = 0; x < n; x++) dv.setInt16(x * 2, Math.round(30 * Math.sin(2 * Math.PI * 22 * x / rate)), true);
+  return (SIL = URL.createObjectURL(new Blob([wavBytes(pcm, rate)], { type: 'audio/wav' })));
+}
+function keep(title) {
+  if (!S || !AU) return;
+  try { const u = silUrl(); AU.loop = true; if (S.srcUrl !== u) { S.seek = null; AU.src = u; S.srcUrl = u; } AU.playbackRate = 1; AU.play().catch(() => {}); } catch {}
+  try { const ms = navigator.mediaSession; if (ms) { ms.metadata = new MediaMetadata({ title: title || '⏳ Agla hissa tayyar ho raha hai…', artist: (S.v?.t || 'Video samjhao') + ' · Blue Khata' }); ms.playbackState = 'playing'; } } catch {}
+}
+async function wlOn() { try { if (S && !S.wl && navigator.wakeLock && !hid()) { const w = await navigator.wakeLock.request('screen'); if (!S) { w.release(); return; } S.wl = w; w.addEventListener?.('release', () => { if (S && S.wl === w) S.wl = null; }); } } catch {} }
+function wlOff() { try { S?.wl?.release(); } catch {} if (S) S.wl = null; }
+function onVis() {
+  if (!S || !S.v || S.cur < 0) return;
+  if (hid()) {
+    // phone ki awaz chal rahi thi aur screen band hui -> wo yahan chalti nahi: wahin rok kar intezar (dhun chalu), screen khulte hi usi line se
+    if (S.ptOn && !S.paused && S.wait < 0) { const i = S.cur, k = Math.max(0, (S.ptK || 1) - 1); quiet(); S.ptRes = { i, k }; S.wait = i; keep('📱 Screen kholein — phone ki awaz (Google ki awaz abhi nahi)'); badge(i); paintBar(); }
+    return;
+  }
+  if (S.wait === S.cur && !S.paused) playPart(S.cur);
+  else if (S.blocked) resume();
+}
+function phoneTalk(i, k0 = 0) {
   const t = TTSP(), p = S.v.parts[i]; if (!t || !p) { next(); return; }
   try { t.cancel(); } catch {}
-  const tok = S.tok = (S.tok || 0) + 1, L = linesOf(p), vc = urVoice(); let k = 0;
+  const tok = S.tok = (S.tok || 0) + 1, L = linesOf(p), vc = urVoice(); let k = Math.min(Math.max(0, k0), L.length);
+  S.ptOn = true; wlOn(); setMs('playing');
   const step = () => {
     if (!S || S.tok !== tok) return;
     if (sleepDue()) return;
     if (k >= L.length) { next(); return; }
-    markLine(i, k); const l = L[k++], u = new SpeechSynthesisUtterance(l[2] || l[1]); u.lang = l[2] ? 'ur-PK' : 'en-IN'; if (vc && l[2]) u.voice = vc;
+    S.ptK = k + 1; markLine(i, k); const l = L[k++], u = new SpeechSynthesisUtterance(l[2] || l[1]); u.lang = l[2] ? 'ur-PK' : 'en-IN'; if (vc && l[2]) u.voice = vc;
     u.rate = RATES[S.rate][0]; u.pitch = l[0] === 'B' ? 0.75 : 1.2;
     u.onend = step; u.onerror = ev => { if (ev?.error === 'interrupted' || ev?.error === 'canceled') return; step(); };
     t.speak(u);
   };
   step();
 }
-function quiet() { if (!S) return; S.tok = (S.tok || 0) + 1; try { TTSP()?.cancel(); } catch {} try { AU?.pause(); } catch {} try { S.smp?.pause(); } catch {} }
-function stopPlay() { if (!S) return; quiet(); markLine(-1, 0); const c = S.cur; S.cur = -1; S.wait = -1; S.paused = false; S.all = false; if (c >= 0) badge(c); paintBar(); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'none'; } catch {} }
+function quiet() { if (!S) return; S.tok = (S.tok || 0) + 1; S.ptOn = false; try { TTSP()?.cancel(); } catch {} try { if (AU) { AU.loop = false; AU.pause(); } } catch {} try { S.smp?.pause(); } catch {} }
+function stopPlay() { if (!S) return; quiet(); wlOff(); markLine(-1, 0); const c = S.cur; S.cur = -1; S.wait = -1; S.paused = false; S.all = false; S.blocked = 0; S.ptRes = null; if (c >= 0) badge(c); paintBar(); setMs('none'); }
 function meta(i) {
   try {
     if (!('mediaSession' in navigator) || !S?.v) return; const p = S.v.parts[i];
@@ -405,14 +442,20 @@ function meta(i) {
 }
 function playPart(i) {
   if (!S || !S.v) return; const p = S.v.parts[i]; if (!p) { stopPlay(); return; }
-  quiet(); const old = S.cur; S.cur = i; S.paused = false; S.wait = -1; if (old >= 0 && old !== i) badge(old);
-  const a = audOf(i);
-  if (a?.st === 'ok') { markLine(i, 0); const f0 = a.f0 || 0;
+  quiet(); const old = S.cur; S.cur = i; S.paused = false; S.blocked = 0; S.wait = -1; if (old >= 0 && old !== i) badge(old);
+  const a = audOf(i), res = S.ptRes && S.ptRes.i === i ? S.ptRes.k : 0; S.ptRes = null;
+  if (a?.st === 'ok') { markLine(i, 0); wlOff(); const f0 = a.f0 || 0; AU.loop = false;
     if (S.srcUrl !== a.url) { S.seek = f0 > 0 ? f0 : null; AU.src = a.url; S.srcUrl = a.url; }
     else { S.seek = f0; try { AU.currentTime = AU.duration > 0 ? f0 * AU.duration : 0; } catch { S.seek = null; } }
-    AU.playbackRate = RATES[S.rate][0]; AU.play().catch(() => { S.paused = true; badge(i); paintBar(); }); meta(i); pump(); }
-  else if (a?.st === 'x') phoneTalk(i);
-  else { S.wait = i; pump(); }
+    // v1.7: purane play() ka AbortError (naya src) kabhi naye hisse ko 'ruka' na banaye; asal mana (screen band) = notification ke ▶ / screen khulte hi khud
+    AU.playbackRate = RATES[S.rate][0]; AU.play().catch(e => { if (!S || S.cur !== i || e?.name === 'AbortError') return; S.paused = true; S.blocked = 1; badge(i); paintBar(); setMs('paused'); }); meta(i); pump(); }
+  else if (a?.st === 'x') {
+    // v1.7: screen band ho to phone ki awaz chalti hi nahi — intezar (Google ki hadd 65 s baad khud / screen khulte hi wahin se); khuli screen = phone ki awaz
+    if (hid()) { S.wait = i; if (res) S.ptRes = { i, k: res }; keep(a.h ? '⏳ Google ki awaz ki minute wali hadd — 1 minute mein khud' : '📱 Screen kholein — phone ki awaz (Google ki awaz abhi nahi)');
+      if (a.h && (S.ttsHold || 0) <= Date.now()) { for (const k of Object.keys(S.aud)) if (S.aud[k]?.h) delete S.aud[k]; pump(); } }
+    else phoneTalk(i, res);
+  }
+  else { S.wait = i; keep(); pump(); }
   badge(i); paintBar();
   if (!S.ln) $('vsDlg')?.querySelector(`[data-vs-part="${i}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
@@ -421,30 +464,45 @@ function next() {
   if (!S.all) { stopPlay(); return; }
   const i = S.cur + 1;
   if (i < S.v.parts.length) { playPart(i); return; }
-  if (S.busy || S.retry) { const c = S.cur; S.cur = -1; markLine(-1, 0); badge(c); S.waitNew = true; paintBar(); return; }
+  // v1.7: bani guftagu khatam — agla hissa aa raha ho (ya ruka hua chain ho aur ⏹ na dabaya ho) to khud mangwao; intezar mein dhun chalti rahe (page na soye)
+  if (!S.busy && !S.retry && !S.v.end && !S.halt && !S.stopErr) run(S.v.id, S.v.next || S.v.parts[S.v.parts.length - 1].e);
+  if (S.busy || S.retry) { const c = S.cur; S.cur = -1; S.wait = -1; markLine(-1, 0); badge(c); S.waitNew = true; keep('⏳ Video ka agla hissa AI se aa raha hai…'); paintBar(); return; }
   posDrop(S.v.id); stopPlay();
 }
 function toggle() {
   if (!S || S.cur < 0) return; const a = audOf(S.cur);
-  if (a?.st === 'ok') { if (AU.paused) { AU.play().catch(() => {}); S.paused = false; } else { AU.pause(); S.paused = true; } }
-  else if (a?.st === 'x') { const t = TTSP(); if (S.paused) { t?.resume(); S.paused = false; } else { t?.pause(); S.paused = true; } }
-  badge(S.cur); paintBar();
-  try { if (navigator.mediaSession) navigator.mediaSession.playbackState = S.paused ? 'paused' : 'playing'; } catch {}
+  // v1.7: intezar (dhun) ke waqt roko / chalao — rukne par awaz aa bhi jaye to khud nahi chalti
+  if (S.wait >= 0 || (S.paused && !S.ptOn && !(a?.st === 'ok' && S.srcUrl === a.url))) {
+    if (S.paused) { S.paused = false; playPart(S.cur); return; }
+    quiet(); S.wait = -1; S.paused = true;
+  }
+  else if (a?.st === 'ok') { if (AU.paused) { AU.play().catch(() => {}); S.paused = false; S.blocked = 0; } else { AU.pause(); S.paused = true; } }
+  else if (a?.st === 'x') { const t = TTSP(); if (S.paused) { t?.resume(); S.paused = false; wlOn(); } else { t?.pause(); S.paused = true; wlOff(); } }
+  badge(S.cur); paintBar(); setMs(S.paused ? 'paused' : 'playing');
+}
+// v1.7: notification / earphone / screen khulne ka ▶ — jo bhi haal ho, chalao
+function resume() {
+  if (!S || !S.v) return;
+  if (S.cur < 0) { if (!S.waitNew && S.v.parts.length) { S.all = true; playPart(posIdx(S.v)); } return; }
+  const a = audOf(S.cur);
+  if (S.wait < 0 && a?.st === 'ok' && S.srcUrl === a.url) { S.paused = false; S.blocked = 0; AU.play().catch(() => {}); badge(S.cur); paintBar(); setMs('playing'); }
+  else if (S.paused && S.ptOn) toggle();
+  else { S.all = true; playPart(S.cur); }
 }
 function audioSetup() {
   AU = new Audio(); AU.preload = 'auto';
-  AU.addEventListener('ended', () => { if (S && S.cur >= 0) { const u = audOf(S.cur)?.url; while (u && audOf(S.cur + 1)?.url === u) { const o = S.cur; S.cur = o + 1; badge(o); } } next(); });
-  AU.addEventListener('loadedmetadata', () => { if (!S) return; if (S.seek != null && S.seek > 0 && AU.duration > 0) { try { AU.currentTime = S.seek * AU.duration; } catch { S.seek = null; } } else S.seek = null; });
+  AU.addEventListener('ended', () => { if (S && S.srcUrl === SIL) return; if (S && S.cur >= 0) { const u = audOf(S.cur)?.url; while (u && audOf(S.cur + 1)?.url === u) { const o = S.cur; S.cur = o + 1; badge(o); } } next(); });
+  AU.addEventListener('loadedmetadata', () => { if (!S) return; if (S.srcUrl === SIL) { S.seek = null; return; } if (S.seek != null && S.seek > 0 && AU.duration > 0) { try { AU.currentTime = S.seek * AU.duration; } catch { S.seek = null; } } else S.seek = null; });
   AU.addEventListener('seeked', () => { if (S) S.seek = null; });
-  AU.addEventListener('timeupdate', () => { if (sleepDue()) return; if (!S || !S.v || S.cur < 0 || !(AU.duration > 0) || S.seek != null) return; const a = audOf(S.cur); if (a?.st !== 'ok') return;
+  AU.addEventListener('timeupdate', () => { if (sleepDue()) return; if (!S || !S.v || S.cur < 0 || !(AU.duration > 0) || S.seek != null) return; const a = audOf(S.cur); if (a?.st !== 'ok' || S.srcUrl !== a.url) return;
     const fr = AU.currentTime / AU.duration, f0 = a.f0 || 0, f1 = a.f1 == null ? 1 : a.f1;
     if (fr >= f1 && f1 < 1 && audOf(S.cur + 1)?.url === a.url) { if (!S.all) { stopPlay(); return; } const o = S.cur; S.cur = o + 1; badge(o); badge(S.cur); meta(S.cur); markLine(S.cur, 0); pump(); return; }
     markLine(S.cur, lineAt(linesOf(S.v.parts[S.cur]), Math.min(0.999, Math.max(0, (fr - f0) / Math.max(1e-6, f1 - f0))))); });
-  AU.addEventListener('error', () => { if (!S || S.cur < 0 || !AU.src) return; const i = S.cur, u = audOf(i)?.url; for (const k of Object.keys(S.aud)) if (u && S.aud[k]?.url === u) { S.aud[k] = { st: 'x' }; badge(Number(k)); } S.aud[i] = { st: 'x' }; S.srcUrl = ''; S.seek = null; badge(i); phoneTalk(i); });
+  AU.addEventListener('error', () => { if (!S || S.cur < 0 || !AU.src || S.srcUrl === SIL || S.wait >= 0) return; const i = S.cur, u = audOf(i)?.url; for (const k of Object.keys(S.aud)) if (u && S.aud[k]?.url === u) { S.aud[k] = { st: 'x' }; badge(Number(k)); } S.aud[i] = { st: 'x' }; S.srcUrl = ''; S.seek = null; badge(i); playPart(i); });
   try {
     const ms = navigator.mediaSession; if (!ms) return;
-    ms.setActionHandler('play', () => { if (S?.paused) toggle(); });
-    ms.setActionHandler('pause', () => { if (S && !S.paused) toggle(); });
+    ms.setActionHandler('play', () => resume());
+    ms.setActionHandler('pause', () => { if (!S) return; if (S.waitNew) { S.waitNew = false; quiet(); setMs('paused'); paintBar(); } else if (S.cur >= 0 && !S.paused) toggle(); });
     ms.setActionHandler('nexttrack', () => { if (S?.v && S.cur + 1 < S.v.parts.length) { S.all = true; playPart(S.cur + 1); } });
     ms.setActionHandler('previoustrack', () => { if (S?.v && S.cur > 0) { S.all = true; playPart(S.cur - 1); } });
   } catch {}
@@ -563,7 +621,7 @@ async function run(id, a, n = 0, tryN = 0) {
   if (!S || S.busy) return;
   clearTimeout(S.retry); S.retry = 0;
   if (!S.v || S.v.id !== id) { stopPlay(); freeAud(); const o = load()[id]; S.v = o ? Object.assign(savedV(o), { next: a, end: 0 }) : { id, t: '', sp: [], parts: [], next: a, end: 0 }; }
-  const v = S.v, b = a + STEP; S.busy = true; S.halt = false; S.err = ''; S.msg = 'AI video sun raha hai… (' + fmt(a) + ' – ' + fmt(b) + ')'; paint();
+  const v = S.v, b = a + STEP; S.busy = true; S.halt = false; S.stopErr = 0; S.err = ''; S.msg = 'AI video sun raha hai… (' + fmt(a) + ' – ' + fmt(b) + ')'; paint();
   try {
     const out = await ask(id, a, b);
     if (!S || S.v !== v) return;
@@ -579,14 +637,17 @@ async function run(id, a, n = 0, tryN = 0) {
     if (first === 0 || !more || !tail) paint(); else { append(first); }
     pump();
     if (S.waitNew && out.parts.length) { S.waitNew = false; S.all = true; playPart(first); }
-    else if (S.waitNew && !more) { S.waitNew = false; paintBar(); }
+    else if (S.waitNew && !more) { S.waitNew = false; quiet(); setMs('none'); paintBar(); }
     if (S.queue) { const q = S.queue; S.queue = null; S.halt = false; goVid(q.id, q.a); return; }
     if (more) run(id, v.next, n + 1); else { paint(); if (v.end && !v.sum && v.parts.length >= 3) sumMake(v, true); }
   } catch (e) {
     if (!S || S.v !== v) return;
     S.busy = false;
-    if (!e?.stop && !S.halt && tryN < 3 && v.parts.length) { S.err = 'Agla hissa nahi aaya (' + String(e?.message || e).slice(0, 80) + ') — khud dobara koshish ' + (tryN + 1) + '/3…'; paint(); pump(); S.retry = setTimeout(() => { if (S && S.v === v) { S.retry = 0; run(id, a, n, tryN + 1); } }, 5000); return; }
-    S.waitNew = false; S.err = String(e?.message || e); paint(); pump();
+    // v1.7: 429 (minute wali hadd) = 65 s baad khud, 8 dafa · doosri ghalti 5 s → 1 min, 6 dafa (pehle 429 par foran band, baqi 3 dafa 5 s)
+    const maxT = e?.q ? 8 : 6, wt = e?.q ? 65000 : Math.min(60000, 5000 * 2 ** tryN);
+    if (!e?.stop && !S.halt && tryN < maxT && (v.parts.length || e?.q)) { S.err = (e?.q ? '⏳ Google ki minute wali hadd' : 'Agla hissa nahi aaya (' + String(e?.message || e).slice(0, 80) + ')') + ' — ' + Math.round(wt / 1000) + ' sec baad khud dobara ' + (tryN + 1) + '/' + maxT + '…'; paint(); pump(); S.retry = setTimeout(() => { if (S && S.v === v) { S.retry = 0; run(id, a, n, tryN + 1); } }, wt); return; }
+    if (e?.stop) S.stopErr = 1;
+    if (S.waitNew) { S.waitNew = false; quiet(); setMs('none'); } S.err = String(e?.message || e); paint(); pump();
     if (S.queue) { const q = S.queue; S.queue = null; S.halt = false; S.err = ''; goVid(q.id, q.a); }
   }
 }
@@ -776,7 +837,7 @@ async function onClick(e) {
   if (k.vs === 'paste') { try { const x = await navigator.clipboard.readText(); if (x) { keep(); S.url = x.trim(); paint(); urlAuto(S.url); } } catch { A.notice?.('Paste ki ijazat nahi mili — link khane mein khud paste karein'); } return; }
   if (k.vs === 'list') { keep(); if (S.busy) { A.notice?.('⏳ Abhi hissa aa raha hai — thori der baad'); return; } S.menu = false; stopPlay(); freeAud(); S.v = null; S.url = ''; S.from = ''; S.view = ''; S.err = ''; try { localStorage.removeItem('sam-vs-last'); } catch {} paint(); return; }
   if (k.vs === 'rate') { S.rate = (S.rate + 1) % RATES.length; try { localStorage.setItem('sam-vs-rate', String(S.rate)); } catch {} if (AU) AU.playbackRate = RATES[S.rate][0]; paintBar(); return; }
-  if (k.vs === 'all') { if (S.waitNew) { S.waitNew = false; paintBar(); } else if (S.cur >= 0) toggle(); else { S.all = true; playPart(posIdx(S.v)); } return; }
+  if (k.vs === 'all') { if (S.waitNew) { S.waitNew = false; quiet(); setMs('paused'); paintBar(); } else if (S.cur >= 0) toggle(); else { S.all = true; playPart(posIdx(S.v)); } return; }
   if (k.vs === 'halt') { S.halt = true; clearTimeout(S.retry); S.retry = 0; t.disabled = true; t.textContent = '⏹ Ruk raha…'; return; }
   if (k.vs === 'force') { if (S.v && !S.busy) { S.v.end = 0; S.err = ''; run(S.v.id, S.v.next || 0); } return; }
   if (k.vs === 'more') { if (S.v && !S.v.end) run(S.v.id, S.v.next); return; }
@@ -786,7 +847,7 @@ async function onClick(e) {
     goVid(id, String(S.from || '').trim() ? secOf(S.from) : null);
   }
 }
-function shut() { if (!S) return; clearTimeout(S.retry); clearTimeout(S.holdT); clearTimeout(S.sleepT); if (S.smpUrl) { try { URL.revokeObjectURL(S.smpUrl); } catch {} } stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
+function shut() { if (!S) return; try { document.removeEventListener('visibilitychange', onVis); } catch {} wlOff(); clearTimeout(S.retry); clearTimeout(S.holdT); clearTimeout(S.sleepT); if (S.smpUrl) { try { URL.revokeObjectURL(S.smpUrl); } catch {} } stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
 function close() { const d = dlg(); shut(); if (d) { try { d.close(); } catch {} d.remove(); } if (window.ntVsClose) window.ntVsClose = null; }
 export function open(ctx) {
   A = ctx || {};
@@ -795,7 +856,7 @@ export function open(ctx) {
   d = document.createElement('dialog'); d.id = 'vsDlg'; d.className = 'vs-dlg'; document.body.appendChild(d);
   let rate = 1; try { const r = Number(localStorage.getItem('sam-vs-rate')); if (r >= 0 && r < RATES.length) rate = r; } catch {}
   S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null, ttsNoMulti: '', menu: false, smpW: '', smp: null, cap: {}, ttsHold: 0, tts429: 0, holdT: 0, seek: null, srcUrl: '', view: '', q: '', wq: '', qBusy: false, sumBusy: false, actBusy: false, sleepAt: 0, sleepT: 0, smpUrl: '', smpSum: 0 };
-  audioSetup();
+  audioSetup(); document.addEventListener('visibilitychange', onVis);
   d.addEventListener('click', onClick); d.addEventListener('input', onInput); d.addEventListener('change', onChange); d.addEventListener('keydown', onKey);
   d.addEventListener('close', () => { shut(); d.remove(); });
   try { TTSP()?.getVoices(); } catch {}

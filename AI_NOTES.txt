@@ -9607,3 +9607,18 @@ Video samjhao v1.6 (malik: 'naya link paste karein to time bhi khud us hisaab se
   (parts = []) aur saved video ki jagah khali likh deta tha — ab `mergeIn` (naya hissa purane mein, sirf usi waqt ke purane hisse badalte). Bani hui jagah ka waqt = wohi hissa khule (AI nahi).
   Doosri video load ho rahi ho to nayi qatar mein (`S.queue`). Jagah bhar jaye to purani video hatti hai (pehle poori save chup-chaap fail). KEEP 25. ⋮ 📚 Purani videos.
   Node test tOf / mergeIn PASS; asal phone par nahi azmaya. AI: wahi (Gemini sirf samjhane / awaz mein).
+
+
+=== 2026-11-24 (app v2.369.0) — 🎓 Video samjhao v1.7: awaz beech mein kabhi na ruke ===
+Malik: 'baar baar ruk jati hai — meri aankhein band hoti hain, khol kar dabana parta hai to chalti hai · auto kar do'. video-sam.js v1.7, PC / rules: kuch nahi.
+Wajahein (code se): (1) agle hisse ki awaz ka intezar / Google TTS ki minute wali hadd (429) / AI ka agla hissa — in sab mein <audio> RUK jata tha; screen band par Android page
+  sula deta aur baad ka play() mana. (2) screen band ho to phone ki awaz (speechSynthesis) chalti hi nahi — phoneTalk atak jata (onend nahi aata) = hamesha ke liye ruka.
+  (3) AI video ka 429 (minute wali hadd) = { stop } -> poora chain band, phir bani guftagu khatam hote hi stopPlay. (4) purane play() ka AbortError naye hisse ko S.paused bana deta.
+Ilaaj: `keep(title)` = intezar mein WAHI <audio> 12 s ki 22 Hz bohat halki dhun (-61 dBFS, sunai nahi deti) loop karta hai — page jaagta, notification par '⏳ …', awaz aate hi
+  seedha (AU.loop false). Screen band (`hid()`) = phone ki awaz NAHI: Google ki hadd ho to 65 s baad khud (holdT ab intezar wala hissa bhi saaf karta hai), warna screen khulte hi
+  (`onVis` visibilitychange) — chalti phone awaz ke beech screen band hui to usi line se (S.ptRes). Phone ki awaz ke waqt wake lock (screen khud band na ho). AI 429: day / PerDay
+  = stop, warna { q } -> 65 s baad 8 dafa; doosri ghalti 5 s -> 1 min, 6 dafa. next(): bani guftagu khatam aur chain ruka (⏹ / stopErr na ho) = khud run(). Notification ▶ = `resume()`
+  (har haal mein chalata), ⏸ = intezar bhi rokta. timeupdate / error / ended / loadedmetadata dhun (SIL) ko nazar andaz karte hain.
+Azmaya: headless Chrome + nakli Gemini (fetch stub, 65 s timer chhota + Date.now aage): screen band -> TTS 429 -> dhun -> khud awaz · AI 429 -> khud dobara · AI der -> dhun -> agla
+  hissa · TTS band + screen band -> 'Screen kholein' + dhun, screen khuli -> phone awaz · phone awaz ke beech band/khuli -> usi line se. Asal phone (Android ka sulana / play() mana)
+  par nahi azmaya — malik se nateeja poochho. AI: wahi (Gemini sirf samjhane / awaz mein).
