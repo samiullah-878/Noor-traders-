@@ -5573,3 +5573,6 @@ Isi update mein 🔊: do-awaz wali Gemini darkhwast 400 deti thi (speech_metadat
 
 === v2.358.0 (23 Nov 2026) — 🎓 Video samjhao v1.4 ===
 Gemini awaz ki hadd (429): har chhote hisse ki awaz pehle se ban rahi thi. Ab 15 min ke page ki EK awaz (groupsOf, f0-f1), chalta + agla page, ek waqt ek, 429 = 65 s ruk kar dobara, lamba = aadha. Timeout 240 s. Node test groupsOf PASS + import; asal Gemini / phone par azmaya nahi. AI: Gemini (sirf is screen mein).
+
+=== 2026-11-23 — pos-khata-sync (y): 🖨 khaton ki list (app v2.359.0) ===
+khataPrints j.k 'list' {t:'c'|'s', R:[[naam, DD-MM-YY, aakhri raqam paisa, baqaya paisa]]} -> listSlip (Font A naam + baqaya mota, Font B aakhri entry, Kul lene / dene). Dispatch runKhataPrints: lst -> rep -> day -> khata. Purana PC (y se pehle) is job ko khata samajh kar khali parchi chhapega — PC 3-5 min mein update.

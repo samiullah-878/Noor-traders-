@@ -1,6 +1,6 @@
 {
- "version": "2026-11-22.5",
- "note": "pos-sales-dekho v2.12 (items se hisaab: plus / minus / wapsi alag — posSales/<din>-it)",
+ "version": "2026-11-23.1",
+ "note": "pos-khata-sync y (khaton ki list ka thermal print: Customers / Suppliers — khataPrints k list)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -14,7 +14,7 @@
   "khata-sync-auto.bat": "7006262d6b2e395b6212aa2b130c191bb3284b1a2bf60793ee537fd845f69905",
   "label-auto.bat": "7094351892e48c7a2d4a32b2ac49e96e8d39e66856a3ff276d36b27b91368824",
   "label-print.js": "9a8eb6849121045e663379fb33bae52d156cfa63c3016a6c478cd4e1359b00c6",
-  "pos-khata-sync.js": "a73ad7fda1ff86e4a074eb0025ea9821cab42517e3ee03eb8c5f8437a3084cf3",
+  "pos-khata-sync.js": "e8572f215cc64dd4dd8bb207616bdaade06864c409d53abd4d6b322e5d56cd87",
   "post-farq.js": "e41505f00578b0477386adbee095ab507e06e76019a4caa73fc2ea66d1a9ef04",
   "purchase-auto.bat": "f877f7a5c14ad0a654b499396e8661c20a1140c2b99d68c1a91b18cae440fb85",
   "purchase-post.js": "284c63b22719ba6d4ec4c551985b9edc762597f20fcb3a4c5f04100a2d3a6aee",

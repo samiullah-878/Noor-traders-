@@ -1,4 +1,8 @@
-// video-sam.js v1.4 (app v2.358.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// video-sam.js v1.5 (app v2.359.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// v1.5 (malik 23 Nov: 'sab bana do' — 9 kaam): ▶ wahin se shuru (sam-vs-pos / sam-vs-last) · 😴 so jaun to band (15 / 30 / 60) · ⭐ pasand ki line (line par tap,
+//   sam-vs-star) · 📖 lafzon ki copy (sam-vs-words, search) · 📄 PDF (A.pdf — kholo + bhejo) · YouTube → Share → Blue Khata (A.share, manifest share_target) ·
+//   📌 Khulasa (video khatam hote hi khud + 🔊) · ✅ Mere kaam ki baatein (☐) · ❓ Sawal poochho (jawab usi video se). 🤖 AI sirf khulasa / kaam / sawal mein (likhai se, video dobara nahi).
+//   Sab yaad sirf is phone par. Naye kaam ⋮ ke andar (saamne nayi qatar nahi).
 // v1.4 (malik: 'Gemini ki awaz ki hadd poori' — poori video ke har chhote hisse ki awaz pehle se ban rahi thi · 'ek hi dafa poora page ban jaye'): awaz 15 min ke page ki EK
 //   (groupsOf), sirf chalta + agla page, hadd par 65 s ruk kar dobara (band nahi), ek waqt ek darkhwast.
 // v1.3 (malik: 'yeh bhi video 15 minute ki hi hai, is se aage ki nahi'): AI 15 min ke tukre ke khatam hone ko 'video khatam' keh deta tha -> ab 'end' sirf tab
@@ -83,18 +87,45 @@ function audioBlob(b64, mime) {
   return new Blob([wavBytes(u, rate)], { type: 'audio/wav' });
 }
 const ttsText = p => linesOf(p).map(l => SPK[l[0]] + ': ' + (l[2] || l[1])).join('\n');
-export const _t = { groupsOf: (...a) => groupsOf(...a), wOf: (...a) => wOf(...a), bOf: (...a) => bOf(...a), vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt, pcmOf: (...a) => pcmOf(...a), ttsBody: (...a) => ttsBody(...a), voGet };
+export const _t = { posIdx: (...a) => posIdx(...a), sumOf: (...a) => sumOf(...a), actOf: (...a) => actOf(...a), romOnly: (...a) => romOnly(...a), pdfHTML: (...a) => pdfHTML(...a), txOf: (...a) => txOf(...a), groupsOf: (...a) => groupsOf(...a), wOf: (...a) => wOf(...a), bOf: (...a) => bOf(...a), vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt, pcmOf: (...a) => pcmOf(...a), ttsBody: (...a) => ttsBody(...a), voGet };
 
 const load = () => { try { const o = JSON.parse(localStorage.getItem(LS) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } };
 function store(v) {
   try {
-    const o = load(); o[v.id] = { id: v.id, t: v.t || '', sp: v.sp || [], parts: v.parts, next: v.next, end: v.end ? 1 : 0, at: Date.now() };
+    const o = load(); o[v.id] = { id: v.id, t: v.t || '', sp: v.sp || [], parts: v.parts, next: v.next, end: v.end ? 1 : 0, sum: v.sum || null, act: v.act || null, qa: v.qa || null, at: Date.now() };
+    try { localStorage.setItem('sam-vs-last', v.id); } catch {}
     const ids = Object.keys(o).sort((x, y) => (o[y].at || 0) - (o[x].at || 0));
     for (const k of ids.slice(KEEP)) { delete o[k]; idbDropVid(k); }
     localStorage.setItem(LS, JSON.stringify(o));
   } catch {}
 }
-const drop = id => { try { const o = load(); delete o[id]; localStorage.setItem(LS, JSON.stringify(o)); } catch {} idbDropVid(id); };
+const drop = id => { try { const o = load(); delete o[id]; localStorage.setItem(LS, JSON.stringify(o)); } catch {} idbDropVid(id); posDrop(id); };
+const savedV = o => ({ id: o.id, t: o.t, sp: o.sp || [], parts: o.parts || [], next: o.next || 0, end: o.end, sum: o.sum || null, act: o.act || null, qa: o.qa || null });
+
+// ---------- v1.5: chhoti yaad (sirf is phone par) ----------
+const jget = (k, d) => { try { const o = JSON.parse(localStorage.getItem(k) || 'null'); return o && typeof o === 'object' ? o : d; } catch { return d; } };
+const jset = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch {} };
+// ▶ wahin se: {id: [hisse ka shuru second, line, kab]}
+const posGet = id => jget('sam-vs-pos', {})[id] || null;
+function posSet(id, sec, k) { const o = jget('sam-vs-pos', {}); o[id] = [Math.round(sec), k, Date.now()]; const ids = Object.keys(o); if (ids.length > 30) for (const x of ids.sort((a, b) => (o[a][2] || 0) - (o[b][2] || 0)).slice(0, ids.length - 30)) delete o[x]; jset('sam-vs-pos', o); }
+function posDrop(id) { const o = jget('sam-vs-pos', {}); if (o[id]) { delete o[id]; jset('sam-vs-pos', o); } }
+const posIdx = v => { const q = v && posGet(v.id); if (!q) return 0; const i = v.parts.findIndex(x => Math.round(x.s) === q[0]); return i > 0 ? i : 0; };
+// ⭐ pasand ki lines: [{k, id, t, s, n, r, at}] (300 tak)
+const starAll = () => { const a = jget('sam-vs-star', []); return Array.isArray(a) ? a : []; };
+const starKey = (id, sec, r) => id + ':' + Math.round(sec) + ':' + hsh(String(r));
+function starToggle(v, p, l) {
+  const k = starKey(v.id, p.s, l[1]); let a = starAll(); const had = a.some(x => x.k === k);
+  if (had) a = a.filter(x => x.k !== k); else { a.push({ k, id: v.id, t: String(v.t || '').slice(0, 80), s: Math.round(p.s), n: nameOf(v, l[0]), r: l[1], at: Date.now() }); if (a.length > 300) a = a.slice(a.length - 300); }
+  jset('sam-vs-star', a); return !had;
+}
+// 📖 lafz: {chhote harf: [lafz, matlab, kab]} (1500 tak) — video hatane par bhi rehte hain
+function wordsAdd(parts) {
+  const o = jget('sam-vs-words', {}); let ch = false;
+  for (const q of parts || []) for (const w of q.w || []) { const k = String(w[0] || '').toLowerCase().trim(); if (!k || !w[1] || o[k]) continue; o[k] = [String(w[0]).trim(), String(w[1]).trim(), Date.now()]; ch = true; }
+  if (!ch) return; const ks = Object.keys(o); if (ks.length > 1500) for (const x of ks.sort((a, b) => (o[a][2] || 0) - (o[b][2] || 0)).slice(0, ks.length - 1500)) delete o[x];
+  jset('sam-vs-words', o);
+}
+const wordsN = () => Object.keys(jget('sam-vs-words', {})).length;
 
 // ---------- audio ki yaad (IndexedDB 'nt-vs') ----------
 let DBP = null;
@@ -257,7 +288,7 @@ async function sample(voice) {
   try {
     if (!SAMP[voice]) { const cfg = await A.aiCfg(); if (!cfg?.key) return; const models = S.ttsM || (S.ttsM = await ttsModels(cfg.key)); const d = await ttsOne('السلام علیکم۔ میں اس آواز میں آپ کو ویڈیو سمجھاؤں گی۔'.replace('گی', /Larka/.test((VOICES.find(v => v[0] === voice) || [])[1] || '') ? 'گا' : 'گی'), voice, models, cfg.key); SAMP[voice] = URL.createObjectURL(audioBlob(d.data, d.mimeType || d.mime_type)); }
     if (!S || S.cur >= 0) return;
-    const a = S.smp || (S.smp = new Audio()); a.src = SAMP[voice]; await a.play();
+    const a = S.smp || (S.smp = new Audio()); S.smpSum = 0; a.onended = null; a.src = SAMP[voice]; await a.play();
   } catch (e) { A.notice?.('🔊 Namoona nahi bana (' + String(e?.message || e).slice(0, 80) + ')'); }
 }
 const audOf = i => (S && S.aud[i]) || null;
@@ -337,6 +368,7 @@ function markLine(i, k) {
   const d = $('vsDlg'); if (!d) return;
   d.querySelectorAll('.vs-l.is-on').forEach(el => el.classList.remove('is-on'));
   if (!key) return;
+  try { const q = S.v?.parts[i]; if (q && S.cur === i) posSet(S.v.id, q.s, k); } catch {}
   const el = d.querySelector(`[data-vs-ln="${key}"]`); if (el) { el.classList.add('is-on'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
 }
 function phoneTalk(i) {
@@ -345,6 +377,7 @@ function phoneTalk(i) {
   const tok = S.tok = (S.tok || 0) + 1, L = linesOf(p), vc = urVoice(); let k = 0;
   const step = () => {
     if (!S || S.tok !== tok) return;
+    if (sleepDue()) return;
     if (k >= L.length) { next(); return; }
     markLine(i, k); const l = L[k++], u = new SpeechSynthesisUtterance(l[2] || l[1]); u.lang = l[2] ? 'ur-PK' : 'en-IN'; if (vc && l[2]) u.voice = vc;
     u.rate = RATES[S.rate][0]; u.pitch = l[0] === 'B' ? 0.75 : 1.2;
@@ -353,7 +386,7 @@ function phoneTalk(i) {
   };
   step();
 }
-function quiet() { if (!S) return; S.tok = (S.tok || 0) + 1; try { TTSP()?.cancel(); } catch {} try { AU?.pause(); } catch {} }
+function quiet() { if (!S) return; S.tok = (S.tok || 0) + 1; try { TTSP()?.cancel(); } catch {} try { AU?.pause(); } catch {} try { S.smp?.pause(); } catch {} }
 function stopPlay() { if (!S) return; quiet(); markLine(-1, 0); const c = S.cur; S.cur = -1; S.wait = -1; S.paused = false; S.all = false; if (c >= 0) badge(c); paintBar(); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'none'; } catch {} }
 function meta(i) {
   try {
@@ -381,7 +414,7 @@ function next() {
   const i = S.cur + 1;
   if (i < S.v.parts.length) { playPart(i); return; }
   if (S.busy || S.retry) { const c = S.cur; S.cur = -1; markLine(-1, 0); badge(c); S.waitNew = true; paintBar(); return; }
-  stopPlay();
+  posDrop(S.v.id); stopPlay();
 }
 function toggle() {
   if (!S || S.cur < 0) return; const a = audOf(S.cur);
@@ -395,7 +428,7 @@ function audioSetup() {
   AU.addEventListener('ended', () => { if (S && S.cur >= 0) { const u = audOf(S.cur)?.url; while (u && audOf(S.cur + 1)?.url === u) { const o = S.cur; S.cur = o + 1; badge(o); } } next(); });
   AU.addEventListener('loadedmetadata', () => { if (!S) return; if (S.seek != null && S.seek > 0 && AU.duration > 0) { try { AU.currentTime = S.seek * AU.duration; } catch { S.seek = null; } } else S.seek = null; });
   AU.addEventListener('seeked', () => { if (S) S.seek = null; });
-  AU.addEventListener('timeupdate', () => { if (!S || !S.v || S.cur < 0 || !(AU.duration > 0) || S.seek != null) return; const a = audOf(S.cur); if (a?.st !== 'ok') return;
+  AU.addEventListener('timeupdate', () => { if (sleepDue()) return; if (!S || !S.v || S.cur < 0 || !(AU.duration > 0) || S.seek != null) return; const a = audOf(S.cur); if (a?.st !== 'ok') return;
     const fr = AU.currentTime / AU.duration, f0 = a.f0 || 0, f1 = a.f1 == null ? 1 : a.f1;
     if (fr >= f1 && f1 < 1 && audOf(S.cur + 1)?.url === a.url) { if (!S.all) { stopPlay(); return; } const o = S.cur; S.cur = o + 1; badge(o); badge(S.cur); meta(S.cur); markLine(S.cur, 0); pump(); return; }
     markLine(S.cur, lineAt(linesOf(S.v.parts[S.cur]), Math.min(0.999, Math.max(0, (fr - f0) / Math.max(1e-6, f1 - f0))))); });
@@ -457,6 +490,15 @@ html body dialog.vs-dlg .vs-say{width:40px;min-height:36px!important;padding:0!i
 .vs-oc>div{flex:1;min-width:0;cursor:pointer}.vs-oc b{display:block;font-size:14.5px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.vs-oc small{font-size:12.5px;color:#5b6885}
 .vs-bar{flex:none;display:flex;gap:6px;padding:8px 10px;background:#fff;border-top:1px solid #dfe6f2;overflow-x:auto}
 .vs-bar .vs-go{flex:1 0 auto}
+.vs-l{cursor:pointer}.vs-l.st::after{content:' ⭐';font-size:13px}
+.vs-card{background:#fff;border:1.5px solid #dfe6f2;border-radius:14px;padding:9px 11px;display:grid;grid-template-columns:minmax(0,1fr);gap:7px}
+.vs-ch{display:flex;align-items:center;gap:8px;font-weight:800;font-size:15.5px;color:#1d3160}.vs-ch small{font-weight:600;color:#5b6885;font-size:12.5px}.vs-ch .vs-chip{margin-left:auto}
+.vs-ol{margin:0;padding-left:22px;display:grid;gap:5px;font-size:16px;line-height:1.45}
+.vs-ck{display:flex;gap:9px;align-items:flex-start;font-size:16px;line-height:1.4}.vs-ck input{width:22px;height:22px;flex:none;margin-top:2px}.vs-ck input:checked+span{text-decoration:line-through;color:#7a869f}
+.vs-q{font-size:15.5px;line-height:1.45;border-left:3px solid #f0d49a;padding-left:9px}.vs-q b{display:block;color:#243f77}
+.vs-wl{display:grid;gap:5px}.vs-wl>div{display:flex;gap:8px;flex-wrap:wrap;background:#fff;border:1px solid #dfe6f2;border-radius:10px;padding:6px 10px;font-size:15px}.vs-wl b{color:#8a5a00}
+.vs-mv.w{flex-wrap:wrap;overflow:visible}
+.vs-sm{flex:1;min-width:0;font-size:12.5px;color:#5b6885;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 `;
 const dlg = () => $('vsDlg');
 const nameOf = (v, k) => (v.sp && v.sp[k === 'B' ? 1 : 0]) || (k === 'B' ? 'Mehman' : 'Mezban');
@@ -466,33 +508,40 @@ function oldHTML() {
   return `<div class="vs-note"><b>Pehle samjhi hui videos</b> (sirf is phone par)</div><div class="vs-old">${ids.map(k => `<div class="vs-oc"><div data-vs-old="${esc(k)}"><b>${esc(o[k].t || 'Video ' + k)}</b><small>${(o[k].parts || []).length} hisse · ${fmt(o[k].next || 0)} tak${o[k].end ? ' · poori' : ''}</small></div><button type="button" class="vs-chip" data-vs-del="${esc(k)}" aria-label="Hatao">🗑</button></div>`).join('')}</div>`;
 }
 function partsHTML(v) {
-  return v.parts.map((p, i) => `<div class="vs-p" data-vs-part="${i}"><div class="vs-ph"><a class="vs-tm" href="https://youtu.be/${esc(v.id)}?t=${Math.round(p.s)}" target="_blank" rel="noopener">${fmt(p.s)} – ${fmt(p.e)}</a><span class="vs-ab"></span><button type="button" class="vs-say" data-vs-say="${i}" aria-label="Sunao">▶</button></div>${linesOf(p).map((l, k) => `<div class="vs-l ${l[0] === 'B' ? 'b' : 'a'}" data-vs-ln="${i}:${k}"><b>${esc(nameOf(v, l[0]))}:</b>${esc(l[1])}</div>`).join('')}${(p.w || []).length ? `<div class="vs-w">${p.w.map(w => `<span><b>${esc(w[0])}</b> = ${esc(w[1])}</span>`).join('')}</div>` : ''}</div>`).join('');
+  const SK = new Set(starAll().map(x => x.k));
+  return v.parts.map((p, i) => `<div class="vs-p" data-vs-part="${i}"><div class="vs-ph"><a class="vs-tm" href="https://youtu.be/${esc(v.id)}?t=${Math.round(p.s)}" target="_blank" rel="noopener">${fmt(p.s)} – ${fmt(p.e)}</a><span class="vs-ab"></span><button type="button" class="vs-say" data-vs-say="${i}" aria-label="Sunao">▶</button></div>${linesOf(p).map((l, k) => `<div class="vs-l ${l[0] === 'B' ? 'b' : 'a'}${SK.has(starKey(v.id, p.s, l[1])) ? ' st' : ''}" data-vs-ln="${i}:${k}"><b>${esc(nameOf(v, l[0]))}:</b>${esc(l[1])}</div>`).join('')}${(p.w || []).length ? `<div class="vs-w">${p.w.map(w => `<span><b>${esc(w[0])}</b> = ${esc(w[1])}</span>`).join('')}</div>` : ''}</div>`).join('');
 }
 function paint() {
   const d = dlg(); if (!d || !S) return;
   const v = S.v, y = d.querySelector('.vs-scroll')?.scrollTop || 0;
+  const qi = $('vsQ'), qf = !!qi && document.activeElement === qi; if (qi) S.q = qi.value;
   const form = `<div class="vs-form"><div class="vs-row"><input class="vs-in" id="vsUrl" type="url" inputmode="url" placeholder="YouTube ka link" value="${esc(S.url || '')}"><button type="button" class="vs-chip" data-vs="paste">📋 Paste</button></div>
     <div class="vs-row"><input class="vs-in t" id="vsFrom" type="text" inputmode="numeric" placeholder="0:00" value="${esc(S.from || '')}"><button type="button" class="vs-go" data-vs="go"${S.busy ? ' disabled' : ''}>🎬 Samjhao</button></div>
     ${v ? '' : '<div class="vs-note">"Kahan se" = waqt, jaise <b>53:44</b>. Khali = shuru se. Pehle 15 minute aate hi sunna shuru karein — poori video ke agle hisse peeche khud aate rehte hain, chalti line peeli hoti hai. 🤖 AI (Gemini: likhai + awaz) — kabhi ghalat bhi samajh sakta hai.</div>'}</div>`;
   const st = S.busy ? `<div class="vs-st" id="vsSt">⏳ ${esc(S.msg || 'AI video sun raha hai…')}${v && v.parts.length ? '' : '<div class="vs-note">1-3 minute lag sakte hain.</div>'}</div>` : (S.err ? `<div class="vs-st bad">✕ ${esc(S.err)}</div>` : '');
-  const body = v ? `<div class="vs-ttl">${esc(v.t || 'Video')}</div>${partsHTML(v)}${!v.parts.length && !S.busy ? '<div class="vs-note">Is hisse mein kuch nahi mila.</div>' : ''}${st}${v.end ? '<div class="vs-note">✅ Video yahan khatam.</div>' + (!S.busy && v.parts.length ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="force">▶ Video aage bhi hai — aage samjhao</button></div>' : '') : ''}${!S.busy ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="list">‹ Doosri video</button></div>' : ''}` : st + oldHTML();
-  d.innerHTML = `<div class="vs-hd"><div><b>🎓 Video samjhao</b><small>YouTube ki video — aasaan Roman Urdu mein + 🔊 awaz</small></div><span class="vs-hb"><button type="button" class="vs-x" data-vs="menu" aria-label="Awaz chuno">⋮</button><button type="button" class="vs-x" data-vs="x" aria-label="Band">✕</button></span></div>
-    <div class="vs-scroll">${S.menu ? menuHTML() : ''}${form}${body}</div><div class="vs-bar" id="vsBar"></div>`;
+  const body = v ? `<div class="vs-ttl">${esc(v.t || 'Video')}</div>${partsHTML(v)}${!v.parts.length && !S.busy ? '<div class="vs-note">Is hisse mein kuch nahi mila.</div>' : ''}${st}${v.end ? '<div class="vs-note">✅ Video yahan khatam.</div>' + (!S.busy && v.parts.length ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="force">▶ Video aage bhi hai — aage samjhao</button></div>' : '') : ''}${extraHTML(v)}${!S.busy ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="list">‹ Doosri video</button></div>' : ''}` : st + oldHTML();
+  d.innerHTML = `<div class="vs-hd"><div><b>🎓 Video samjhao</b><small>YouTube ki video — aasaan Roman Urdu mein + 🔊 awaz</small></div><span class="vs-hb"><button type="button" class="vs-x" data-vs="menu" aria-label="Mazeed">⋮</button><button type="button" class="vs-x" data-vs="x" aria-label="Band">✕</button></span></div>
+    <div class="vs-scroll">${S.menu ? menuHTML() : ''}${S.view ? viewHTML() : form + body}</div><div class="vs-bar" id="vsBar"></div>`;
   const sc = d.querySelector('.vs-scroll'); if (sc) sc.scrollTop = y;
+  if (qf) { const q2 = $('vsQ'); if (q2) { try { q2.focus({ preventScroll: true }); q2.setSelectionRange(q2.value.length, q2.value.length); } catch {} } }
   if (v) v.parts.forEach((_, i) => badge(i));
   if (S.ln) { const k = S.ln; S.ln = ''; const [a, b] = k.split(':').map(Number); const el = d.querySelector(`[data-vs-ln="${k}"]`); if (el) { el.classList.add('is-on'); S.ln = k; } }
   paintBar();
 }
 function menuHTML() {
   const vo = voGet(), sp = S.v?.sp || [], row = (k, nm) => `<div class="vs-mr"><b>${esc(nm)}</b><div class="vs-mv">${VOICES.map(v => `<button type="button" class="vs-chip${vo[k] === v[0] ? ' is-in' : ''}" data-vs-vo="${k}:${v[0]}">${S.smpW === k + v[0] ? '⏳ ' : (vo[k] === v[0] ? '✓ ' : '')}${v[1]}</button>`).join('')}</div></div>`;
-  return `<div class="vs-menu"><div class="vs-mt">🔊 Awaz chuno <small>dabao = chun li + namoona</small></div>${row('A', sp[0] || 'Sawal wala')}${row('B', sp[1] || 'Jawab wala')}<div class="vs-note">Gemini ki bani banai awazein (kisi asal insaan ki nahi). Awaz badalne par is video ki awaz dobara banti hai.${S.ttsOff ? '<br>⚠️ Gemini ki awaz abhi nahi ban rahi: ' + esc(S.ttsOff.slice(0, 110)) : ''}</div></div>`;
+  const v = S.v, has = !!(v && v.parts.length), left = S.sleepAt ? Math.max(1, Math.ceil((S.sleepAt - Date.now()) / 60000)) : 0, tb = (k, t, dis) => `<button type="button" class="vs-chip" data-vs="${k}"${dis ? ' disabled' : ''}>${t}</button>`;
+  const tools = `<div class="vs-menu"><div class="vs-mt">🧰 Kaam</div><div class="vs-mv w">${tb('star', '⭐ Pasand ki lines (' + starAll().length + ')')}${tb('words', '📖 Lafz (' + wordsN() + ')')}${has ? tb('sum', S.sumBusy ? '⏳ Khulasa…' : '📌 Khulasa', S.sumBusy) + tb('act', S.actBusy ? '⏳ Kaam ki baatein…' : '✅ Mere kaam ki baatein', S.actBusy) + tb('qgo', '❓ Sawal poochho') + tb('pdf', '📄 PDF') : ''}</div>
+    <div class="vs-mr"><b>😴 So jaun to awaz band${left ? ' — ' + left + ' min baqi' : ''}</b><div class="vs-mv">${[15, 30, 60].map(m => `<button type="button" class="vs-chip" data-vs-sl="${m}">${m} min</button>`).join('')}<button type="button" class="vs-chip${left ? '' : ' is-in'}" data-vs-sl="0">Band</button></div></div>
+    <div class="vs-note">🤖 AI sirf Khulasa, Kaam ki baatein aur Sawal mein. Pasand, lafz aur "kahan chhora" sirf is phone par rehte hain.</div></div>`;
+  return tools + `<div class="vs-menu"><div class="vs-mt">🔊 Awaz chuno <small>dabao = chun li + namoona</small></div>${row('A', sp[0] || 'Sawal wala')}${row('B', sp[1] || 'Jawab wala')}<div class="vs-note">Gemini ki bani banai awazein (kisi asal insaan ki nahi). Awaz badalne par is video ki awaz dobara banti hai.${S.ttsOff ? '<br>⚠️ Gemini ki awaz abhi nahi ban rahi: ' + esc(S.ttsOff.slice(0, 110)) : ''}</div></div>`;
 }
 function paintBar() {
   const b = $('vsBar'); if (!b || !S) return; const v = S.v;
   if (!v || !v.parts.length) { b.style.display = 'none'; return; }
   b.style.display = '';
   const on = S.cur >= 0 || S.waitNew;
-  b.innerHTML = `<button type="button" class="vs-go" data-vs="all">${on ? (S.paused ? '▶ Chalao' : (S.wait >= 0 || S.waitNew ? '⏳ Awaz ban rahi' : '⏸ Roko')) : '▶ Sab sunao'}</button><button type="button" class="vs-chip" data-vs="rate">🐢 ${RATES[S.rate][1]}</button>${S.busy ? '<button type="button" class="vs-chip" data-vs="halt">⏹ Load roko</button>' : (v.end ? '' : '<button type="button" class="vs-chip" data-vs="more">➡ Aage 15 min</button>')}<button type="button" class="vs-chip" data-vs="share">📤 Reader</button>`;
+  b.innerHTML = `<button type="button" class="vs-go" data-vs="all">${on ? (S.paused ? '▶ Chalao' : (S.wait >= 0 || S.waitNew ? '⏳ Awaz ban rahi' : '⏸ Roko')) : (posIdx(v) > 0 ? '▶ Wahin se (' + fmt(v.parts[posIdx(v)].s) + ')' : '▶ Sab sunao')}</button><button type="button" class="vs-chip" data-vs="rate">🐢 ${RATES[S.rate][1]}</button>${S.busy ? '<button type="button" class="vs-chip" data-vs="halt">⏹ Load roko</button>' : (v.end ? '' : '<button type="button" class="vs-chip" data-vs="more">➡ Aage 15 min</button>')}<button type="button" class="vs-chip" data-vs="share">📤 Reader</button>`;
 }
 function append(first) {
   const d = dlg(); if (!d || !S?.v) return;
@@ -505,7 +554,7 @@ function append(first) {
 async function run(id, a, n = 0, tryN = 0) {
   if (!S || S.busy) return;
   clearTimeout(S.retry); S.retry = 0;
-  if (!S.v || S.v.id !== id) { stopPlay(); freeAud(); const o = load()[id]; S.v = o && a === (o.next || 0) ? { id, t: o.t, sp: o.sp || [], parts: o.parts || [], next: o.next || 0, end: o.end } : { id, t: o?.t || '', sp: o?.sp || [], parts: [], next: a, end: 0 }; }
+  if (!S.v || S.v.id !== id) { stopPlay(); freeAud(); const o = load()[id]; S.v = o && a === (o.next || 0) ? savedV(o) : { id, t: o?.t || '', sp: o?.sp || [], parts: [], next: a, end: 0 }; }
   const v = S.v, b = a + STEP; S.busy = true; S.halt = false; S.err = ''; S.msg = 'AI video sun raha hai… (' + fmt(a) + ' – ' + fmt(b) + ')'; paint();
   try {
     const out = await ask(id, a, b);
@@ -515,14 +564,14 @@ async function run(id, a, n = 0, tryN = 0) {
     const first = v.parts.length;
     const lastE = out.parts.length ? Math.max(a, ...out.parts.map(p => p.e)) : a, fin = !out.parts.length || (out.end && lastE < b - 90) ? 1 : 0;
     for (const q of out.parts) q.b = a;
-    v.parts.push(...out.parts); v.end = fin; v.next = fin && out.parts.length ? lastE : b;
+    v.parts.push(...out.parts); wordsAdd(out.parts); v.end = fin; v.next = fin && out.parts.length ? lastE : b;
     store(v); S.busy = false;
     const more = !v.end && !S.halt && n + 1 < MAXAUTO;
     if (first === 0 || !more) paint(); else { append(first); }
     pump();
     if (S.waitNew && out.parts.length) { S.waitNew = false; S.all = true; playPart(first); }
     else if (S.waitNew && !more) { S.waitNew = false; paintBar(); }
-    if (more) run(id, v.next, n + 1); else paint();
+    if (more) run(id, v.next, n + 1); else { paint(); if (v.end && !v.sum && v.parts.length >= 3) sumMake(v, true); }
   } catch (e) {
     if (!S || S.v !== v) return;
     S.busy = false;
@@ -530,6 +579,118 @@ async function run(id, a, n = 0, tryN = 0) {
     S.waitNew = false; S.err = String(e?.message || e); paint(); pump();
   }
 }
+// ---------- v1.5: khulasa / kaam ki baatein / sawal (🤖 likhai se — video dobara nahi bheji jati) ----------
+async function askText(prompt, json) {
+  const cfg = await A.aiCfg(); if (!cfg || !cfg.key) throw Error('AI key nahi lagi — Settings → AI key.');
+  const models = [cfg.model, ...FALLBACK].filter((m, i, L) => m && L.indexOf(m) === i); let last = null;
+  for (const m of models) {
+    const r = await post(m, { contents: [{ role: 'user', parts: [{ text: prompt }] }], generationConfig: { temperature: 0.2, ...(json ? { responseMimeType: 'application/json' } : {}) } }, cfg.key, 120000);
+    if (r.ok) { const t = (r.j.candidates?.[0]?.content?.parts || []).map(x => x.text || '').join('').trim(); if (t) return t; last = Error('AI ne khali jawab diya'); continue; }
+    last = Error(r.status === -1 ? 'AI ne waqt par jawab nahi diya' : r.status === 429 ? 'Google ki hadd poori — kuch der baad dobara' : r.msg);
+    if (r.status === 429 || r.status === -1 || r.status === 401 || r.status === 403) break;
+  }
+  throw last || Error('AI se jawab nahi mila');
+}
+const jparse = t => { t = String(t || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim(); const i = t.indexOf('{'), j = t.lastIndexOf('}'); return JSON.parse(i >= 0 && j > i ? t.slice(i, j + 1) : t); };
+const txOf = v => v.parts.map(p => '[' + fmt(p.s) + '] ' + linesOf(p).map(l => nameOf(v, l[0]) + ': ' + l[1]).join(' ')).join('\n').slice(0, 150000);
+const WHO = 'Sunne wala Pakistani dukandar hai: Urdu samajhta hai, sirf Roman (Latin a-z) harf parh sakta hai, English / Hindi ke mushkil lafz nahi samajhta.';
+const romOnly = t => String(t || '').replace(/[؀-ۿݐ-ݿऀ-ॿ]+/g, ' ').replace(/[*#`]/g, '').replace(/[ \t]+/g, ' ').trim();
+function sumOf(o) { return (Array.isArray(o.k) ? o.k : []).filter(x => Array.isArray(x) && String(x[0] || '').trim() && !NONLAT.test(String(x[0]))).slice(0, 10).map(x => [String(x[0]).trim(), String(x[1] || '').trim()]); }
+function actOf(o) { return (Array.isArray(o.a) ? o.a : []).map(x => romOnly(Array.isArray(x) ? x[0] : x)).filter(Boolean).slice(0, 8).map(x => [x, 0]); }
+async function sumMake(v, auto) {
+  if (!S || S.sumBusy || !v || !v.parts.length) return; S.sumBusy = true; if (S.v === v) paint();
+  try {
+    const L = sumOf(jparse(await askText([WHO, 'Neeche ek video ki guftagu (Roman Urdu) hai. Is ka KHULASA dein: 5 se 10 sab se zaroori baatein, har baat 1-2 aasaan jumle. Sirf wohi jo video mein kaha gaya — apni taraf se kuch na jorein.', 'Sirf yeh JSON dein: {"k": [["baat Roman Urdu mein", "wohi baat Urdu harfon mein"]]}', 'Roman line mein Urdu / Devanagari harf KABHI nahi (sirf a-z).', '', txOf(v)].join('\n'), true)));
+    if (!L.length) throw Error('khulasa khali aaya');
+    v.sum = L; store(v); if (!auto) A.notice?.('📌 Khulasa ban gaya — neeche dekhein');
+  } catch (e) { A.notice?.('✕ Khulasa nahi bana (' + String(e?.message || e).slice(0, 90) + ')' + (auto ? ' — ⋮ → 📌 Khulasa se dobara' : '')); }
+  finally { if (S) { S.sumBusy = false; if (S.v === v) paint(); } }
+}
+async function actMake(v) {
+  if (!S || S.actBusy || !v || !v.parts.length) return; S.actBusy = true; paint();
+  try {
+    const L = actOf(jparse(await askText([WHO, 'Neeche ek video ki guftagu (Roman Urdu) hai. Is se 5 se 8 AMALI kaam nikaalein jo sunne wala kal se apni zindagi, sehat, ghar / bachon ya apni dukan (kiryana, kai mulazim) mein kar sakta hai.', 'Har kaam ek chhota saaf jumla (hukum ki tarah), aasaan Roman Urdu mein. Sirf wohi jo video ki baat se nikalta ho — video mein kaam ki baat kam ho to kam dein.', 'Sirf yeh JSON dein: {"a": ["kaam 1", "kaam 2"]}', 'Urdu / Devanagari harf KABHI nahi (sirf a-z).', '', txOf(v)].join('\n'), true)));
+    if (!L.length) throw Error('koi kaam ki baat nahi mili');
+    v.act = L; store(v); A.notice?.('✅ Kaam ki baatein ban gayin — neeche dekhein');
+  } catch (e) { A.notice?.('✕ Kaam ki baatein nahi banin (' + String(e?.message || e).slice(0, 90) + ')'); }
+  finally { if (S) { S.actBusy = false; if (S.v === v) paint(); } }
+}
+async function qaAsk(v, q) {
+  if (!S || S.qBusy || !v || !v.parts.length) return; q = String(q || '').trim().slice(0, 300); if (!q) { A.notice?.('Pehle sawal likhein'); return; }
+  S.qBusy = true; S.q = q; paint();
+  try {
+    const a = romOnly(await askText([WHO, 'Neeche ek video ki guftagu (Roman Urdu) hai. Sawal ka jawab SIRF isi guftagu se dein: aasaan Roman Urdu, 2 se 5 jumle, aur bataein video mein kis waqt (jaise 12:30) yeh baat hui.', 'Agar video mein is ka jawab nahi hai to sirf itna likhein: Video mein yeh baat nahi hui. Apni taraf se kuch na jorein. Urdu / Devanagari harf nahi (sirf a-z). Koi JSON / sar-khi nahi — sirf jawab.', '', 'SAWAL: ' + q, '', 'GUFTAGU:', txOf(v)].join('\n'), false)).slice(0, 1200);
+    if (!a) throw Error('jawab khali aaya');
+    v.qa = [...(v.qa || []), [q, a]].slice(-10); store(v); if (S) { S.q = ''; const el = $('vsQ'); if (el) el.value = ''; }
+  } catch (e) { A.notice?.('✕ Jawab nahi mila (' + String(e?.message || e).slice(0, 90) + ')'); }
+  finally { if (S) { S.qBusy = false; if (S.v === v) { paint(); $('vsQa')?.scrollIntoView({ block: 'end' }); } } }
+}
+// 📌 khulasa ki awaz: Gemini (ek awaz, yaad mein) — na bane to phone ki awaz
+async function sumSay(btn) {
+  const v = S?.v; if (!v?.sum?.length) return;
+  if (S.smp && !S.smp.paused && S.smpSum) { S.smp.pause(); btn.textContent = '🔊 Sunao'; return; }
+  stopPlay(); const text = v.sum.map(x => x[1] || x[0]).join('\n'), key = v.id + ':sum:' + hsh(text + voKey()); btn.textContent = '⏳';
+  try {
+    let blob = await idbGet(key);
+    if (!blob) { const cfg = await A.aiCfg(); if (!cfg?.key) throw Error('AI key nahi'); const models = S.ttsM || (S.ttsM = await ttsModels(cfg.key)); const d = await ttsOne(text, voGet().A, models, cfg.key); blob = audioBlob(d.data, d.mimeType || d.mime_type); idbPut(key, blob); }
+    if (!S || S.v !== v) return;
+    const a = S.smp || (S.smp = new Audio()); if (S.smpUrl) { try { URL.revokeObjectURL(S.smpUrl); } catch {} } S.smpUrl = URL.createObjectURL(blob); S.smpSum = 1;
+    a.src = S.smpUrl; a.playbackRate = RATES[S.rate][0]; a.onended = () => { const b = dlg()?.querySelector('[data-vs="sumsay"]'); if (b) b.textContent = '🔊 Sunao'; }; await a.play();
+    const b = dlg()?.querySelector('[data-vs="sumsay"]'); if (b) b.textContent = '⏸ Roko';
+  } catch {
+    const b = dlg()?.querySelector('[data-vs="sumsay"]'); if (b) b.textContent = '🔊 Sunao';
+    const t = TTSP(); if (!t) { A.notice?.('🔊 Awaz nahi bani'); return; }
+    try { t.cancel(); const u = new SpeechSynthesisUtterance(text); u.lang = 'ur-PK'; const vc = urVoice(); if (vc) u.voice = vc; u.rate = RATES[S.rate][0]; t.speak(u); } catch {}
+  }
+}
+function extraHTML(v) {
+  if (!v || !v.parts.length) return '';
+  const sum = v.sum && v.sum.length ? `<div class="vs-card" id="vsSum"><div class="vs-ch">📌 Khulasa <button type="button" class="vs-chip" data-vs="sumsay">🔊 Sunao</button></div><ol class="vs-ol">${v.sum.map(x => `<li>${esc(x[0])}</li>`).join('')}</ol></div>` : (S.sumBusy ? '<div class="vs-st">⏳ Khulasa ban raha hai…</div>' : '');
+  const act = v.act && v.act.length ? `<div class="vs-card" id="vsAct"><div class="vs-ch">✅ Mere kaam ki baatein <small id="vsActN">✓ ${v.act.filter(x => x[1]).length}/${v.act.length}</small></div>${v.act.map((x, i) => `<label class="vs-ck"><input type="checkbox" data-vs-act="${i}"${x[1] ? ' checked' : ''}><span>${esc(x[0])}</span></label>`).join('')}</div>` : (S.actBusy ? '<div class="vs-st">⏳ Kaam ki baatein ban rahi hain…</div>' : '');
+  const qa = `<div class="vs-card" id="vsQa"><div class="vs-ch">❓ Sawal poochho <small>jawab isi video se · 🤖 AI</small></div>${(v.qa || []).map(x => `<div class="vs-q"><b>${esc(x[0])}</b><div>${esc(x[1])}</div></div>`).join('')}<div class="vs-row"><input class="vs-in" id="vsQ" type="text" enterkeyhint="send" placeholder="Sawal likhein…" value="${esc(S.q || '')}"><button type="button" class="vs-chip" data-vs="ask"${S.qBusy ? ' disabled' : ''}>${S.qBusy ? '⏳' : 'Poochho'}</button></div></div>`;
+  return sum + act + qa;
+}
+function wordsHTML() {
+  const q = String(S.wq || '').toLowerCase().trim(), W = Object.values(jget('sam-vs-words', {})).filter(Array.isArray).sort((a, b) => (b[2] || 0) - (a[2] || 0)).filter(x => !q || (x[0] + ' ' + x[1]).toLowerCase().includes(q));
+  return W.length ? `<div class="vs-wl">${W.slice(0, 400).map(x => `<div><b>${esc(x[0])}</b><span>= ${esc(x[1])}</span></div>`).join('')}</div>` : `<div class="vs-note">${q ? 'Is naam ka lafz nahi mila.' : 'Abhi koi lafz jama nahi hua — video samjhane par mushkil lafz khud yahan aate hain.'}</div>`;
+}
+function viewHTML() {
+  const back = '<div class="vs-row"><button type="button" class="vs-chip" data-vs="vback">‹ Wapas</button></div>';
+  if (S.view === 'words') return back + `<div class="vs-ttl">📖 Lafzon ki copy (${wordsN()})</div><div class="vs-row"><input class="vs-in" id="vsWq" data-vs-wq="1" type="search" placeholder="🔍 Lafz dhoondein" value="${esc(S.wq || '')}"></div><div id="vsWl">${wordsHTML()}</div>`;
+  const L = starAll().slice().reverse();
+  return back + `<div class="vs-ttl">⭐ Pasand ki lines (${L.length})</div>` + (L.length ? L.map(x => `<div class="vs-p"><div class="vs-ph"><a class="vs-tm" href="https://youtu.be/${esc(x.id)}?t=${Number(x.s) || 0}" target="_blank" rel="noopener">${fmt(x.s)}</a><small class="vs-sm">${esc(x.t || '')}</small><button type="button" class="vs-chip" data-vs-unstar="${esc(x.k)}" aria-label="Hatao">✕</button></div><div class="vs-l"><b>${esc(x.n || '')}:</b>${esc(x.r)}</div></div>`).join('') : '<div class="vs-note">Abhi koi line pasand nahi ki. Video ki kisi bhi line par tap karein = ⭐.</div>');
+}
+function pdfHTML(v) {
+  const E = x => esc(String(x ?? '').replace(/[^\x20-\x7e -ÿ]/g, ' ').replace(/\s+/g, ' ').trim());
+  let o = `<h1>${E(v.t) || 'Video'}</h1>`;
+  if (v.sum?.length) o += `<h2>Khulasa</h2><table><tbody>${v.sum.map((x, i) => `<tr><td>${i + 1}</td><td>${E(x[0])}</td></tr>`).join('')}</tbody></table>`;
+  if (v.act?.length) o += `<h2>Mere kaam ki baatein</h2><table><tbody>${v.act.map((x, i) => `<tr><td>${i + 1}</td><td>${E(x[0])}</td></tr>`).join('')}</tbody></table>`;
+  o += `<h2>Guftagu (${fmt(v.parts[0].s)} - ${fmt(v.parts[v.parts.length - 1].e)})</h2><table><thead><tr><th>Waqt</th><th>Kaun</th><th>Baat</th></tr></thead><tbody>${v.parts.flatMap(p => linesOf(p).map((l, k) => `<tr><td>${k ? '' : fmt(p.s)}</td><td>${E(nameOf(v, l[0]))}</td><td>${E(l[1])}</td></tr>`)).join('')}</tbody></table>`;
+  return o;
+}
+// 😴 so jaun to band
+function sleepSet(min) { if (!S) return; clearTimeout(S.sleepT); S.sleepAt = min ? Date.now() + min * 60000 : 0; if (min) S.sleepT = setTimeout(sleepDue, min * 60000 + 800); A.notice?.(min ? '😴 ' + min + ' minute baad awaz khud band ho jayegi' : '😴 Timer band'); }
+function sleepDue() {
+  if (!S || !S.sleepAt || Date.now() < S.sleepAt) return false;
+  S.sleepAt = 0; clearTimeout(S.sleepT); try { S.smp?.pause(); } catch {}
+  if (S.cur >= 0 || S.waitNew) { S.waitNew = false; stopPlay(); }
+  A.notice?.('😴 Timer poora — awaz band. Dobara kholein to wahin se chalegi.'); if (S.menu) paint();
+  return true;
+}
+function openSaved(id) {
+  const o = load()[id]; if (!o || !S || S.busy) return false;
+  stopPlay(); freeAud(); S.v = savedV(o); S.view = ''; S.url = 'https://youtu.be/' + o.id; S.from = fmt(o.next || 0); S.err = '';
+  try { localStorage.setItem('sam-vs-last', o.id); } catch {}
+  wordsAdd(S.v.parts); paint(); pump();
+  const i = posIdx(S.v); if (i > 0) setTimeout(() => dlg()?.querySelector(`[data-vs-part="${i}"]`)?.scrollIntoView({ block: 'center' }), 80);
+  return true;
+}
+function onInput(e) { const t = e.target; if (!S || !t?.dataset) return; if (t.dataset.vsWq) { S.wq = t.value; const b = $('vsWl'); if (b) b.innerHTML = wordsHTML(); } }
+function onChange(e) {
+  const t = e.target; if (!S || !t?.dataset || t.dataset.vsAct == null) return; const v = S.v, i = Number(t.dataset.vsAct); if (!v?.act?.[i]) return;
+  v.act[i][1] = t.checked ? 1 : 0; store(v); const n = $('vsActN'); if (n) n.textContent = '✓ ' + v.act.filter(x => x[1]).length + '/' + v.act.length;
+}
+function onKey(e) { if (e.key === 'Enter' && e.target?.id === 'vsQ' && S?.v) { e.preventDefault(); qaAsk(S.v, e.target.value); } }
 async function share() {
   const v = S?.v; if (!v) return;
   const text = (v.t || 'Video') + '\n\n' + v.parts.map(p => linesOf(p).map(l => l[2] || l[1]).join('\n')).join('\n\n');
@@ -538,11 +699,22 @@ async function share() {
 }
 async function onClick(e) {
   const d = dlg(); if (!d || !S) return;
-  const t = e.target.closest?.('[data-vs],[data-vs-say],[data-vs-old],[data-vs-del],[data-vs-vo]'); if (!t || !d.contains(t)) return;
+  const t = e.target.closest?.('[data-vs],[data-vs-say],[data-vs-old],[data-vs-del],[data-vs-vo],[data-vs-sl],[data-vs-unstar],[data-vs-ln]'); if (!t || !d.contains(t)) return;
   const k = t.dataset;
   const keep = () => { S.url = $('vsUrl')?.value || ''; S.from = $('vsFrom')?.value || ''; };
   if (k.vsSay != null) { const i = Number(k.vsSay); if (S.cur === i) toggle(); else { S.all = true; playPart(i); } return; }
-  if (k.vsOld) { const o = load()[k.vsOld]; if (!o || S.busy) return; stopPlay(); freeAud(); S.v = { id: o.id, t: o.t, sp: o.sp || [], parts: o.parts || [], next: o.next || 0, end: o.end }; S.url = 'https://youtu.be/' + o.id; S.from = fmt(o.next || 0); S.err = ''; paint(); pump(); return; }
+  if (k.vsOld) { openSaved(k.vsOld); return; }
+  if (k.vsSl != null) { keep(); sleepSet(Number(k.vsSl) || 0); paint(); return; }
+  if (k.vsUnstar) { jset('sam-vs-star', starAll().filter(x => x.k !== k.vsUnstar)); paint(); return; }
+  if (k.vsLn != null && !k.vs) { const [i, j] = k.vsLn.split(':').map(Number), q = S.v?.parts[i], l = q && linesOf(q)[j]; if (!l) return; const on = starToggle(S.v, q, l); t.classList.toggle('st', on); A.notice?.(on ? '⭐ Pasand mein rakh li' : 'Pasand se hata di'); return; }
+  if (k.vs === 'star' || k.vs === 'words') { keep(); S.view = k.vs; S.menu = false; S.wq = ''; paint(); d.querySelector('.vs-scroll')?.scrollTo?.({ top: 0 }); return; }
+  if (k.vs === 'vback') { S.view = ''; paint(); return; }
+  if (k.vs === 'sum') { keep(); S.menu = false; if (S.v?.sum?.length && !confirm('Khulasa pehle se bana hai. Dobara banayein?')) { paint(); $('vsSum')?.scrollIntoView({ block: 'center' }); return; } sumMake(S.v, false); return; }
+  if (k.vs === 'act') { keep(); S.menu = false; if (S.v?.act?.length && !confirm('Kaam ki baatein pehle se bani hain. Dobara banayein? (tick mit jayenge)')) { paint(); $('vsAct')?.scrollIntoView({ block: 'center' }); return; } actMake(S.v); return; }
+  if (k.vs === 'qgo') { keep(); S.menu = false; S.view = ''; paint(); const el = $('vsQ'); if (el) { el.scrollIntoView({ block: 'center' }); try { el.focus(); } catch {} } return; }
+  if (k.vs === 'ask') { qaAsk(S.v, $('vsQ')?.value || ''); return; }
+  if (k.vs === 'sumsay') { sumSay(t); return; }
+  if (k.vs === 'pdf') { const v = S.v; if (!v || !v.parts.length) return; if (!A.pdf) { A.notice?.('PDF yahan nahi ban sakti'); return; } const html = pdfHTML(v), ttl = 'Video samjhao — ' + String(v.t || 'Video').replace(/[^\x20-\x7e]/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 60); close(); A.pdf(html, ttl); return; }
   if (k.vsDel) { if (confirm('Yeh samjhi hui video (aur us ki awaz) list se hata dein?')) { drop(k.vsDel); paint(); } return; }
   if (k.vs === 'menu') { keep(); S.menu = !S.menu; paint(); if (S.menu) d.querySelector('.vs-scroll')?.scrollTo?.({ top: 0 }); return; }
   if (k.vsVo) {
@@ -555,9 +727,9 @@ async function onClick(e) {
   }
   if (k.vs === 'x') { close(); return; }
   if (k.vs === 'paste') { try { const x = await navigator.clipboard.readText(); if (x) { keep(); S.url = x.trim(); paint(); } } catch { A.notice?.('Paste ki ijazat nahi mili — link khane mein khud paste karein'); } return; }
-  if (k.vs === 'list') { keep(); stopPlay(); freeAud(); S.v = null; S.err = ''; paint(); return; }
+  if (k.vs === 'list') { keep(); stopPlay(); freeAud(); S.v = null; S.view = ''; S.err = ''; try { localStorage.removeItem('sam-vs-last'); } catch {} paint(); return; }
   if (k.vs === 'rate') { S.rate = (S.rate + 1) % RATES.length; try { localStorage.setItem('sam-vs-rate', String(S.rate)); } catch {} if (AU) AU.playbackRate = RATES[S.rate][0]; paintBar(); return; }
-  if (k.vs === 'all') { if (S.waitNew) { S.waitNew = false; paintBar(); } else if (S.cur >= 0) toggle(); else { S.all = true; playPart(0); } return; }
+  if (k.vs === 'all') { if (S.waitNew) { S.waitNew = false; paintBar(); } else if (S.cur >= 0) toggle(); else { S.all = true; playPart(posIdx(S.v)); } return; }
   if (k.vs === 'halt') { S.halt = true; clearTimeout(S.retry); S.retry = 0; t.disabled = true; t.textContent = '⏹ Ruk raha…'; return; }
   if (k.vs === 'force') { if (S.v && !S.busy) { S.v.end = 0; S.err = ''; run(S.v.id, S.v.next || 0); } return; }
   if (k.vs === 'more') { if (S.v && !S.v.end) run(S.v.id, S.v.next); return; }
@@ -568,7 +740,7 @@ async function onClick(e) {
     run(id, a);
   }
 }
-function shut() { if (!S) return; clearTimeout(S.retry); clearTimeout(S.holdT); stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
+function shut() { if (!S) return; clearTimeout(S.retry); clearTimeout(S.holdT); clearTimeout(S.sleepT); if (S.smpUrl) { try { URL.revokeObjectURL(S.smpUrl); } catch {} } stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
 function close() { const d = dlg(); shut(); if (d) { try { d.close(); } catch {} d.remove(); } if (window.ntVsClose) window.ntVsClose = null; }
 export function open(ctx) {
   A = ctx || {};
@@ -576,12 +748,16 @@ export function open(ctx) {
   let d = dlg(); if (d) d.remove();
   d = document.createElement('dialog'); d.id = 'vsDlg'; d.className = 'vs-dlg'; document.body.appendChild(d);
   let rate = 1; try { const r = Number(localStorage.getItem('sam-vs-rate')); if (r >= 0 && r < RATES.length) rate = r; } catch {}
-  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null, ttsNoMulti: '', menu: false, smpW: '', smp: null, cap: {}, ttsHold: 0, tts429: 0, holdT: 0, seek: null, srcUrl: '' };
+  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null, ttsNoMulti: '', menu: false, smpW: '', smp: null, cap: {}, ttsHold: 0, tts429: 0, holdT: 0, seek: null, srcUrl: '', view: '', q: '', wq: '', qBusy: false, sumBusy: false, actBusy: false, sleepAt: 0, sleepT: 0, smpUrl: '', smpSum: 0 };
   audioSetup();
-  d.addEventListener('click', onClick);
+  d.addEventListener('click', onClick); d.addEventListener('input', onInput); d.addEventListener('change', onChange); d.addEventListener('keydown', onKey);
   d.addEventListener('close', () => { shut(); d.remove(); });
   try { TTSP()?.getVoices(); } catch {}
   paint();
   try { d.showModal(); } catch { d.setAttribute('open', ''); }
   window.ntVsClose = () => { close(); return true; };
+  // v1.5: YouTube se Share aaya = wohi video (pehle samjhi ho to wahin se, warna shuru se khud) · warna pichhli khuli video wahin se
+  const sh = vidOf(A.share || '');
+  if (sh) { if (!openSaved(sh)) { S.url = 'https://youtu.be/' + sh; S.from = ''; paint(); run(sh, 0); } }
+  else { let last = ''; try { last = localStorage.getItem('sam-vs-last') || ''; } catch {} if (last) openSaved(last); }
 }
