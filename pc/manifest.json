@@ -1,6 +1,6 @@
 {
- "version": "2026-11-23.3",
- "note": "live-cam v2.1 (Sab cameras tez: yaad + TCP input, 20 s -> 1 s namoona; na chale = purana tareeqa)",
+ "version": "2026-11-23.4",
+ "note": "pos-sales-dekho v2.16 (Bills tez: jaanch 0.15 s + badle bill ka chhota tez doc)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -38,7 +38,7 @@
   "sales-stats-auto.bat": "d3c9c311652bbc1ecc79264c4ca6fee2b88698dd59003306717926c5cf59d111",
   "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
-  "pos-sales-dekho.js": "f938a27e4e45e94f1dc709a370063b94df567d6db5ca37f6bb96868e46093163",
+  "pos-sales-dekho.js": "8ba62af6f32ee7418e3ef734b28ab3b7b569ef82ab3659d5dc6d0f6642b70bcb",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
   "nt-print.js": "fb1ebe8511b87be35284f22ed6742c577e92343593c500d3b0a9a3fdb7b44300",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",

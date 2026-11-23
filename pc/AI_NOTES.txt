@@ -5588,3 +5588,9 @@ Malik: 'speed tez ka rasta nikalo · PC par bojh na pare' (Sab cameras 10-20 s m
 PC live-cam v2.1: ring (har recording line ke aakhri 3.5 s, keyframe se) + mosaic ke input TCP 127.0.0.1 (moTcp) = ffmpeg foran shuru; na chale = purana UDP (MO_FASTBAD); mosaic 5 min garam.
 App live.js: pichhla chip yaad (sam-lv-last) — Sab cameras tha to khirki khulte hi wohi.
 Jaanch (sandbox, nakli cameras): 6 camera purana 20.7 s, naya 0.6 s; asal code ke functions se 8 camera 3x3 = 0.7 s, koi decode ghalti nahi. Asal NVR / PC par azmaya nahi. 'Hamesha chalu' nahi lagaya (bojh). AI nahi.
+
+=== v2.362.0 (23 Nov 2026) — ⚡ Bills screen aur tez ===
+Malik: 'is ko aur tez kar do jitna kar sakte ho' (🧾 Bills, PC par).
+PC pos-sales-dekho v2.16: EVERY 150 ms · fastPut (posSales/<din>-f: sirf badle bill, 5 s ki khirki) + bigPut (poori list) — dono apni line, aakhri wala, jaanch nahi rukti.
+App: cloud.listenPosSales = poori list + tez doc ka milan (meta.fast) · sale.js nbH (likhai na badle to list dobara nahi).
+Jaanch: nakli Firestore (poori list 300 ms, tez 40 ms): tez doc 140 ms mein, poori list 400 ms baad; app milana PASS. Asal PC / internet par azmaya nahi. Rules nahi badle (posSales/{day} read). AI nahi.

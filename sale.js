@@ -4,9 +4,9 @@
 // Counter = R rate (COUNTER SALE, cash) · Wholesale = W rate ("whole sale" party, udhaar + cash ka CRV)
 // Malik rate badal sakta hai; mulazim ka rate fix (PC bhi mulazim ki sale POS ke rate se hi banata hai).
 
-import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.361.0';
-import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.361.0';
-import { smWatch, smChipHTML, smForDoc } from './sale-man.js?v=2.361.0';   // v2.180.0: 👦 larka (POS SP Man) chip
+import { saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, openSaleCamera, camMissing, camCheck, stockWaitHTML, scanNewBill, setSaleGodamHook, setSaleBillsHook, setSaleLineGodamHook, scanReload } from './pos-stock.js?v=2.362.0';
+import { smartSearch, topItems, noteHit, voiceSearch, fold, smartHit } from './smart-search.js?v=2.362.0';
+import { smWatch, smChipHTML, smForDoc } from './sale-man.js?v=2.362.0';   // v2.180.0: 👦 larka (POS SP Man) chip
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -865,6 +865,8 @@ function nbDetHTML(b, filter) {
           <div class="nb-acts">${canEditBill(b) ? `<button type="button" class="nb-edit" data-nb-edit="${esc(b.id)}">✏️ Edit</button>` : b.ps === 2 ? '<small>📌 Post ho chuka — edit band</small>' : ''}${b.src === 'app' && b.status === 'done' ? `<button type="button" data-nb-print="${esc(b.id)}">🖨 Dobara print</button>` : ''}</div></div>`;
 }
 const mounts = new Set();
+// v2.362.0: ⚡ Bills ki list sirf tab dobara bane jab us ki likhai waqai badli ho (wohi snapshot / sirf PC ki raftar badli = DOM nahi chhoota)
+const nbH = el => ({ set innerHTML(h) { if (el.__nbh !== h || !el.firstChild) { el.__nbh = h; el.innerHTML = h; } } });
 function billsRepaint() { for (const m of [...mounts]) { if (!m.box.isConnected) { mounts.delete(m); continue; } m.paint(); } const b = $('saleTodayBtn'); if (b) b.textContent = todayLabel(); }
 const FILTERS = [['all', 'Sab'], ['un', '○ Un-posted'], ['po', '✓ Posted'], ['pd', '🟢 Paid'], ['up', '🔴 Udhaar'], ['pc', '💻 PC'], ['app', '📱 App']];
 // v2.137.0: 🧾 BILLS CHIPS (malik: "ek poori screen mein jitne bill hain chips ki shakal mein bare lafzon mein · upar search · neeche 20 bill,
@@ -960,9 +962,9 @@ function mountBills(box, opt = {}) {
       if (pill) { pill.hidden = isToday; pill.innerHTML = `📅 ${vd === yd ? 'Kal' : D.getDate() + ' ' + D.toLocaleString('en-US', { month: 'short' })} <i>⋮</i>`; pill.title = dayTxt; }
       const U = shown.filter(top), P = shown.filter(b => !top(b)), det = b => open === b.id ? `<div class="nb-cdet">${nbDetHTML(b, filter)}</div>` : '';
       const ug = U.map(b => nbChipSm(b, open) + det(b)).join(''), uAll = all.filter(top).length;   // v2.168.0: 🔵 un-posted = ⋮ ka panel
-      ulist.innerHTML = ug || `<p class="stat-note">${t ? 'Is search mein koi un-posted nahi' : 'Koi un-posted bill nahi ✓'}</p>`;
+      nbH(ulist).innerHTML = ug || `<p class="stat-note">${t ? 'Is search mein koi un-posted nahi' : 'Koi un-posted bill nahi ✓'}</p>`;
       ucnt.textContent = num(uAll); ubdg.textContent = num(uAll); ubdg.hidden = !uAll;
-      list.innerHTML = (t && U.length ? `<div class="nb-ugrid">${ug}</div>` : '') + (P.length ? `<div class="nb-grid">${P.map(b => nbChipHTML(b, open, vd, yd) + det(b)).join('')}</div>` : '') || (t || !U.length ? '<p class="stat-note">Koi bill nahi</p>' : `<p class="stat-note">Abhi koi posted bill nahi · 🔵 ${num(U.length)} un-posted ⋮ mein</p>`);
+      nbH(list).innerHTML = (t && U.length ? `<div class="nb-ugrid">${ug}</div>` : '') + (P.length ? `<div class="nb-grid">${P.map(b => nbChipHTML(b, open, vd, yd) + det(b)).join('')}</div>` : '') || (t || !U.length ? '<p class="stat-note">Koi bill nahi</p>' : `<p class="stat-note">Abhi koi posted bill nahi · 🔵 ${num(U.length)} un-posted ⋮ mein</p>`);
       // v2.155.0: ✨ naya bill / naya post = chip par 2.4 s chamak (dobara paint par --nbd se wahin se jari) · 🔔 naya un-posted = ding (⋮, sirf is device)
       const fk = b => b.id + '|' + (top(b) ? 'u' : 'p'), now = Date.now();
       if (!isToday) { nbSeen.vd = ''; nbSeen.ok = false; }
@@ -975,7 +977,7 @@ function mountBills(box, opt = {}) {
         if (ua && now - ua < 2400 && !ubdg.classList.contains('nb-ubnew')) { ubdg.classList.add('nb-ubnew'); setTimeout(() => ubdg.classList.remove('nb-ubnew'), 2600); } }
       return;
     }
-    list.innerHTML = rows.map(b => { const c = billCls(b), bd = new Date(b.createdAt || 0), bds = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;
+    nbH(list).innerHTML = rows.map(b => { const c = billCls(b), bd = new Date(b.createdAt || 0), bds = `${bd.getFullYear()}-${String(bd.getMonth() + 1).padStart(2, '0')}-${String(bd.getDate()).padStart(2, '0')}`;
       const tm0 = bd.toLocaleTimeString('en-PK', { hour: 'numeric', minute: '2-digit' }), tm = !b.createdAt || bds === vd ? tm0 : `<b class="nb-odd">${bds === yd ? 'kal' : bd.getDate() + ' ' + bd.toLocaleString('en-US', { month: 'short' })} ${tm0}</b>`;
       return `<div class="nb-bill ${c}${open === b.id ? ' open' : ''}" data-nb="${esc(b.id)}">
         <div class="nb-row"><i class="${b.ps === 1 && !b.cancelled ? 'unp' : b.ps === 2 ? 'pst' : ''}">${psIcon(b, c)}</i><b class="nb-no">${b.saleNo ? esc(String(b.saleNo).replace(/^0+(?=\d{4})/, '')) : (b.credit ? 'Wholesale' : 'Counter')}</b><b class="nb-amt">${num(b.total)}</b>

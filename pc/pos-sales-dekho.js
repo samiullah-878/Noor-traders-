@@ -1,4 +1,6 @@
 // =========================================================
+//  v2.16 (2026-11-23, malik: 'Bills screen aur tez — jitna kar sakte ho'): ⚡ jaanch har 0.15 s (pehle 0.5) · naya / badla bill PEHLE chhote doc posSales/<din>-f {d, at, b:[badle bill, aakhri 5 s]}
+//    mein (chhota = internet se jaldi), poori list (posSales/<din>) us ke saath apni line mein (ek waqt ek, aakhri wali — jaanch ko nahi rokti). App dono ko mila kar dikhati hai.
 //  v2.15 (2026-11-23): 🎛 Live 'Sab cameras' (liveReq pc '@sab') = us video ke sab counter (mo.k 'c') ka banta bill + POS screen ka hukum (6 counter tak); '@godam' / '@sab' khud counter nahi.
 //  v2.12 (2026-11-22): ➕ / ➖ ITEMS SE HISAAB — posSales/<din>-it (har item ka plus / minus / wapsi ka jor; cancel + stock fraq bahar; SIRF dikhana) + blueAccess/saleItReq (purana din).
 //  pos-sales-dekho.js  v2.14 (2026-11-17: counter ka naam = PC ka apna naam (pc-names v1.1 — Mithu / Abdurehman / Bilal jaise naam nahi; 🔗 app ke jore hue naam)) · v2.13 (2026-11-16: counter ka naam NT-PRINT ki setting se — pc-names.js) · v2.12 (2026-11-14: cancel bills ki RAQAM bhi — sum.cxRs; malik: 'POS report 21 lakh, app 11 lakh — farq kyun' · sirf dikhane ke liye, sale ka hisaab wahi)
@@ -25,7 +27,7 @@ const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
 
 const BUSINESS_ID = 'noor-traders';
-const EVERY = 500;                 // v2.1 (2026-10-31): ½ sec (malik: "ek second mein bill pohnche") · v1.9 (2026-10-27): 1 sec (malik: "posting POS mein jaldi, app mein late") · v1.3: 2 sec (sirf ginti; Firestore par likhna sirf badlaav par) · v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
+const EVERY = 150;   // v2.16: 0.15 s (malik: 'aur tez') · pehle 500:                // v2.1 (2026-10-31): ½ sec (malik: "ek second mein bill pohnche") · v1.9 (2026-10-27): 1 sec (malik: "posting POS mein jaldi, app mein late") · v1.3: 2 sec (sirf ginti; Firestore par likhna sirf badlaav par) · v1.1: 10 sec — pehle sirf ginti/aakhri bill dekhta hai, badle to poori list
 const FULL_EVERY = 5 * 60 * 1000;    // phir bhi har 5 min poori list (koi badlaav na chhoote)
 let lastKey = '', lastFull = 0, lastLinesFull = 0;
 const LOCK_PORT = 47824;
@@ -437,10 +439,32 @@ async function once() {
   // v1.9: bills ka haal SAB SE PEHLE app ko · v2.1: sum / Daily Sale / items peeche ki lane mein (slow) — yahan intezar nahi
   if (hash !== lastHash) {
     const qm = Date.now() - t0, tw = Date.now();
-    await col.doc(day).set({ day, at: tw, bills, pm: { q: qm, w: lastWm, e: EVERY, f: full ? 1 : 0 } }, { merge: true });
-    lastWm = Date.now() - tw; lastHash = hash;
-    log(`Aaj ke ${bills.length} POS bills app mein (cancel ${bills.filter(b => b.x).length}, udhaar ${bills.filter(b => b.cr && !b.x).length}) · parha ${qm}ms · bheja ${lastWm}ms${full ? ' · poori list' : ''}`);
+    lastHash = hash;
+    fastPut(day, bills, tw, qm);   // v2.16: ⚡ pehle sirf badle bill (chhota doc)
+    bigPut(day, { day, at: tw, bills, pm: { q: qm, w: lastWm, e: EVERY, f: full ? 1 : 0 } }, `Aaj ke ${bills.length} POS bills app mein (cancel ${bills.filter(b => b.x).length}, udhaar ${bills.filter(b => b.cr && !b.x).length}) · parha ${qm}ms${full ? ' · poori list' : ''}`);
   }
+}
+// v2.16: ⚡ do likhai ki line — har ek mein ek waqt ek, hamesha AAKHRI wala (beech wala chhoot jaye to koi nuqsan nahi: aakhri mein sab hai). Jaanch (once) kabhi in ka intezar nahi karti.
+const wrFail = e => { log('Bills likhai masla: ' + e.message); lastHash = ''; if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); };
+let bigBusy = false, bigNext = null;
+function bigPut(day, payload, note) {
+  bigNext = { day, payload, note }; if (bigBusy) return; bigBusy = true;
+  (async () => { while (bigNext) { const x = bigNext; bigNext = null; const tw = Date.now();
+    try { await col.doc(x.day).set(x.payload, { merge: true }); lastWm = Date.now() - tw; log(`${x.note} · bheja ${lastWm}ms`); } catch (e) { wrFail(e); } }
+  bigBusy = false; })();
+}
+let fPrev = new Map(), fDay = '', fRec = new Map(), fBusy = false, fNext = null, fSeq = 0;
+function fastPut(day, bills, at, qm) {
+  if (fDay !== day) { fDay = day; fPrev = new Map(); fRec = new Map(); }
+  const first = !fPrev.size, cur = new Map();
+  for (const b of bills) { const j = JSON.stringify(b); cur.set(b.id, j); if (!first && fPrev.get(b.id) !== j) fRec.set(b.id, { b, t: at }); }
+  fPrev = cur;
+  for (const [id, x] of fRec) if (at - x.t > 5000) fRec.delete(id);
+  if (!fRec.size) return;   // pehli dafa / kuch khaas nahi = sirf poori list
+  const b = [...fRec.values()].sort((x, y) => y.t - x.t).slice(0, 40).map(x => x.b);
+  fNext = { day, body: { d: day, at, n: ++fSeq, q: qm, b } }; if (fBusy) return; fBusy = true;
+  (async () => { while (fNext) { const x = fNext; fNext = null; try { await col.doc(x.day + '-f').set(x.body); } catch (e) { log('Tez doc masla: ' + e.message); } }
+  fBusy = false; })();
 }
 // v2.1: PEECHE KI LANE — sum (app milane ke liye) + Daily Sale (possale-<din>) + items (posSaleLines). Bill likhne ko kabhi nahi rokti.
 let slowRun = false, lastSumHash = '';
@@ -473,7 +497,7 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v2.15 chal raha hai — har ½ second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
+  log('pos-sales-dekho v2.16 chal raha hai — har 0.15 second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
