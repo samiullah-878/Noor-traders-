@@ -1,5 +1,8 @@
 // =========================================================
-//  live-cam.js  v2.2 (2026-11-23, malik ki screenshot: Sab cameras ke khanon par 'Abdurehman' / 'Bilal (server)' — bill / POS screen nahi aa rahi thi): khane ka naam ab counter ka AAJ ka naam
+//  live-cam.js  v2.3 (2026-11-23 raat, malik: 'recording ko PC mein save karne ki zaroorat nahi — us ki jagah SAB cameras ki live screen record karta rahe · group mein lagatar'):
+//    📼 blueAccess/sabRec {on, g (group jid), gn, kd din, st / end 'HH:MM'} — 🎛 Sab cameras wali EK video dukan ke waqt lagatar record (5-5 min, sab-rec\sab-YYYYMMDD-HHMMSS.mp4,
+//    recording wali line ki copy se — NVR par naya rabta NAHI), har band tukra wa-media\bv-sab-*.mp4 -> waOut {grp, vf} (wa-out group ki line). PC par kd din. Haal liveCamPc.sr.
+//  v2.2 (2026-11-23, malik ki screenshot: Sab cameras ke khanon par 'Abdurehman' / 'Bilal (server)' — bill / POS screen nahi aa rahi thi): khane ka naam ab counter ka AAJ ka naam
 //    (PN.nowName — camera setting ki purani chaabi nahi), warna app posLive/<naam> ghalat naam se sunti thi.
 //  v2.1 (2026-11-23, malik: 'speed tez ka rasta nikalo' — Sab cameras 10-20 s mein khulte the): ⚡ har recording wali line ke aakhri ~3.5 s yaad (ring, aakhri keyframe se)
 //    + mosaic ke input ab TCP (127.0.0.1) — ffmpeg jis pal input khole usi pal yaad wala hissa mil jata hai (probe ka 1-2 s fi camera intezar nahi). Namoona test 6 camera:
@@ -42,10 +45,10 @@ const os = require('os');
 const dgram = require('dgram');
 const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
-if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
+if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.2';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.3';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -82,6 +85,7 @@ biz.collection('blueAccess').doc('billClip').onSnapshot(s => {
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), ch: (d.ch && typeof d.ch === 'object') ? d.ch : {},
     xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v1.8
     gc: (Array.isArray(d.gc) ? d.gc : []).map(x => ({ g: Math.floor(Number(x && x.g) || 0), c: String((x && x.c) || '').trim().slice(0, 30), i: Number(x && x.i) === 2 ? 2 : 1 })).filter(x => x.g > 0 && x.c && x.c !== '-') };   // v1.9: 🏬 gate pass godam camera
+  try { CF.rdrv = require('./rec-dir.js').letter(d.rdrv); } catch { CF.rdrv = ''; }   // v2.3: 📼 sab cameras ki recording usi drive par
   const sig = [CF.kind, CF.ip, CF.port, CF.user, CF.pw, Number(d.at) || 0].join('|');
   if (sig !== cfSig) { cfSig = sig; AUTHBAD = 0; for (const p of pipes.values()) stopPipe(p, 'setting badli'); }
   srcSync(); try { pushSt(true); } catch {}   // v1.9: godam cameras ki list (mo) app tak
@@ -288,6 +292,126 @@ function startMosaic(codec, kind) {
   return p;
 }
 
+// ---------- 📼 v2.3: 🎛 SAB CAMERAS ki ek-screen RECORDING (5-5 min) -> WhatsApp group ----------
+// Malik (23 Nov): 'recording ko save karne ki ab PC mein zaroorat nahi — us ki jagah jo sab cameras ki live screen hai us ko record karta rahe · group mein lagatar videos'.
+// Setting blueAccess/sabRec (sirf malik). Input = recording wali line ki copy (srcs) — NVR par naya rabta KABHI nahi; jis camera ki line na ho us ka khana khali.
+const SR_SEG = 300, SR_FILE = path.join(DIR, 'sab-rec-sent.json'), SR_WAM = path.join(DIR, 'wa-media'), SR_RE = /^sab-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.mp4$/;
+let SR = { on: false, g: '', gn: '', kd: 2, st: 480, end: 1320 }, sr = null, srBad = 0, srUdp = false, srTry = 0, srCleanAt = 0;
+const srSt = { rec: 0, n: 0, err: '', last: '', at: 0, sent: 0, day: '' };
+let srSent = {}; try { srSent = JSON.parse(fs.readFileSync(SR_FILE, 'utf8')) || {}; } catch {}
+function srSave() { try { const k = Object.keys(srSent).sort(); for (const x of k.slice(0, Math.max(0, k.length - 1500))) delete srSent[x]; fs.writeFileSync(SR_FILE, JSON.stringify(srSent)); } catch {} }
+function srDir() { let root = path.join(DIR, 'clip-rec'); try { root = require('./rec-dir.js').active(DIR, CF.rdrv).root; } catch {} return path.join(path.dirname(root), 'sab-rec'); }
+const srT0 = n => { const m = String(n).match(SR_RE); return m ? new Date(+m[1], +m[2] - 1, +m[3], +m[4], +m[5], +m[6]).getTime() : 0; };
+const srMin = () => { const d = new Date(); return d.getHours() * 60 + d.getMinutes(); };
+const srWant = () => SR.on && CF.on && !!CF.ip && !AUTHBAD && srMin() >= SR.st && srMin() < SR.end;
+const srHm = t => { const d = new Date(t); let h = d.getHours(); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${String(d.getMinutes()).padStart(2, '0')} ${ap}`; };
+const SR_MON = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+biz.collection('blueAccess').doc('sabRec').onSnapshot(s => {
+  const d = s.exists ? s.data() || {} : {}, hm = (v, df) => { const m = String(v || '').match(/^(\d{1,2}):(\d{2})$/); return m ? Math.min(1439, +m[1] * 60 + +m[2]) : df; };
+  SR = { on: d.on === true, g: /^[0-9]{6,30}(-[0-9]{6,20})?@g\.us$/.test(String(d.g || '')) ? String(d.g) : '', gn: String(d.gn || '').slice(0, 40), kd: Math.max(1, Math.min(30, Math.round(Number(d.kd) || 2))), st: hm(d.st, 480), end: hm(d.end, 1320) };
+  log(`📼 sab cameras ki recording: ${SR.on ? 'CHALU' : 'band'}${SR.g ? ' · group ' + (SR.gn || SR.g) : ' · group nahi chuna'} · ${SR.kd} din`);
+  try { srTick(); pushSt(true); } catch {}
+}, e => log('⚠️ sabRec: ' + e.message));
+function srFilter(L, ok, w, h, fps) {   // khane ki jagah PAKKI (camera ki line na ho = khali khana) — taake group ki har video mein har camera wahi jagah
+  const [c, r] = moGrid(L.length), parts = [], lab = [], lay = []; let k = 0;
+  for (let i = 0; i < c * r; i++) {
+    if (i < L.length && ok[i]) parts.push(`[${k++}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x0b0f16,setsar=1[v${i}]`);
+    else parts.push(`color=c=0x0b0f16:s=${w}x${h}:r=${fps}[v${i}]`);
+    lab.push(`[v${i}]`); lay.push(`${(i % c) * w}_${Math.floor(i / c) * h}`);
+  }
+  parts.push(c * r === 1 ? `[v0]null[out]` : `${lab.join('')}xstack=inputs=${c * r}:layout=${lay.join('|')}[out]`);
+  return parts.join(';');
+}
+function srStart() {
+  if (sr) return;
+  const ff = ffPath(); if (!ff) { srSt.err = 'ffmpeg abhi nahi (bill-clip install kar raha)'; return; }
+  const L = allList(); if (!L.length) { srSt.err = 'Koi camera ⚙️ Camera setup mein nahi'; return; }
+  const ok = L.map(x => shareOk(x.ch)); if (!ok.some(Boolean)) { srSt.err = 'Kisi camera ki recording ki line nahi aa rahi (⚙️ Camera setup — ⏺ Rec ON?)'; return; }
+  const dir = srDir(); try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { srSt.err = 'recording ka folder nahi bana (' + String(e.code || e.message).slice(0, 40) + ')'; return; }
+  const T = L.length > 6 ? ALL_T : MO_T, f = srFilter(L, ok, T.w, T.h, ALL_FPS);
+  const p = sr = { fw: [], srv: [], L, ok, sig: ok.map(Number).join(''), lsig: L.map(x => x.n + ':' + x.ch).join('|'), at: Date.now(), grow: Date.now(), key: '', dir, udp: srUdp, made: 0 };
+  Promise.all(L.map((x, i) => ok[i] && !p.udp ? moTcp(p, x.ch) : 0)).then(tp => {
+    if (sr !== p) { moUnfw(p); return; }
+    const inArgs = [], pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt'];
+    L.forEach((x, i) => {
+      if (!ok[i]) return;
+      if (tp[i]) { inArgs.push(...pre, '-f', 'mpegts', '-i', `tcp://127.0.0.1:${tp[i]}`); return; }
+      const fp = 48940 + i, fs2 = dgram.createSocket('udp4'); fs2.on('error', () => {});
+      const obj = { writable: true, writableLength: 0, write: m => { try { fs2.send(m, fp, '127.0.0.1'); } catch {} } };
+      srcs.get(x.ch).subs.add(obj); p.fw.push({ ch: x.ch, obj, sock: fs2 });
+      inArgs.push(...pre, '-f', 'mpegts', '-i', `udp://127.0.0.1:${fp}?fifo_size=1000000&overrun_nonfatal=1&buffer_size=8388608`);
+    });
+    // 380k x 300 s = ~14 MB (WhatsApp ki 16 MB hadd ke andar); crf = khara manzar chhoti file (internet kam)
+    const args = ['-hide_banner', '-loglevel', 'error', ...inArgs, '-filter_complex', f, '-map', '[out]', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-crf', '30', '-maxrate', '380k', '-bufsize', '760k', '-g', String(ALL_FPS * 10),
+      '-f', 'segment', '-segment_time', String(SR_SEG), '-segment_atclocktime', '1', '-reset_timestamps', '1', '-strftime', '1', '-segment_format', 'mp4', '-segment_format_options', 'movflags=+faststart', path.join(dir, 'sab-%Y%m%d-%H%M%S.mp4')];
+    const proc = spawn(ff, args, { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] }); p.ff = proc; let err = '';
+    proc.stdin.on('error', () => {});
+    proc.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
+    proc.on('error', e => { err += ' ' + e.message; });
+    proc.on('close', code => {
+      moUnfw(p); p.ff = null; if (sr === p) sr = null; srSt.rec = 0;
+      if (p.stopping) return;
+      const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
+      if (!p.made) { srBad++; if (!p.udp && srBad >= 2) { srUdp = true; log('📼 sab recording: tez (TCP) tareeqa nahi chala — purana UDP tareeqa'); } }
+      srSt.err = 'recording ruki: ' + why; log(`📼 sab recording ruki (${why})`);
+    });
+    srSt.err = ''; log(`📼 sab recording shuru — ${ok.filter(Boolean).length}/${L.length} camera${p.udp ? ' (udp)' : ''} -> ${dir}`);
+  }).catch(e => { if (sr === p) sr = null; moUnfw(p); log('⚠️ sab recording: ' + (e && e.message)); });
+}
+function srStop(why) {
+  const p = sr; if (!p) return; sr = null; p.stopping = true; srSt.rec = 0;
+  try { p.ff && p.ff.stdin.write('q'); } catch {}   // 'q' = chalti file theek band ho (kill = adhoori file)
+  setTimeout(() => { try { p.ff && p.ff.kill(); } catch {} if (!p.ff) moUnfw(p); }, 6000);
+  if (why) log(`📼 sab recording band (${why})`);
+}
+function srOkMp4(f) { try { const fd = fs.openSync(f, 'r'), b = Buffer.alloc(65536), n = fs.readSync(fd, b, 0, 65536, 0); fs.closeSync(fd); const i = b.subarray(0, n).indexOf('moov'), j = b.subarray(0, n).indexOf('mdat'); return i > 0 && (j < 0 || i < j); } catch { return false; } }   // theek band hui file = moov shuru mein (faststart)
+function srSend(now) {
+  const dir = srDir(); let fl = []; try { fl = fs.readdirSync(dir).filter(n => SR_RE.test(n)).sort(); } catch { return; }
+  const open = sr && sr.ff ? fl[fl.length - 1] : ''; let ch = false;
+  for (const n of fl) {
+    if (n === open || srSent[n]) continue;
+    const f = path.join(dir, n), t0 = srT0(n); let st; try { st = fs.statSync(f); } catch { continue; }
+    if (now - st.mtimeMs < 8000) continue;   // abhi band ho rahi hai
+    ch = true;
+    if (!SR.g) { srSent[n] = 'nog'; continue; }
+    if (now - t0 > 45 * 60000) { srSent[n] = 'old'; continue; }   // PC band tha / purani — group mein dher na lage
+    if (st.size < 20000 || !srOkMp4(f)) { srSent[n] = 'bad'; continue; }
+    if (st.size > 15.6e6) { srSent[n] = 'big'; log(`📼 ${n}: ${Math.round(st.size / 1e6)} MB — WhatsApp ki hadd se bari, nahi bheji`); continue; }
+    const stamp = n.slice(4, -4), eid = 'bv-sab-' + stamp, vf = eid + '.mp4', t1 = Math.min(t0 + SR_SEG * 1000 + 15000, st.mtimeMs), d0 = new Date(t0);
+    try { fs.mkdirSync(SR_WAM, { recursive: true }); fs.copyFileSync(f, path.join(SR_WAM, vf)); } catch (e) { srSt.err = 'wa-media mein copy nahi hui (' + String(e.code || e.message).slice(0, 40) + ')'; ch = false; continue; }
+    srSent[n] = 'q';
+    const names = allList().map((x, i) => `${i + 1} ${x.n}`).join(' · ').slice(0, 300);
+    const txt = `🎛 Sab cameras · ${d0.getDate()} ${SR_MON[d0.getMonth()]} · ${srHm(t0)} – ${srHm(t1)}${names ? '\n' + names : ''}`;
+    biz.collection('waOut').doc(eid).create({ st: 'new', at: now, grp: SR.g, nm: SR.gn || 'Sab cameras', kind: 'bvs', eid, txt, vf })
+      .then(() => { const day = new Date().toDateString(); if (srSt.day !== day) { srSt.day = day; srSt.sent = 0; } srSt.sent++; srSt.last = srHm(t0); srSt.at = Date.now(); srSent[n] = 'ok'; srSave(); })
+      .catch(e => { if (/already exists|ALREADY_EXISTS/i.test(String(e && e.message))) { srSent[n] = 'ok'; } else { delete srSent[n]; srSt.err = 'group ko nahi gayi: ' + String(e && e.message).slice(0, 80); } srSave(); });
+  }
+  if (ch) srSave();
+}
+function srClean(now) {
+  if (now - srCleanAt < 10 * 60000) return; srCleanAt = now;
+  for (const dir of new Set([srDir(), path.join(DIR, 'sab-rec')])) { let fl = []; try { fl = fs.readdirSync(dir); } catch { continue; }
+    for (const n of fl) { const t0 = srT0(n); if (t0 && now - t0 > SR.kd * 86400000) { try { fs.unlinkSync(path.join(dir, n)); } catch {} } } }
+}
+function srTick() {
+  const now = Date.now(), want = srWant();
+  if (!want) { if (sr) srStop(SR.on ? 'dukan ka waqt nahi' : 'malik ne band ki'); if (!SR.on) srSt.err = ''; }
+  else if (!sr) { if (now - srTry > 30000) { srTry = now; srStart(); } }
+  else if (sr.ff) {
+    const p = sr; let nm = '', sz = 0; try { const fl = fs.readdirSync(p.dir).filter(n => SR_RE.test(n)).sort(); nm = fl[fl.length - 1] || ''; if (nm) sz = fs.statSync(path.join(p.dir, nm)).size; } catch {}
+    const key = nm + ':' + sz;
+    if (key !== p.key && nm && srT0(nm) >= p.at - 2000) { p.key = key; p.grow = now; if (sz > 0) { p.made = 1; srBad = 0; } }
+    else if (now - p.grow > 120000) { log('📼 sab recording: 2 min se file nahi barhi (koi camera ruka?) — dobara'); if (!p.made) { srBad++; if (!p.udp && srBad >= 2) srUdp = true; } srStop(''); srTry = now - 25000; }
+    if (sr === p) {
+      const sig = p.L.map(x => Number(shareOk(x.ch))).join(''), lsig = allList().map(x => x.n + ':' + x.ch).join('|');
+      if (sig !== p.sig || lsig !== p.lsig) { if (!p.sigAt) p.sigAt = now; else if (now - p.sigAt > 40000) { srStop('camera ki line / list badli'); srTry = now - 25000; } } else p.sigAt = 0;
+      srSt.rec = 1; srSt.n = p.ok.filter(Boolean).length;
+    }
+  }
+  try { srSend(now); } catch (e) { log('⚠️ sab bhejna: ' + e.message); }
+  try { srClean(now); } catch {}
+}
+
 // ---------- dekhne wale ----------
 const viewers = new Map();   // reqId → {pc, track, pipe, hb}
 function endViewer(id, why) {
@@ -360,14 +484,15 @@ let ST = { err: '' }, stAt = 0;
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const cams = [...pipes.values()].map(p => ({ ch: p.ch, n: p.tracks.size, on: p.ff ? 1 : 0, err: p.err || '' }));
-  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams, mo: moList().map(x => x.n), all: allList().map(x => x.n) }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }   // v1.9: mo = godam cameras
+  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams, mo: moList().map(x => x.n), all: allList().map(x => x.n), sr: { on: SR.on ? 1 : 0, g: SR.g ? 1 : 0, kd: SR.kd, rec: srSt.rec, n: srSt.n, err: String(srSt.err || '').slice(0, 140), last: srSt.last, at: srSt.at, sent: srSt.sent } }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }   // v1.9: mo = godam cameras
 }
 
 function main() {
   log(`🔴 live-cam v${VER} shuru — ${os.hostname()} · lock ${LOCK_PORT}`);
   werift(); pushSt(true);
   setInterval(ZINDA.guard ? ZINDA.guard(() => { werift(); pushSt(); }, 10 * 60000, 'tick') : () => { werift(); pushSt(); }, 30000);
-  process.on('exit', () => { for (const p of pipes.values()) { try { p.ff && p.ff.kill(); } catch {} } });
+  setInterval(() => { try { srTick(); } catch (e) { log('⚠️ sab recording: ' + e.message); } }, 20000);   // v2.3: 📼
+  process.on('exit', () => { for (const p of pipes.values()) { try { p.ff && p.ff.kill(); } catch {} } try { sr && sr.ff && sr.ff.kill(); } catch {} });
 }
 const lock = net.createServer();
 lock.once('error', () => { console.log(`[${new Date().toLocaleTimeString()}] live-cam pehle se chal raha hai (lock ${LOCK_PORT})`); process.exit(3); });

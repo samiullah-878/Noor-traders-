@@ -394,7 +394,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.366.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.367.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-gfull]')) { const tile = t.closest('.bt-gt'), v = tile?.querySelector('video'); try { if (document.fullscreenElement) document.exitFullscreen(); else if (v?.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else tile?.requestFullscreen?.(); } catch {} return; }   // v2.337.0: 🚪 godam video
@@ -545,7 +545,7 @@ function openWa() {
 // ---------- 👥 v2.328.0: HAR bill ki video WhatsApp GROUP mein (malik 19 Nov: 'din mein jitni videos banein SAB · counter-wise · transparent patti, blur nahi') ----------
 // blueAccess/billWaGroup {on, g: {counter: jid}, gd (baqi sab), gn: {jid: naam}, lim, end} — SIRF malik. PC bill-clip v2.9 har kamyab clip patti ke saath bana kar
 // wa-out v1.28 se group mein. Groups ki list = blueAccess/waOutGroups (wa-out, Business number jin groups mein hai). Yahan sirf setting + haal.
-let wgGr = null, wgOff = null, wgCf = null;
+let wgGr = null, wgOff = null, wgCf = null, sbCf = null, sbPc = null, sbOff = null;   // v2.367.0: 📼 sb = Sab cameras ki recording (blueAccess/sabRec · haal liveCamPc.sr)
 const wgRows = () => { try { const a = JSON.parse(wgGr?.j || '[]'); return Array.isArray(a) ? a.filter(r => Array.isArray(r) && /@g\.us$/.test(String(r[0] || ''))) : []; } catch { return []; } };
 const verLt = (v, a, b) => { const [x, y] = String(v || '').split('.').map(Number); return !(x > a || (x === a && y >= b)); };
 function wgPcs() {
@@ -558,7 +558,7 @@ function wgPcs() {
 function wgOpts(sel, none) {
   const R = wgRows(), gn = wgCf?.gn || {};
   let h = `<option value="">${esc(none)}</option>` + R.map(r => `<option value="${esc(r[0])}"${r[0] === sel ? ' selected' : ''}>${esc(r[1] || r[0])} · ${Number(r[2]) || 0} log${r[3] ? ' · 🔒 sirf admin' : ''}</option>`).join('');
-  if (sel && !R.some(r => r[0] === sel)) h += `<option value="${esc(sel)}" selected>${esc(gn[sel] || sel)} (list mein nahi)</option>`;
+  if (sel && !R.some(r => r[0] === sel)) h += `<option value="${esc(sel)}" selected>${esc(gn[sel] || (sbCf?.g === sel && sbCf.gn) || sel)} (list mein nahi)</option>`;
   return h;
 }
 function wgPaintSt() {
@@ -574,7 +574,8 @@ function wgPaintSt() {
 function wgPaintOpts() {   // list badli — chuna hua wahi rahe
   const d = $('btDlg'); if (!d?.open || !d.dataset.wg) return;
   d.querySelectorAll('select[data-wg-gd],select[data-wg-pc]').forEach(s => { const v = s.value; s.innerHTML = wgOpts(v, s.dataset.wgGd ? '— koi nahi —' : '— upar wala (sab ka) —'); });
-  wgPaintSt();
+  d.querySelectorAll('select[data-sb-g]').forEach(s => { const v = s.value; s.innerHTML = wgOpts(v, '— group chunein —'); });
+  wgPaintSt(); sbPaintSt();
 }
 async function wgSave(btn, onNow) {
   const d = $('btDlg'); if (!d?.open) return;
@@ -590,11 +591,48 @@ async function wgSave(btn, onNow) {
   catch (e) { if (btn) btn.textContent = '✕'; notice('Save nahi hua: ' + (e?.message || e)); return false; }
   finally { if (btn) setTimeout(() => { btn.disabled = false; btn.textContent = old; }, 1400); wgPaintSt(); }
 }
+// v2.367.0: 📼 SAB CAMERAS ki ek-screen recording -> group (malik 23 Nov: 'recording ko PC mein save karne ki zaroorat nahi — sab cameras ki live screen record ho · group mein lagatar')
+const sbHm = v => /^\d{1,2}:\d{2}$/.test(String(v || '')) ? String(v) : '';
+function sbPaintSt() {
+  const d = $('btDlg'), el = d?.open && d.querySelector('[data-sb-stt]'); if (!el) return;
+  const p = sbPc, r = p?.sr, v = String(p?.ver || '');
+  el.textContent = !p ? '⏳ PC ka haal abhi nahi aaya' : Date.now() - (Number(p.at) || 0) > 5 * 60000 ? '🖥 PC chup (' + ago(p.at) + ') — PC on hote hi khud'
+    : v && verLt(v, 2, 3) ? `⏳ PC ka live-cam purana (v${v}) — 3-5 min mein khud update`
+    : !r || !r.on ? 'PC: recording band'
+    : `${r.rec ? '🔴 record ho rahi — ' + (r.n || 0) + ' camera' : '⚪ abhi record nahi ho rahi'}${r.err ? ' · ⚠ ' + r.err : ''}${r.g ? '' : ' · group nahi chuna'}${r.sent ? ' · aaj ' + r.sent + ' gayi' : ''}${r.last ? ' · aakhri ' + r.last : ''}`;
+}
+async function sbSave(btn, onNow) {
+  const d = $('btDlg'); if (!d?.open) return false;
+  const g = d.querySelector('[data-sb-g]').value, R = wgRows(), on = onNow === undefined ? !!sbCf?.on : onNow;
+  if (on && !g) { notice('Pehle group chunein'); return false; }
+  const row = R.find(x => x[0] === g), gn = String((row && row[1]) || (sbCf?.g === g && sbCf?.gn) || '').slice(0, 40);
+  const nx = { on, g, gn, kd: Math.max(1, Math.min(30, Number(d.querySelector('[data-sb-kd]').value) || 2)), st: sbHm(d.querySelector('[data-sb-st]').value) || '08:00', end: sbHm(d.querySelector('[data-sb-end]').value) || '22:00' };
+  if (on && !sbCf?.on && !confirm('📼 Sab cameras ki ek video lagatar record ho kar is group mein jayegi (har 5 min ek video).\n\nSaath har camera ki ALAG recording PC par sirf 3 ghante rakhi jayegi — purani (10 din wali) alag recording MIT jayegi, wapas nahi aati.\n\nOK?')) return false;
+  const old = btn ? btn.textContent : ''; if (btn) { btn.disabled = true; btn.textContent = '⏳'; }
+  try {
+    await cloud.setSabRec(nx);
+    if (on && !sbCf?.on && cloud.setBillClipPart) await cloud.setBillClipPart({ rkd: 0.125 });   // har camera ki alag recording 3 ghante (bill / gate pass video ke liye kaafi)
+    sbCf = nx; if (btn) btn.textContent = '✅'; notice(on ? '📼 Chalu — sab cameras ki recording group mein' : 'Sab cameras ki recording band'); return true;
+  } catch (e) { if (btn) btn.textContent = '✕'; notice('Save nahi hua: ' + (e?.message || e)); return false; }
+  finally { if (btn) setTimeout(() => { btn.disabled = false; btn.textContent = old; }, 1400); sbPaintSt(); }
+}
+function sbHTML() {
+  const c = sbCf || {}, on = !!c.on, kd = Number(c.kd) || 2;
+  return `<div class="bt-sbbox"><div class="bt-wgtop"><button type="button" class="bt-sm bt-wgon${on ? ' is-in' : ''}" data-sb-on="1">${on ? '🟢 CHALU' : '⚪ BAND'}</button><b class="bt-sbh">📼 Sab cameras ki recording</b></div>
+      <select data-sb-g="1">${wgOpts(String(c.g || ''), '— group chunein —')}</select>
+      <div class="bt-wgrow"><b>📅 PC par rakho</b><select data-sb-kd>${[1, 2, 3, 7].map(n => `<option value="${n}"${n === kd ? ' selected' : ''}>${n} din</option>`).join('')}</select></div>
+      <div class="bt-wgrow"><b>🌅 Shuru</b><input type="time" data-sb-st value="${esc(sbHm(c.st) || '08:00')}"></div>
+      <div class="bt-wgrow"><b>🌙 Band</b><input type="time" data-sb-end value="${esc(sbHm(c.end) || '22:00')}"></div>
+      <div class="bt-warow0"><button type="button" class="bt-sm bt-wago" data-sb-save="1">💾 Save</button></div>
+      <p class="bt-sub" data-sb-stt></p>
+      <p class="bt-sub">🎛 Sab cameras EK video (har 5 min) khud is group mein — roz taqreeban 140. Har camera ki alag recording sirf 3 ghante rehti hai (bill / gate pass ki video usi se banti hai). Khane chhote hain: 'kya ho raha tha' dikhta hai, chehra / item saaf nahi.</p></div>`;
+}
 async function openWg() {
   if (!isOwner() || !cloud?.setBillWaGroup) { notice(isOwner() ? 'App update karein' : 'Sirf malik'); return; }
   const d = dlg(); d.dataset.wg = '1'; delete d.dataset.wa; delete d.dataset.list; delete d.dataset.unp;
   d.innerHTML = '<div class="bt-dbody">⏳</div>'; if (!d.open) d.showModal();
   try { wgCf = await cloud.getBillWaGroup(); } catch { wgCf = wgCf || {}; }
+  try { if (cloud.getSabRec) sbCf = await cloud.getSabRec(); } catch { sbCf = sbCf || {}; }
   if (!d.open || !d.dataset.wg) return;   // beech mein band
   const on = !!wgCf.on, g = wgCf.g || {}, lim = Number(wgCf.lim) || 400, end = /^\d{1,2}:\d{2}$/.test(String(wgCf.end || '')) ? wgCf.end : '22:00';
   d.innerHTML = `<div class="bt-dhead"><b>👥 Har bill ki video — group</b><button type="button" class="bt-x" data-x="1">×</button></div>
@@ -606,13 +644,18 @@ async function openWg() {
       <div class="bt-wgrow"><b>🌙 Raat band</b><input type="time" data-wg-end value="${esc(end)}"></div>
       <div class="bt-warow0"><button type="button" class="bt-sm" data-wg-ref="1">🔄 Groups ki list</button><button type="button" class="bt-sm bt-wago" data-wg-save="1">💾 Save</button></div>
       <p class="bt-sub" data-wg-gs></p>
-      <p class="bt-sub">Video ke upar transparent patti (sirf kinara, peeche video saaf): bill #, Rs, items × tadad. Business number (gahak wala WhatsApp) ko group mein add karein. Har video ke beech 20 s · raat ke waqt / din ki hadd ke baad nahi.</p></div>`;
+      <p class="bt-sub">Video ke upar transparent patti (sirf kinara, peeche video saaf): bill #, Rs, items × tadad. Business number (gahak wala WhatsApp) ko group mein add karein. Har video ke beech 20 s · raat ke waqt / din ki hadd ke baad nahi.</p>
+      ${cloud.setSabRec ? sbHTML() : ''}</div>`;
   d.querySelector('[data-x]').onclick = () => { delete d.dataset.wg; d.close(); };
   d.querySelector('[data-wg-save]').onclick = ev => wgSave(ev.currentTarget);
   d.querySelector('[data-wg-on]').onclick = async ev => { const b = ev.currentTarget, nv = !wgCf?.on; b.classList.toggle('is-in', nv); b.textContent = nv ? '🟢 CHALU' : '⚪ BAND';
     if (!(await wgSave(null, nv))) { b.classList.toggle('is-in', !nv); b.textContent = !nv ? '🟢 CHALU' : '⚪ BAND'; } };
   d.querySelector('[data-wg-ref]').onclick = async ev => { const b = ev.currentTarget; b.disabled = true; b.textContent = '⏳';
     try { await cloud.reqWaOutGroups(); b.textContent = '✅'; } catch (e) { b.textContent = '✕'; notice('Nahi hua: ' + (e?.message || e)); } setTimeout(() => { b.disabled = false; b.textContent = '🔄 Groups ki list'; }, 2500); };
+  { const sv = d.querySelector('[data-sb-save]'), so = d.querySelector('[data-sb-on]');   // v2.367.0: 📼
+    if (sv) sv.onclick = ev => sbSave(ev.currentTarget);
+    if (so) so.onclick = async ev => { const b = ev.currentTarget, nv = !sbCf?.on; if (await sbSave(null, nv)) { b.classList.toggle('is-in', nv); b.textContent = nv ? '🟢 CHALU' : '⚪ BAND'; } };
+    if (!sbOff && cloud.listenLiveCamPc) { sbOff = cloud.listenLiveCamPc(x => { sbPc = x; sbPaintSt(); }); offs.push(() => { try { sbOff && sbOff(); } catch {} sbOff = null; }); } }
   if (!wgOff && cloud.listenWaOutGroups) { wgOff = cloud.listenWaOutGroups(s => { wgGr = s; wgPaintOpts(); }); offs.push(() => { try { wgOff && wgOff(); } catch {} wgOff = null; }); }
   wgPaintOpts();
 }
@@ -738,7 +781,7 @@ async function openSetup() {
       if (!n && !c) return; if (!n || !(c > 0 && c < 1000)) { xBad = xBad || `"${n || '?'}" ka naam / channel adhoora`; return; } if (seenX.has(n.toLowerCase()) || pcs.has(n)) { xBad = xBad || `"${n}" naam dohra hai`; return; } seenX.add(n.toLowerCase()); xc.push({ n, ch: c, r: r.querySelector('[data-xr]').classList.contains('on') ? 1 : 0 }); const hv = r.querySelector('[data-xhd]')?.dataset.xhd; if (hv === 'hd' || hv === 'lo') hdc.push({ ch: c, hd: hv === 'hd' ? 1 : 0 }); });
     if (xBad) { notice('📹 ' + xBad); return; }
     const gc = []; d.querySelectorAll('select[data-gc]').forEach(sl => { const v = String(sl.value || ''); if (v) gc.push({ g: Number(sl.dataset.gc), c: v.slice(0, 30), i: Number(sl.dataset.gi) === 2 ? 2 : 1 }); });   // v2.337.0: 🚪 list (merge mein poori badalti) · v2.338.0: i = 1 / 2 camera
-    const out = { xc, hdc, gc, gpv, on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rkd: Math.max(1, Math.min(90, Math.round(Number(g('rkd')) || 10))), rep: String(g('rep')).trim() || '20:30', ch };
+    const out = { xc, hdc, gc, gpv, on, onAt: on ? ((cf.on !== false && cf.ip && cf.onAt) ? cf.onAt : Date.now()) : 0, kind, sub, ip: String(g('ip')).trim(), port: Number(g('port')) || 554, user: String(g('user')).trim() || 'admin', pw: String(g('pw')), pre, post: Number(g('post')) || 20, keep: Number(g('keep')) || 2, rkd: (Number(cf.rkd) > 0 && Number(cf.rkd) < 1 && Number(g('rkd')) === Number(cf.rkd)) ? Number(cf.rkd) : Math.max(1, Math.min(90, Math.round(Number(g('rkd')) || 10))), rep: String(g('rep')).trim() || '20:30', ch };
     ev.currentTarget.disabled = true;
     try { await cloud.setBillClipCfg(out); notice('💾 Camera setup save — PC 30 s mein uthata hai'); d.close(); }
     catch (e) { notice('Save nahi hua: ' + (e?.message || e)); ev.currentTarget.disabled = false; }

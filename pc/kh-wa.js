@@ -17,7 +17,7 @@
 //    'reports' (sirf malik) -> menu (stg r) -> reportConfig {reportNow, waOnly} -> raat-report v1.6. PDF / print = aakhri 30 din. Baqaya ka formula = app runningOf (skipsBal + cashPays).
 //  Number: blueAccess/khNum {m: {partyId: n}} — malik ki app deti hai. AI NAHI. SQL nahi (POS ko yeh file kabhi nahi chhooti).
 // =========================================================
-const VER = '1.15';   // v1.15 (20 Nov): recording ke din billClip.rkd (default 10) — setting ab Settings → 🖥️ PC scripts → 💽 Recording kahan.
+const VER = '1.16';   // v1.16 (23 Nov): billClip.rkd 1 se kam = ghante (0.125 = 3 ghante) — waqt ki video sirf utni purani. // v1.15 (20 Nov): recording ke din billClip.rkd (default 10) — setting ab Settings → 🖥️ PC scripts → 💽 Recording kahan.
 // v1.14 (pehle):   // v1.14 (20 Nov, malik ne '11:06 SE 7 minute ki' likha — jawab hi nahi aaya): waqt ab tParse — '11:06 se 7 minute (ki / tak)' · 'kal 3:45' · 'X se Y'; camera chunne ke baad waqt jaisa kuch bhi likha samajh na aaye = madad ka jawab (khamosh nahi); recording 2 din (billClip.rkh).
 // v1.13 (pehle):   // v1.13 (20 Nov, malik: 'WhatsApp par time ka clip — live ke andar · hum time likhein, us waqt ki video'): 🕒 live → camera → 8 Waqt ki video (ya seedha 3:45 · 3:45 5 · 3:40-3:50 · live 3 3:45) → billClipWa {kind live, f0, f1} → bill-clip v2.14 recording se. ⏺ recording ab 9.
 // v1.12 (pehle):   // v1.12 (19 Nov, malik: 'live likhein to aage camera ke naam khud aa jayein · phir number · 30 sec … 30 min · tarteeb se · mazeed cameras · recording chalu'): 📹 'live' (sirf malik / Mubeen) -> camera list (billClipPc.cams) -> number -> 📸 / 30 sec … 30 min / ⏺ recording (sirf malik) -> billClipWa lv<w> {kind 'live'} (bill-clip v2.10) · 'live 3 4' = seedha
@@ -355,7 +355,7 @@ function make({ biz, log = () => {} }) {
   }
   const hmT = t => { const d = new Date(Number(t) + PKO); let h = d.getUTCHours(); const ap = h >= 12 ? 'pm' : 'am'; h = h % 12 || 12; return `${h}:${String(d.getUTCMinutes()).padStart(2, '0')} ${ap}`; };
   const TM_HELP = '🕒 Waqt aise likhein:\n3:45 = 3:44 se 3:46 tak (2 min)\n3:45 se 7 minute = 3:45 se 3:52 tak\n3:40-3:50 = poora hissa (30 min tak)\nkal 3:45 = kal ka waqt\nam / pm na likhein to sab se qareebi guzra hua waqt.';
-  async function rkMin() { try { const sn = await BA.doc('billClip').get(), d = sn.exists ? sn.data() || {} : {}; return (Number(d.rkd) > 0 ? Math.max(1, Math.min(90, Math.round(Number(d.rkd)))) : 10) * 1440; } catch { return 14400; } }   // sirf recording rakhne ke minute — password wagera yahan kabhi nahi chhuta
+  async function rkMin() { try { const sn = await BA.doc('billClip').get(), d = sn.exists ? sn.data() || {} : {}; const k = Number(d.rkd); return k > 0 && k < 1 ? Math.max(180, Math.round(k * 1440)) : (k > 0 ? Math.max(1, Math.min(90, Math.round(k))) : 10) * 1440; } catch { return 14400; } }   // sirf recording rakhne ke minute — password wagera yahan kabhi nahi chhuta
   const rkTxt = n => n % 1440 === 0 ? `${n / 1440} din` : n % 60 ? `${n} min` : `${n / 60} ghante`;
   async function lvTime(ph, name, w, cam, text) {
     if (!canLive(ph)) { await say(ph, 'kv-' + w, '✕ Live camera sirf malik / Mubeen dekh sakte hain.'); return true; }

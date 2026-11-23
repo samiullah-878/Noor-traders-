@@ -14,7 +14,8 @@ const aiBox = () => document.getElementById('pcAi');
 const box = () => document.getElementById('pcDrv');
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ago = t => { const m = Math.max(0, Math.round((Date.now() - t) / 60000)); return m < 1 ? 'abhi' : m < 60 ? m + ' min pehle' : Math.floor(m / 60) + ' ghante pehle'; };
-const DAYS = [2, 5, 10, 15, 30, 60];
+const DAYS = [0.125, 2, 5, 10, 15, 30, 60];   // v2.367.0: 0.125 = 3 ghante (har camera ki alag recording sirf bill video ke liye — lambi recording = 📼 Sab cameras)
+const dl = n => n < 1 ? Math.round(n * 24) + ' ghante' : n + ' din';
 const gb = x => x == null ? '?' : (x >= 100 ? Math.round(x) : (Math.round(x * 10) / 10)) + ' GB';
 
 export function setup(deps) {
@@ -46,7 +47,7 @@ function stChip() {
   const dk = pc.dk;
   if (want && dk.d !== want) return dk.err ? `<span class="pdv-st r">✕ ${esc(dk.err)}</span>` : `<span class="pdv-st w">⏳ ${esc(want)}: par le ja raha…</span>`;
   if (dk.err) return `<span class="pdv-st r">✕ ${esc(dk.err)}</span>`;
-  if (wantD && Number(pc.rkd) !== wantD) return `<span class="pdv-st w">⏳ ${wantD} din lag rahe…</span>`;
+  if (wantD && Number(pc.rkd) !== wantD) return `<span class="pdv-st w">⏳ ${dl(wantD)} lag rahe…</span>`;
   return `<span class="pdv-st g">✅ Recording ${esc(dk.d)}: par</span>`;
 }
 
@@ -66,19 +67,19 @@ function html() {
       <span class="pdv-sz"><i class="pdv-bar"><i style="width:${used}%"></i></i><small>${gb(x.free)} khali</small></span>${tag}</button>`;
   }).join('');
   const days = curDays();
-  const chips = DAYS.map(n => `<button type="button" class="pdv-c${n === days ? ' is-in' : ''}" data-pdv="k" data-n="${n}"${busy ? ' disabled' : ''}>${n} din</button>`).join('');
+  const chips = DAYS.map(n => `<button type="button" class="pdv-c${n === days ? ' is-in' : ''}" data-pdv="k" data-n="${n}"${busy ? ' disabled' : ''}>${dl(n)}</button>`).join('');
   let info = '';
   if (dk.day > 0) {
     info = `<p class="pdv-ln">📼 Abhi recording ${gb(dk.used)} · roz ${dk.est ? '≈' : ''}${gb(dk.day)} · ${esc(act)}: par ≈ <b>${Number(dk.can) || 0} din</b> ki jagah</p>`;
     const need = dk.day * days;
-    if (dk.can && days > dk.can) info += `<p class="pdv-ln r">⚠️ ${days} din ≈ ${gb(need)} — ${esc(act)}: par sirf ≈ ${dk.can} din ki jagah. Jagah 25 GB se kam hui to sab se purani recording pehle mitegi.</p>`;
-    else info += `<p class="pdv-ln g">✓ ${days} din ≈ ${gb(need)} — aaram se aa jayegi</p>`;
+    if (dk.can && days > dk.can) info += `<p class="pdv-ln r">⚠️ ${dl(days)} ≈ ${gb(need)} — ${esc(act)}: par sirf ≈ ${dk.can} din ki jagah. Jagah 25 GB se kam hui to sab se purani recording pehle mitegi.</p>`;
+    else info += `<p class="pdv-ln g">✓ ${dl(days)} ≈ ${gb(need)} — aaram se aa jayegi</p>`;
     if (dk.est) info += '<p class="pdv-note">≈ = abhi 1 din se kam recording hai, kal tak pakka hisaab.</p>';
   } else info = '<p class="pdv-note">⏳ Roz kitne GB lagte hain — recording ke 10-20 min baad yahan.</p>';
   return `<div class="pdv-box">${hd}<p class="pdv-note">Camera ki recording kis hard par rahe — drive par tap karein.</p>
     <div class="pdv-list">${rows}</div>
     <div class="pdv-days"><span>📅 Kitne din rakhein</span>${chips}</div>${info}
-    <p class="pdv-note">Drive badli to purani recording wahin se ${days} din pure kar ke khud mitegi (move nahi hoti). Bill video / WhatsApp waqt ki video / ginti dono jagah se chalti hai. AI nahi.</p></div>`;
+    <p class="pdv-note">Drive badli to purani recording wahin se ${dl(days)} pure kar ke khud mitegi (move nahi hoti). Bill video / WhatsApp waqt ki video / ginti dono jagah se chalti hai. AI nahi.</p></div>`;
 }
 function paint() { const b = box(); if (b) b.innerHTML = html(); }
 
@@ -87,7 +88,7 @@ async function pickDrive(d) {
   const x = (pc?.drv || []).find(y => y.d === d); if (!x) return;
   if (pc?.dk?.d === d && !want) { A.notice?.(`✓ Recording pehle se ${d}: par hai`); return; }
   const days = curDays();
-  if (!confirm(`💽 Camera ki recording ab ${d}: drive par hogi (sab cameras).\n\n${d}: par ${gb(x.free)} khali hai.\nPurani recording jahan hai wahin se ${days} din pure kar ke khud mitegi.\n\nOK?`)) return;
+  if (!confirm(`💽 Camera ki recording ab ${d}: drive par hogi (sab cameras).\n\n${d}: par ${gb(x.free)} khali hai.\nPurani recording jahan hai wahin se ${dl(days)} pure kar ke khud mitegi.\n\nOK?`)) return;
   busy = 'd'; want = d; paint();
   try { await A.cloud.setBillClipPart({ rdrv: d }); cfg = { ...(cfg || {}), rdrv: d }; A.notice?.(`⏳ ${d}: par recording shuru ho rahi hai — PC 1-2 min mein bata dega`); }
   catch (e) { want = ''; A.notice?.('✕ ' + (e?.message || e)); }
@@ -96,8 +97,9 @@ async function pickDrive(d) {
 
 async function pickDays(n) {
   if (!(n > 0) || busy || n === curDays()) return;
+  if (n < curDays() && !confirm(`📅 Har camera ki alag recording ab sirf ${dl(n)} rakhi jayegi.\n\nIs se purani recording MIT jayegi — wapas nahi aati.\n\nOK?`)) return;
   busy = 'k'; wantD = n; paint();
-  try { await A.cloud.setBillClipPart({ rkd: n }); cfg = { ...(cfg || {}), rkd: n }; A.notice?.(`✓ Recording ${n} din rakhi jayegi`); }
+  try { await A.cloud.setBillClipPart({ rkd: n }); cfg = { ...(cfg || {}), rkd: n }; A.notice?.(`✓ Recording ${dl(n)} rakhi jayegi`); }
   catch (e) { wantD = 0; A.notice?.('✕ ' + (e?.message || e)); }
   busy = ''; paint();
 }

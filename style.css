@@ -8726,6 +8726,9 @@ html body #lvDlg .lv-tools button.lv-q.bad{background:linear-gradient(180deg,#7f
 #btDlg .bt-wgon{font-weight:700;flex:none}
 #btDlg .bt-wgon.is-in{background:linear-gradient(180deg,#25d366,#128c4a)!important;color:#fff!important;border-color:#0e7a3f!important}
 #btDlg .bt-wgl{display:block;font-weight:700;font-size:13px;margin:6px 0 4px}
+#btDlg .bt-sbbox{margin-top:14px;padding-top:12px;border-top:1px solid rgba(148,163,184,.35)}
+#btDlg .bt-sbbox select[data-sb-g]{width:100%;margin-bottom:4px}
+#btDlg .bt-sbh{font-size:14px;min-width:0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
 #btDlg .bt-wgrow{display:grid;grid-template-columns:minmax(84px,auto) minmax(0,1fr);gap:8px;align-items:center;margin:5px 0}
 #btDlg .bt-wgrow b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
 #btDlg select[data-wg-gd],#btDlg .bt-wgrow select,#btDlg .bt-wgrow input{width:100%;min-width:0;height:38px;border-radius:11px;border:1px solid #c9d3e6;padding:0 10px;font-size:14px;background:#fff;color:#14213d}
