@@ -9532,3 +9532,6 @@ Isi update mein 🔊: do-awaz wali Gemini darkhwast 400 deti thi (speech_metadat
 === v2.357.0 + md pkg v70 (23 Nov 2026) ===
 🏦 Alfa notification saada (alfa.py): har Alfa popup -> andar BAF + PKR jaanch (OTP nahi) -> seedha HttpRequest; fail = purani Java line. Ginti bkN / bkS / bkC. Wajah: Rs 100 Raast 13:43 Bank screen mein aaya hi nahi (aakhri notification 11:57). Python simulator + MCP validator VALID; phone par azmaya nahi.
 0 Sab zero: Rack bharo (pos-stock.js rkZero, .rk2-zero) — sab tadad 0, dobara = wapas. AI nahi.
+
+=== v2.358.0 (23 Nov 2026) — 🎓 Video samjhao v1.4 ===
+Gemini awaz ki hadd (429): har chhote hisse ki awaz pehle se ban rahi thi. Ab 15 min ke page ki EK awaz (groupsOf, f0-f1), chalta + agla page, ek waqt ek, 429 = 65 s ruk kar dobara, lamba = aadha. Timeout 240 s. Node test groupsOf PASS + import; asal Gemini / phone par azmaya nahi. AI: Gemini (sirf is screen mein).

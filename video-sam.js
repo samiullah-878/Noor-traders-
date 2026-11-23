@@ -1,4 +1,6 @@
-// video-sam.js v1.3 (app v2.356.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// video-sam.js v1.4 (app v2.358.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// v1.4 (malik: 'Gemini ki awaz ki hadd poori' — poori video ke har chhote hisse ki awaz pehle se ban rahi thi · 'ek hi dafa poora page ban jaye'): awaz 15 min ke page ki EK
+//   (groupsOf), sirf chalta + agla page, hadd par 65 s ruk kar dobara (band nahi), ek waqt ek darkhwast.
 // v1.3 (malik: 'yeh bhi video 15 minute ki hi hai, is se aage ki nahi'): AI 15 min ke tukre ke khatam hone ko 'video khatam' keh deta tha -> ab 'end' sirf tab
 //   maana jata hai jab tukra khali ho YA aakhri line tukre ke khatam se 90 s pehle ruke; purani ruki video par chip '▶ Video aage bhi hai'.
 //   🔊 Gemini awaz (malik: 'pehle sahi thi, ab ek hi hai'): do bolne wale pehchane jane ke baad do-awaz wali darkhwast 400 deti thi ('speech_metadata.speaker for each
@@ -81,7 +83,7 @@ function audioBlob(b64, mime) {
   return new Blob([wavBytes(u, rate)], { type: 'audio/wav' });
 }
 const ttsText = p => linesOf(p).map(l => SPK[l[0]] + ': ' + (l[2] || l[1])).join('\n');
-export const _t = { vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt, pcmOf: (...a) => pcmOf(...a), ttsBody: (...a) => ttsBody(...a), voGet };
+export const _t = { groupsOf: (...a) => groupsOf(...a), wOf: (...a) => wOf(...a), bOf: (...a) => bOf(...a), vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt, pcmOf: (...a) => pcmOf(...a), ttsBody: (...a) => ttsBody(...a), voGet };
 
 const load = () => { try { const o = JSON.parse(localStorage.getItem(LS) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } };
 function store(v) {
@@ -208,10 +210,10 @@ const ttsOneBody = (text, voice) => ({ contents: [{ parts: [{ text: 'Say in Urdu
 async function ttsOne(text, voice, models, key) {
   let last = null;
   for (const m of models.slice(0, 2)) {
-    const r = await post(m, ttsOneBody(text, voice), key, 70000);
+    const r = await post(m, ttsOneBody(text, voice), key, 240000);
     if (r.ok) { const d = ttsData(r); if (d?.data) return d; last = Error('awaz khali aayi'); continue; }
     last = Error(r.msg);
-    if (r.status === 429) throw Object.assign(Error('Google ki awaz ki hadd poori ho gayi'), { off: 1 });
+    if (r.status === 429) throw Object.assign(Error('Google ki awaz ki hadd poori ho gayi'), { q: 1 });
     if (r.status === 401 || r.status === 403) throw Object.assign(last, { off: 1 });
   }
   throw Object.assign(last || Error('awaz nahi bani'), { all: 1 });
@@ -227,10 +229,10 @@ async function tts(p) {
     for (const m of models.slice(0, 2)) {
       const order = [known[m], 'n', 'm', 'o'].filter((x, i, a) => x && a.indexOf(x) === i);
       for (const f of order) {
-        const r = await post(m, ttsBody(L, f, vo), cfg.key, 70000);
+        const r = await post(m, ttsBody(L, f, vo), cfg.key, 240000);
         if (r.ok) { const d = ttsData(r); if (d?.data) { ttsFmtSet(m, f); if (S && S.ttsM[0] !== m) S.ttsM = [m, ...S.ttsM.filter(x => x !== m)]; return audioBlob(d.data, d.mimeType || d.mime_type); } last = Error('awaz khali aayi'); continue; }
         last = Error(r.msg);
-        if (r.status === 429) throw Object.assign(Error('Google ki awaz ki hadd poori ho gayi'), { off: 1 });
+        if (r.status === 429) throw Object.assign(Error('Google ki awaz ki hadd poori ho gayi'), { q: 1 });
         if (r.status === 401 || r.status === 403) throw Object.assign(last, { off: 1 });
         if (r.status !== 400) break;
       }
@@ -267,29 +269,56 @@ function badge(i) {
   if (tg) tg.textContent = !a ? '' : a.st === 'ok' ? '🔊' : a.st === 'w' ? '⏳' : '📱';
   if (tg) tg.title = !a ? '' : a.st === 'ok' ? 'Gemini ki awaz tayyar' : a.st === 'w' ? 'awaz ban rahi hai' : 'phone ki awaz';
 }
-function pump() { if (!S || !S.v) return; while ((S.pumps || 0) < 2) { S.pumps = (S.pumps || 0) + 1; pumpOne().finally(() => { if (S) S.pumps = Math.max(0, (S.pumps || 1) - 1); }); } }
+// v1.4 (malik 23 Nov: 'ek hi dafa, hisson ki bajaye poora page ban jaye'): awaz ab har chhote hisse ki alag NAHI — AI ke ek jawab (15 min ka page) ki EK awaz
+//   (1 ghante ki video = ~50 ki jagah ~5 darkhwastein — Google ki hadd dheere kharch). Har hissa usi awaz ka ek tukda (f0–f1, likhai ki lambai se andaza).
+//   Sirf chalte page + agle 1 page ki awaz banti hai. Bohat lamba page / Google na de = khud aadha (S.cap). Hadd (429) = 65 s ruk kar dobara, 3 dafa = phone ki awaz.
+const CAP = 3600, AHEAD = 1;
+const bOf = p => (p.b != null ? p.b : Math.floor((Number(p.s) || 0) / STEP) * STEP);
+const wOf = p => linesOf(p).reduce((n, l) => n + String(l[2] || l[1]).length + 12, 0);
+function groupsOf(v, capOf) {
+  const G = []; let cur = null, b0 = null, n = 0;
+  v.parts.forEach((q, i) => { const b = bOf(q), w = wOf(q), cap = (capOf && capOf[b]) || CAP;
+    if (!cur || b !== b0 || (n + w > cap && cur.length)) { cur = []; G.push(cur); b0 = b; n = 0; }
+    cur.push(i); n += w; });
+  return G;
+}
+const gKey = (v, g) => v.id + ':g' + Math.round(v.parts[g[0]].s) + ':' + g.length + ':' + hsh(g.map(i => ttsText(v.parts[i])).join('\n') + voKey());
+function ttsStop(msg) { if (!S) return; S.ttsOff = msg; A.notice?.('🔊 Gemini ki awaz nahi bani (' + msg.slice(0, 90) + ') — phone ki awaz chalegi (sirf screen khuli ho to).'); }
+function pump() { if (!S || !S.v) return; while ((S.pumps || 0) < 1) { S.pumps = (S.pumps || 0) + 1; pumpOne().finally(() => { if (S) S.pumps = Math.max(0, (S.pumps || 1) - 1); }); } }
 async function pumpOne() {
   for (;;) {
     if (!S || !S.v) return;
-    const v = S.v, n = v.parts.length, from = Math.max(0, S.wait >= 0 ? S.wait : S.cur);
-    let i = -1;
-    for (let k = 0; k < n; k++) { const x = (from + k) % n; if (!S.aud[x]) { i = x; break; } }
-    if (i < 0) return;
-    const p = v.parts[i], key = aKey(v.id, p);
-    S.aud[i] = { st: 'w' }; badge(i);
-    let blob = await idbGet(key);
+    const v = S.v, G = groupsOf(v, S.cap), from = Math.max(0, S.wait >= 0 ? S.wait : S.cur), g0 = Math.max(0, G.findIndex(x => x.includes(from)));
+    let g = null;
+    for (let k = g0; k < G.length && k <= g0 + AHEAD; k++) if (G[k].some(i => !S.aud[i])) { g = G[k]; break; }
+    if (!g) return;
+    for (const i of g) { S.aud[i] = { st: 'w' }; badge(i); }
+    const key = gKey(v, g); let blob = await idbGet(key), hold = false;
     if (!blob && S && !S.ttsOff) {
-      try { blob = await tts(p); idbPut(key, blob); if (S) S.ttsFail = 0; }
-      catch (e) {
-        if (!S || S.v !== v) return;
-        S.ttsFail = (S.ttsFail || 0) + 1;
-        if (e?.off || S.ttsFail >= 4) { S.ttsOff = String(e?.message || e); A.notice?.('🔊 Gemini ki awaz nahi bani (' + S.ttsOff.slice(0, 90) + ') — phone ki awaz chalegi (sirf screen khuli ho to).'); }
+      if ((S.ttsHold || 0) > Date.now()) hold = true;
+      else {
+        try { blob = await tts({ d: g.flatMap(i => linesOf(v.parts[i])) }); idbPut(key, blob); if (S) { S.ttsFail = 0; S.tts429 = 0; } }
+        catch (e) {
+          if (!S || S.v !== v) return;
+          if (e?.q) {
+            S.tts429 = (S.tts429 || 0) + 1;
+            if (S.tts429 >= 3) ttsStop('Google ki awaz ki aaj ki hadd poori ho gayi');
+            else { hold = true; S.ttsHold = Date.now() + 65000; A.notice?.('🔊 Google ki awaz ki hadd — 1 minute baad khud dobara (tab tak phone ki awaz)'); clearTimeout(S.holdT);
+              S.holdT = setTimeout(() => { if (!S || S.v !== v) return; for (const k of Object.keys(S.aud)) if (S.aud[k]?.h && Number(k) !== S.cur) delete S.aud[k]; pump(); }, 66000); }
+          } else if (e?.off) ttsStop(String(e?.message || e));
+          else {
+            S.ttsFail = (S.ttsFail || 0) + 1;
+            if (S.ttsFail >= 4) ttsStop(String(e?.message || e));
+            else if (g.length > 1) { const b = bOf(v.parts[g[0]]), c = (S.cap && S.cap[b]) || CAP; S.cap = S.cap || {}; S.cap[b] = Math.max(400, Math.round(Math.min(c, g.reduce((n, i) => n + wOf(v.parts[i]), 0)) / 2)); for (const i of g) delete S.aud[i]; continue; }
+          }
+        }
       }
     }
     if (!S || S.v !== v) return;
-    S.aud[i] = blob ? { st: 'ok', url: URL.createObjectURL(blob) } : { st: 'x' };
-    badge(i);
-    if (S.wait === i) { S.wait = -1; playPart(i); }
+    if (blob) { const url = URL.createObjectURL(blob), W = g.map(i => wOf(v.parts[i])), tot = W.reduce((x, y) => x + y, 0) || 1; let acc = 0;
+      g.forEach((i, k) => { const f0 = acc / tot; acc += W[k]; S.aud[i] = { st: 'ok', url, f0, f1: k === g.length - 1 ? 1 : acc / tot }; badge(i); }); }
+    else for (const i of g) { S.aud[i] = { st: 'x', h: hold ? 1 : 0 }; badge(i); }
+    if (S.wait >= 0 && g.includes(S.wait)) { const w = S.wait; S.wait = -1; playPart(w); }
   }
 }
 
@@ -337,7 +366,10 @@ function playPart(i) {
   if (!S || !S.v) return; const p = S.v.parts[i]; if (!p) { stopPlay(); return; }
   quiet(); const old = S.cur; S.cur = i; S.paused = false; S.wait = -1; if (old >= 0 && old !== i) badge(old);
   const a = audOf(i);
-  if (a?.st === 'ok') { markLine(i, 0); AU.src = a.url; AU.playbackRate = RATES[S.rate][0]; AU.play().catch(() => { S.paused = true; badge(i); paintBar(); }); meta(i); }
+  if (a?.st === 'ok') { markLine(i, 0); const f0 = a.f0 || 0;
+    if (S.srcUrl !== a.url) { S.seek = f0 > 0 ? f0 : null; AU.src = a.url; S.srcUrl = a.url; }
+    else { S.seek = f0; try { AU.currentTime = AU.duration > 0 ? f0 * AU.duration : 0; } catch { S.seek = null; } }
+    AU.playbackRate = RATES[S.rate][0]; AU.play().catch(() => { S.paused = true; badge(i); paintBar(); }); meta(i); pump(); }
   else if (a?.st === 'x') phoneTalk(i);
   else { S.wait = i; pump(); }
   badge(i); paintBar();
@@ -360,9 +392,14 @@ function toggle() {
 }
 function audioSetup() {
   AU = new Audio(); AU.preload = 'auto';
-  AU.addEventListener('ended', () => next());
-  AU.addEventListener('timeupdate', () => { if (!S || !S.v || S.cur < 0 || audOf(S.cur)?.st !== 'ok' || !(AU.duration > 0)) return; markLine(S.cur, lineAt(linesOf(S.v.parts[S.cur]), AU.currentTime / AU.duration)); });
-  AU.addEventListener('error', () => { if (!S || S.cur < 0 || !AU.src) return; const i = S.cur; S.aud[i] = { st: 'x' }; badge(i); phoneTalk(i); });
+  AU.addEventListener('ended', () => { if (S && S.cur >= 0) { const u = audOf(S.cur)?.url; while (u && audOf(S.cur + 1)?.url === u) { const o = S.cur; S.cur = o + 1; badge(o); } } next(); });
+  AU.addEventListener('loadedmetadata', () => { if (!S) return; if (S.seek != null && S.seek > 0 && AU.duration > 0) { try { AU.currentTime = S.seek * AU.duration; } catch { S.seek = null; } } else S.seek = null; });
+  AU.addEventListener('seeked', () => { if (S) S.seek = null; });
+  AU.addEventListener('timeupdate', () => { if (!S || !S.v || S.cur < 0 || !(AU.duration > 0) || S.seek != null) return; const a = audOf(S.cur); if (a?.st !== 'ok') return;
+    const fr = AU.currentTime / AU.duration, f0 = a.f0 || 0, f1 = a.f1 == null ? 1 : a.f1;
+    if (fr >= f1 && f1 < 1 && audOf(S.cur + 1)?.url === a.url) { if (!S.all) { stopPlay(); return; } const o = S.cur; S.cur = o + 1; badge(o); badge(S.cur); meta(S.cur); markLine(S.cur, 0); pump(); return; }
+    markLine(S.cur, lineAt(linesOf(S.v.parts[S.cur]), Math.min(0.999, Math.max(0, (fr - f0) / Math.max(1e-6, f1 - f0))))); });
+  AU.addEventListener('error', () => { if (!S || S.cur < 0 || !AU.src) return; const i = S.cur, u = audOf(i)?.url; for (const k of Object.keys(S.aud)) if (u && S.aud[k]?.url === u) { S.aud[k] = { st: 'x' }; badge(Number(k)); } S.aud[i] = { st: 'x' }; S.srcUrl = ''; S.seek = null; badge(i); phoneTalk(i); });
   try {
     const ms = navigator.mediaSession; if (!ms) return;
     ms.setActionHandler('play', () => { if (S?.paused) toggle(); });
@@ -371,7 +408,7 @@ function audioSetup() {
     ms.setActionHandler('previoustrack', () => { if (S?.v && S.cur > 0) { S.all = true; playPart(S.cur - 1); } });
   } catch {}
 }
-function freeAud() { if (!S) return; for (const k of Object.keys(S.aud)) { const u = S.aud[k]?.url; if (u) try { URL.revokeObjectURL(u); } catch {} } S.aud = {}; }
+function freeAud() { if (!S) return; for (const k of Object.keys(S.aud)) { const u = S.aud[k]?.url; if (u) try { URL.revokeObjectURL(u); } catch {} } S.aud = {}; S.srcUrl = ''; S.seek = null; }
 
 // ---------- UI ----------
 const CSS = `
@@ -477,6 +514,7 @@ async function run(id, a, n = 0, tryN = 0) {
     if (out.sp.length && !(v.sp && v.sp.length)) v.sp = out.sp;
     const first = v.parts.length;
     const lastE = out.parts.length ? Math.max(a, ...out.parts.map(p => p.e)) : a, fin = !out.parts.length || (out.end && lastE < b - 90) ? 1 : 0;
+    for (const q of out.parts) q.b = a;
     v.parts.push(...out.parts); v.end = fin; v.next = fin && out.parts.length ? lastE : b;
     store(v); S.busy = false;
     const more = !v.end && !S.halt && n + 1 < MAXAUTO;
@@ -530,7 +568,7 @@ async function onClick(e) {
     run(id, a);
   }
 }
-function shut() { if (!S) return; clearTimeout(S.retry); stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
+function shut() { if (!S) return; clearTimeout(S.retry); clearTimeout(S.holdT); stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
 function close() { const d = dlg(); shut(); if (d) { try { d.close(); } catch {} d.remove(); } if (window.ntVsClose) window.ntVsClose = null; }
 export function open(ctx) {
   A = ctx || {};
@@ -538,7 +576,7 @@ export function open(ctx) {
   let d = dlg(); if (d) d.remove();
   d = document.createElement('dialog'); d.id = 'vsDlg'; d.className = 'vs-dlg'; document.body.appendChild(d);
   let rate = 1; try { const r = Number(localStorage.getItem('sam-vs-rate')); if (r >= 0 && r < RATES.length) rate = r; } catch {}
-  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null, ttsNoMulti: '', menu: false, smpW: '', smp: null };
+  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null, ttsNoMulti: '', menu: false, smpW: '', smp: null, cap: {}, ttsHold: 0, tts429: 0, holdT: 0, seek: null, srcUrl: '' };
   audioSetup();
   d.addEventListener('click', onClick);
   d.addEventListener('close', () => { shut(); d.remove(); });
