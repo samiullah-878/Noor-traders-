@@ -5611,3 +5611,6 @@ sale-rep.js: naya hissa 📦 Wholesale ke bill (ginti, kul, cash mila, list) + P
 === v2.366.0 (23 Nov 2026) — 🎛 Sab cameras: khali counter khane par wajah ===
 Malik: live bill ban raha, items nahi aa rahe. Photo: khana KEIME1D (purana PC naam), chips mein RN6QU6D alag = pcAlias 🔗 nahi juda (andaza — malik ke 🔗 ke baad pakka hoga).
 App: 12 s tak bill / screen na aaye to khane par '⚠ ... ⚙️ Camera setup mein 🔗'. PC nahi badla. AI nahi.
+
+=== md pkg v71 (23 Nov 2026 raat) — 📸 Sehat lock RUKA ===
+Malik: 'wo paani wala droid band kar do abhi'. msl macros se bahar + off mein. Yaad ke popup wahi. App / PC nahi badle. Phone 1-2 min mein khud le leta hai.
