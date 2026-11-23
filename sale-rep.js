@@ -4,7 +4,7 @@
 // Data WAHI: posSales/<din> {bills[], sum} (PC pos-sales-dekho — nayi SQL nahi, PC ki koi file nahi badli). SIRF DIKHANA — Daily Sale ka hisaab is se nahi badalta.
 // sum ki raqam RUPAY mein (sum.amt PAISA); Daily ki raqam PAISA. AI NAHI.
 let C = null, DAY = '', DOC = undefined, stop = null, IT = undefined, stop2 = null, itQ = '', itTab = 'pl', itAsk = 0;
-import { smartFind } from './dukan/dhoond.js?v=2.364.0';
+import { smartFind } from './dukan/dhoond.js?v=2.365.0';
 const E = s => C.esc(String(s ?? ''));
 const R = x => C.money(Math.round((Number(x) || 0) * 100));          // rupay -> 'Rs …'
 const J = x => { try { const v = typeof x === 'string' ? JSON.parse(x) : x; return Array.isArray(v) ? v : []; } catch { return []; } };
@@ -56,6 +56,7 @@ function badla(r, k) {
 
 // ---- screen ----
 const ln = (a, b, c) => `<div class="sr-ln ${c || ''}"><span>${a}</span><b>${b}</b></div>`;
+const IT_ON = false;   // v2.365.0 (malik: 'plus minus nazar hi nahi aana chahiye') — Items se hisaab chhupa; wapas = true
 const sec = (key, ic, title, right, body, open) => `<details class="sr-sec" data-sr-sec="${key}"${open ? ' open' : ''}><summary><span>${ic} ${title}</span><b>${right}</b><i>▾</i></summary><div class="sr-body">${body}</div></details>`;
 const billRow = b => `<div class="sr-row${b.x ? ' x' : ''}"><span><b>#${E(b.no || b.id)}</b> ${E(b.p || '')}${b.cr ? ' <u>udhaar</u>' : ''}</span><small>${E(tm(b.tm))}${b.pc ? ' · 🖥 ' + E(b.pc) : ''}${b.by ? ' · ' + E(b.by) : ''}${b.n ? ' · ' + b.n + ' item' : ''}</small><em>${R(b.t)}</em></div>`;
 const more = (l, n) => l.length > n ? `<small class="sr-more">… aur ${l.length - n} (PDF mein sab)</small>` : '';
@@ -160,7 +161,8 @@ function html() {
   const mnB = k.mn.length ? `<small class="sr-note">Yeh minus bill ke TOTAL mein pehle se shamil hai (bill utna kam bana) — dobara minus nahi hota.</small>` + [...byNo].map(([no, l]) => `<div class="sr-ret"><div class="sr-row"><span><b>🧾 Bill #${E(no)}</b></span><small>${l.length} minus line</small><em>− ${R(l.reduce((n, a) => n + Math.abs(a[2]) * a[3], 0))}</em></div>${l.map(a => `<div class="sr-it"><span>${E(a[1])}</span><b>− ${q3(a[2])} × ${R(a[3])}</b></div>`).join('')}</div>`).join('') : `<p class="sr-none">${s.mn == null ? 'Minus items ki list PC se nahi aayi.' : 'Kisi bill mein minus item nahi.'}</p>`;
   return head + `<div class="sr-scroll">${top}
    ${sec('kul', '🧾', 'Kul bill · ' + (s.n || 0), R(k.g), kul, true)}
-   ${(it => sec('it', '➕➖', 'Items se hisaab', it.right, it.body))(itSafe(k))}
+   ${(k.wsB.length || s.ws) ? sec('ws', '📦', 'Wholesale ke bill · ' + (k.has ? k.wsB.length : (s.ws || 0)), R(s.wsRs), '<small class="sr-note">Yeh bill upar ke Kul bill mein pehle se shamil hain (dobara jama nahi hote).</small>' + ln('Kul wholesale', R(s.wsRs), 'tot') + ln('is mein cash mila', R(s.wsCash), 'sub') + (k.has ? k.wsB.slice(0, 80).map(billRow).join('') + more(k.wsB, 80) : '')) : ''}
+   ${IT_ON ? (it => sec('it', '➕➖', 'Items se hisaab', it.right, it.body))(itSafe(k)) : ''}
    ${(ml => sec('ml', '🔎', 'POS report se milao', ml.right, ml.body))(mlHTML(k))}
    ${sec('cx', '⛔', 'Cancel · ' + (s.cx || 0), R(s.cxRs), '<small class="sr-note">Cancel bill kisi hisaab mein shamil nahi.</small>' + cxB)}
    ${sec('rt', '↩', 'Return · ' + k.rtd.length, R(k.rt + k.rtUdhRs), rtB)}
@@ -177,24 +179,25 @@ function paint() { const d = dlg(); if (!d) return;
 function pdfHTML(k) {
   const s = k.s, tr = (a, b) => `<tr><td>${a}</td><td style="text-align:right">${b}</td></tr>`, h = t => `<h2>${t}</h2>`;
   const bt = l => `<table><thead><tr><th>Bill</th><th>Gahak</th><th>Waqt</th><th>Counter</th><th style="text-align:right">Raqam</th></tr></thead><tbody>${l.map(b => `<tr><td>#${E(b.no || b.id)}</td><td>${E(b.p || '')}${b.cr ? ' (udhaar)' : ''}</td><td>${E(tm(b.tm))}</td><td>${E(b.pc || '')}</td><td style="text-align:right">${R(b.t)}</td></tr>`).join('')}</tbody></table>`;
-  let o = `<h1>Sale ki report — ${E(dayTxt(DAY))}</h1>` + h('Khulasa') + `<table><tbody>${tr('Cash bills (' + (k.has ? k.cashB.length : '-') + ')', R(s.gc))}${tr('Udhaar bills (' + (k.has ? k.udhB.length : '-') + ')', R(s.gu))}${tr('<b>Kul bill ' + (s.n || 0) + ' (POS Sale report)</b>', '<b>' + R(k.g) + '</b>')}${tr('- Udhaar jo cash nahi mila', '- ' + R(k.un))}${tr('<b>Return ke BAGHAIR</b>', '<b>' + R(k.noRet) + '</b>')}${tr('- Sale Return, cash wapsi (' + (s.rt || 0) + ')', '- ' + R(k.rt))}${tr('<b>Return MINUS kar ke (galle ki sale)</b>', '<b>' + R(k.withRet) + '</b>')}${tr('Cancel bill (' + (s.cx || 0) + ') - shamil nahi', R(s.cxRs))}${tr('Udhaar party ki wapsi (' + k.rtUdh.length + ') - minus nahi', R(k.rtUdhRs))}${tr('Bill ke andar minus lines (' + k.mn.length + ') - bill mein pehle se', '- ' + R(k.mnRs))}${s.fq ? tr('Stock fraq ke bill (' + s.fq + ') - shamil nahi', R(s.fqRs)) : ''}${tr('Galle mein hona (return minus kar ke)', sgn(k.hona))}${k.autoOn ? tr('Galle mein hona (return ke baghair)', sgn(k.honaNo)) : ''}</tbody></table>`;
+  let o = `<h1>Sale ki report — ${E(dayTxt(DAY))}</h1>` + h('Khulasa') + `<table><tbody>${tr('Cash bills (' + (k.has ? k.cashB.length : '-') + ')', R(s.gc))}${tr('Udhaar bills (' + (k.has ? k.udhB.length : '-') + ')', R(s.gu))}${s.ws ? tr('is mein Wholesale bill (' + s.ws + ')', R(s.wsRs)) : ''}${tr('<b>Kul bill ' + (s.n || 0) + ' (POS Sale report)</b>', '<b>' + R(k.g) + '</b>')}${tr('- Udhaar jo cash nahi mila', '- ' + R(k.un))}${tr('<b>Return ke BAGHAIR</b>', '<b>' + R(k.noRet) + '</b>')}${tr('- Sale Return, cash wapsi (' + (s.rt || 0) + ')', '- ' + R(k.rt))}${tr('<b>Return MINUS kar ke (galle ki sale)</b>', '<b>' + R(k.withRet) + '</b>')}${tr('Cancel bill (' + (s.cx || 0) + ') - shamil nahi', R(s.cxRs))}${tr('Udhaar party ki wapsi (' + k.rtUdh.length + ') - minus nahi', R(k.rtUdhRs))}${tr('Bill ke andar minus lines (' + k.mn.length + ') - bill mein pehle se', '- ' + R(k.mnRs))}${s.fq ? tr('Stock fraq ke bill (' + s.fq + ') - shamil nahi', R(s.fqRs)) : ''}${tr('Galle mein hona (return minus kar ke)', sgn(k.hona))}${k.autoOn ? tr('Galle mein hona (return ke baghair)', sgn(k.honaNo)) : ''}</tbody></table>`;
   if (k.rtd.length) o += h('Return (' + k.rtd.length + ')') + `<table><thead><tr><th>Wapsi</th><th>Gahak</th><th>Items</th><th>Badle ka bill</th><th style="text-align:right">Raqam</th></tr></thead><tbody>${k.rtd.map(r => `<tr><td>#${E(r.no)}</td><td>${E(r.p || '')}${r.cr && !isWs(r.p) ? ' (udhaar)' : ''}</td><td>${(r.it || []).map(a => E(a[0]) + ' ' + q3(a[1])).join(', ')}</td><td>${E(badla(r, k).replace(/[^\x20-\x7e]/g, '').trim())}</td><td style="text-align:right">${R(r.t)}</td></tr>`).join('')}</tbody></table>`;
   if (k.mn.length) o += h('Bill ke andar minus (' + k.mn.length + ')') + `<table><thead><tr><th>Bill</th><th>Item</th><th>Tadad</th><th style="text-align:right">Raqam</th></tr></thead><tbody>${k.mn.map(a => `<tr><td>#${E(a[0])}</td><td>${E(a[1])}</td><td>- ${q3(a[2])}</td><td style="text-align:right">- ${R(Math.abs(a[2]) * a[3])}</td></tr>`).join('')}</tbody></table>`;
-  const ic = IT ? itCalc(k) : null;
+  const ic = IT_ON && IT ? itCalc(k) : null;
   if (ic) { const it3 = (L, mnus, bi) => `<table><thead><tr><th>Item</th><th>Tadad</th><th>Bill</th><th style="text-align:right">Raqam</th></tr></thead><tbody>${L.map(a => `<tr><td>${E(a[0])}</td><td>${E(q3(a[1]))}</td><td>${E(String(a[bi] || '').split(',').slice(0, 5).join(', '))}</td><td style="text-align:right">${mnus ? '- ' : ''}${R(a[2])}</td></tr>`).join('')}</tbody></table>`;
     o += h('Items se hisaab') + `<table><tbody>${tr('Plus items - cash bill', R(ic.Pc))}${tr('Plus items - udhaar bill', R(ic.Pu))}${tr('<b>Plus KUL</b>', '<b>' + R(ic.P) + '</b>')}${tr('Bill ke andar minus', '- ' + R(ic.M))}${tr('Wapsi cash', '- ' + R(ic.Rc))}${tr('Wapsi udhaar', '- ' + R(ic.Ru))}${tr('Udhaar jo cash nahi aaya', '- ' + R(ic.un))}${tr('Discount / gol', sgn(ic.disc))}${ic.v.map(x => tr('<b>' + E(x.t) + '</b> (galle mein hona ' + sgn(x.gal) + ')', '<b>' + R(x.v) + '</b>')).join('')}</tbody></table>`;
     if (ic.mn.length) o += h('Minus items (' + ic.mn.length + ')') + it3(ic.mn, 1, 4);
     if (ic.rt.length) o += h('Wapsi ki items (' + ic.rt.length + ')') + it3(ic.rt, 1, 5);
     if (ic.pl.length) o += h('Plus items (' + ic.pl.length + ')') + it3(ic.pl, 0, 6); }
+  if (k.wsB.length) o += h('Wholesale ke bill (' + k.wsB.length + ') - kul ' + R(s.wsRs)) + bt(k.wsB);
   if (k.cx.length) o += h('Cancel bill (' + k.cx.length + ')') + bt(k.cx);
   if (k.live.length) o += h('Sab bill (' + k.live.length + ')') + bt(k.live);
   return o;
 }
 function slipText(k) {
   const s = k.s, n = x => 'Rs ' + Math.round(Number(x) || 0).toLocaleString('en-US'), L = (a, b) => a + ': ' + b;
-  return ['*SALE REPORT ' + DAY + '*', '', L('Cash bills', n(s.gc)), L('Udhaar bills', n(s.gu)), '*' + L('Kul bill ' + (s.n || 0), n(k.g)) + '*', L('- Udhaar baqi', n(k.un)), '*' + L('Return ke BAGHAIR', n(k.noRet)) + '*', L('- Return cash ' + (s.rt || 0), n(k.rt)), '*' + L('Return MINUS (galla)', n(k.withRet)) + '*', '',
+  return ['*SALE REPORT ' + DAY + '*', '', L('Cash bills', n(s.gc)), L('Udhaar bills', n(s.gu)), ...(s.ws ? [L('  wholesale ' + s.ws, n(s.wsRs))] : []), '*' + L('Kul bill ' + (s.n || 0), n(k.g)) + '*', L('- Udhaar baqi', n(k.un)), '*' + L('Return ke BAGHAIR', n(k.noRet)) + '*', L('- Return cash ' + (s.rt || 0), n(k.rt)), '*' + L('Return MINUS (galla)', n(k.withRet)) + '*', '',
     L('Cancel ' + (s.cx || 0) + ' (shamil nahi)', n(s.cxRs)), L('Udhaar wapsi ' + k.rtUdh.length, n(k.rtUdhRs)), L('Bill mein minus ' + k.mn.length, n(k.mnRs)), '', L('Galle mein hona', (k.hona < 0 ? '- ' : '') + n(Math.abs(k.hona))), ...(k.autoOn ? [L('  return ke baghair', (k.honaNo < 0 ? '- ' : '') + n(Math.abs(k.honaNo)))] : []),
-    ...((ic => ic ? ['', '*ITEMS SE*', L('Plus kul', n(ic.P)), L('  cash bill', n(ic.Pc)), L('  udhaar bill', n(ic.Pu)), L('Bill mein minus', n(ic.M)), L('Wapsi cash', n(ic.Rc)), L('Wapsi udhaar', n(ic.Ru)), ...ic.v.map(x => L(x.t.slice(0, 26), n(x.v)))] : [])(IT ? itCalc(k) : null)),
+    ...((ic => ic ? ['', '*ITEMS SE*', L('Plus kul', n(ic.P)), L('  cash bill', n(ic.Pc)), L('  udhaar bill', n(ic.Pu)), L('Bill mein minus', n(ic.M)), L('Wapsi cash', n(ic.Rc)), L('Wapsi udhaar', n(ic.Ru)), ...ic.v.map(x => L(x.t.slice(0, 26), n(x.v)))] : [])(IT_ON && IT ? itCalc(k) : null)),
     ...(k.rtd.length ? ['', '*RETURN*', ...k.rtd.map(r => '#' + r.no + ' ' + String(r.p || '').slice(0, 16) + ' ' + n(r.t))] : [])].join('\n');
 }
 async function onClick(e) {

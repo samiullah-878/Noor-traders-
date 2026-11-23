@@ -9569,3 +9569,7 @@ App: screen chalti = '⏳ bill ban raha' + tasveer; khali = bill + 5 items. Node
 === v2.364.0 (23 Nov 2026) — ☑ Mulazim form Save par tick girti thi ===
 Malik: Nigrani ke tick Save ke baad wapis uncheck. Wajah: CAP_SCR mein nz. / ir. / fac. prefix nahi -> form Save OPT_IN tick (nz.sab, nz.ginti, nz.gvid, ir.sup, ir.nafa) allow mein nahi daalta tha.
 Hal: CAP_SCR ka fallback CAPS se. Sirf app (PC nahi badla). AI nahi.
+
+=== v2.365.0 (23 Nov 2026) — 🧾 Sale ki report: Wholesale hissa, Items se hisaab chhupa ===
+Malik: wholesale ke bill jama kar ke dikhao; stock fraq add nahi; plus minus nazar na aaye.
+sale-rep.js: naya hissa 📦 Wholesale ke bill (ginti, kul, cash mila, list) + PDF / thermal; IT_ON=false (➕➖ Items se hisaab chhupa). Stock fraq pehle jaisa alag, kisi total mein nahi. Sirf app. AI nahi.
