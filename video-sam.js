@@ -1,4 +1,8 @@
-// video-sam.js v1.1 (app v2.354.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// video-sam.js v1.2 (app v2.355.0, 23 Nov 2026) — 🎓 VIDEO SAMJHAO
+// v1.2 (malik 23 Nov, screenshot: har line 'Raj:' + English jumle + ek hi awaz · 'baar baar agla click na karna pare — auto banta rahe' · 'jis line par hon wo peeli'):
+//   bolne wala ab NAAM se (sp mein se) -> A / B · English / Hindi jumle ka TARJUMA Roman Urdu (English zyada / Urdu harf = ek dafa dobara maango) ·
+//   poori video khud load (MAXAUTO 40, ghalti par 3 dafa khud dobara) · chalti line peeli (.is-on — audio ke waqt se andaza, phone awaz mein pakki) ·
+//   awaz 2 line mein banti hai, 70 s hadd · audio ki yaad ki key mein likhai ka hash (purani English audio dobara na chale).
 // Malik: "YouTube ki videos mein bohat se alfaz Hindi mein hain, samajh nahi aati · har 2-3 minute explain · audio mein aa jaye".
 // v1.1 (malik 23 Nov: "pehla 15 minute ka part aaye, main sunna start kar dun, baqi parts background mein load hote rahein · podcast jaisa — Raj aurat ki
 //   awaz, doctor mard ki · background mein nahi chalti, is ka hal · Gemini ki awaz hi chalegi · aur wo doosri app reader wali"):
@@ -9,7 +13,7 @@
 //   ④ 📤 Reader = Urdu likhai kisi parhne wali app ko (navigator.share).
 // Link Gemini ko SEEDHA (file_data.file_uri) — video download / upload KAHIN nahi. Sirf public video. Firestore / PC / rules: kuch nahi. AI: HAAN (Gemini).
 const API = 'https://generativelanguage.googleapis.com/v1beta';
-const LS = 'sam-vs-list', STEP = 900, KEEP = 12, MAXAUTO = 8;
+const LS = 'sam-vs-list', STEP = 900, KEEP = 12, MAXAUTO = 40;
 const FALLBACK = ['gemini-3.5-flash', 'gemini-3.6-flash', 'gemini-3.8-flash'];
 const TTS_FALL = ['gemini-3.1-flash-tts-preview', 'gemini-2.5-flash-preview-tts'];
 const VOICE = { A: 'Kore', B: 'Charon' };          // A = zanana, B = mardana (Gemini ki bani banai awazein)
@@ -29,17 +33,30 @@ const secOf = t => {
 const fmt = s => { s = Math.max(0, Math.round(Number(s) || 0)); const h = Math.floor(s / 3600), m = Math.floor((s % 3600) / 60), x = String(s % 60).padStart(2, '0'); return h ? h + ':' + String(m).padStart(2, '0') + ':' + x : m + ':' + x; };
 const tsOf = v => { if (typeof v === 'number') return v; const s = String(v ?? ''); return s.includes(':') ? secOf(s) : (Number(s.replace(/[^0-9.]/g, '')) || 0); };
 const linesOf = p => (p.d && p.d.length ? p.d : (p.r ? [['A', p.r, p.u || '']] : []));
+const NONLAT = /[\u0600-\u06FF\u0750-\u077F\u0900-\u097F]/;
+const ENW = new Set('you that this of and are it they have has what when because from with your for was not but there which their would can will about just like our them'.split(' '));
+// AI ka jawab kharab? '' = theek · warna wajah (ek dafa dobara maangte hain)
+function badOut(parts, sp) {
+  const L = parts.flatMap(p => p.d); if (L.length < 4) return '';
+  const words = L.map(l => l[1]).join(' ').toLowerCase().split(/[^a-z']+/).filter(Boolean);
+  if (words.length > 20 && words.filter(w => ENW.has(w)).length / words.length > 0.14) return 'en';
+  if (L.some(l => NONLAT.test(l[1]))) return 'script';
+  if (sp.length > 1 && L.length >= 8 && (L.every(l => l[0] === 'A') || L.every(l => l[0] === 'B'))) return 'one';
+  return '';
+}
 function parseOut(text, a, b) {
   let t = String(text || '').trim().replace(/^```(?:json)?/i, '').replace(/```$/, '').trim();
   const i = t.indexOf('{'), j = t.lastIndexOf('}'); if (i >= 0 && j > i) t = t.slice(i, j + 1);
   const o = JSON.parse(t), L = Array.isArray(o.p) ? o.p : [];
+  const sp = Array.isArray(o.sp) ? o.sp.slice(0, 2).map(x => String(x || '').trim().slice(0, 24)).filter(Boolean) : [];
+  const nk = x => String(x || '').toLowerCase().replace(/[^a-z0-9]/g, '');
+  const who = k => { const n = nk(k); if (n === 'a' || n === 'b') return n.toUpperCase(); const a0 = nk(sp[0]), b0 = nk(sp[1]); if (b0 && (n === b0 || n.includes(b0) || b0.includes(n) && n.length > 2)) return 'B'; if (a0 && (n === a0 || n.includes(a0) || a0.includes(n) && n.length > 2)) return 'A'; return /mehman|guest|doctor|dr/.test(n) ? 'B' : 'A'; };
   const parts = L.map(x => {
-    let d = (Array.isArray(x.d) ? x.d : []).filter(y => Array.isArray(y) && String(y[1] || '').trim()).map(y => [String(y[0]).toUpperCase() === 'B' ? 'B' : 'A', String(y[1]).trim(), String(y[2] || '').trim()]);
+    let d = (Array.isArray(x.d) ? x.d : []).filter(y => Array.isArray(y) && String(y[1] || '').trim()).map(y => [who(y[0]), String(y[1]).trim(), String(y[2] || '').trim()]);
     if (!d.length && String(x.r || '').trim()) d = [['A', String(x.r).trim(), String(x.u || '').trim()]];
-    return { s: Math.min(Math.max(tsOf(x.s), a), b), e: Math.min(Math.max(tsOf(x.e), a), b), d, w: (Array.isArray(x.w) ? x.w : []).filter(y => Array.isArray(y) && y[0] && y[1]).slice(0, 5).map(y => [String(y[0]), String(y[1])]) };
+    return { s: Math.min(Math.max(tsOf(x.s), a), b), e: Math.min(Math.max(tsOf(x.e), a), b), d, w: (Array.isArray(x.w) ? x.w : []).filter(y => Array.isArray(y) && y[0] && y[1] && !NONLAT.test(String(y[0]) + String(y[1]))).slice(0, 4).map(y => [String(y[0]), String(y[1])]) };
   }).filter(x => x.d.length);
-  const sp = Array.isArray(o.sp) ? o.sp.slice(0, 2).map(x => String(x || '').trim().slice(0, 24)) : [];
-  return { title: String(o.title || '').trim().slice(0, 120), sp, end: Number(o.end) ? 1 : 0, parts };
+  return { title: String(o.title || '').trim().slice(0, 120), sp, end: Number(o.end) ? 1 : 0, parts, bad: badOut(parts, sp) };
 }
 // Gemini ki awaz: PCM (audio/L16;rate=24000) -> WAV; wav / mp3 / ogg ho to waisi hi
 function wavBytes(pcm, rate) {
@@ -56,7 +73,7 @@ function audioBlob(b64, mime) {
   return new Blob([wavBytes(u, rate)], { type: 'audio/wav' });
 }
 const ttsText = p => linesOf(p).map(l => SPK[l[0]] + ': ' + (l[2] || l[1])).join('\n');
-export const _t = { vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf };
+export const _t = { vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt };
 
 const load = () => { try { const o = JSON.parse(localStorage.getItem(LS) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } };
 function store(v) {
@@ -72,25 +89,30 @@ const drop = id => { try { const o = load(); delete o[id]; localStorage.setItem(
 // ---------- audio ki yaad (IndexedDB 'nt-vs') ----------
 let DBP = null;
 const idb = () => DBP || (DBP = new Promise(res => { try { const r = indexedDB.open('nt-vs', 1); r.onupgradeneeded = () => r.result.createObjectStore('a'); r.onsuccess = () => res(r.result); r.onerror = () => res(null); } catch { res(null); } }));
-const aKey = (id, p) => id + ':' + Math.round(p.s) + ':' + linesOf(p).length;
+const hsh = t => { let h = 5381; for (let i = 0; i < t.length; i++) h = ((h << 5) + h + t.charCodeAt(i)) >>> 0; return h.toString(36); };
+const aKey = (id, p) => id + ':' + Math.round(p.s) + ':' + hsh(ttsText(p));
 const idbGet = async k => { const db = await idb(); if (!db) return null; return new Promise(res => { try { const q = db.transaction('a').objectStore('a').get(k); q.onsuccess = () => res(q.result || null); q.onerror = () => res(null); } catch { res(null); } }); };
 const idbPut = async (k, v) => { const db = await idb(); if (!db) return; try { db.transaction('a', 'readwrite').objectStore('a').put(v, k); } catch {} };
 async function idbDropVid(id) { const db = await idb(); if (!db) return; try { const st = db.transaction('a', 'readwrite').objectStore('a'), q = st.openKeyCursor(); q.onsuccess = () => { const c = q.result; if (!c) return; if (String(c.key).startsWith(id + ':')) st.delete(c.key); c.continue(); }; } catch {} }
 
-const PROMPT = (a, b) => [
-  'Aap ek sabar wale ustaad hain. Sunne wala Pakistani hai: Urdu samajhta hai, Hindi / Sanskrit ke mushkil lafz NAHI samajhta, aur sirf Roman (Latin) harf parh sakta hai.',
-  `Is YouTube video ka SIRF ${fmt(a)} se ${fmt(b)} tak ka hissa (second ${a} se ${b}) sunein.`,
-  'Is hisse ko 1 se 2 minute ke tukron mein baantein, tarteeb se, aur har tukre ki guftagu likhein.',
+const STRICT = { en: 'PICHHLA JAWAB GHALAT THA: lines English mein thin. Har line ka TARJUMA Roman Urdu mein karein — English jumla waise ka waisa KABHI nahi.', script: 'PICHHLA JAWAB GHALAT THA: Roman line mein Urdu / Hindi harf the. Roman line sirf Latin (a-z) harfon mein.', one: 'PICHHLA JAWAB GHALAT THA: har line ek hi bolne wale ke naam thi. Awaz se pehchanein — sawal poochhne wala aur jawab dene wala alag log hain, har line par sahi naam.' };
+const PROMPT = (a, b, why) => [
+  'Aap ek sabar wale ustaad aur mutarjim hain. Sunne wala Pakistani hai: Urdu samajhta hai, English aur Hindi / Sanskrit ke mushkil lafz NAHI samajhta, aur sirf Roman (Latin) harf parh sakta hai.',
+  `Is YouTube video ka SIRF ${fmt(a)} se ${fmt(b)} tak ka hissa (second ${a} se ${b}) sunein. Video English, Hindi ya mili-juli zaban mein ho sakti hai.`,
+  'Is hisse ko 1 se 2 minute ke tukron mein baantein, tarteeb se, aur har tukre ki guftagu Roman Urdu mein likhein.',
   'Sirf yeh JSON dein (koi aur likhai nahi):',
-  '{"title": "video ka naam", "sp": ["Raj", "Doctor"], "end": 0, "p": [{"s": 3224, "e": 3320, "d": [["A", "roman line", "urdu line"], ["B", "roman line", "urdu line"]], "w": [["lafz", "matlab"]]}]}',
-  '- sp = do asal bolne walon ke chhote naam Roman mein: pehla A = mezban (sawal poochhne wala), doosra B = mehman. Ek hi banda bole to sirf A.',
+  '{"title": "video ka naam", "sp": ["Raj", "Dr Amen"], "end": 0, "p": [{"s": 3224, "e": 3320, "d": [["Raj", "Bachon ka dimagh kis ghalti se kharab hota hai?", "بچوں کا دماغ کس غلطی سے خراب ہوتا ہے؟"], ["Dr Amen", "Sab se bari ghalti ghalat khana hai.", "سب سے بڑی غلطی غلط کھانا ہے۔"]], "w": [["frontal lobe", "dimagh ka agla hissa"]]}]}',
+  '- sp = do asal bolne walon ke chhote naam Roman mein: pehla = mezban (sawal poochhne wala), doosra = mehman (jawab / tafseel dene wala). Ek hi banda bole to sirf ek naam.',
   '- s, e = tukre ke shuru aur khatam ke SECOND (video ke shuru se, hindse).',
-  '- d = us tukre ki guftagu tarteeb se, 2 se 6 lines: har line = ["A" ya "B", Roman Urdu, wohi line Urdu harfon (Arabic script) mein]. Har line 1 se 3 jumle.',
+  '- d = us tukre ki guftagu tarteeb se, 3 se 6 lines: har line = [bolne wale ka naam (sp mein se), Roman Urdu, wohi line Urdu harfon (Arabic script) mein]. Har line 1 se 3 jumle.',
+  '- AWAZ se pehchanein kaun bol raha hai. Jawab / tafseel dene wale ki line par mehman ka naam likhein, sawal wali line par mezban ka. Sab lines ek hi naam se tabhi jab waqai sirf wohi bola ho.',
+  '- Har line ka TARJUMA aasaan Roman Urdu mein: English ya Hindi jumla waise ka waisa KABHI nahi. Sirf rozmarra ke English lafz (brain, doctor, phone, sugar) reh sakte hain. Hindi / Sanskrit lafz ki jagah aam Urdu lafz (samasya = masla, karan = wajah, prashn = sawal).',
   '- Har bolne wale ki baat usi ke andaz mein, MUKHTASAR — lafz-ba-lafz transcript NAHI. Jo video mein nahi kaha gaya wo apni taraf se MAT jorein.',
-  '- Hindi / Sanskrit lafz ki jagah aam Urdu lafz (samasya = masla, karan = wajah, prashn = sawal). Aam English lafz rehne dein. Roman line mein Devanagari ya Urdu harf KABHI nahi.',
-  '- w = us tukre ke zyada se zyada 3 mushkil lafz Roman mein aur un ka aasaan Urdu matlab Roman mein. Na hon to [].',
+  '- Roman line aur w mein Devanagari ya Urdu harf KABHI nahi (sirf a-z). Urdu harf sirf teesre khane mein.',
+  '- w = us tukre ke zyada se zyada 3 mushkil lafz (English / Hindi) aur un ka aasaan matlab, dono Roman mein. Na hon to [].',
   '- Ishtihar / sponsor ka hissa ek line mein.',
-  `- Agar video ${fmt(b)} se pehle khatam ho jaye to "end": 1. Agar ${fmt(a)} par video pehle hi khatam ho chuki ho to "p": [] aur "end": 1.`
+  `- Agar video ${fmt(b)} se pehle khatam ho jaye to "end": 1. Agar ${fmt(a)} par video pehle hi khatam ho chuki ho to "p": [] aur "end": 1.`,
+  ...(why && STRICT[why] ? [STRICT[why]] : [])
 ].join('\n');
 
 async function post(model, body, key, ms) {
@@ -103,21 +125,21 @@ async function post(model, body, key, ms) {
   finally { clearTimeout(tm); }
 }
 async function ask(id, a, b) {
-  const cfg = await A.aiCfg(); if (!cfg || !cfg.key) throw Error('AI key nahi lagi — Settings → AI key.');
+  const cfg = await A.aiCfg(); if (!cfg || !cfg.key) throw Object.assign(Error('AI key nahi lagi — Settings → AI key.'), { stop: 1 });
   const models = [cfg.model, ...FALLBACK].filter((m, i, L) => m && L.indexOf(m) === i);
   const body = lv => ({
-    contents: [{ role: 'user', parts: [{ file_data: { file_uri: 'https://www.youtube.com/watch?v=' + id }, ...(lv < 2 ? { video_metadata: { start_offset: a + 's', end_offset: b + 's' } } : {}) }, { text: PROMPT(a, b) }] }],
+    contents: [{ role: 'user', parts: [{ file_data: { file_uri: 'https://www.youtube.com/watch?v=' + id }, ...(lv < 2 ? { video_metadata: { start_offset: a + 's', end_offset: b + 's' } } : {}) }, { text: PROMPT(a, b, why) }] }],
     generationConfig: { temperature: 0.2, ...(lv < 3 ? { responseMimeType: 'application/json' } : {}), ...(lv < 1 ? { mediaResolution: 'MEDIA_RESOLUTION_LOW' } : {}) }
   });
-  let last = null;
+  let last = null, why = '', again = 0;
   for (let mi = 0; mi < models.length; mi++) {
     for (let lv = 0; lv < 4; lv++) {
       const r = await post(models[mi], body(lv), cfg.key, 240000);
       if (!r.ok) {
         last = Error(r.msg);
         if (r.status === -1) throw Error('AI ne 4 minute mein jawab nahi diya — internet dekhein, phir dobara.');
-        if (r.status === 429) throw Error('Google ki hadd poori ho gayi — kuch der baad dobara koshish karein.');
-        if (r.status === 403 && /permission|private|not\s*(?:public|available)/i.test(r.msg)) throw Error('Yeh video AI nahi dekh sakta (private / pabandi wali). Sirf public video chalti hai.');
+        if (r.status === 429) throw Object.assign(Error('Google ki hadd poori ho gayi — kuch der baad dobara koshish karein.'), { stop: 1 });
+        if (r.status === 403 && /permission|private|not\s*(?:public|available)/i.test(r.msg)) throw Object.assign(Error('Yeh video AI nahi dekh sakta (private / pabandi wali). Sirf public video chalti hai.'), { stop: 1 });
         if (r.status === 404 || /not found|no longer available|not supported for/i.test(r.msg)) break;
         if (r.status === 400) continue;
         if (r.status >= 500 || r.status === 0) break;
@@ -125,7 +147,9 @@ async function ask(id, a, b) {
       }
       const text = (r.j.candidates?.[0]?.content?.parts || []).map(p => p.text || '').join('');
       if (!text) { last = Error('AI ne khali jawab diya' + (r.j.promptFeedback?.blockReason ? ' (' + r.j.promptFeedback.blockReason + ')' : '')); continue; }
-      try { return parseOut(text, a, b); } catch { last = Error('AI ka jawab parha nahi gaya — dobara koshish karein.'); }
+      let out = null; try { out = parseOut(text, a, b); } catch { last = Error('AI ka jawab parha nahi gaya — dobara koshish karein.'); }
+      if (out && out.bad && again < 1) { again++; why = out.bad; lv--; continue; }
+      if (out) return out;
     }
   }
   throw last || Error('AI se jawab nahi mila');
@@ -156,8 +180,8 @@ async function tts(p) {
   if (!both) body.contents[0].parts[0].text = 'Say in Urdu (Pakistan), natural calm pace:\n' + linesOf(p).map(l => l[2] || l[1]).join('\n');
   const models = S.ttsM || (S.ttsM = await ttsModels(cfg.key));
   let last = null;
-  for (const m of models.slice(0, 4)) {
-    const r = await post(m, body, cfg.key, 180000);
+  for (const m of models.slice(0, 2)) {
+    const r = await post(m, body, cfg.key, 70000);
     if (r.ok) {
       const part = (r.j.candidates?.[0]?.content?.parts || []).find(x => x.inlineData?.data || x.inline_data?.data), d = part?.inlineData || part?.inline_data;
       if (d?.data) { if (S.ttsM[0] !== m) S.ttsM = [m, ...S.ttsM.filter(x => x !== m)]; return audioBlob(d.data, d.mimeType || d.mime_type); }
@@ -178,39 +202,49 @@ function badge(i) {
   if (tg) tg.textContent = !a ? '' : a.st === 'ok' ? '🔊' : a.st === 'w' ? '⏳' : '📱';
   if (tg) tg.title = !a ? '' : a.st === 'ok' ? 'Gemini ki awaz tayyar' : a.st === 'w' ? 'awaz ban rahi hai' : 'phone ki awaz';
 }
-async function pump() {
-  if (!S || S.pumping || !S.v) return;
-  S.pumping = true;
-  try {
-    for (;;) {
-      if (!S || !S.v) break;
-      const v = S.v, n = v.parts.length, from = Math.max(0, S.cur);
-      let i = -1;
-      for (let k = 0; k < n; k++) { const x = (from + k) % n; if (!S.aud[x]) { i = x; break; } }
-      if (i < 0) break;
-      const p = v.parts[i], key = aKey(v.id, p);
-      S.aud[i] = { st: 'w' }; badge(i);
-      let blob = await idbGet(key);
-      if (!blob && !S.ttsOff) {
-        try { blob = await tts(p); idbPut(key, blob); S.ttsFail = 0; }
-        catch (e) {
-          if (!S || S.v !== v) break;
-          S.ttsFail = (S.ttsFail || 0) + 1;
-          if (e?.off || S.ttsFail >= 3) { S.ttsOff = String(e?.message || e); A.notice?.('🔊 Gemini ki awaz nahi bani (' + S.ttsOff.slice(0, 90) + ') — phone ki awaz chalegi (sirf screen khuli ho to).'); }
-        }
+function pump() { if (!S || !S.v) return; while ((S.pumps || 0) < 2) { S.pumps = (S.pumps || 0) + 1; pumpOne().finally(() => { if (S) S.pumps = Math.max(0, (S.pumps || 1) - 1); }); } }
+async function pumpOne() {
+  for (;;) {
+    if (!S || !S.v) return;
+    const v = S.v, n = v.parts.length, from = Math.max(0, S.wait >= 0 ? S.wait : S.cur);
+    let i = -1;
+    for (let k = 0; k < n; k++) { const x = (from + k) % n; if (!S.aud[x]) { i = x; break; } }
+    if (i < 0) return;
+    const p = v.parts[i], key = aKey(v.id, p);
+    S.aud[i] = { st: 'w' }; badge(i);
+    let blob = await idbGet(key);
+    if (!blob && S && !S.ttsOff) {
+      try { blob = await tts(p); idbPut(key, blob); if (S) S.ttsFail = 0; }
+      catch (e) {
+        if (!S || S.v !== v) return;
+        S.ttsFail = (S.ttsFail || 0) + 1;
+        if (e?.off || S.ttsFail >= 4) { S.ttsOff = String(e?.message || e); A.notice?.('🔊 Gemini ki awaz nahi bani (' + S.ttsOff.slice(0, 90) + ') — phone ki awaz chalegi (sirf screen khuli ho to).'); }
       }
-      if (!S || S.v !== v) break;
-      S.aud[i] = blob ? { st: 'ok', url: URL.createObjectURL(blob) } : { st: 'x' };
-      badge(i);
-      if (S.wait === i) { S.wait = -1; playPart(i); }
     }
-  } finally { if (S) { S.pumping = false; if (S.v && S.v.parts.some((_, i) => !S.aud[i])) setTimeout(pump, 0); } }
+    if (!S || S.v !== v) return;
+    S.aud[i] = blob ? { st: 'ok', url: URL.createObjectURL(blob) } : { st: 'x' };
+    badge(i);
+    if (S.wait === i) { S.wait = -1; playPart(i); }
+  }
 }
 
 // ---------- chalana ----------
 const TTSP = () => (typeof window !== 'undefined' && window.speechSynthesis) || null;
 const RATES = [[0.85, 'Aahista'], [1, 'Aam'], [1.25, 'Tez']];
 const urVoice = () => { const t = TTSP(); if (!t) return null; const L = t.getVoices() || []; return L.find(v => /^ur/i.test(v.lang)) || null; };
+// audio ke waqt se andaza: kaun si line chal rahi hai (har line ka hissa = us ki likhai ki lambai + thora waqfa)
+function lineAt(L, frac) {
+  const w = L.map(l => String(l[2] || l[1]).length + 12), tot = w.reduce((x, y) => x + y, 0) || 1; let acc = 0;
+  for (let k = 0; k < w.length; k++) { acc += w[k]; if (frac < acc / tot) return k; }
+  return Math.max(0, w.length - 1);
+}
+function markLine(i, k) {
+  if (!S) return; const key = i < 0 ? '' : i + ':' + k; if (S.ln === key) return; S.ln = key;
+  const d = $('vsDlg'); if (!d) return;
+  d.querySelectorAll('.vs-l.is-on').forEach(el => el.classList.remove('is-on'));
+  if (!key) return;
+  const el = d.querySelector(`[data-vs-ln="${key}"]`); if (el) { el.classList.add('is-on'); el.scrollIntoView({ block: 'center', behavior: 'smooth' }); }
+}
 function phoneTalk(i) {
   const t = TTSP(), p = S.v.parts[i]; if (!t || !p) { next(); return; }
   try { t.cancel(); } catch {}
@@ -218,7 +252,7 @@ function phoneTalk(i) {
   const step = () => {
     if (!S || S.tok !== tok) return;
     if (k >= L.length) { next(); return; }
-    const l = L[k++], u = new SpeechSynthesisUtterance(l[2] || l[1]); u.lang = l[2] ? 'ur-PK' : 'en-IN'; if (vc && l[2]) u.voice = vc;
+    markLine(i, k); const l = L[k++], u = new SpeechSynthesisUtterance(l[2] || l[1]); u.lang = l[2] ? 'ur-PK' : 'en-IN'; if (vc && l[2]) u.voice = vc;
     u.rate = RATES[S.rate][0]; u.pitch = l[0] === 'B' ? 0.75 : 1.2;
     u.onend = step; u.onerror = ev => { if (ev?.error === 'interrupted' || ev?.error === 'canceled') return; step(); };
     t.speak(u);
@@ -226,7 +260,7 @@ function phoneTalk(i) {
   step();
 }
 function quiet() { if (!S) return; S.tok = (S.tok || 0) + 1; try { TTSP()?.cancel(); } catch {} try { AU?.pause(); } catch {} }
-function stopPlay() { if (!S) return; quiet(); const c = S.cur; S.cur = -1; S.wait = -1; S.paused = false; S.all = false; if (c >= 0) badge(c); paintBar(); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'none'; } catch {} }
+function stopPlay() { if (!S) return; quiet(); markLine(-1, 0); const c = S.cur; S.cur = -1; S.wait = -1; S.paused = false; S.all = false; if (c >= 0) badge(c); paintBar(); try { if (navigator.mediaSession) navigator.mediaSession.playbackState = 'none'; } catch {} }
 function meta(i) {
   try {
     if (!('mediaSession' in navigator) || !S?.v) return; const p = S.v.parts[i];
@@ -238,18 +272,18 @@ function playPart(i) {
   if (!S || !S.v) return; const p = S.v.parts[i]; if (!p) { stopPlay(); return; }
   quiet(); const old = S.cur; S.cur = i; S.paused = false; S.wait = -1; if (old >= 0 && old !== i) badge(old);
   const a = audOf(i);
-  if (a?.st === 'ok') { AU.src = a.url; AU.playbackRate = RATES[S.rate][0]; AU.play().catch(() => { S.paused = true; badge(i); paintBar(); }); meta(i); }
+  if (a?.st === 'ok') { markLine(i, 0); AU.src = a.url; AU.playbackRate = RATES[S.rate][0]; AU.play().catch(() => { S.paused = true; badge(i); paintBar(); }); meta(i); }
   else if (a?.st === 'x') phoneTalk(i);
   else { S.wait = i; pump(); }
   badge(i); paintBar();
-  $('vsDlg')?.querySelector(`[data-vs-part="${i}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
+  if (!S.ln) $('vsDlg')?.querySelector(`[data-vs-part="${i}"]`)?.scrollIntoView({ block: 'center', behavior: 'smooth' });
 }
 function next() {
   if (!S || !S.v || S.cur < 0) return;
   if (!S.all) { stopPlay(); return; }
   const i = S.cur + 1;
   if (i < S.v.parts.length) { playPart(i); return; }
-  if (S.busy) { const c = S.cur; S.cur = -1; badge(c); S.waitNew = true; paintBar(); return; }
+  if (S.busy || S.retry) { const c = S.cur; S.cur = -1; markLine(-1, 0); badge(c); S.waitNew = true; paintBar(); return; }
   stopPlay();
 }
 function toggle() {
@@ -262,6 +296,7 @@ function toggle() {
 function audioSetup() {
   AU = new Audio(); AU.preload = 'auto';
   AU.addEventListener('ended', () => next());
+  AU.addEventListener('timeupdate', () => { if (!S || !S.v || S.cur < 0 || audOf(S.cur)?.st !== 'ok' || !(AU.duration > 0)) return; markLine(S.cur, lineAt(linesOf(S.v.parts[S.cur]), AU.currentTime / AU.duration)); });
   AU.addEventListener('error', () => { if (!S || S.cur < 0 || !AU.src) return; const i = S.cur; S.aud[i] = { st: 'x' }; badge(i); phoneTalk(i); });
   try {
     const ms = navigator.mediaSession; if (!ms) return;
@@ -304,6 +339,8 @@ html body dialog.vs-dlg .vs-say{width:40px;min-height:36px!important;padding:0!i
 .vs-l{font-size:16.5px;line-height:1.5;padding-left:9px;border-left:3px solid #c2477f}
 .vs-l.b{border-left-color:#2f55a0}
 .vs-l b{font-size:14px;color:#c2477f;margin-right:5px}.vs-l.b b{color:#2f55a0}
+.vs-l{border-radius:0 8px 8px 0;transition:background .2s}
+.vs-l.is-on{background:#ffe98a;box-shadow:0 0 0 3px #ffe98a}
 .vs-w{display:flex;flex-wrap:wrap;gap:5px}
 .vs-w span{font-size:13.5px;background:#fff8e6;border:1px solid #f0d49a;border-radius:999px;padding:2px 9px}
 .vs-w span b{font-weight:800}
@@ -321,20 +358,21 @@ function oldHTML() {
   return `<div class="vs-note"><b>Pehle samjhi hui videos</b> (sirf is phone par)</div><div class="vs-old">${ids.map(k => `<div class="vs-oc"><div data-vs-old="${esc(k)}"><b>${esc(o[k].t || 'Video ' + k)}</b><small>${(o[k].parts || []).length} hisse · ${fmt(o[k].next || 0)} tak${o[k].end ? ' · poori' : ''}</small></div><button type="button" class="vs-chip" data-vs-del="${esc(k)}" aria-label="Hatao">🗑</button></div>`).join('')}</div>`;
 }
 function partsHTML(v) {
-  return v.parts.map((p, i) => `<div class="vs-p" data-vs-part="${i}"><div class="vs-ph"><a class="vs-tm" href="https://youtu.be/${esc(v.id)}?t=${Math.round(p.s)}" target="_blank" rel="noopener">${fmt(p.s)} – ${fmt(p.e)}</a><span class="vs-ab"></span><button type="button" class="vs-say" data-vs-say="${i}" aria-label="Sunao">▶</button></div>${linesOf(p).map(l => `<div class="vs-l ${l[0] === 'B' ? 'b' : 'a'}"><b>${esc(nameOf(v, l[0]))}:</b>${esc(l[1])}</div>`).join('')}${(p.w || []).length ? `<div class="vs-w">${p.w.map(w => `<span><b>${esc(w[0])}</b> = ${esc(w[1])}</span>`).join('')}</div>` : ''}</div>`).join('');
+  return v.parts.map((p, i) => `<div class="vs-p" data-vs-part="${i}"><div class="vs-ph"><a class="vs-tm" href="https://youtu.be/${esc(v.id)}?t=${Math.round(p.s)}" target="_blank" rel="noopener">${fmt(p.s)} – ${fmt(p.e)}</a><span class="vs-ab"></span><button type="button" class="vs-say" data-vs-say="${i}" aria-label="Sunao">▶</button></div>${linesOf(p).map((l, k) => `<div class="vs-l ${l[0] === 'B' ? 'b' : 'a'}" data-vs-ln="${i}:${k}"><b>${esc(nameOf(v, l[0]))}:</b>${esc(l[1])}</div>`).join('')}${(p.w || []).length ? `<div class="vs-w">${p.w.map(w => `<span><b>${esc(w[0])}</b> = ${esc(w[1])}</span>`).join('')}</div>` : ''}</div>`).join('');
 }
 function paint() {
   const d = dlg(); if (!d || !S) return;
   const v = S.v, y = d.querySelector('.vs-scroll')?.scrollTop || 0;
   const form = `<div class="vs-form"><div class="vs-row"><input class="vs-in" id="vsUrl" type="url" inputmode="url" placeholder="YouTube ka link" value="${esc(S.url || '')}"><button type="button" class="vs-chip" data-vs="paste">📋 Paste</button></div>
     <div class="vs-row"><input class="vs-in t" id="vsFrom" type="text" inputmode="numeric" placeholder="0:00" value="${esc(S.from || '')}"><button type="button" class="vs-go" data-vs="go"${S.busy ? ' disabled' : ''}>🎬 Samjhao</button></div>
-    ${v ? '' : '<div class="vs-note">"Kahan se" = waqt, jaise <b>53:44</b>. Khali = shuru se. Pehle 15 minute aate hi sunna shuru karein — agle hisse peeche khud load hote hain. 🤖 AI (Gemini: likhai + awaz) — kabhi ghalat bhi samajh sakta hai.</div>'}</div>`;
+    ${v ? '' : '<div class="vs-note">"Kahan se" = waqt, jaise <b>53:44</b>. Khali = shuru se. Pehle 15 minute aate hi sunna shuru karein — poori video ke agle hisse peeche khud aate rehte hain, chalti line peeli hoti hai. 🤖 AI (Gemini: likhai + awaz) — kabhi ghalat bhi samajh sakta hai.</div>'}</div>`;
   const st = S.busy ? `<div class="vs-st" id="vsSt">⏳ ${esc(S.msg || 'AI video sun raha hai…')}${v && v.parts.length ? '' : '<div class="vs-note">1-3 minute lag sakte hain.</div>'}</div>` : (S.err ? `<div class="vs-st bad">✕ ${esc(S.err)}</div>` : '');
   const body = v ? `<div class="vs-ttl">${esc(v.t || 'Video')}</div>${partsHTML(v)}${!v.parts.length && !S.busy ? '<div class="vs-note">Is hisse mein kuch nahi mila.</div>' : ''}${st}${v.end ? '<div class="vs-note">✅ Video yahan khatam.</div>' : ''}${!S.busy ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="list">‹ Doosri video</button></div>' : ''}` : st + oldHTML();
   d.innerHTML = `<div class="vs-hd"><div><b>🎓 Video samjhao</b><small>YouTube ki video — aasaan Roman Urdu mein + 🔊 awaz</small></div><button type="button" class="vs-x" data-vs="x" aria-label="Band">✕</button></div>
     <div class="vs-scroll">${form}${body}</div><div class="vs-bar" id="vsBar"></div>`;
   const sc = d.querySelector('.vs-scroll'); if (sc) sc.scrollTop = y;
   if (v) v.parts.forEach((_, i) => badge(i));
+  if (S.ln) { const k = S.ln; S.ln = ''; const [a, b] = k.split(':').map(Number); const el = d.querySelector(`[data-vs-ln="${k}"]`); if (el) { el.classList.add('is-on'); S.ln = k; } }
   paintBar();
 }
 function paintBar() {
@@ -352,8 +390,9 @@ function append(first) {
   let at = last; for (const el of all) { at.after(el); at = el; }
   for (let i = first; i < S.v.parts.length; i++) badge(i);
 }
-async function run(id, a, n = 0) {
+async function run(id, a, n = 0, tryN = 0) {
   if (!S || S.busy) return;
+  clearTimeout(S.retry); S.retry = 0;
   if (!S.v || S.v.id !== id) { stopPlay(); freeAud(); const o = load()[id]; S.v = o && a === (o.next || 0) ? { id, t: o.t, sp: o.sp || [], parts: o.parts || [], next: o.next || 0, end: o.end } : { id, t: o?.t || '', sp: o?.sp || [], parts: [], next: a, end: 0 }; }
   const v = S.v, b = a + STEP; S.busy = true; S.halt = false; S.err = ''; S.msg = 'AI video sun raha hai… (' + fmt(a) + ' – ' + fmt(b) + ')'; paint();
   try {
@@ -370,7 +409,12 @@ async function run(id, a, n = 0) {
     if (S.waitNew && out.parts.length) { S.waitNew = false; S.all = true; playPart(first); }
     else if (S.waitNew && !more) { S.waitNew = false; paintBar(); }
     if (more) run(id, v.next, n + 1); else paint();
-  } catch (e) { if (S && S.v === v) { S.busy = false; S.waitNew = false; S.err = String(e?.message || e); paint(); pump(); } }
+  } catch (e) {
+    if (!S || S.v !== v) return;
+    S.busy = false;
+    if (!e?.stop && !S.halt && tryN < 3 && v.parts.length) { S.err = 'Agla hissa nahi aaya (' + String(e?.message || e).slice(0, 80) + ') — khud dobara koshish ' + (tryN + 1) + '/3…'; paint(); pump(); S.retry = setTimeout(() => { if (S && S.v === v) { S.retry = 0; run(id, a, n, tryN + 1); } }, 5000); return; }
+    S.waitNew = false; S.err = String(e?.message || e); paint(); pump();
+  }
 }
 async function share() {
   const v = S?.v; if (!v) return;
@@ -391,7 +435,7 @@ async function onClick(e) {
   if (k.vs === 'list') { keep(); stopPlay(); freeAud(); S.v = null; S.err = ''; paint(); return; }
   if (k.vs === 'rate') { S.rate = (S.rate + 1) % RATES.length; try { localStorage.setItem('sam-vs-rate', String(S.rate)); } catch {} if (AU) AU.playbackRate = RATES[S.rate][0]; paintBar(); return; }
   if (k.vs === 'all') { if (S.waitNew) { S.waitNew = false; paintBar(); } else if (S.cur >= 0) toggle(); else { S.all = true; playPart(0); } return; }
-  if (k.vs === 'halt') { S.halt = true; t.disabled = true; t.textContent = '⏹ Ruk raha…'; return; }
+  if (k.vs === 'halt') { S.halt = true; clearTimeout(S.retry); S.retry = 0; t.disabled = true; t.textContent = '⏹ Ruk raha…'; return; }
   if (k.vs === 'more') { if (S.v && !S.v.end) run(S.v.id, S.v.next); return; }
   if (k.vs === 'share') { share(); return; }
   if (k.vs === 'go') {
@@ -400,7 +444,7 @@ async function onClick(e) {
     run(id, a);
   }
 }
-function shut() { if (!S) return; stopPlay(); freeAud(); try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
+function shut() { if (!S) return; clearTimeout(S.retry); stopPlay(); freeAud(); try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
 function close() { const d = dlg(); shut(); if (d) { try { d.close(); } catch {} d.remove(); } if (window.ntVsClose) window.ntVsClose = null; }
 export function open(ctx) {
   A = ctx || {};
@@ -408,7 +452,7 @@ export function open(ctx) {
   let d = dlg(); if (d) d.remove();
   d = document.createElement('dialog'); d.id = 'vsDlg'; d.className = 'vs-dlg'; document.body.appendChild(d);
   let rate = 1; try { const r = Number(localStorage.getItem('sam-vs-rate')); if (r >= 0 && r < RATES.length) rate = r; } catch {}
-  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumping: false, ttsOff: '', ttsFail: 0, ttsM: null };
+  S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null };
   audioSetup();
   d.addEventListener('click', onClick);
   d.addEventListener('close', () => { shut(); d.remove(); });

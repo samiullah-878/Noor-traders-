@@ -5548,3 +5548,15 @@ Malik: 'pehla 15 minute ka part aaye, sunna start kar dun, baqi parts background
 - 📤 Reader = navigator.share (Urdu likhai) -> koi bhi parhne wali app; na ho to copy.
 - TEST: sirf helpers node se (parse d / purani shakal / ttsText / WAV header). Asal Gemini video + TTS call, Urdu talaffuz, background chalna phone par azmaya NAHI.
 - AI: HAAN (Gemini likhai + awaz, paise wali key). Rules / PC / Firestore: kuch nahi.
+
+=== v2.355.0 (23 Nov 2026) — 🎓 Video samjhao v1.2: sahi naam + tarjuma + poori video khud + peeli line ===
+Malik (screenshot): har line 'Raj:' thi, jumle English mein, ek hi awaz · 'baar baar agla click na karna pare, auto banta rahe' · 'jis line par hon wo yellow'.
+- WAJAH: video English thi (Raj Shamani x Dr Amen) — prompt sirf 'Hindi lafz badlo' kehta tha, is liye AI ne English jumle waise hi de diye; aur 'A / B' ke bajaye sab 'A'.
+- Ab d = [NAAM (sp mein se), Roman, Urdu] -> parseOut `who()` A / B; prompt: har line ka TARJUMA Roman Urdu (English / Hindi jumla waise ka waisa nahi), awaz se bolne wala.
+- badOut(): English zyada ('en', ENW lafz > 14%) / Roman line mein Urdu-Hindi harf ('script') / sab lines ek hi naam ('one') = EK dafa dobara maango (STRICT line). w mein ghair-Latin joda hata.
+- Poori video khud: MAXAUTO 40 (10 ghante), ghalti par 5 s baad khud dobara (3 dafa; hadd / private / key = ruk).
+- Chalti line peeli (.vs-l.is-on): Gemini audio = waqt ke hisse se andaza (lineAt: likhai ki lambai), phone awaz = pakki; line khud beech mein aati hai.
+- Awaz 2 line mein banti hai (pump -> pumpOne x2), 70 s hadd, 2 model; audio key = id:second:hash(likhai) — purani English audio dobara nahi chalti.
+- Purani saved video (English wali): wohi link 0:00 / jahan se chahein dobara 'Samjhao'.
+- TEST: node helpers (who / badOut / lineAt / key). Asal Gemini par azmaya NAHI.
+- AI: HAAN (Gemini).
