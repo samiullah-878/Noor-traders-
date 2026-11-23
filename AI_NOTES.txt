@@ -9592,3 +9592,7 @@ PC: live-cam v2.3 — blueAccess/sabRec {on, g, gn, kd, st, end}; srStart = ek f
     bill-clip v2.22 / kh-wa v1.16: billClip.rkd < 1 = ghante (0.125 = 3 ghante, min 180 min). wa-out v1.34 sirf dobara shuru.
 App: tally.js openWg mein sbHTML / sbSave / sbPaintSt (ON = confirm + rkd 0.125) · cloud getSabRec / setSabRec · pc-drives DAYS mein '3 ghante' + kam karne par confirm · Camera setup Save rkd 0.125 nahi bigarta.
 Azmaya: node --check, ffmpeg (2 TCP mpegts -> xstack -> segment, 'q' se saaf band, moov pehle). Asal NVR / WhatsApp group / PC ka CPU bojh nahi azmaya. AI nahi. Rules nahi badle.
+
+=== md pkg v73 (23 Nov 2026 raat) — 🧠 Falsafa / recording popup wapas (GHALTI) ===
+Malik: 'Paani wale ke saath tum ne wo recording wala pop bhi band kar diya hai'. Wajah: v72 mein Paani + Coffee macro band -> pnDue aage nahi barhta -> qaide.py ki shart 'Paani 2 min se door' hamesha jhooti -> Falsafa + 'Sona hai?' popup kabhi nahi aata.
+Hal: qaide.py PAANI_ON = False -> Paani wali sharten nahi (sirf unlock par popup). Paani / Coffee dobara chalu karo to PAANI_ON = True. Phone par azmaya nahi. AI nahi.
