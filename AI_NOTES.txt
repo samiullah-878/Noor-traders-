@@ -9565,3 +9565,7 @@ Jaanch: nakli Firestore (poori list 300 ms, tez 40 ms): tez doc 140 ms mein, poo
 Malik ki screenshot: Sab cameras chal rahe, magar khanon par purane naam (Abdurehman / Bilal (server)) aur items nahi; ek khane par safed dabba.
 Wajah: live-cam allList ne CF.ch ki purani chaabi naam bana di -> app posLive/<purana naam> sunti rahi. live-cam v2.2: PN.nowName. Safed dabba = bill chhapne ke baad POS screen khali.
 App: screen chalti = '⏳ bill ban raha' + tasveer; khali = bill + 5 items. Node test (tile logic) + syntax. Asal PC par azmaya nahi. AI nahi.
+
+=== v2.364.0 (23 Nov 2026) — ☑ Mulazim form Save par tick girti thi ===
+Malik: Nigrani ke tick Save ke baad wapis uncheck. Wajah: CAP_SCR mein nz. / ir. / fac. prefix nahi -> form Save OPT_IN tick (nz.sab, nz.ginti, nz.gvid, ir.sup, ir.nafa) allow mein nahi daalta tha.
+Hal: CAP_SCR ka fallback CAPS se. Sirf app (PC nahi badla). AI nahi.
