@@ -8,7 +8,7 @@
 #   v64 (21 Nov, malik: 'SMS wala lagta hai, pop wala nahi'): notification ki likhai pehle LOCAL variables (bkT / bkX — SetVariable mein magic text trigger ke saath
 #   pakka chalta hai) mein, Java wahan se parhta hai; pehle Java seedha {notification} maangta tha (JavaAction mein trigger ka magic text azmaya hua nahi tha).
 import json, os
-from cb import trig, iff, END, ELSE, var, lvar
+from cb import trig, iff, END, ELSE, var, lvar, gv, inc, expr, gt, lt, strne
 D = os.path.dirname(os.path.abspath(__file__))
 T1, T2, T3 = 112233445566781, 112233445566782, 112233445566783
 
@@ -58,24 +58,46 @@ J = '\n'.join([
  '} catch (Throwable e) { return "masla " + e; }'])
 
 def lsstr(n, v): return {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": n, "m_type": 2, "isLocalVar": True}, "m_newStringValue": v}
+def has(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 2, True), "m_stringValue": v, "m_stringComparisonType": 1, "checkCase": False}
+def no(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 2, True), "m_stringValue": v, "m_stringComparisonType": 2, "checkCase": False}
+# v70 (23 Nov, malik: 'Alfalah wala nahi chal raha' — Rs 100 Raast 13:43, Bank screen mein aaya hi nahi): macro HBL wale popup macro (jo chalta hai) jaisa SAADA —
+#   popup -> seedha HttpRequest (URL {v=bkU}, chaabi {v=bkK}). Trigger ab Alfa ka HAR popup (likhai ki shart macro ke andar: BAF + PKR, OTP / PIN / password nahi).
+#   Java ab sirf bachao: seedha bhejna 2xx na de (net nahi / likhai mein ajeeb harf) -> wohi purani line (bkQ) + 5 min wali dobara koshish.
+#   Ginti (phone ki report mein nazar aati hai): bkN = len-den wala popup dekha · bkS = seedha chala gaya · bkC = aakhri jawab ka code.
+HTTP = {"m_classType": "HttpRequestAction", "m_SIGUID": 0, "requestConfig": {"requestType": 1, "urlToOpen": "{v=bkU}", "requestTimeOutSeconds": 12, "contentType": "application/json",
+    "contentBodySource": 0, "contentBodyText": '{"fields":{"k":{"stringValue":"{v=bkK}"},"src":{"stringValue":"notif"},"from":{"stringValue":"Alfa"},"text":{"stringValue":"{lv=bkT} - {lv=bkX}"}}}',
+    "blockNextAction": True, "followRedirects": True, "headerParams": [], "queryParams": [],
+    "saveResponseType": 0, "saveReturnCodeToVariable": True, "returnCodeVariableName": "rc", "useStaticContentBodyFile": True}}
+JAVA = {"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": J, "blockNextAction": True, "responseVariableName": "bkR", "runInBackgroundThread": True}
+RC0 = {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "rc", "m_type": 1, "isLocalVar": True}, "m_newIntValue": 0}
 a = [
-    iff([trig(T1, "Alfa notification")]), lsstr("bkM", "n"), lsstr("bkT", "{not_title}"), lsstr("bkX", "{notification}"), ELSE, lsstr("bkM", "q"), END,
-    {"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": J, "blockNextAction": True, "responseVariableName": "bkR", "runInBackgroundThread": True},
+    lsstr("bkT", "{not_title}"), lsstr("bkX", "{notification}"), RC0,
+    iff([has("bkX", "BAF"), has("bkX", "PKR"), no("bkX", "OTP"), no("bkX", "passw"), no("bkX", "one time"), no("bkX", " PIN"), no("bkX", "code is"), no("bkT", "OTP")]),
+      inc("bkN"),
+      iff([trig(T1, "Alfa notification")]),
+        HTTP, expr("bkC", "{lv=rc}"),
+        iff([gt("rc", 199, True), lt("rc", 300, True)]), inc("bkS"),
+        ELSE, lsstr("bkM", "n"), JAVA, END,
+      END,
+    ELSE,
+      lsstr("bkM", "q"),
+      iff([strne("bkQ", "")]), JAVA, END,
+    END,
 ]
 AL = {"macroExportVersion": 1, "macro": {
     "m_name": "🏦 Alfa notification",
     "m_description": "Alfa app ki 'BAF A/C' paise aaye / gaye wali notification Blue Khata ke HBL Inbox (bankSms) mein — PC khud khate mein lagata hai, wahi Tx ID wala SMS jurwan (double nahi). OTP / PIN kabhi nahi. Net na ho = phone mein line, baad mein khud. Chaabi app webhook (nt_bank) se.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [lvar("bkM", 2), lvar("bkR", 2), lvar("bkT", 2), lvar("bkX", 2)],
+    "localVariables": [lvar("bkM", 2), lvar("bkR", 2), lvar("bkT", 2), lvar("bkX", 2), lvar("rc", 1)],
     "m_triggerList": [
         {"m_classType": "NotificationTrigger", "m_SIGUID": T1, "m_option": 0, "m_packageNameList": ["com.base.bankalfalah"], "m_applicationNameList": ["Alfa"],
-         "m_excludeApps": False, "separateTitleAndMessage": True, "matchOptionTitle": 0, "matchOptionMessage": 2, "messageContent": "BAF",
-         "enableRegex": False, "ignoreCase": True, "m_ignoreOngoing": True, "m_supressMultiples": True, "m_soundOption": 0},
+         "m_excludeApps": False, "separateTitleAndMessage": False, "matchOptionTitle": 0, "matchOptionMessage": 0,
+         "m_ignoreOngoing": False, "m_supressMultiples": True},
         {"m_classType": "WebHookTrigger", "m_SIGUID": T2, "identifier": "nt_bank", "variableWhiteListEnabled": True, "variableWhiteList": ["bkU", "bkK"]},
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T3, "m_seconds": 300, "m_useAlarm": False,
          "m_constraintList": [{"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 112233445566784, "m_variable": {"m_name": "bkQ", "m_type": 2, "isLocalVar": False},
                                "m_stringValue": "", "m_stringComparisonType": 0, "m_stringEqual": False}]}],
     "m_actionList": a, "m_constraintList": []},
-    "globalVariables": [var("bkU", 2), var("bkK", 2), var("bkQ", 2)], "userIcons": None}
+    "globalVariables": [var("bkU", 2), var("bkK", 2), var("bkQ", 2), var("bkN"), var("bkS"), var("bkC")], "userIcons": None}
 if __name__ == '__main__':
     json.dump(AL, open(os.path.join(D, 'alfa.json'), 'w'), ensure_ascii=False, separators=(',', ':')); print('alfa ok', len(a))

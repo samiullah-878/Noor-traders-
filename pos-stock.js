@@ -1,8 +1,8 @@
 // pos-stock.js — POS ka stock (posStock collection) app mein dikhata hai
 // Data sirf padha jata hai. Likhne ka kaam PC par chalne wala sync-stock.js karta hai.
 
-import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.356.0';
-import { liveLabelsHTML } from './barcode.js?v=2.356.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
+import { smartSearch, setAliases, aliasOf, noteHit, voiceSearch, hlName, smartHit, fold, topItems } from './smart-search.js?v=2.357.0';
+import { liveLabelsHTML } from './barcode.js?v=2.357.0';   // v2.97: 🖨 label live + ✕ cancel (wahi module jo app.js — ek hi nusqha)
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const norm = s => String(s || '').toLowerCase().replace(/\s+/g, ' ').trim();
@@ -699,13 +699,13 @@ export function stockRozChip() {
 export async function stockRozOpen(k) {
   if (!cloud) return; start();
   if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  if (isOwner() && !k) { try { (await import('./roz.js?v=2.356.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
+  if (isOwner() && !k) { try { (await import('./roz.js?v=2.357.0')).rozDash(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } return; }
   const L = rozLocs().filter(rozCan);
   if (!rozCfg().on) { notice('📋 Roz ki ginti malik ne band rakhi hai'); return; }
   if (!L.length) { notice('🔒 Roz ki ginti ki ijazat nahi (malik: Settings → Mulazim → 📋 Roz ki ginti)'); return; }
   const go = x => { try { window.ntRecentOpen?.({ open: { kind: 'stock', screen: 'roz', k: x } }); } catch { rozEnter(x); } };
   if (k || L.length === 1) { go(k || L[0].k); return; }
-  try { (await import('./roz.js?v=2.356.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
+  try { (await import('./roz.js?v=2.357.0')).rozPick(stockRozApi(), go); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); }
 }
 // roz.js ke liye andar ka saman (sirf parhna + wahi kaam jo buttons karte hain)
 export function stockRozApi() {
@@ -729,7 +729,7 @@ export function stockRozApi() {
 let farqMod = null;
 const farqCan = () => seeStock() && (isOwner() || can('stock.farq'));
 async function farqOpenNow() { if (!farqCan()) { notice('⚖️ Stock farq — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { farqMod = farqMod || await import('./farq.js?v=2.356.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { farqMod = farqMod || await import('./farq.js?v=2.357.0'); recentPush({ key: 'farq', icon: '⚖️', label: 'Stock farq', open: { kind: 'stock', screen: 'farq' } }); farqMod.farqOpen(stockRozApi()); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // sab jagah (jo gini) ka asal farq — is round ki ginti
 function oxNet(id) { let net = 0, k = false, z = false, n = 0, pr = 0; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it))); net += f; n++; if (f < -0.001) k = true; if (f > 0.001) z = true; pr = Number(it.prate) || pr; } return n ? { net: r3(net), rs: net * pr, both: k && z, n } : null; }
 function oxHTML(r, c, diff) {
@@ -781,7 +781,7 @@ function qtrGinti(b, id) {
     return Math.abs(f) > 0.0005 ? { f: r3(f), round } : null; } catch { return null; }
 }
 async function qtrGo(o) { if (!qtrCan()) { notice('⇄ Transfer — ijazat nahi (malik se kahein)'); return; } start(true); if (!loaded) { notice('⏳ Stock aa raha hai — 2 second baad dobara'); return; }
-  try { qtrMod = qtrMod || await import('./qtr.js?v=2.356.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
+  try { qtrMod = qtrMod || await import('./qtr.js?v=2.357.0'); qtrMod.qtrOpen(qtrApi(), o); } catch (e) { notice('Nahi khula: ' + (e?.message || e)); } }
 // jagah badli: sab se bara KAM (yahan maal kam = POS zyada) → sab se bari ZYADTI, tadad = dono mein chhoti
 function oxPair(id) {
   let k = null, z = null; for (const b of brInfo().branches) { const it = itemAt(b, id); if (!it) continue; const c = countOf(b, it); if (!c) continue; const f = r3(countedPcs(c) - Number(sysOf(c, it)));
@@ -4789,6 +4789,16 @@ function rkLaneHTML(names, lane) {
     return `<section class="rk-g rk-why"><div class="rk-gh"><b>🔍 Ye list mein kyun nahi?</b></div>${H.map(it => { const w = rkWhy(it.id); return `<div class="rk-wy"${w.can || w.any ? ` data-rk-add="${esc(String(it.id))}" role="button"` : ''}><span><b>${esc(it.name)}</b><i class="rk-c pc">${w.w}</i><small>📦 ${w.stk}</small></span>${w.can || w.any ? `<button type="button" class="rk-sv" data-rk-add="${esc(String(it.id))}">➕ Line mein lao</button>` : ''}</div>`; }).join('')}</section>`; })() : '';
   return `<div id="rkList" class="rk2-list">${body || (q ? `<p class="rk-note">"${esc(q)}" — list mein nahi${rkSabOk() && !rkSabOn() ? ' · "☐ Sab items" laga kar dekhein' : ''}</p>` : `<p class="rk2-empty">${rackAt || irData ? `✓ Abhi kuch lana nahi${rkSabOk() && !rkSabOn() ? ' — upar "☐ Sab items" se koi bhi item' : ''}` : '⏳ PC data aa raha hai (2–5 min)'}</p>`)}${rows.length > shown.length ? `<p class="rk-note">+${num(rows.length - shown.length)} aur — 🔍 upar search karein</p>` : ''}</div><div id="rkWhy">${why}</div>`;
 }
+// v2.357.0 (malik 23 Nov: 'ek chip — Sab zero · zero dabayein sab zero ho jaye'): list ki har item (aam + har packet) ki tadad 0; dobara dabao = pehle wali tadad wapas.
+function rkZero() {
+  if (!rk || rk.busy) return;
+  if (rk.z0) { rk.sel = rk.z0.sel; rk.pQ = rk.z0.pQ; rk.z0 = null; rk.x2 = ''; rkPaint(); notice('↺ Tadad wapas pehle jaisi'); return; }
+  const lane = rk._lane || rkLaneRows(); if (!lane || !(lane.N.length + lane.P.length)) { notice('List khali hai'); return; }
+  rk.z0 = { sel: new Map(rk.sel), pQ: new Map(rk.pQ || []) }; if (!rk.pQ) rk.pQ = new Map();
+  for (const y of lane.N) rk.sel.set(String(y.x.i), 0);
+  for (const y of lane.P) for (const p of y.packs) rk.pQ.set(String(y.r.i) + '|' + p.z, 0);
+  rk.x2 = ''; try { document.activeElement?.blur?.(); } catch {} rkPaint(); notice('0 — sab ki tadad zero · jo lana ho us ki tadad likhein (↺ Wapas = pehle wali)');
+}
 function rkFootHTML(n) {
   return `<div class="rk2-foot" id="rkFoot"><label class="rk2-lb${rk.lbAll ? ' is-in' : ''}"><input type="checkbox" data-rk-lball="1"${rk.lbAll ? ' checked' : ''}><span>🏷 barcode</span></label><button type="button" class="rk-go rk2-go" data-rk-goall="1"${n && !rk.busy ? '' : ' disabled'}>${rk.busy ? '⏳ PC note bana raha hai…' : n ? `🖨 Print — ${num(n)} item${n === 1 ? '' : 's'}` : '🖨 Print — tadad likhein'}</button></div>`;
 }
@@ -4804,7 +4814,7 @@ function rkPaint(only) { if (rk?.tab === 'ro') roWatch();
   const tabs = `<div class="rk-tabs${can('stock.mangwao') ? '' : ' two'}" data-mn-seg="rk.tab" data-mn-i="🧺" data-mn-t="Lane wale · Packet % · Mangwao" data-mn-g="🧺 Rack bharo">${[['lane', '🧺 Lane wale', laneN], ['pct', '📋 Packet %', pctN], ...(can('stock.mangwao') ? [['ro', '🛒 Mangwao', roN]] : [])].map(([k, l, n]) => `<button type="button" class="${rk.tab === k ? 'is-in' : ''}" data-rk-tab="${k}">${l} <i>${typeof n === 'string' ? n : num(n)}</i></button>`).join('')}</div>`;
   const gseg = `<div class="rk-nb rk-gch" data-mn-seg="rk.g" data-mn-i="🏬" data-mn-t="Kaun sa godam" data-mn-g="🧺 Rack bharo">${[...collect().branches.filter(b => b !== 1), 0].map(b => `<button type="button" class="${rk.g === b ? 'is-in' : ''}" data-rk-g="${b}">${b ? '🏬 ' + esc(branchName(b, names)) : 'Sab'}</button>`).join('')}</div>`;
   const top = rk.tab === 'lane'
-    ? `<div class="rk2-top"><label class="hs-search rk2-qs"><input type="search" data-rk-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.q)}" autocomplete="off" enterkeyhint="search"></label><div class="rk2-bar">${rkSabOk() ? `<label class="rk2-sab${rkSabOn() ? ' is-in' : ''}"><input type="checkbox" data-rk-sab="1"${rkSabOn() ? ' checked' : ''}><span>Sab items</span></label>` : ''}${rkPillHTML(names)}</div></div>`
+    ? `<div class="rk2-top"><label class="hs-search rk2-qs"><input type="search" data-rk-q="1" placeholder="🔍 item dhoondo…" value="${esc(rk.q)}" autocomplete="off" enterkeyhint="search"></label><div class="rk2-bar">${rkSabOk() ? `<label class="rk2-sab${rkSabOn() ? ' is-in' : ''}"><input type="checkbox" data-rk-sab="1"${rkSabOn() ? ' checked' : ''}><span>Sab items</span></label>` : ''}<button type="button" class="rk2-zero${rk.z0 ? ' is-in' : ''}" data-rk-zero="1" title="Sab items ki tadad 0">${rk.z0 ? '↺ Wapas' : '0 Sab zero'}</button>${rkPillHTML(names)}</div></div>`
     : `<div class="rk2-top rk2-top2">${rkPillHTML(names)}</div>`;
   const warn = rackAt && age > 10 ? '<div class="rk-time old">⚠️ PC ka rack data 10 min se purana — rack script ruka?</div>' : '';
   const z0 = rackZero.length && isOwner() ? (() => { const Z = rk.zAll ? rackZero : rackZero.slice(0, 8); return `<div class="rk-z0" data-mn-box="rk.zero" data-mn-i="⚠️" data-mn-t="Carton pcs 0 wale items (${num(rackZero.length)})" data-mn-g="🧺 Rack bharo"><b>⚠️ ${num(rackZero.length)} items ka carton pcs <u>0</u> hai</b><small>POS mein in ka bill "Divide by zero" rok sakta hai. App se bane items PC khud 1 kar deta hai (item-post v1.3); baqi POS Item master mein Cotton/packing likhein (kam az kam 1).</small><span class="rk-chips">${Z.map(x => `<i class="rk-c kh" title="dukan ${num(x.ss)} · 30 din mein ${num(x.s)} bike">${esc(x.n)}${x.s ? ` · ${num(x.s)} bike` : ''}</i>`).join('')}${rackZero.length > 8 ? `<button type="button" class="rk-c pc rk-zm" data-rk-zall="1">${rk.zAll ? '▴ kam' : `+${num(rackZero.length - 8)} aur`}</button>` : ''}</span></div>`; })() : '';
@@ -4839,7 +4849,8 @@ async function rkGoAll() {   // 🖨 ek click — har godam ka EK transfer note 
   notice(`${ok.length ? '🖨 Patti printer par — ' + ok.join(' · ') : ''}${bad.length ? (ok.length ? ' · ' : '') + '⚠️ Nahi bana: ' + bad.join(' · ') : ''}`);
   if (rk) { rk.busy = ''; rkPaint(); }
 }
-document.addEventListener('click', e => { const t = e.target.closest?.('[data-rk2-x],[data-rk-goall]'); if (!t || !rk || !t.closest('#rkBody')) return;
+document.addEventListener('click', e => { const t = e.target.closest?.('[data-rk2-x],[data-rk-goall],[data-rk-zero]'); if (!t || !rk || !t.closest('#rkBody')) return;
+  if (t.dataset.rkZero != null) { rkZero(); return; }
   if (t.dataset.rk2X) { rk.x2 = rk.x2 === t.dataset.rk2X ? '' : t.dataset.rk2X; rk.ed = ''; rkPaint(true); return; }
   if (t.dataset.rkGoall != null) rkGoAll(); });
 document.addEventListener('input', e => { const t = e.target; if (rk && t?.matches?.('#rkBody .rk2-q input')) rkQtySet(t); });
@@ -5411,8 +5422,8 @@ export const stockCanItem = () => ({ edit: canEditItem(), add: canNewItem() });
 // v2.103.47: 🧩 AGENT ACTIONS — malik: "agent ko poori app ka access: har chip, har qaida; likh kar kaam". Har action WAHI function jo button
 //   chalata hai (sab purane check khud). read = foran; baqi = card → ✓ (agent.js). Naya feature = yahan uska action bhi (CLAUDE.md qaida).
 // ============================================================================================================
-import { agentRegister } from './agent.js?v=2.356.0';
-import { recentPush } from './recent.js?v=2.356.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
+import { agentRegister } from './agent.js?v=2.357.0';
+import { recentPush } from './recent.js?v=2.357.0';   // v2.103.61: 🕘 haal hi ki khirkiyan
 const RK_TABN = { lane: 'Lane wale', pend: 'Rack bhara?', pct: 'Packet %', ro: 'Mangwao' };
 function rkRecent() { if (!rk) return; recentPush({ key: 'rack', icon: '🧺', label: 'Rack · ' + (RK_TABN[rk.tab] || rk.tab) + (rk.g ? ' · ' + branchName(rk.g, collect().names) : ''), open: { kind: 'stock', screen: 'rack', g: rk.g || 0, tab: rk.tab } }); }
 // v2.103.61: 🕘 recent chip se khirki wapas (app.js window.ntRecentOpen → yahan)

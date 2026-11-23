@@ -5566,3 +5566,7 @@ Malik: 'yeh bhi video 15 minute ki hi hai, is se aage ki nahi'. Wajah (andaza, c
 Ilaaj video-sam.js run(): end sirf jab tukra khali ya aakhri line b-90 s se pehle; prompt saaf; ruki video par chip data-vs=force '▶ Video aage bhi hai'.
 Asal Gemini par azmaya nahi. AI: haan (Gemini) — sirf is screen mein.
 Isi update mein 🔊: do-awaz wali Gemini darkhwast 400 deti thi (speech_metadata.speaker) -> har line alag part + speechMetadata.speaker, phir purani shakal, phir ek-awaz tukre + PCM jor. ⋮ 🔊 Awaz chuno (sam-vs-voice, 4 awazein, namoona). Node test: pcmOf / ttsBody PASS; asal Gemini par azmaya nahi.
+
+=== v2.357.0 + md pkg v70 (23 Nov 2026) ===
+🏦 Alfa notification saada (alfa.py): har Alfa popup -> andar BAF + PKR jaanch (OTP nahi) -> seedha HttpRequest; fail = purani Java line. Ginti bkN / bkS / bkC. Wajah: Rs 100 Raast 13:43 Bank screen mein aaya hi nahi (aakhri notification 11:57). Python simulator + MCP validator VALID; phone par azmaya nahi.
+0 Sab zero: Rack bharo (pos-stock.js rkZero, .rk2-zero) — sab tadad 0, dobara = wapas. AI nahi.

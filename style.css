@@ -5868,6 +5868,8 @@ html body #dialogBody .rk2-bar:empty{display:none}
 html body #dialogBody .rk2-sab{flex:none;display:inline-flex;align-items:center;gap:7px;min-height:36px;padding:0 12px;border-radius:999px;border:1.5px solid #c7cdfb;background:#fff;color:#312e81;font:800 13px/1 system-ui,sans-serif;cursor:pointer;user-select:none}
 html body #dialogBody .rk2-sab input{width:18px;height:18px;margin:0;accent-color:#4f46e5}
 html body #dialogBody .rk2-sab.is-in{background:#eef2ff;border-color:#4f46e5;box-shadow:0 2px 8px rgba(79,70,229,.18)}
+html body #dialogBody .rk2-zero{flex:none;min-height:36px!important;padding:0 11px!important;border-radius:999px!important;border:1.5px solid #f3c6a5!important;background:linear-gradient(180deg,#fff,#fff4ea)!important;color:#9a3412!important;font:800 13px/1 system-ui,sans-serif;white-space:nowrap;cursor:pointer}
+html body #dialogBody .rk2-zero.is-in{border-color:#4f46e5!important;background:#eef2ff!important;color:#312e81!important}
 html body #dialogBody .rk2-bar .rk-pill{flex:1;min-width:0}
 html body #dialogBody .rk2-list{display:grid;gap:5px;min-width:0}
 html body #dialogBody .rk2-gh{margin:6px 2px 0;font:800 12.5px/1.2 system-ui,sans-serif;color:#4b5280}
