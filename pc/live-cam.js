@@ -1,4 +1,10 @@
 // =========================================================
+//  live-cam.js  v2.6 (2026-11-24, malik ki screenshots: 🎛 Sab cameras grey + WhatsApp wali sab-rec video bhi grey — 'cwo cbi ok h'):
+//    (1) yaad (ring) ab AAKHRI POORI TASVEER (keyframe) se — naya keyframe aate hi purana hissa hat-ta (20 s / 10 MB tak); naya dekhne wala ffmpeg hamesha poori
+//    tasveer se shuru (pehle 3.5 s mein keyframe na hota to beech se = grey). Video ka PID PMT se (sirf video ka keyframe ginte hain).
+//    (2) PC busy ho kar kisi ffmpeg ka dabba bhar jaye to tukre BEECH SE nahi girte — agli poori tasveer tak ruko, phir wahan se (relay `_skip`) = grey ki jagah pal bhar ruki
+//    tasveer. Shuru mein yaad na ho to bhi pehli poori tasveer ka intezar. 30 s koi keyframe na dikhe = purana tareeqa (kabhi kaali screen nahi).
+//    (3) 🎛 / 🏬 / 📼 ke inputs `-skip_loop_filter all` (chhote khane — CPU kam, farq nazar nahi aata). (4) 🩺 mosaic ka haal bhi app ko (pehle sirf ek camera wali live ka).
 //  live-cam.js  v2.5 (2026-11-24, malik: 'KEIME1D wala system delete kar do, us ki jagah RN6 wala'): pc-names v1.2 (purana counter camera = RN6QU6D) +
 //    🎛 Sab cameras ki list mein ek counter naam DO dafa nahi — camera setting mein naya naam (RN6QU6D) aur purani chaabi (Abdurehman) dono hon to naye naam wali chaabi.
 //  live-cam.js  v2.4 (2026-11-24, malik ki screenshot: group ki video phone par beech mein patli patti — 3x2 chauri video, ek khana khali, baqi screen kaali):
@@ -54,7 +60,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.5';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.6';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -119,20 +125,43 @@ function tsGaps(x, m) {   // v1.7: 🩺 recording ki line ke tukre PC ke andar g
   }
   return g;
 }   // ch → {sock, subs:Set(ffmpeg stdin), last, pk}
-// v2.1: ⚡ aakhri ~3.5 s yaad (naya dekhne wala ffmpeg foran keyframe se shuru kare)
-const RING_MS = 3500, RING_MAX = 6e6;
+// v2.1: ⚡ yaad (naya dekhne wala ffmpeg foran keyframe se shuru kare) · v2.6: yaad AAKHRI keyframe se (naya keyframe = purana hissa hata), 20 s / 10 MB tak
+const RING_MS = 20000, RING_MAX = 10e6, LIM = 4e6, K_OK = 30000;
+function pmtVid(b) {   // v2.6: PMT se video ka PID (H.264 / HEVC / MPEG) — audio ka random-access keyframe nahi ginte
+  try { let o = 4 + 1 + b[4]; if (b[o] !== 0x02) return 0; const sl = ((b[o + 1] & 15) << 8) | b[o + 2], end = Math.min(b.length, o + 3 + sl - 4), pil = ((b[o + 10] & 15) << 8) | b[o + 11]; o += 12 + pil;
+    while (o + 5 <= end) { const t = b[o], pid = ((b[o + 1] & 0x1f) << 8) | b[o + 2], il = ((b[o + 3] & 15) << 8) | b[o + 4]; if ([0x01, 0x02, 0x10, 0x1b, 0x24].includes(t)) return pid; o += 5 + il; } } catch {}
+  return 0;
+}
 function ringAdd(x, m, now) {
-  let k = false;
+  let ki = -1;
   for (let i = 0; i + 188 <= m.length; i += 188) {
     if (m[i] !== 0x47) break;
     const pid = ((m[i + 1] & 0x1f) << 8) | m[i + 2];
-    if (pid === 0) x.pat = Buffer.from(m.subarray(i, i + 188)); else if (pid === 0x1000) x.pmt = Buffer.from(m.subarray(i, i + 188));
-    else if (((m[i + 3] >> 4) & 2) && m[i + 4] > 0 && (m[i + 5] & 0x40)) k = true;   // random access = keyframe
+    if (pid === 0) x.pat = Buffer.from(m.subarray(i, i + 188));
+    else if (pid === 0x1000) { x.pmt = Buffer.from(m.subarray(i, i + 188)); if ((m[i + 1] & 0x40) && !((m[i + 3] >> 4) & 2)) { const v = pmtVid(x.pmt); if (v) x.vpid = v; } }
+    else if (ki < 0 && (!x.vpid || pid === x.vpid) && ((m[i + 3] >> 4) & 2) && m[i + 4] > 0 && (m[i + 5] & 0x40)) ki = i;   // random access = keyframe (datagram mein kahan se)
   }
-  const R = x.ring || (x.ring = []); R.push({ t: now, k, m }); x.rb = (x.rb || 0) + m.length;
+  const R = x.ring || (x.ring = []);
+  if (ki >= 0) { if (x.kAt) x.gop = now - x.kAt; x.kAt = now; R.length = 0; x.rb = 0; }   // naya keyframe = purana hissa bekaar
+  R.push({ t: now, ki, m }); x.rb = (x.rb || 0) + m.length;
   while (R.length > 1 && (now - R[0].t > RING_MS || x.rb > RING_MAX)) { x.rb -= R[0].m.length; R.shift(); }
+  return ki;
 }
-function ringHead(x) { const R = x.ring || [], i = R.findIndex(e => e.k), out = []; if (i < 0) return null; if (x.pat) out.push(x.pat); if (x.pmt) out.push(x.pmt); for (let j = i; j < R.length; j++) out.push(R[j].m); return Buffer.concat(out); }
+function ringHead(x) { const R = x.ring || [], out = []; if (!R.length || R[0].ki < 0) return null; if (x.pat) out.push(x.pat); if (x.pmt) out.push(x.pmt); out.push(R[0].m.subarray(R[0].ki)); for (let j = 1; j < R.length; j++) out.push(R[j].m); return Buffer.concat(out); }
+const kOk = (x, now) => !!x.kAt && now - x.kAt < K_OK;   // is line mein keyframe pehchane ja rahe hain (na hon = purana tareeqa, kabhi kaali screen nahi)
+function joinW(x, w) {   // v2.6: naya dekhne wala — yaad ho to poori tasveer se, warna agli poori tasveer ka intezar
+  const h = ringHead(x); if (h) { w.write(h); w._lim = h.length + LIM; } else if (kOk(x, Date.now())) w._skip = 1;
+}
+function relay(x, w, m, ki, ok) {   // v2.6: dabba bhar jaye to beech se tukre nahi — agli poori tasveer tak ruko (grey ki jagah pal bhar ruki tasveer)
+  if (w._skip) {
+    if (!ok) w._skip = 0;
+    else if (ki < 0) { if (w._skip === 2) x.drop = (x.drop || 0) + 1; return; }
+    else { w._skip = 0; if (!w.writable) return; const b = []; if (x.pat) b.push(x.pat); if (x.pmt) b.push(x.pmt); b.push(m.subarray(ki)); w.write(b.length > 1 ? Buffer.concat(b) : b[0]); return; }
+  }
+  const lim = w._lim || LIM; if (w._lim && w.writableLength < LIM) w._lim = 0;
+  if (w.writable && w.writableLength < lim) { w.write(m); return; }
+  x.drop = (x.drop || 0) + 1; if (ok) { w._skip = 2; x.skn = (x.skn || 0) + 1; }
+}
 function srcSync() {
   const want = new Set(); if (CF.on && CF.ip) { for (const v of Object.values(CF.ch)) if (Number(v) > 0 && Number(v) < 1000) want.add(Number(v)); for (const x of CF.xc || []) if (x.r) want.add(x.ch); }   // v1.8: recording wale mazeed camera ki copy bhi
   for (const [ch, x] of srcs) if (!want.has(ch)) { try { x.sock.close(); } catch {} srcs.delete(ch); }
@@ -141,7 +170,7 @@ function srcSync() {
     const x = { subs: new Set(), last: 0, pk: 0 }; srcs.set(ch, x);
     try { const sock = dgram.createSocket('udp4'); x.sock = sock;
       sock.on('error', e => { x.err = e.message; log(`⚠️ share ch ${ch}: ${e.message}`); try { sock.close(); } catch {} if (srcs.get(ch) === x) srcs.delete(ch); });
-      sock.on('message', m => { x.pk++; x.last = Date.now(); x.gap = (x.gap || 0) + tsGaps(x, m); try { ringAdd(x, m, x.last); } catch {} for (const w of x.subs) { try { if (w.writable && w.writableLength < 4e6) w.write(m); else x.drop = (x.drop || 0) + 1; } catch {} } });
+      sock.on('message', m => { x.pk++; const now = Date.now(); x.last = now; x.gap = (x.gap || 0) + tsGaps(x, m); let ki = -1; try { ki = ringAdd(x, m, now); } catch {} const ok = kOk(x, now); for (const w of x.subs) { try { relay(x, w, m, ki, ok); } catch {} } });
       sock.bind(SH_PORT(ch), '127.0.0.1', () => { try { sock.setRecvBufferSize(BUF); } catch (e) { log(`⚠️ share ch ${ch} dabba: ${e.message}`); } });
     } catch (e) { log(`⚠️ share ch ${ch}: ${e.message}`); srcs.delete(ch); }
   }
@@ -176,7 +205,7 @@ function startPipe(ch, codec) {
     const src = process.env.LIVE_TEST_SRC ? ['-re', '-f', 'lavfi', '-i', 'testsrc=size=704x576:rate=15'] : p.share ? ['-f', 'mpegts', '-i', 'pipe:0'] : ['-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(ch, p.main)];
     const args = ['-hide_banner', '-loglevel', 'error', ...(p.share ? [] : ['-nostdin']), '-fflags', 'nobuffer+discardcorrupt', ...src, '-an', '-vf', "fps=12,scale='min(640,iw)':-2", ...enc, '-f', 'rtp', '-payload_type', '96', '-pkt_size', '1200', `rtp://127.0.0.1:${port}`];
     const proc = spawn(ff, args, { windowsHide: true, stdio: [p.share ? 'pipe' : 'ignore', 'ignore', 'pipe'] }); p.ff = proc; p.at = Date.now(); let err = '';
-    const sx = p.share ? srcs.get(ch) : null; if (sx) { proc.stdin.on('error', () => {}); sx.subs.add(proc.stdin); }
+    const sx = p.share ? srcs.get(ch) : null; if (sx) { proc.stdin.on('error', () => {}); try { joinW(sx, proc.stdin); } catch {} sx.subs.add(proc.stdin); }
     proc.stderr.on('data', d => { const t = String(d); err += t; if (err.length > 2000) err = err.slice(-2000); const n = (t.match(DEC_ERR) || []).length; if (n) p.de = (p.de || 0) + n; });   // v1.7: 🩺 NVR→PC ki ghaltiyan gino
     proc.on('error', e => { err += ' ' + e.message; });
     proc.on('close', code => {
@@ -240,7 +269,7 @@ function moTcp(p, ch) {   // ek input = ek chhota TCP darwaza (sirf 127.0.0.1); 
   return new Promise(res => {
     const x = srcs.get(ch); if (!x) return res(0);
     const srv = net.createServer(c => {
-      c.setNoDelay(true); c.on('error', () => {}); try { const h = ringHead(x); if (h) c.write(h); } catch {}
+      c.setNoDelay(true); c.on('error', () => {}); try { joinW(x, c); } catch {}
       x.subs.add(c); p.fw.push({ ch, obj: c, sock: { close: () => { try { c.destroy(); } catch {} } } }); c.on('close', () => { try { x.subs.delete(c); } catch {} });
     });
     srv.on('error', () => res(0)); (p.srv = p.srv || []).push(srv);
@@ -266,12 +295,12 @@ function startMosaic(codec, kind) {
     Promise.all(L.map(x => fast && shareOk(x.ch) ? moTcp(p, x.ch) : 0)).then(tp => {
     if (p.stopped || p.sock !== sock) { moUnfw(p); return; }
     L.forEach((x, i) => {
-      const pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt'];   // probe 1 s: inputs ek ek khulte hain (default = 4 camera ~25 s intezar, ab ~7 s)
+      const pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt', '-skip_loop_filter', 'all'];   // probe 1 s: inputs ek ek khulte hain (default = 4 camera ~25 s intezar, ab ~7 s)
       if (process.env.LIVE_TEST_SRC) { inArgs.push('-re', '-f', 'lavfi', '-i', `testsrc=size=704x576:rate=15`); how.push('test'); return; }
       if (tp[i]) { inArgs.push(...pre, '-f', 'mpegts', '-i', `tcp://127.0.0.1:${tp[i]}`); how.push('rec⚡'); return; }   // v2.1
       if (shareOk(x.ch)) {   // recording wali copy → is ffmpeg ke apne udp port par aage (ek ffmpeg ki stdin ek hi hoti hai)
         const fp = PB + i, fs2 = dgram.createSocket('udp4'); fs2.on('error', () => {});
-        const obj = { writable: true, writableLength: 0, write: m => { try { fs2.send(m, fp, '127.0.0.1'); } catch {} } };
+        const obj = { writable: true, writableLength: 0, _skip: kOk(srcs.get(x.ch), Date.now()) ? 1 : 0, write: m => { try { fs2.send(m, fp, '127.0.0.1'); } catch {} } };
         srcs.get(x.ch).subs.add(obj); p.fw.push({ ch: x.ch, obj, sock: fs2 });
         inArgs.push(...pre, '-f', 'mpegts', '-i', `udp://127.0.0.1:${fp}?fifo_size=1000000&overrun_nonfatal=1&buffer_size=8388608`); how.push('rec');
       } else { inArgs.push(...pre, '-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(x.ch, false)); how.push('rtsp'); }
@@ -281,7 +310,7 @@ function startMosaic(codec, kind) {
       : ['-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-g', String(FPS * 2), '-bf', '0', '-b:v', br + 'k', '-maxrate', Math.round(br * 1.3) + 'k', '-bufsize', Math.round(br * 0.7) + 'k'];
     const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', ...inArgs, '-filter_complex', f, '-map', '[out]', '-an', ...enc, '-f', 'rtp', '-payload_type', '96', '-pkt_size', '1200', `rtp://127.0.0.1:${port}`];
     const proc = spawn(ff, args, { windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] }); p.ff = proc; p.at = Date.now(); let err = '';
-    proc.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
+    proc.stderr.on('data', d => { const t = String(d); err += t; if (err.length > 2000) err = err.slice(-2000); const n = (t.match(DEC_ERR) || []).length; if (n) p.de = (p.de || 0) + n; });   // v2.6: 🩺 mosaic ki ghaltiyan bhi
     proc.on('error', e => { err += ' ' + e.message; });
     proc.on('close', code => {
       moUnfw(p); p.ff = null; const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
@@ -361,12 +390,12 @@ function srStart() {
   const p = sr = { tx: !!tx, fw: [], srv: [], L, ok, sig: ok.map(Number).join(''), lsig: L.map(x => x.n + ':' + x.ch).join('|'), at: Date.now(), grow: Date.now(), key: '', dir, udp: srUdp, made: 0 };
   Promise.all(L.map((x, i) => ok[i] && !p.udp ? moTcp(p, x.ch) : 0)).then(tp => {
     if (sr !== p) { moUnfw(p); return; }
-    const inArgs = [], pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt'];
+    const inArgs = [], pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt', '-skip_loop_filter', 'all'];
     L.forEach((x, i) => {
       if (!ok[i]) return;
       if (tp[i]) { inArgs.push(...pre, '-f', 'mpegts', '-i', `tcp://127.0.0.1:${tp[i]}`); return; }
       const fp = 48940 + i, fs2 = dgram.createSocket('udp4'); fs2.on('error', () => {});
-      const obj = { writable: true, writableLength: 0, write: m => { try { fs2.send(m, fp, '127.0.0.1'); } catch {} } };
+      const obj = { writable: true, writableLength: 0, _skip: kOk(srcs.get(x.ch), Date.now()) ? 1 : 0, write: m => { try { fs2.send(m, fp, '127.0.0.1'); } catch {} } };
       srcs.get(x.ch).subs.add(obj); p.fw.push({ ch: x.ch, obj, sock: fs2 });
       inArgs.push(...pre, '-f', 'mpegts', '-i', `udp://127.0.0.1:${fp}?fifo_size=1000000&overrun_nonfatal=1&buffer_size=8388608`);
     });
@@ -495,13 +524,14 @@ setInterval(() => {
     if (!p.tracks.size) continue;
     if (p.mo) { if (p.pk !== p.pkSeen) { p.pkSeen = p.pk; p.pkAt = now; } else if (p.ff && now - (p.at || now) > 15000 && now - (p.pkAt || now) > 15000) { log('🏬 live ' + moLab(p) + ': 15 s se video nahi — dobara (koi camera ruka)'); try { p.ff.kill(); } catch {} } }   // v1.9
     if (p.share && p.ff && now - (p.at || now) > 8000 && !shareOk(p.ch)) { log(`🔗 live ch ${p.ch}: recording ki line ruk gayi — dobara`); try { p.ff.kill(); } catch {} continue; }   // v1.2
-    { const x = p.share ? srcs.get(p.ch) : null, gT = x ? (x.gap || 0) + (x.drop || 0) : 0;   // v1.7: 🩺 pichhle 10 s mein tukre kahan gire — app chip
+    { const xs = p.mo ? (p.list || []).map(v => srcs.get(v.ch)).filter(Boolean) : [p.share ? srcs.get(p.ch) : null].filter(Boolean), gT = xs.reduce((a, x) => a + (x.gap || 0) + (x.drop || 0), 0);   // v2.6: mosaic = sab camera   // v1.7: 🩺 pichhle 10 s mein tukre kahan gire — app chip
       const fresh = now - (p.at || now) < 8000;   // shuru ke pehle pal (beech GOP se jurna) ki ghaltiyan nahi gintay
       const d = fresh ? 0 : (p.de || 0) - (p.de0 || 0), g = fresh ? 0 : Math.max(0, gT - (p.g0 || 0)), r = fresh ? 0 : (p.rg || 0) - (p.rg0 || 0);
       p.de0 = p.de || 0; p.g0 = gT; p.rg0 = p.rg || 0;
-      const sig = (d >= 2 ? 'd' : '') + (g > 0 ? 'g' : '') + (r > 0 ? 'r' : '');
-      if (d >= 2 || g || r) log(`🩺 live ch ${p.ch}: 10 s mein NVR→PC ghalti ${d} · PC ke andar gire ${g} · RTP gire ${r}`);
-      for (const [id, v] of viewers) if (v.pipe === p && (v.qs !== sig || sig)) { v.qs = sig; REQ.doc(id).set({ q: { d, g, r, at: now } }, { merge: true }).catch(() => {}); } }
+      const kf = Math.round(Math.max(0, ...xs.map(x => kOk(x, now) ? (x.gop || 0) : 0)) / 1000);   // v2.6: camera ki poori tasveer (keyframe) har kitne second — NVR I-frame interval
+      const sig = (d >= 2 ? 'd' : '') + (g > 0 ? 'g' : '') + (r > 0 ? 'r' : '') + (kf > 4 ? 'k' + kf : '');
+      if (d >= 2 || g || r) log(`🩺 live ${p.mo ? moLab(p) : 'ch ' + p.ch}: 10 s mein NVR→PC ghalti ${d} · PC ke andar gire ${g} · RTP gire ${r}`);
+      for (const [id, v] of viewers) if (v.pipe === p && (v.qs !== sig || d >= 2 || g || r)) { v.qs = sig; REQ.doc(id).set({ q: { d, g, r, kf, at: now } }, { merge: true }).catch(() => {}); } }
     if (p.pk > 0) { for (const [id, v] of viewers) if (v.pipe === p && !v.rtp) { v.rtp = 1; v.warn = ''; REQ.doc(id).set({ rtp: 1, warn: '' }, { merge: true }).catch(() => {}); } }
     else if (p.ff && now - (p.at || now) > (p.share || p.mo ? 20000 : 12000)) warnViewers(p, p.mo ? moLab(p) + ': abhi video nahi aa rahi — kisi camera ki recording ruki hai? (⚙️ Setup → 🎞 Recording)' : `Camera ch ${p.ch}: NVR se jur gaya par video nahi aa rahi — ye channel NVR par chal raha hai? (⚙️ mein counter ka channel dekhein)`);
   }

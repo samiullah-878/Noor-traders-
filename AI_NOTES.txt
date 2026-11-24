@@ -9698,3 +9698,17 @@ patti (CPU abhi / avg / max · RAM · ↑ ↓ · aaj WhatsApp videos), chart 1 C
 dandiyan, 'Kaun kitna kha raha' (average + max + RAM, ⚠ bhaari = avg 15% / max 50%) + mashwara + seedha button (👥 Group videos = window.ntBtWg, 🤖 Camera AI = PC
 scripts ka #pcAi). Tap = tooltip. Rang dataviz reference (neela / narangi). PC par khud kuch band nahi hota. Azmaya: Chromium + nakli cloud (menu, tally aana-jana,
 back, BAND / CHALU, chart + tooltip, 1 ghanta) + doctor ke hisaab ka nakli Firestore test (5 min nuqte, restart par purana parh kar). Asal PC par nahi. AI nahi.
+
+=== v2.374.0 (2026-11-24) — 🎞 Grey camera ka ilaaj (PC live-cam v2.6) ===
+Malik ki screenshots: 🎛 Sab cameras ke khane grey + WhatsApp group wali 📼 sab cameras video bhi grey (yani masla PC ke andar bhi, sirf phone ka net nahi).
+Plan malik ne OK kiya ('cwo cbi ok h'): 1 PC ilaaj (yeh update), 2 NVR setting ka mashwara (malik ko bataya), 3 Netflix jaisa bafar = baad mein sirf kehne par.
+live-cam v2.6: (1) ring (recording ki line ki yaad) ab aakhri keyframe se — naya keyframe aate hi purana hissa hat-ta, 20 s / 10 MB tak (pehle 3.5 s: GOP lamba ho to
+yaad mein keyframe hota hi nahi tha = naya ffmpeg beech se jurta = grey). Video PID PMT se (pmtVid), keyframe = random access flag sirf video PID par. ringHead
+keyframe wale datagram ko us packet se kaat kar deta hai. (2) joinW(x, w): har naya dekhne wala (TCP mosaic / 📼 sab-rec input, ek camera live ki stdin) = ringHead,
+na ho to _skip 1 (agli poori tasveer ka intezar); UDP fallback obj bhi _skip 1 se. relay(x, w, m, ki, ok): dabba (writableLength) LIM 4 MB se upar = _skip 2,
+agli keyframe par pat + pmt + wahan se dobara (beech ke gire tukre = grey dhabbe ki jagah pal bhar ruki tasveer); shuru ke ring burst ke liye _lim = burst + 4 MB.
+kOk(x) = 30 s mein keyframe dekha — na dekha ho to purana tareeqa (kabhi kaali screen nahi). (3) mosaic + sab-rec inputs '-skip_loop_filter all' (chhote khane, CPU kam).
+(4) 🩺 10 s loop: mosaic (p.mo) ke sab camera ki gap + drop jama, mosaic ki ffmpeg stderr DEC_ERR ginti, liveReq.q {d, g, r, kf, at} — kf = camera ki keyframe har
+kitne second (sab se lamba). q dobara sirf jab badle ya masla ho (kf akela har 10 s nahi likhta). App live.js qPaint: q.kf > 4 = chip ki baat mein NVR I-frame 2 s +
+Smart Codec band ka mashwara. Sandbox (nakli 6 s GOP mpegts): beech se jurna purana 246 decode ghaltiyan -> naya 0; dabba bharne par purana 5 -> naya 0; keyframe 5/5,
+vpid 0x100. Asal NVR / PC par azmaya nahi. AI nahi.

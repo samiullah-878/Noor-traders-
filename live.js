@@ -382,6 +382,7 @@ function qPaint(s) {
   else if (fr && (Number(q.g) > 0 || Number(q.r) > 0)) { k = 'bad'; t = '🩺 PC ke andar toot'; why = 'Server PC ke andar video ke tukre gire (PC us waqt bohat busy) — Settings → 🖥️ PC scripts ka 🔥 CPU dabba dekhein.'; }
   else if ((s.loss || 0) >= 2) { k = 'warn'; t = `📱 Net kamzor ${Math.round(s.loss)}%`; why = `PC se video saaf ja rahi hai — aap ke phone ke internet par ${Math.round(s.loss)}% tukre gum ho rahe hain. Wi-Fi / doosra internet try karein.`; }
   else if (s.f) { k = 'ok'; t = '🩺 Saaf'; why = fr ? 'Camera → PC → phone: kahin tukre gum nahi ho rahe.' : 'Phone tak video saaf aa rahi hai (PC ka haal: live-cam update 3-5 min mein).'; }
+  if (t && fr && Number(q.kf) > 4) why += ` · Camera ki poori tasveer (keyframe) har ${Number(q.kf)} second mein aati hai — tukra gire to itni der grey / ruki. Ilaaj: NVR mein us camera ka I-frame interval 2 second (fps x 2) aur Smart Codec / H.264+ band.`;   // v2.374.0 (live-cam v2.6)
   e.hidden = !t; e.textContent = t; e.className = 'lv-q' + (k ? ' ' + k : ''); e.dataset.why = why;
 }
 
