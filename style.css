@@ -9167,3 +9167,39 @@ html body #lvDlg .lv-tlg>button.lv-mot{width:100%;height:var(--th);border:1px so
 html body #lvDlg .lv-tlg>button.lv-mot.is-ar{outline:3px solid #fbbf24;outline-offset:-3px}
 #lvDlg .lv-mv b{display:grid;place-items:center;width:42px;height:34px;border-radius:999px;background:linear-gradient(180deg,#1e3a8a,#172554);border:1px solid #93c5fd88;color:#fff;font-size:16px;box-shadow:0 2px 8px #0008}
 html body #lvDlg .lv-tools button.lv-cols{border-radius:999px;padding:0 12px;white-space:nowrap}
+/* v2.370.0: 🧾 counter khane par banta bill (scan ke naam) + baayein 🖨 chhape magar post na hue bill · ⏰ Ruke bills — sirf kinara + kaale kinare wali likhai (rang / blur nahi) */
+#lvDlg .lv-tbc{position:absolute;left:3px;top:30px;bottom:3px;width:calc(50% - 8px);display:flex;flex-direction:column;align-items:flex-start;gap:2px;pointer-events:none;font-size:clamp(8px,4cqw,14px);line-height:1.25;color:#fff;text-shadow:0 0 2px #000,0 1px 2px #000,1px 1px 1px #000;overflow:hidden}
+#lvDlg .lv-tbc:empty{display:none}
+#lvDlg .lv-tbk{font-style:normal;font-weight:800;white-space:nowrap;max-width:100%;overflow:hidden;text-overflow:ellipsis;border:1px solid #60a5fa;color:#dbeafe;border-radius:999px;padding:0 6px;flex:0 0 auto}
+#lvDlg .lv-tbk.m{border-color:#ffffff8c;color:#fff;font-weight:700}
+#lvDlg .lv-tbr.nw{color:#bbf7d0}
+#lvDlg .lv-tbr small{font-size:.8em;opacity:.9}
+html body #lvDlg .lv-tools button.lv-rk{border-radius:999px;padding:0 12px;white-space:nowrap}
+html body #lvDlg .lv-tools button.lv-rk.is-z{opacity:.65}
+html body #lvDlg .lv-tools button.lv-rk:not(.is-z){background:linear-gradient(180deg,#9a3412,#7c2d12)!important;border:1px solid #fb923c!important;color:#ffedd5!important}
+#lvRkDlg{position:fixed;inset:0;width:auto;height:auto;max-width:none;max-height:none;margin:0;padding:0;border:0;background:#0b1220;color:#e5e7eb;flex-direction:column}
+#lvRkDlg[open]{display:flex}
+#lvRkDlg::backdrop{background:#000c}
+#lvRkDlg .rk-head{display:flex;align-items:center;gap:6px 10px;flex-wrap:wrap;padding:10px max(12px,env(safe-area-inset-right)) 10px max(12px,env(safe-area-inset-left));background:#111a2e;border-bottom:1px solid #ffffff1a}
+#lvRkDlg .rk-head b{font-size:16px}
+#lvRkDlg .rk-head small{flex:1 1 150px;opacity:.75;font-size:12px;order:1}
+html body #lvRkDlg button.rk-x{margin-left:auto;order:2;height:34px;width:34px;min-height:0!important;padding:0!important;border-radius:999px!important;border:1px solid #ffffff40!important;background:#ffffff1a!important;color:#fff!important;font-size:20px;line-height:1}
+#lvRkDlg .rk-list{flex:1;min-height:0;overflow:auto;padding:8px;display:flex;flex-direction:column;gap:6px;-webkit-overflow-scrolling:touch}
+#lvRkDlg .rk-row{border:1px solid #ffffff1f;border-radius:11px;background:linear-gradient(180deg,#152038,#101a2e);padding:7px 10px;flex:0 0 auto}
+#lvRkDlg .rk-row.is-op{border-color:#60a5fa88}
+#lvRkDlg .rk-row.is-po{opacity:.7}
+#lvRkDlg .rk-l1{display:flex;align-items:center;gap:8px;min-width:0}
+#lvRkDlg .rk-l1 b{font-size:17px}
+#lvRkDlg .rk-rs{flex:1;min-width:0;font-weight:700;color:#fde68a;white-space:nowrap}
+html body #lvRkDlg button.rk-b{height:32px;min-height:0!important;padding:0 12px!important;border-radius:999px!important;border:1px solid #ffffff40!important;background:linear-gradient(#ffffff22,#ffffff10)!important;color:#fff!important;font-size:12.5px;white-space:nowrap;flex:0 0 auto}
+html body #lvRkDlg button.rk-b.ok{border-color:#4ade80!important;background:linear-gradient(180deg,#14532d,#0f3d22)!important;color:#d1fae5!important}
+html body #lvRkDlg button.rk-b.q{border-color:#fbbf24!important;color:#fde68a!important}
+#lvRkDlg .rk-l2{font-size:12.5px;opacity:.8;margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+#lvRkDlg .rk-box{margin-top:7px;display:flex;flex-direction:column;gap:6px}
+#lvRkDlg .rk-box video{display:block;width:100%;max-height:55vh;background:#000;border-radius:8px}
+#lvRkDlg .rk-vs{font-size:12px;opacity:.8}
+#lvRkDlg .rk-it{display:flex;flex-wrap:wrap;gap:4px}
+#lvRkDlg .rk-it span{font-size:13px;border:1px solid #ffffff26;border-radius:999px;padding:2px 9px}
+#lvRkDlg .rk-it b{color:#fde047}
+#lvRkDlg .rk-it.m{opacity:.7;font-size:12px}
+#lvRkDlg .rk-empty{padding:30px 10px;text-align:center;opacity:.85}

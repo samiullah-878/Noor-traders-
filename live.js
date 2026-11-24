@@ -18,6 +18,13 @@
 //   chip '🎛 Sab cameras' (CAP nz.sab) → liveReq pc '@sab' → PC live-cam v2.0 counter + godam + mazeed cameras EK video (9 tak) + mo {n, k:[c|g|x], g:[godam]}.
 //   Har khane ke upar (#lvMo .lv-tb, sirf kinara + kaale kinare wali likhai — rang / blur nahi): counter = banta bill (posLive) + POS screen ki tasveer
 //   (aakhri item par); godam = us godam ka taza gate pass (gatePass — WAHI data, ✓ diya hua; sab ✓ ke 20 s baad / 10 min baad khud hat-ta). Tap = wohi camera akela. AI nahi.
+// v2.370.0: 🧾 COUNTER KE KHANE PAR ITEMS KE NAAM + 🖨 BILL CHIPS + ⏰ RUKE BILLS (malik 24 Nov: 'live items ke names aayein · pehle bill bane items ke names ·
+//   us ke baad bill ka number aur amount side par · bill post ho to wahan se ghayab · koi bill 30 minute tak post na ho to video ke saath alag screen mein · sab auto ·
+//   screen yahi · 5 bills ikathe'): counter NT-PRINT v1.36 dekhte waqt har scan ka barcode posLive/<naam>__scan → PC pos-sales-dekho v2.17 naam (posLive.sn).
+//   Khane ke daayein = BANTA BILL (counter ke aakhri chhape bill ke baad ke scan, naya upar, ×ginti); baayein = us counter ke chhape magar post na hue bill
+//   (🖨 #no · Rs, naya upar, 5 + '+N') — post / cancel hote hi khud ghayab (posSales). Haath se likhi item print ke baad (POS SQL mein print par hi likhta hai).
+//   Purana NT-PRINT (scan ka doc nahi) = pehle jaisa (POS screen ki tasveer). ⏰ chip = aaj ke bill jo chhapne ke 30 min baad bhi post nahi — har bill ka ▶ video
+//   (billClip; na ho to 🎬 maango = billClipReq) + items; post hote hi list se khud hat-ta. AI nahi.
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
@@ -38,7 +45,7 @@ export function openLive(o) {
   if (!d) { d = document.createElement('dialog'); d.id = 'lvDlg'; d.className = 'lv-dlg'; document.body.append(d); d.addEventListener('cancel', ev => { ev.preventDefault(); closeLive(); }); }
   d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}${isMoP(p) ? ' lv-gd' : ''}">${lvLbl(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
     <div class="lv-body"><video id="lvVid" playsinline muted autoplay></video><div class="lv-st" id="lvSt">⏳ jor raha…</div><div class="lv-shot" id="lvShot" hidden></div><div class="lv-bill" id="lvBill" ${bOn() ? '' : 'hidden'}></div>
-      <div class="lv-tools"><button type="button" class="lv-mob" id="lvMoB" data-lv-mob="1" hidden>‹ 🏬 Sab</button><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" class="lv-cols" id="lvCols" data-lv-cols="1" hidden>▦ Auto</button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
+      <div class="lv-tools"><button type="button" class="lv-mob" id="lvMoB" data-lv-mob="1" hidden>‹ 🏬 Sab</button><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" class="lv-cols" id="lvCols" data-lv-cols="1" hidden>▦ Auto</button><button type="button" class="lv-rk is-z" id="lvRk" data-lv-rk="1" title="Chhape magar 30 min se post nahi">⏰ Ruke …</button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
   d.onclick = ev => {
     const t = ev.target;
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
@@ -47,6 +54,7 @@ export function openLive(o) {
     if (t.closest('[data-lv-cols]')) { const L = ['a', '1', '2', '3'], nx = L[(L.indexOf(tlCols()) + 1) % L.length]; try { localStorage.setItem(TL_K, nx); } catch {} tlLayout(); return; }
     const mt = t.closest('[data-lv-mo]'); if (mt) { if (Date.now() - TL.lpT < 700) return; if (TL.arr) { tlMove(TL.arr, 0); return; } moGo(mt.dataset.lvMo); return; }   // v2.348.0: khane par tap = wohi camera akela
     if (t.closest('[data-lv-mob]')) { moGo(moHome); return; }
+    if (t.closest('[data-lv-rk]')) { rkOpen(); return; }   // v2.370.0: ⏰ Ruke bills
     if (t.closest('[data-lv-re]')) { start(); return; }
     const qb = t.closest('[data-lv-q]'); if (qb) { notice(qb.dataset.why || ''); return; }   // v2.322.0: 🩺 poori baat
     if (Date.now() - SPM < 450) return;   // v2.321.0: khiskane ke foran baad wala click (bara / chhota nahi)
@@ -59,6 +67,7 @@ export function openLive(o) {
   if (!d.open) d.showModal();
   spWire(d); setTimeout(spApply, 0);   // v2.321.0
   if (!pcStop && cloud.listenLiveCamPc) pcStop = cloud.listenLiveCamPc(s => { pcSt = s; });
+  rkSync();   // v2.370.0: aaj ke bill (khane ke 🖨 chips + ⏰ Ruke bills)
   if (cur) start(); else stat('✕ Koi counter nahi', true);
 }
 function stat(t, bad) { const e = $('lvSt'); if (!e) return; e.textContent = t; e.classList.toggle('bad', !!bad); e.hidden = false; }
@@ -69,8 +78,8 @@ function stop(sendEnd) {
   if (sendEnd && s.id && cloud.liveEnd) cloud.liveEnd(s.id).catch(() => {});
   const v = $('lvVid'); if (v) v.srcObject = null;
 }
-export function closeLive() { RES = false; MO = null; moBack = false; tlStop(); tbStop(); billStop(); stop(true); const d = $('lvDlg'); try { d?.close(); } catch { d?.removeAttribute('open'); } try { pcStop && pcStop(); } catch {} pcStop = null; }
-window.ntLvClose = () => { const d = $('lvDlg'); if (!d?.open) return false; if (moBack && !isMoP(cur)) { moGo(moHome); return true; } closeLive(); return true; };   // v2.348.0: pehle wapas sab godam
+export function closeLive() { RES = false; MO = null; moBack = false; rkClose(); rkStop(); tlStop(); tbStop(); billStop(); stop(true); const d = $('lvDlg'); try { d?.close(); } catch { d?.removeAttribute('open'); } try { pcStop && pcStop(); } catch {} pcStop = null; }
+window.ntLvClose = () => { const d = $('lvDlg'); if (!d?.open) return false; if ($('lvRkDlg')?.open) { rkClose(); return true; } if (moBack && !isMoP(cur)) { moGo(moHome); return true; } closeLive(); return true; };   // v2.348.0: pehle wapas sab godam
 function moGo(p) {   // v2.348.0
   if (isMoP(p)) { moBack = false; moHome = p; } else moBack = true; cur = p;
   $('lvDlg')?.querySelectorAll('[data-lv-pc]').forEach(x => x.classList.toggle('is-in', x.dataset.lvPc === p)); start();
@@ -82,7 +91,7 @@ function moPaint(mo) {   // v2.348.0: video ke upar har khane par naam — tap =
   if (e && e.dataset.sig === sig) return;
   if (!e) { e = document.createElement('div'); e.id = 'lvMo'; e.className = 'lv-mo tl'; const v = $('lvVid'); v ? v.after(e) : body.append(e); tlWire(e); }
   e.dataset.sig = sig; TL.mo = mo; TL.c = c; TL.r = r;
-  e.innerHTML = `<div class="lv-tlg">${tlOrder(mo).map(i => `<button type="button" class="lv-mot" data-lv-mo="${esc(mo.n[i])}" data-i="${i}"><canvas></canvas><span>${K[i] === 'c' ? '🖥 ' : K[i] === 'g' ? '🏬 ' : K.length ? '📹 ' : ''}${esc(mo.n[i])}</span><div class="lv-tb" data-tb="${i}"></div><div class="lv-mv"><b data-lv-mv="-1">▲</b><b data-lv-mv="1">▼</b><b data-lv-mv="0">✓</b></div></button>`).join('')}</div>`;
+  e.innerHTML = `<div class="lv-tlg">${tlOrder(mo).map(i => `<button type="button" class="lv-mot" data-lv-mo="${esc(mo.n[i])}" data-i="${i}"><canvas></canvas><span>${K[i] === 'c' ? '🖥 ' : K[i] === 'g' ? '🏬 ' : K.length ? '📹 ' : ''}${esc(mo.n[i])}</span><div class="lv-tb" data-tb="${i}"></div><div class="lv-tbc" data-tbc="${i}"></div><div class="lv-mv"><b data-lv-mv="-1">▲</b><b data-lv-mv="1">▼</b><b data-lv-mv="0">✓</b></div></button>`).join('')}</div>`;
   const cb = $('lvCols'); if (cb) cb.hidden = false;
   tlLayout(); tlDraw();
   try { if (!localStorage.getItem('sam-lv-tlh')) { localStorage.setItem('sam-lv-tlh', '1'); notice('💡 Dabba daba kar rakhein = ▲ ▼ se upar neeche · ▦ = ek qatar mein kitne dabbe'); } } catch {}
@@ -136,15 +145,16 @@ function tlMove(b, dir) {
 }
 
 // ---------- 🎛 v2.360.0: har khane ka apna data — counter = bill + POS screen · godam = gate pass ----------
-let TB = { un: [], t: null, bill: new Map(), shot: new Map(), gp: null, mo: null, cv: null };
+let TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), gp: null, mo: null, cv: null };
 const tbMs = v => typeof v === 'number' ? v : v?.toMillis ? v.toMillis() : v?.seconds ? v.seconds * 1000 : 0;
 const tbDay = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-function tbStop() { for (const f of TB.un) { try { f && f(); } catch {} } for (const o of TB.shot.values()) { try { o.url && URL.revokeObjectURL(o.url); } catch {} } clearInterval(TB.t); TB = { un: [], t: null, bill: new Map(), shot: new Map(), gp: null, mo: null, cv: null }; }
+function tbStop() { for (const f of TB.un) { try { f && f(); } catch {} } for (const o of TB.shot.values()) { try { o.url && URL.revokeObjectURL(o.url); } catch {} } clearInterval(TB.t); TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), gp: null, mo: null, cv: null }; }
 function tbSync(mo) {
   tbStop(); if (!mo || !Array.isArray(mo.k) || !cloud) return; TB.mo = mo; TB.t0 = Date.now();
   mo.n.forEach((n, i) => {
     if (mo.k[i] !== 'c') return;
-    if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive(n, (d, err) => { if (err || !d || TB.mo !== mo) return; let L = []; try { L = JSON.parse(d.j || '[]'); } catch {} TB.bill.set(n, { d, L, at: Date.now() }); tbPaint(i); }));
+    if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive(n, (d, err) => { if (err || !d || TB.mo !== mo) return; let L = [], sn = {}; try { L = JSON.parse(d.j || '[]'); } catch {} try { sn = JSON.parse(d.sn || '{}') || {}; } catch {} TB.bill.set(n, { d, L, sn, at: Date.now() }); tbPaint(i); }));
+    if (cloud.listenPosScan) TB.un.push(cloud.listenPosScan(n, (d, err) => { if (err || TB.mo !== mo) return; if (d) TB.scan.set(n, { a: d.a || [], ver: d.ver || '', at: Date.now() }); else TB.scan.delete(n); tbPaint(i); }));   // v2.370.0
     if (cloud.listenPosShot) TB.un.push(cloud.listenPosShot(n, (d, err, cache) => { if (err || cache || TB.mo !== mo) return; const o = TB.shot.get(n); try { o && o.url && URL.revokeObjectURL(o.url); } catch {}
       const on = d && Number(d.on) === 1 && d.im; TB.shot.set(n, { url: on ? URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })) : '', at: Date.now() }); tbPaint(i); }));
   });
@@ -185,7 +195,20 @@ function tbFollow(img) {   // POS list mein nayi item neeche judti hai — sab s
 function tbPaint(i) {
   const mo = TB.mo, e = mo && $('lvMo')?.querySelector(`[data-tb="${i}"]`); if (!e) return;
   const k = mo.k[i], n = mo.n[i], now = Date.now(); let h = '', img = '';
-  if (k === 'c') {
+  let ch = '';   // v2.370.0: baayein — is counter ke chhape magar post na hue bill
+  if (k === 'c' && TB.scan.get(n)) {   // v2.370.0: NT-PRINT v1.36 — scan ke barcode se BANTE BILL ke naam
+    const P = rkPcBills(n), lastPr = P.reduce((m, x) => Math.max(m, Number(x.ct) || Number(x.pt) || 0), 0), sn = (TB.bill.get(n) || {}).sn || {};
+    const U = P.filter(rkUnp).sort((a, b) => (Number(b.ct) || 0) - (Number(a.ct) || 0));
+    ch = U.slice(0, 5).map(x => `<i class="lv-tbk">🖨 #${escB(rkNo(x))} · Rs ${nf(x.t)}</i>`).join('') + (U.length > 5 ? `<i class="lv-tbk m">+${U.length - 5} bill</i>` : '');
+    const A = (TB.scan.get(n).a || []).filter(x => Array.isArray(x) && Number(x[0]) > lastPr + 500), G = new Map();
+    for (const [t, c] of A) { const o = G.get(c) || { c, n: 0, t: 0 }; o.n++; o.t = Math.max(o.t, Number(t) || 0); G.set(c, o); }
+    const R = [...G.values()].sort((a, b) => b.t - a.t);
+    if (R.length) {
+      const row = o => { const v = sn[o.c], nm = Array.isArray(v) ? v[0] : '', q = Array.isArray(v) ? Number(v[1]) || 1 : 1;
+        return `<div class="lv-tbr${now - o.t < 4000 ? ' nw' : ''}">${nm ? escB(nm) : '🔖 ' + escB(String(o.c).slice(-10))}${q !== 1 ? ` <small>(${q3(q)})</small>` : ''} <b>×${o.n}</b></div>`; };
+      h = `<div class="lv-tbh nw">🧾 Bill ban raha · ${R.length} item</div>` + R.slice(0, 6).map(row).join('') + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
+    }
+  } else if (k === 'c') {
     const b = TB.bill.get(n), sh = TB.shot.get(n), d = b && b.d, shOn = !!(sh && sh.url && !sh.empty && now - sh.at < 45000);   // v2.363.0: khali screen = tasveer nahi, bill ki items
     if (shOn) h = '<div class="lv-tbh nw">⏳ bill ban raha…</div>';
     else if (d && d.sid) {
@@ -204,9 +227,87 @@ function tbPaint(i) {
         + (L.length > 4 ? `<div class="lv-tbr m">+${L.length - 4} items</div>` : '') + (G.length > 1 ? `<div class="lv-tbr m">+${G.length - 1} aur gate pass</div>` : '');
     }
   }
+  const ce = $('lvMo')?.querySelector(`[data-tbc="${i}"]`); if (ce && ce.dataset.sig !== ch) { ce.dataset.sig = ch; ce.innerHTML = ch; }   // v2.370.0
   const sig = h + '|' + img; if (e.dataset.sig === sig) return; e.dataset.sig = sig;
   e.innerHTML = h + (img ? '<div class="lv-tsh"><img alt=""></div>' : '');
   if (img) { const im = e.querySelector('img'), sh0 = TB.shot.get(n); im.onload = () => { if (tbFollow(im) && sh0 && TB.shot.get(n) === sh0) { sh0.empty = 1; tbPaint(i); } }; im.src = img; }
+}
+// ---------- v2.370.0: aaj ke bill — khane ke 🖨 chips + ⏰ RUKE BILLS (chhape, 30 min se post nahi) ----------
+const RK_MIN = 30;
+const rkDay = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi' }).format(new Date());
+let RK = { un: null, day: '', bills: [], t: null, cu: null, clips: new Map(), asked: new Set(), open: '', vu: '', vi: 0, lines: new Map(), keep: null };
+const rkUnp = b => b && !Number(b.x) && Number(b.ps) !== 2 && Number(b.ps) !== 3 && Number(b.ct) > 0;   // chhapa magar post / cancel nahi
+const rkNo = b => String(b.no || b.id || '').replace(/^0+(?=\d)/, '');
+const rkPcBills = n => RK.bills.filter(b => String(b.pc || '') === String(n));
+const rkLate = () => { const now = Date.now(); return RK.bills.filter(b => rkUnp(b) && now - Number(b.ct) >= RK_MIN * 60000).sort((a, b) => Number(b.ct) - Number(a.ct)); };
+function rkStop() { try { RK.un && RK.un(); } catch {} clearInterval(RK.t); RK.un = null; RK.t = null; RK.bills = []; RK.day = ''; }
+function rkSync() {
+  const d = rkDay(); if (RK.un && RK.day === d) return; rkStop(); if (!cloud?.listenPosSales) return; RK.day = d;
+  RK.un = cloud.listenPosSales(d, L => { if (!Array.isArray(L)) return; RK.bills = L; rkChip(); tbAll(); if ($('lvRkDlg')?.open) rkPaint(); });
+  RK.t = setInterval(() => { if (rkDay() !== RK.day) rkSync(); rkChip(); if ($('lvRkDlg')?.open) rkPaint(); }, 30000);
+}
+function rkChip() { const e = $('lvRk'); if (!e) return; const n = rkLate().length; e.textContent = `⏰ Ruke ${n}`; e.classList.toggle('is-z', !n); }
+const rkTm = t => { try { return new Date(Number(t)).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', timeZone: 'Asia/Karachi' }); } catch { return ''; } };
+const rkAgo = t => { const m = Math.max(0, Math.round((Date.now() - Number(t)) / 60000)); return m >= 60 ? `${Math.floor(m / 60)} ghante ${m % 60} min` : `${m} min`; };
+function rkOpen() {
+  let d = $('lvRkDlg');
+  if (!d) { d = document.createElement('dialog'); d.id = 'lvRkDlg'; d.className = 'lv-rkd'; document.body.append(d);
+    d.addEventListener('cancel', ev => { ev.preventDefault(); rkClose(); });
+    d.addEventListener('click', ev => { const t = ev.target;
+      if (t.closest('[data-rk-x]')) { rkClose(); return; }
+      const pl = t.closest('[data-rk-play]'); if (pl) { const id = pl.dataset.rkPlay; if (RK.open === id) { RK.open = ''; rkVidStop(); rkPaint(); } else rkPlay(id); return; }
+      const rq = t.closest('[data-rk-req]'); if (rq) { rkReq(rq.dataset.rkReq); return; }
+    }); }
+  if (!RK.cu && cloud?.listenBillClips) RK.cu = cloud.listenBillClips([rkDay()], L => { if (!Array.isArray(L)) return; RK.clips = new Map(L.filter(c => c && !String(c.id).includes('~')).map(c => [String(c.id), c])); if (d.open) rkPaint(); });
+  rkPaint(); if (!d.open) d.showModal();
+}
+function rkClose() { rkVidStop(); RK.open = ''; RK.keep = null; try { RK.cu && RK.cu(); } catch {} RK.cu = null; const d = $('lvRkDlg'); try { d?.open && d.close(); } catch { d?.removeAttribute('open'); } }
+function rkVidStop() { const v = $('lvRkVid'); try { v && v.pause(); } catch {} if (RK.vu) { try { URL.revokeObjectURL(RK.vu); } catch {} RK.vu = ''; } }
+function rkVidHTML(b) {
+  const id = String(b.id), c = RK.clips.get(id), L = RK.lines.get(id);
+  const it = Array.isArray(L) ? (L.length ? `<div class="rk-it">${L.slice(0, 40).map(x => `<span>${escB(x.n ?? x.name ?? x[1] ?? '')} <b>×${q3(x.q ?? x.qty ?? x[2])}</b></span>`).join('')}</div>` : '<div class="rk-it m">items nahi mile</div>') : '<div class="rk-it m">⏳ items…</div>';
+  const v = c && c.st === 'ok' ? '<video id="lvRkVid" playsinline controls autoplay muted></video><div class="rk-vs" id="lvRkVs">⏳ video aa rahi…</div>' : '';
+  return `<div class="rk-box">${v}${it}</div>`;
+}
+function rkPaint() {
+  const d = $('lvRkDlg'); if (!d) return;
+  const L = rkLate(), ids = new Set(L.map(b => String(b.id)));
+  if (RK.open && !ids.has(RK.open)) { const b = RK.bills.find(x => String(x.id) === RK.open); if (b) { RK.keep = { ...b, _post: !rkUnp(b) }; } } else if (!RK.open) RK.keep = null;
+  const rows = [...(RK.keep && !ids.has(String(RK.keep.id)) ? [RK.keep] : []), ...L];
+  const btn = b => { const id = String(b.id), c = RK.clips.get(id);
+    if (c && c.st === 'ok') return `<button type="button" class="rk-b ok" data-rk-play="${escB(id)}">${RK.open === id ? '▲ Band' : '▶ Video'}</button>`;
+    if (RK.asked.has(id) || (c && c.st === 'wait')) return `<button type="button" class="rk-b" data-rk-play="${escB(id)}">⏳ ban rahi</button>`;
+    return `<button type="button" class="rk-b q" data-rk-req="${escB(id)}">🎬 ${c && (c.st === 'err' || c.st === 'skip') ? 'Dobara maango' : 'Video maango'}</button>`; };
+  const html = `<div class="rk-head"><b>⏰ Ruke bills · ${L.length}</b><small>Chhape magar ${RK_MIN} min se post nahi — post hote hi khud hat jate hain</small><button type="button" class="rk-x" data-rk-x="1">×</button></div>
+    <div class="rk-list">${rows.length ? rows.map(b => { const id = String(b.id), op = RK.open === id;
+      return `<div class="rk-row${op ? ' is-op' : ''}${b._post ? ' is-po' : ''}" data-rk-id="${escB(id)}"><div class="rk-l1"><b>#${escB(rkNo(b))}</b><span class="rk-rs">Rs ${nf(b.t)}</span>${btn(b)}</div>
+        <div class="rk-l2">🖥 ${escB(b.pc || '?')} · 🖨 ${escB(rkTm(b.ct))} · ⏱ ${escB(rkAgo(b.ct))}${b.p ? ' · ' + escB(String(b.p).slice(0, 24)) : ''}${b._post ? ' · <i>📌 Post ho gaya</i>' : ''}</div>${op ? rkVidHTML(b) : ''}</div>`; }).join('') : `<div class="rk-empty">✅ Koi ruka bill nahi — sab chhape bill ${RK_MIN} min ke andar post ho gaye</div>`}</div>`;
+  const sig = html; if (d.dataset.sig === sig) return;
+  const v0 = $('lvRkVid'), keepV = v0 && RK.open && d.querySelector(`[data-rk-id="${CSS.escape(RK.open)}"] video`) ? v0 : null, vs = $('lvRkVs')?.textContent || '';   // chalti video wahi rahe (dobara load nahi)
+  const ls = d.querySelector('.rk-list')?.scrollTop || 0;
+  d.dataset.sig = sig; d.innerHTML = html;
+  const lst = d.querySelector('.rk-list'); if (lst) lst.scrollTop = ls;
+  if (keepV) { const nv = $('lvRkVid'); if (nv) { nv.replaceWith(keepV); const s2 = $('lvRkVs'); if (s2) s2.textContent = vs; } } else if (RK.open && $('lvRkVid')) rkLoadVid(RK.open, RK.vi || 0);
+}
+async function rkLoadVid(id, i) {
+  const c = RK.clips.get(id); if (!c || c.st !== 'ok') return; const sg = Array.isArray(c.segs) && c.segs.length ? c.segs : null;
+  const st = $('lvRkVs'); if (st) st.textContent = '⏳ video aa rahi…';
+  let u8 = null; try { u8 = sg ? await cloud.getBillClipSeg(id, i, sg[i]?.n) : (i ? null : await cloud.getBillClip(id, c.n)); } catch { u8 = null; }
+  if (RK.open !== id) return; const v = $('lvRkVid'), s2 = $('lvRkVs'); if (!v) return;
+  if (!u8 || !u8.length) { if (s2) s2.textContent = '⚠ video nahi mili'; return; }
+  rkVidStop(); RK.vu = URL.createObjectURL(new Blob([u8], { type: 'video/mp4' })); RK.vi = i;
+  v.src = RK.vu; v.onended = () => { if (sg && i + 1 < sg.length && RK.open === id) rkLoadVid(id, i + 1); else if (s2) s2.textContent = '✓ video khatam'; };
+  v.play().catch(() => {}); if (s2) s2.textContent = sg && sg.length > 1 ? `▶ hissa ${i + 1} / ${sg.length}` : '▶';
+}
+async function rkPlay(id) {
+  rkVidStop(); RK.open = id; RK.vi = 0; rkPaint();
+  if (!RK.lines.has(id) && cloud?.getPosSaleLines) { try { RK.lines.set(id, await cloud.getPosSaleLines(id) || []); } catch { RK.lines.set(id, []); } if (RK.open === id) { const d = $('lvRkDlg'); if (d) { delete d.dataset.sig; rkPaint(); } } }
+}
+async function rkReq(id) {
+  const b = RK.bills.find(x => String(x.id) === String(id)); if (!b || !cloud?.reqBillClip) return;
+  RK.asked.add(String(id)); rkPaint();
+  try { await cloud.reqBillClip(id, { no: b.no, pc: b.pc, day: RK.day }); notice('🎬 Video maangi — PC 1-2 min mein bana dega'); }
+  catch (e) { RK.asked.delete(String(id)); rkPaint(); notice('✕ Video nahi maang saka: ' + (e.message || e)); }
 }
 let RES = false;   // v2.226.0: app peeche ja kar wapas aaye (popup / call) = KHUD dobara (malik: "jab bhi on karein foran aana chahiye")
 document.addEventListener('visibilitychange', () => { if (document.hidden) { if (S) { stop(true); RES = true; stat('⏸ App peeche gayi — wapas aate hi khud jur jayega'); } } else if (RES && $('lvDlg')?.open && cur) { RES = false; start(); } });

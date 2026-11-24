@@ -1,4 +1,8 @@
 // =========================================================
+//  v2.17 (2026-11-24, malik: 'live items ke names aayein — pehle bill bane items ke names'): 🧾 LIVE SCAN NAAM — counter NT-PRINT v1.36 Live dekhte waqt har
+//    scan ka barcode posLive/<naam>__scan mein bhejta hai; yahan (sirf jab wohi counter dekha ja raha ho) har naye barcode ka item naam POS se (Items.ItemCode ·
+//    ItemSubCode.SBBarCode + tadad · baqi barcode khane) → posLive/<naam>.sn = JSON {barcode: [naam, tadad]}. Har barcode ek dafa (yaad), na mile 5 min baad dobara.
+//    Sirf SELECT, POS mein kuch nahi. AI nahi.
 //  v2.16 (2026-11-23, malik: 'Bills screen aur tez — jitna kar sakte ho'): ⚡ jaanch har 0.15 s (pehle 0.5) · naya / badla bill PEHLE chhote doc posSales/<din>-f {d, at, b:[badle bill, aakhri 5 s]}
 //    mein (chhota = internet se jaldi), poori list (posSales/<din>) us ke saath apni line mein (ek waqt ek, aakhri wali — jaanch ko nahi rokti). App dono ko mila kar dikhati hai.
 //  v2.15 (2026-11-23): 🎛 Live 'Sab cameras' (liveReq pc '@sab') = us video ke sab counter (mo.k 'c') ka banta bill + POS screen ka hukum (6 counter tak); '@godam' / '@sab' khud counter nahi.
@@ -116,13 +120,53 @@ async function livePut(nm, d) {
   liveLast.set(nm, { k, at: Date.now() });
   await liveCol.doc(String(nm).replace(/\//g, '_').slice(0, 100)).set({ ...d, at: Date.now() });
 }
+// v2.17: 🧾 LIVE SCAN NAAM — dekhe ja rahe counter ka posLive/<naam>__scan (NT-PRINT v1.36) suno; naye barcode ka naam POS se (sirf SELECT)
+const scanL = new Map(), scanNm = new Map(); let scanSrc;   // scanL: naam -> {un, codes} · scanNm: barcode -> {n, q, at}
+function scanSync(W) {
+  const want = new Set(W.map(x => x[0]));
+  for (const [nm, o] of scanL) if (!want.has(nm)) { try { o.un && o.un(); } catch {} scanL.delete(nm); }
+  for (const nm of want) if (!scanL.has(nm)) {
+    const o = { codes: [], un: null }; scanL.set(nm, o);
+    try { o.un = liveCol.doc(String(nm).replace(/\//g, '_').slice(0, 100) + '__scan').onSnapshot(d => { let a = []; try { a = JSON.parse(((d.exists && d.data()) || {}).a || '[]'); } catch {}
+      o.codes = [...new Set((Array.isArray(a) ? a : []).map(x => String((x && x[1]) || '').trim().slice(0, 40)).filter(Boolean))].slice(-60); }, e => log('live scan suno: ' + e.message)); } catch (e) { log('live scan suno: ' + e.message); }
+  }
+}
+async function scanNames(p, nm) {
+  const o = scanL.get(nm); if (!o || !o.codes.length) return '';
+  if (scanSrc === undefined) {
+    try { scanSrc = (await p.request().query(`SELECT c.TABLE_SCHEMA AS S, c.TABLE_NAME AS T, c.COLUMN_NAME AS C FROM INFORMATION_SCHEMA.COLUMNS c
+      JOIN INFORMATION_SCHEMA.TABLES t ON t.TABLE_SCHEMA = c.TABLE_SCHEMA AND t.TABLE_NAME = c.TABLE_NAME AND t.TABLE_TYPE = 'BASE TABLE'
+      JOIN INFORMATION_SCHEMA.COLUMNS k ON k.TABLE_SCHEMA = c.TABLE_SCHEMA AND k.TABLE_NAME = c.TABLE_NAME AND k.COLUMN_NAME = 'ItemID'
+      WHERE c.COLUMN_NAME LIKE '%barcode%' AND c.DATA_TYPE IN ('varchar', 'nvarchar', 'char', 'nchar')
+        AND (c.TABLE_NAME LIKE '%barcode%' OR c.TABLE_NAME LIKE '%subcode%' OR c.TABLE_NAME = 'Items')`)).recordset || []; } catch (e) { scanSrc = []; log('live scan: barcode khane nahi mile — ' + e.message); }
+  }
+  const now = Date.now(); let left = 15;
+  for (const c of o.codes) {
+    const h = scanNm.get(c); if (h && (h.n || now - h.at < 5 * 60000)) continue; if (left-- <= 0) break;
+    let n = '', q = 1;
+    try { const r = (await p.request().input('c', sql.NVarChar(100), c).query(`SELECT TOP 1 N, Q FROM (
+        SELECT i.ItemName AS N, CAST(1 AS float) AS Q, 1 AS P FROM dbo.Items i WHERE LTRIM(RTRIM(i.ItemCode)) = @c
+        UNION ALL SELECT i.ItemName, CAST(ISNULL(s.SBItemQty, 1) AS float), 2 FROM dbo.ItemSubCode s JOIN dbo.Items i ON i.ItemID = s.ItemID WHERE LTRIM(RTRIM(s.SBBarCode)) = @c) z ORDER BY P`)).recordset[0];
+      if (r) { n = String(r.N || '').trim(); q = Math.round((Number(r.Q) || 1) * 1000) / 1000; } } catch {}
+    for (const src of n ? [] : scanSrc) {
+      try { const col = `[${String(src.C).replace(/]/g, ']]')}]`, tbl = `[${String(src.S).replace(/]/g, ']]')}].[${String(src.T).replace(/]/g, ']]')}]`;
+        const r = (await p.request().input('c', sql.NVarChar(100), c).query(`SELECT TOP 1 i.ItemName AS N FROM ${tbl} x JOIN dbo.Items i ON i.ItemID = x.ItemID WHERE LTRIM(RTRIM(CAST(x.${col} AS nvarchar(100)))) = @c`)).recordset[0];
+        if (r) { n = String(r.N || '').trim(); break; } } catch {}
+    }
+    scanNm.set(c, { n: n.slice(0, 50), q: q > 0 ? q : 1, at: now });
+  }
+  if (scanNm.size > 4000) for (const k of [...scanNm.keys()].slice(0, 1000)) scanNm.delete(k);
+  const m = {}; for (const c of o.codes) { const h = scanNm.get(c); if (h && h.n) m[c] = [h.n, h.q]; }
+  return JSON.stringify(m);
+}
 async function liveTick() {
   if (liveRun) return;
-  const W = liveHosts(); if (!W.length) return;
+  const W = liveHosts(); try { scanSync(W); } catch {} if (!W.length) return;
   liveRun = true;
   try {
     const p = await getPool(), d0 = new Date(); d0.setHours(0, 0, 0, 0);
     for (const [nm, host] of W) {
+      let sn = ''; try { sn = await scanNames(p, nm); } catch (e) { log('live scan naam: ' + e.message); }   // v2.17
       let h = (await p.request().input('d', sql.DateTime, d0).input('h', sql.NVarChar(120), '%at PC:%' + host + '%').query(`SELECT TOP 1 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID,
         CAST(s.SystemNotes AS NVARCHAR(600)) AS SN FROM dbo.Sale s WHERE s.SaleDate >= @d AND CAST(s.SystemNotes AS NVARCHAR(600)) LIKE @h ORDER BY s.SaleID DESC`)).recordset[0];
       // v2.7: 🔴 BANTA HUA BILL (malik: "bill banana start ho to bill screen par aa jaye") — POS counter ka naam ("at PC:") print par likhta hai,
@@ -152,12 +196,12 @@ async function liveTick() {
         if (ok.length) { h = ok[0].c; src = ok[0].r === 3 ? 'chalu' : 'andaza'; }
         dg = `naye ${cs.length} · khule ${open.length}${open.length ? ' (' + open.slice(0, 3).map(c => `#${c.SaleID} login ${String(c.U ?? '?')}→${[...(UM.get(String(c.U ?? '').trim()) || ['?'])].map(x => x.replace(/^DESKTOP-/, '')).join('/')} ${c.LN} line`).join(', ') + ')' : ''}`;
       } catch (e) { dg = 'ghalti: ' + String(e.message || e).slice(0, 120); if (!liveErrLog) { liveErrLog = 1; log('live banta bill: ' + e.message); } }
-      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0, src: '', dg }); continue; }
+      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0, src: '', dg, sn }); continue; }
       const L = (await p.request().input('s', sql.Int, h.SaleID).query(`SELECT TOP 150 d.SaleDetailID AS D, i.ItemName AS N, d.Qty AS Q, d.Rate AS R
         FROM dbo.SaleDetail d LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID WHERE d.SaleID = @s ORDER BY d.SaleDetailID`)).recordset;
       const j = JSON.stringify(L.map(x => [Number(x.D) || 0, String(x.N || '').trim().slice(0, 50), Math.round((Number(x.Q) || 0) * 1000) / 1000, r2(x.R)]));
       await livePut(nm, { pc: nm, sid: Number(h.SaleID) || 0, no: String(h.SaleNo || '').trim(), st: Number(h.DocStatusID) || 0, pr: /Printed\s*By/i.test(String(h.SN || '')) ? 1 : 0,
-        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0, la: Number(firstSeen.l[String(h.SaleID)]) || 0, src, dg });
+        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0, la: Number(firstSeen.l[String(h.SaleID)]) || 0, src, dg, sn });
     }
   } catch (e) { log('live bill: ' + e.message); }
   finally { liveRun = false; }

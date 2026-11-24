@@ -1,4 +1,6 @@
 // =========================================================
+//  live-cam.js  v2.5 (2026-11-24, malik: 'KEIME1D wala system delete kar do, us ki jagah RN6 wala'): pc-names v1.2 (purana counter camera = RN6QU6D) +
+//    🎛 Sab cameras ki list mein ek counter naam DO dafa nahi — camera setting mein naya naam (RN6QU6D) aur purani chaabi (Abdurehman) dono hon to naye naam wali chaabi.
 //  live-cam.js  v2.4 (2026-11-24, malik ki screenshot: group ki video phone par beech mein patli patti — 3x2 chauri video, ek khana khali, baqi screen kaali):
 //    📼 sab cameras ki recording ab phone KHARA rakh kar dekhne wali shakal — 7 camera tak sab EK column (ek ke neeche ek), 8-9 = 2 column (srGrid); khana 5 tak 512x288,
 //    6-7 = 448x252, 8-9 = 384x216 (16 MB ki hadd wahi). Har khane ke upar baayein camera ka naam (counter = 'Counter <PC>') — drawtext: relative fontfile (clip-font) +
@@ -52,7 +54,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.4';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.5';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -214,7 +216,9 @@ function moList(max, sC) {
 }
 function allList() {   // v2.0: 🎛 counter (bill) → godam (gate pass) → baqi mazeed cameras
   const out = [], sC = new Set();
-  for (const n of Object.keys(CF.ch || {}).sort()) { const ch = Math.floor(Number(CF.ch[n]) || 0); if (!n || ch <= 0 || sC.has(ch)) continue; sC.add(ch); let nm = String(n); try { nm = PN.nowName(n) || nm; } catch {} out.push({ n: String(nm).slice(0, 30), ch, k: 'c', g: 0 }); }
+  const nowOf = n => { let nm = String(n); try { nm = PN.nowName(n) || nm; } catch {} return String(nm).slice(0, 30); }, sN = new Set();
+  // v2.5: jis chaabi ka naam hi aaj ka naam hai (RN6QU6D) wo pehle — purani chaabi (Abdurehman -> RN6QU6D) phir dohra naam nahi banati
+  for (const n of Object.keys(CF.ch || {}).sort((a, b) => ((nowOf(b) === b) - (nowOf(a) === a)) || (a < b ? -1 : a > b ? 1 : 0))) { const ch = Math.floor(Number(CF.ch[n]) || 0); if (!n || ch <= 0 || sC.has(ch)) continue; const nm = nowOf(n); if (sN.has(nm)) continue; sC.add(ch); sN.add(nm); out.push({ n: nm, ch, k: 'c', g: 0 }); }
   out.push(...moList(ALL_MAX, sC));
   for (const x of CF.xc || []) { if (sC.has(x.ch)) continue; sC.add(x.ch); out.push({ n: x.n, ch: x.ch, k: 'x', g: 0 }); }
   return out.slice(0, ALL_MAX);

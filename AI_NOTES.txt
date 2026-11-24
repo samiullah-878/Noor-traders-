@@ -9632,3 +9632,25 @@ textfile (sab-rec-t/n<i>.txt) + expansion=none, ffmpeg spawn cwd = DIR. Naam ke 
 App ka Live screen (🎛 / ▦ dabbe) aur moGrid (live mosaic) NAHI badle — sirf sab-rec. Azmaya: ffmpeg testsrc2 se 5 camera (ek band) 512x1440 + naam (% : ' wale naam bhi) aur 8 camera
 768x864 — frame dekha, theek. Asal NVR / WhatsApp par nahi azmaya. AI nahi. Rules nahi badle.
 Malik ne Video samjhao ka '📖 Poori baat' plan NAHI chuna (24 Nov: 'wo Gemini wala plan OK nahi karna') — mat banao jab tak malik khud na kahe.
+
+
+=== 2026-11-24 — v2.370.0: 🎛 Sab cameras — counter khane par BANTE BILL ke naam + 🖨 bill chips + ⏰ Ruke bills · KEIME1D -> RN6QU6D (PC nt-print v1.36, pos-sales-dekho v2.17, pc-names v1.2, live-cam v2.5, bill-clip v2.23) ===
+Malik (screenshot Live 🎛 Sab cameras): 'kemihd wala system delete kar do, us ki jagah RN6 wala · live items ke names aayein · pehle bill bane items ke names, us ke baad bill
+ka number aur amount side par · bill post ho to wahan se ghayab · koi bill 30 minute tak post na ho to video ke saath alag screen mein jama hota rahe (shaam ko dekhein) ·
+post ho jaye to wahan se bhi khud hat jaye · sab auto · screen yahi · 5 bills ikathe'. OK diya (camera setup ki screenshot: RN6QU6D channel 5).
+1) KEIME1D: pc-names LEGACY ab 'DESKTOP-RN6QU6D': 'Abdurehman' (KEIME1D hata) + app tally.js LEG HUBAHU. live-cam v2.5 allList: aaj ka naam ek dafa (naye naam wali chaabi pehle,
+   purani 'Abdurehman' chaabi wahi naam bane to chhod do). bill-clip v2.23 sirf dobara shuru (pc-names).
+2) NAAM: POS item SQL mein sirf Print par likhta hai — is liye bante bill ke naam SCANNER se. NT-PRINT v1.36 (counter): Live mein yehi counter dekha ja raha ho (posLive/_want,
+   75 s) to har sahi scan [waqt, barcode] -> posLive/<naam>__scan {a: JSON aakhri 40 (30 min), at, host, ver} (250 ms jor kar). Koi na dekhe = ek bhi likhai nahi.
+   local-config posScanLive:false = band. PC pos-sales-dekho v2.17 (server): dekhe ja rahe counter ka __scan suno (scanSync), har naye barcode ka naam POS se
+   (Items.ItemCode · ItemSubCode.SBBarCode + SBItemQty · baqi '%barcode%' khane, sync-stock wala tareeqa) -> posLive/<naam>.sn = JSON {barcode: [naam, tadad]}
+   (yaad scanNm, na mile 5 min baad dobara, 15 naye fi chakkar). Sirf SELECT.
+3) APP live.js tile (counter, sirf jab __scan doc ho = NT-PRINT naya): daayein 'Bill ban raha · N item' = counter ke aakhri chhape bill (posSales ct, na ho pt) ke baad ke scan,
+   ek barcode ek line ×ginti, naya upar (6 + '+N'), naam sn se warna '🔖 barcode'. Baayein .lv-tbc = us counter ke aaj ke chhape magar post / cancel na hue bill
+   '🖨 #no · Rs' (naya upar, 5 + '+N') — posSales listener (rkSync, openLive se) se khud ghayab. Purana NT-PRINT = pehle jaisa (POS screen tasveer).
+   Haath se likhi item: print ke baad (scanner se nahi aati). Item POS mein hatai ho to bhi scan list mein rehti hai (POS print se pehle batata nahi).
+4) ⏰ Ruke bills (.lv-tools chip #lvRk, narangi jab > 0): aaj ke bill ct > 0, ps 1 (x / ps 2 / ps 3 nahi), chhape 30+ min (RK_MIN). Khirki <dialog id=lvRkDlg> (phone back pehle
+   isi ko band — ntLvClose): har bill #no · Rs · counter · chhapne ka waqt · kitni der; ▶ Video = billClip (listenBillClips aaj, '~' docs nahi) hisse ek ke baad ek +
+   items (getPosSaleLines); video na ho = 🎬 maango (reqBillClip -> billClipReq). Post hote hi list se hat-ta; jo khula ho wo '📌 Post ho gaya' ke saath rehta jab tak band na karo.
+   cloud.js listenPosScan naya. Rules nahi badle (posLive read wahi). Azmaya: nakli cloud + Chromium (tile naam / chips / post par ghayab / naye print par saaf / Ruke list /
+   video / maango / back). Asal counter / NVR par nahi. AI nahi.

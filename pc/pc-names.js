@@ -1,4 +1,4 @@
-// pc-names.js v1.1 (2026-11-17) — 🖥 COUNTER KA NAAM = PC KA APNA NAAM (NT-PRINT se) · v1.0 (2026-11-16)
+// pc-names.js v1.2 (2026-11-24: KEIME1D -> RN6QU6D) · v1.1 (2026-11-17) — 🖥 COUNTER KA NAAM = PC KA APNA NAAM (NT-PRINT se) · v1.0 (2026-11-16)
 // Malik (17 Nov, camera setup): "RN6QU6D wala aur Abdurehman wala system ek hi hai — Abdurehman ki bajaye PC ka naam aaye, NT-PRINT se".
 //   Naam ab: NT-PRINT ka naam (printPCs/<id>.name — sirf jab us PC ki NT-PRINT setting mein host se alag naam likha ho) warna PC ka host
 //   (DESKTOP- hata kar, jaise RN6QU6D). Purane insaanon wale naam (Mithu / Abdurehman / Bilal) DIKHANE mein NAHI — sirf purana camera
@@ -7,7 +7,9 @@
 //   ho to ek hi PC do dafa na dikhe). App tally.js disp() HUBAHU yehi qaida — ek badlo to doosra bhi.
 // Sirf parhta hai (printPCs + pcAlias). POS mein kuch nahi likhta. AI nahi.
 const fs = require('fs'), path = require('path');
-const LEGACY = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-KEIME1D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
+// v1.2 (2026-11-24, malik ki screenshot: Sab cameras par 'KEIME1D' khali — 'kemihd wala system delete kar do, us ki jagah RN6 wala'): KEIME1D PC hat gaya,
+//   us counter ka camera (purana naam Abdurehman) ab RN6QU6D ka. App tally.js LEG bhi HUBAHU.
+const LEGACY = { 'DESKTOP-8BR23BF': 'Mithu', 'DESKTOP-RN6QU6D': 'Abdurehman', 'DESKTOP-Q1SLV77': 'Bilal (server)' };
 const PC_DEFAULT = {};   // v1.1: dikhane ke liye koi pakka naam nahi (purani scripts ke liye khali export)
 const bare = h => String(h || '').trim().replace(/^DESKTOP-/i, '');
 let NT = {}, NTN = {}, AL = {}, started = false;
