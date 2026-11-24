@@ -7,6 +7,8 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const tm = ms => new Date(ms).toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit' }).toLowerCase();
+// v2.376.0: doctor v3.15 pcLoad.nic = 'Wireless80211~144~naam,Ethernet~1000~naam' (jin par traffic hai)
+const nicOf = s => String(s || '').split(',').map(x => { const [k, sp] = x.split('~'); return k ? { w: /wireless|wifi|802/i.test(k), sp: Number(sp) || 0 } : null; }).filter(Boolean).slice(0, 4);
 const mb = kb => { kb = Number(kb) || 0; return kb >= 1048576 ? (Math.round(kb / 104857.6) / 10) + ' GB' : kb >= 1024 ? Math.round(kb / 1024) + ' MB' : Math.round(kb) + ' KB'; };
 const dayKey = () => new Intl.DateTimeFormat('en-CA', { timeZone: 'Asia/Karachi' }).format(new Date());
 const C1 = '#2a78d6', C2 = '#eb6834';   // dataviz reference palette — slot 1 (blue) + slot 2 (orange), adjacent pair validated
@@ -94,14 +96,16 @@ function paint() {
   const body = d.querySelector('.pcl-body'); if (!body) return;
   const { P, N } = points(), sy = body.scrollTop;
   const cpu = P.map(x => x[1]), ram = P.map(x => x[2]), avg = a => a.length ? Math.round(a.reduce((s, v) => s + v, 0) / a.length) : 0;
-  const up = P.reduce((s, x) => s + (x[3] > 0 ? x[3] : 0), 0), dn = P.reduce((s, x) => s + (x[4] > 0 ? x[4] : 0), 0);
+  const up = P.reduce((s, x) => s + (x[3] > 0 ? x[3] : 0), 0), dn = P.reduce((s, x) => s + (x[4] > 0 ? x[4] : 0), 0), hasNet = P.some(x => x[3] >= 0);   // v2.376.0: naap na ho = '0 KB' nahi, saaf likho
+  const nic = nicOf(D && D.nic), wifi = nic.some(x => x.w), lan = nic.some(x => !x.w);
   const now = NOW && Date.now() - (Number(NOW.at) || 0) < 3 * 60000 ? NOW : null, old = D && Date.now() - (Number(D.at) || 0) > 15 * 60000;
   const wa = WL && WL.vday === dayKey() ? `📲 Aaj WhatsApp videos: ${Number(WL.vn) || 0} · ${mb(WL.vk)}` : '';
   const pr = progs(P, N), heavy = pr.filter(x => x.avg >= 15 || x.mx >= 50);
   body.innerHTML = `
     ${!D ? '<p class="pcl-warn">⏳ PC se pehla hisaab abhi nahi aaya — PC update (doctor v3.14) ke 5-10 min baad. PC band ho to PC chalne par.</p>' : old ? `<p class="pcl-warn">⚠ PC se ${Math.round((Date.now() - D.at) / 60000)} min se naya hisaab nahi — PC band / doctor ruka?</p>` : ''}
     <div class="pcl-pat"><b>🔥 CPU ${now ? 'abhi ' + now.cpu + '% · ' : ''}avg ${avg(cpu)}% · max ${cpu.length ? Math.max(...cpu) : 0}%</b>
-      <span>💾 RAM avg ${avg(ram)}%${D?.ramGb ? ' / ' + D.ramGb + ' GB' : ''} · 📶 ↑ ${mb(up)} · ↓ ${mb(dn)}${wa ? ' · ' + wa : ''}</span></div>
+      <span>💾 RAM avg ${avg(ram)}%${D?.ramGb ? ' / ' + D.ramGb + ' GB' : ''} · 📶 ${hasNet ? '↑ ' + mb(up) + ' · ↓ ' + mb(dn) : 'network ka naap abhi nahi (PC update ke 10 min baad)'}${wa ? ' · ' + wa : ''}</span>${nic.length ? `<span>${nic.map(x => (x.w ? '📶 Wi-Fi' : '🔌 LAN taar') + (x.sp > 0 ? ' ' + x.sp + ' Mbps' : '')).join(' · ')}</span>` : ''}</div>
+    ${wifi && !lan ? '<p class="pcl-warn">📶 Server PC Wi-Fi se jura hai — cameras (NVR) ki video aur WhatsApp uploads ek hi Wi-Fi par. Rush mein Wi-Fi bhar jaye to camera / recording grey ho jati hai. Sab se pakka ilaaj: PC aur NVR ko LAN taar se jorein.</p>' : ''}
     ${avg(cpu) >= 70 && pr[0] ? `<p class="pcl-warn">⚠ Is waqt mein PC par bojh zyada — sab se bhaari: ${esc(nameOf(pr[0].k))} (${Math.round(pr[0].avg)}%)</p>` : ''}
     <h3 class="pcl-h">CPU aur RAM</h3>${lineHTML(P)}
     <h3 class="pcl-h">📶 Network</h3>${barHTML(P)}

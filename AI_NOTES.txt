@@ -9723,3 +9723,15 @@ pakki nahi (hook nahi laga / band / scan Chrome ya kisi aur window mein / scanne
 rw (har SCAN line), sp (skipList / Chrome), er (ERR / exit ki wajah), fg (aakhri window). nt-print v1.38 __scan doc mein rd · al · rw · sp · w (SND.wrong) · er · fg.
 App 🩺: 'sahi N · pakre N · ghalat window N (naam) · Chrome mein N · ⚠ scan system shuru nahi hua / ruk gaya (wajah)'. NT-PRINT ki C# / DLL nahi badli (naya naam
 ki zaroorat nahi), nt-print-setup / nt-fix ki file list nahi badli (naya require nahi). Agla qadam malik ki photo se. Asal counter par azmaya nahi. AI nahi.
+
+=== v2.376.0 (2026-11-24) — 📶 PC ka bojh: network ka asal naap + Wi-Fi / LAN (PC doctor v3.15) ===
+Malik ki photos (18:35): 📊 PC ka bojh — CPU abhi 40% · avg 64% · max 81% · RAM avg 70% / 16 GB · '↑ 0 KB · ↓ 0 KB' · aaj WhatsApp videos 60 · 286 MB; list: SQL
+Server 12.3%, 📼 Sab cameras group recording 9.9% (RAM 1.3 GB), Bill ki video 7.6% (max 15%), Live camera ffmpeg 7.2% (RAM 1.1 GB), PowerShell 1.9% (RAM 779 MB).
+Malik: bill ki video (recording se) BHI grey, 'subah bilkul sahi tha'. Matlab: grey NVR -> PC (RTSP TCP) se hi — recording file khud kharab; live-cam relay nahi.
+CPU 90% tak nahi pohancha (avg 64%) — sirf CPU wajah nahi lagti; shak network (PC Wi-Fi par ho to shaam ke WhatsApp uploads + cameras) — magar network ka naap 0 tha.
+GHALTI (v3.14): 'Get-NetAdapter -Physical | Get-NetAdapterStatistics' is PC par khali; app up/dn -1 ko '0 KB' dikhati thi. doctor v3.15: [System.Net.NetworkInformation.
+NetworkInterface]::GetAllNetworkInterfaces() — sirf Up, Loopback / Tunnel / Virtual / Hyper-V / VMware / VirtualBox / TAP / VPN / Bluetooth / Miniport bahar, har interface
+GetIPv4Statistics apne try mein; NET|rx|tx|types (types = 'Wireless80211~144~naam,Ethernet~1000~naam' jin par traffic) -> pcLoad.nic. Hifazat: output mein ek bhi
+process line na aaye (PowerShell parse ghalti) to CPU.noNet++ — 2 dafa = network hissa band, sirf purana CPU sawal (CPU list kabhi na ruke). App pc-load.js: hasNet
+nahi = 'network ka naap abhi nahi'; nicOf -> '📶 Wi-Fi 144 Mbps' / '🔌 LAN taar 1000 Mbps'; sirf Wi-Fi = pcl-warn (taar lagao). Sandbox mein PowerShell nahi chala
+(download ki ijazat nahi mili) — script hath se jaanchi (braces / parens / string). Asal PC par 10 min baad 📊 se dekhna. AI nahi.

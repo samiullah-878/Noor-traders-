@@ -1,4 +1,6 @@
 // =========================================================
+//  v3.15 (2026-11-24, app v2.376.0, malik ki photo: 📊 PC ka bojh mein ↑ 0 KB · ↓ 0 KB): network ab .NET NetworkInterface se (Get-NetAdapter -Physical | Get-NetAdapterStatistics
+//    is PC par khali deta tha) + pcLoad.nic = kaun sa network chal raha (Wi-Fi / LAN taar + link ki raftar) — cameras grey ki jaanch ke liye. AI nahi.
 //  v3.14 (2026-11-24, app v2.373.0): 📊 PC KA BOJH — cpuTick ke naap har 5 min ek nuqta (CPU / RAM average, network ↑ / ↓, har kaam ka CPU + RAM) → blueAccess/pcLoad
 //    (24 ghante, ek doc); network bytes usi PowerShell mein. 📼 sab cameras ki ffmpeg ab apne naam se (pehle 'bill ki clip' dikhti thi). Sirf naap. AI nahi.
 //  v3.13 (2026-11-17, app v2.319.0): 🚨 DUKAN KI NABZ — nabz.js (alag file) har 60 s dukan ka haal ek doc (pcBeat/<chaabi>) mein, malik ke phone ka
@@ -35,7 +37,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.14';
+const VER = '3.15';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -257,7 +259,7 @@ async function loadInit() {
 async function loadAdd(now, cpu, ram, grp, net) {
   let dUp = 0, dDn = 0;
   if (net && LOAD.net) { const a = net.rx - LOAD.net.rx, b = net.tx - LOAD.net.tx; if (a >= 0 && b >= 0 && a < 20e9 && b < 20e9) { dDn = a; dUp = b; } }
-  if (net) LOAD.net = net;
+  if (net) { LOAD.net = net; LOAD.nic = net.ty || ''; }
   const A = LOAD.acc || (LOAD.acc = { n: 0, cpu: 0, ram: 0, up: 0, dn: 0, net: 0, g: new Map() }); if (!LOAD.at0) LOAD.at0 = now;
   A.n++; A.cpu += cpu; A.ram += ram; A.up += dUp; A.dn += dDn; if (net) A.net++;
   for (const g of grp.values()) { const k = loadKey(g.n), o = A.g.get(k) || { p: 0, m: 0 }; o.p += g.p; o.m += g.m; A.g.set(k, o); }
@@ -269,7 +271,7 @@ async function loadAdd(now, cpu, ram, grp, net) {
   const lim = Math.round(now / 60000) - 24 * 60; LOAD.pts = LOAD.pts.filter(x => x.t >= lim).slice(-300);
   const N = [], ix = new Map(), id = k => { if (!ix.has(k)) { ix.set(k, N.length); N.push(k); } return ix.get(k); };
   const P = LOAD.pts.map(x => [x.t, x.cpu, x.ram, x.up, x.dn, x.g.map(y => [id(y[0]), Math.round(y[1] * 10), y[2]])]);
-  const ref = loadRef(); if (ref) await ref.set({ at: now, ver: VER, host: os.hostname(), cores: os.cpus().length || 1, ramGb: Math.round(os.totalmem() / (1 << 30)), n: JSON.stringify(N), p: JSON.stringify(P) }).catch(e => log('⚠ pcLoad likhna: ' + String(e?.message || e).slice(0, 80)));
+  const ref = loadRef(); if (ref) await ref.set({ at: now, ver: VER, host: os.hostname(), cores: os.cpus().length || 1, ramGb: Math.round(os.totalmem() / (1 << 30)), nic: String(LOAD.nic || '').slice(0, 300), n: JSON.stringify(N), p: JSON.stringify(P) }).catch(e => log('⚠ pcLoad likhna: ' + String(e?.message || e).slice(0, 80)));
 }
 async function cpuTick() {
   if (BLOCKED || CPU.busy || process.platform !== 'win32') return; CPU.busy = true;
@@ -278,10 +280,11 @@ async function cpuTick() {
     // v3.1: Win32_Process (WMI) — SYSTEM ke program (SQL Server, antivirus) ka CPU bhi deta hai (Get-Process bina admin 0 deta tha → "CPU 43%" magar list mein sirf 3%).
     //   Command line isi sawal mein (sirf node / ffmpeg ki) — sirf naam nikalne ko, memory mein; Firestore / log mein KABHI nahi.
     // v3.14: 📶 network ke bytes bhi ISI PowerShell mein (alag process nahi — PC par bojh na barhe); try/catch = purani Windows par sirf network khali, CPU list wahi
-    const out = await psRun("Get-CimInstance Win32_Process | ForEach-Object { $n = [string]$_.Name; $cl = ''; if ($n -eq 'node.exe' -or $n -eq 'ffmpeg.exe') { $cl = [string]$_.CommandLine -replace '[\\r\\n|]', ' ' }; \"$($_.ProcessId)|$n|$([long](($_.KernelModeTime + $_.UserModeTime) / 10000))|$([int]($_.WorkingSetSize / 1MB))|$cl\" }" +
-      '; try { $st = @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Get-NetAdapterStatistics -ErrorAction SilentlyContinue); "NET|$(($st | Measure-Object -Property ReceivedBytes -Sum).Sum)|$(($st | Measure-Object -Property SentBytes -Sum).Sum)" } catch { "NET||" }; exit 0');
+    const out = await psRun("Get-CimInstance Win32_Process | ForEach-Object { $n = [string]$_.Name; $cl = ''; if ($n -eq 'node.exe' -or $n -eq 'ffmpeg.exe') { $cl = [string]$_.CommandLine -replace '[\\r\\n|]', ' ' }; \"$($_.ProcessId)|$n|$([long](($_.KernelModeTime + $_.UserModeTime) / 10000))|$([int]($_.WorkingSetSize / 1MB))|$cl\" }" + (CPU.noNet >= 2 ? '; exit 0' :
+      '; try { $rx = [long]0; $tx = [long]0; $ty = @(); foreach ($i in [System.Net.NetworkInformation.NetworkInterface]::GetAllNetworkInterfaces()) { if ([string]$i.OperationalStatus -ne \'Up\') { continue }; $k = [string]$i.NetworkInterfaceType; if ($k -eq \'Loopback\' -or $k -eq \'Tunnel\' -or $i.Description -match \'Virtual|Hyper-V|VMware|VirtualBox|TAP|VPN|Bluetooth|Miniport|Loopback\') { continue }; try { $s = $i.GetIPv4Statistics() } catch { continue }; $rx += [long]$s.BytesReceived; $tx += [long]$s.BytesSent; if ($s.BytesReceived -gt 0) { $ty += ($k + \'~\' + [long]($i.Speed / 1000000) + \'~\' + ([string]$i.Description -replace \'[|~,]\', \' \')) } }; \"NET|$rx|$tx|\" + ($ty -join \',\') } catch { \"NET||\" }; exit 0'));   // v3.15: .NET NetworkInterface (Get-NetAdapter wala raasta 0 deta tha) + kaun sa network (Wi-Fi / LAN taar, raftar)
     const cur = new Map(); CPU.cmd = new Map(); let net = null;
-    for (const l of out.split(/\r?\n/)) { const a = l.trim().split('|'); if (a[0] === 'NET') { const rx = Number(a[1]), tx = Number(a[2]); if (a[1] && a[2] && rx >= 0 && tx >= 0) net = { rx, tx }; continue; } const pid = Number(a[0]); if (a.length < 4 || !(pid > 0)) continue; const n = String(a[1] || '').replace(/\.exe$/i, ''); cur.set(pid, { n, c: Number(a[2]) || 0, m: Number(a[3]) || 0 }); if (a[4]) CPU.cmd.set(pid, a.slice(4).join(' ')); }
+    for (const l of out.split(/\r?\n/)) { const a = l.trim().split('|'); if (a[0] === 'NET') { const rx = Number(a[1]), tx = Number(a[2]); if (a[1] && a[2] && rx >= 0 && tx >= 0) net = { rx, tx, ty: String(a[3] || '').slice(0, 300) }; continue; } const pid = Number(a[0]); if (a.length < 4 || !(pid > 0)) continue; const n = String(a[1] || '').replace(/\.exe$/i, ''); cur.set(pid, { n, c: Number(a[2]) || 0, m: Number(a[3]) || 0 }); if (a[4]) CPU.cmd.set(pid, a.slice(4).join(' ')); }
+    if (!cur.size && !(CPU.noNet >= 2)) { CPU.noNet = (CPU.noNet || 0) + 1; if (CPU.noNet >= 2) log('⚠ PC ka bojh: network wala hissa PowerShell mein nahi chala — ab sirf CPU list (network khali)'); } else if (cur.size && !(CPU.noNet >= 2)) CPU.noNet = 0;   // v3.15: hifazat — CPU list kabhi na ruke
     const prev = CPU.prev, pt = CPU.pt, dt = now - CPU.pAt; CPU.prev = cur; CPU.pt = t; CPU.pAt = now;
     if (!prev || !pt || !cur.size || dt < 5000 || dt > 5 * 60000) return;
     const cpu = Math.max(0, Math.min(100, Math.round((1 - (t.idle - pt.idle) / Math.max(1, t.tot - pt.tot)) * 100)));
