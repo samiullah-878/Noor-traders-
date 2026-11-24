@@ -1,6 +1,6 @@
 {
- "version": "2026-11-24.9",
- "note": "live-cam v2.7 (📼 sab cameras ki group video PC ki recording files se, 2-7 min peeche · ⏪ Saaf live recording se ~2 min peeche · mosaic se skip_loop_filter hata)",
+ "version": "2026-11-24.10",
+ "note": "live-cam v2.8 (⚡ tez raasta TCP ab RTSP ki ghalti par hamesha band nahi, 10 min baad khud · ⏪ Saaf: har camera ki recording pehle se tayyar, 45 s, saaf wajah)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -101,7 +101,7 @@
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
   "bill-clip.js": "bafe287d99135e9351da911d9b0416d13952749c569a6215c94231cac1d2aa0f",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
-  "live-cam.js": "e3ce52fd947e2d1dc763b9576cb5658f57ada1f89cc08642c83ca124411a0abe",
+  "live-cam.js": "7c3a8ef74fe0c75f4cbe808cec9f72b129650b5a3717eb8c4c76e2182001d898",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
   "pc-vault.js": "6c27772a3b21166eecabdf7079615a394b1a9831a11e3622330809d5ecdf3abd",
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",

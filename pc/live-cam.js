@@ -1,5 +1,10 @@
 // =========================================================
-//  live-cam.js  v2.7 (2026-11-24 shaam, malik: 'issue sirf live par aata hai · PC khud se live banaye jo kuch minute peeche chale to shayad problem na aaye' — OK):
+//  live-cam.js  v2.8 (2026-11-24 raat, malik ki photo 22:37: ⏪ Saaf = sab khane kaale + 'ffmpeg code null'): har camera ka feeder ab
+//    mosaic ke jurne se PEHLE hi apna pehla tukra parh kar tayyar (pehle ek ek kar ke = Windows par 9 camera x process + seek > 15 s,
+//    chowkidar 15 s par band kar deta tha); ⏪ ko pehli tasveer ke liye 45 s; band ho to wajah saaf: 'N/M camera ki recording pohanchi' + har
+//    camera ka haal log mein. ⚡ Tez raasta (TCP) ab kisi aur ki ghalti (recording band = RTSP -138) par hamesha ke liye band nahi hota —
+//    sirf tab jab tez raasta asal mein laga ho, aur 10 min baad khud dobara (24 Nov 10:34 se poori raat UDP par atka tha).
+//  v2.7 (2026-11-24 shaam, malik: 'issue sirf live par aata hai · PC khud se live banaye jo kuch minute peeche chale to shayad problem na aaye' — OK):
 //    (1) 📼 sab cameras ki group recording ab LIVE line se NAHI — PC ki apni recording files (bill-clip ke band 1-min tukre, jo saaf hain) se har 5 min ka
 //        tukra 2-7 min BAAD (srMake: concat + xstack, 'below normal' darja, -threads 2) — har waqt 9 camera chalane wala bojh khatam. Recording na ho = khali khana.
 //    (2) ⏪ SAAF LIVE: liveReq pc '<naam>~' / '@sab~' / '@godam~' = wahi screen magar recording files se ~2 min peeche — har camera ka feeder (ffmpeg -c copy
@@ -66,7 +71,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter, srBuild, srGrid, srTs, dlDiff }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.7';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.8';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -297,7 +302,7 @@ function startMosaic(codec, kind) {
   sock.bind(0, '127.0.0.1', () => {
     try { sock.setRecvBufferSize(BUF); } catch {}
     const port = sock.address().port, inArgs = [], how = []; moUnfw(p);
-    const fast = !MO_FASTBAD && !process.env.LIVE_TEST_SRC; p.fast = fast;
+    const fast = !(MO_FASTBAD && Date.now() - MO_FASTBAD < 10 * 60000) && !process.env.LIVE_TEST_SRC; p.fast = fast;   // v2.8: 10 min baad tez raasta khud dobara
     Promise.all(L.map(x => fast && shareOk(x.ch) ? moTcp(p, x.ch) : 0)).then(tp => {
     if (p.stopped || p.sock !== sock) { moUnfw(p); return; }
     L.forEach((x, i) => {
@@ -311,7 +316,7 @@ function startMosaic(codec, kind) {
         inArgs.push(...pre, '-f', 'mpegts', '-i', `udp://127.0.0.1:${fp}?fifo_size=1000000&overrun_nonfatal=1&buffer_size=8388608`); how.push('rec');
       } else { inArgs.push(...pre, '-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(x.ch, false)); how.push('rtsp'); }
     });
-    const br = Math.round(400 + 220 * L.length);
+    p.how = how; const br = Math.round(400 + 220 * L.length);
     const enc = codec === 'vp8' ? ['-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', br + 'k', '-g', String(FPS * 2), '-error-resilient', '1']
       : ['-c:v', 'libx264', '-preset', 'ultrafast', '-tune', 'zerolatency', '-profile:v', 'baseline', '-pix_fmt', 'yuv420p', '-g', String(FPS * 2), '-bf', '0', '-b:v', br + 'k', '-maxrate', Math.round(br * 1.3) + 'k', '-bufsize', Math.round(br * 0.7) + 'k'];
     const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', ...inArgs, '-filter_complex', f, '-map', '[out]', '-an', ...enc, '-f', 'rtp', '-payload_type', '96', '-pkt_size', '1200', `rtp://127.0.0.1:${port}`];
@@ -321,7 +326,7 @@ function startMosaic(codec, kind) {
     proc.on('close', code => {
       moUnfw(p); p.ff = null; const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
       if (p.stopped) return;
-      if (p.fast && !p.pk && !/401/.test(why)) { MO_FASTBAD = Date.now(); log(`⚡ ${moLab(p)}: tez tareeqa nahi chala (${why}) — purana tareeqa`); try { p.sock && p.sock.close(); } catch {} p.sock = null; if (p.tracks.size || (p.idleAt && Date.now() - p.idleAt < 60000)) setTimeout(() => { if (!p.stopped) { startMosaic(codec, kind); moTell(p); } }, 300); else closePipe(p); return; }
+      if (p.fast && !p.pk && !/401/.test(why) && (p.how || []).includes('rec⚡') && !/rtsp:\/\//.test(why)) { MO_FASTBAD = Date.now(); log(`⚡ ${moLab(p)}: tez tareeqa nahi chala (${why}) — purana tareeqa`); try { p.sock && p.sock.close(); } catch {} p.sock = null; if (p.tracks.size || (p.idleAt && Date.now() - p.idleAt < 60000)) setTimeout(() => { if (!p.stopped) { startMosaic(codec, kind); moTell(p); } }, 300); else closePipe(p); return; }
       if (/401/.test(why)) { AUTHBAD = Date.now(); p.err = why; log('⛔ live ' + moLab(p) + ': 401 — ruka (setting badlein)'); failViewers(p, why); closePipe(p); return; }
       if (p.pk > 100) p.tries = 0;
       p.tries++; p.err = why; log(`🎞 live ${moLab(p)} ruki (${why})`); try { p.sock && p.sock.close(); } catch {} p.sock = null;
@@ -393,11 +398,15 @@ function dlPump(st) {   // ghari ke mutabiq aage — mosaic dheema ho (TCP bhara
     if (due > now + 4) break;
     st.q.shift(); st.qb -= h.len; n++;
     if (st.last && due > st.last && due - st.last < 400) st.step = due - st.last; st.last = Math.max(st.last, due);
-    const ok = st.c.write(h.bufs.length === 1 ? h.bufs[0] : Buffer.concat(h.bufs));
+    st.sb = (st.sb || 0) + h.len; const ok = st.c.write(h.bufs.length === 1 ? h.bufs[0] : Buffer.concat(h.bufs));
     if (!ok) { st.blk = Date.now(); st.c.once('drain', () => { const d = Date.now() - st.blk; st.bw += d; st.last += d; st.blk = 0; }); break; }
   }
   if (st.paused && st.qb < DL_LO && st.ff) { st.paused = false; try { st.ff.stdout.resume(); } catch {} }
   if (!st.q.length && !st.ff && st.waitAt && now - st.waitAt > 8000 && !st.ended) { st.ended = true; log(`⏪ ch ${st.ch}: agla recording tukra nahi mila — is khane ki video ruk gayi`); try { st.part && st.c.write(Buffer.concat(st.part.bufs)); st.part = null; st.c.end(); } catch {} }
+}
+function dlWhy(p) {   // v2.8: kitne camera ki recording mosaic tak pohanchi + har camera ka haal (log)
+  const L = p.dlf || [], ok = L.filter(st => (st.sb || 0) > 0).length;
+  return { ok, n: L.length, det: L.map(st => `ch${st.ch}:${Math.round((st.sb || 0) / 1024)}KB q${st.q.length}${st.waitAt ? ' intezar' : ''}${st.ff ? ' parh' : ''}${st.c ? '' : ' na-jura'}${st.er ? ' ✕' + st.er.slice(0, 40) : ''}`).join(' · ') };
 }
 function dlStop(p) { for (const st of p.dlf || []) { try { st.kill(); } catch {} } p.dlf = []; }
 function dlFeeder(p, ch, ff, T0) {
@@ -405,8 +414,8 @@ function dlFeeder(p, ch, ff, T0) {
     const st = { ch, cur: null, ff: null, c: null, dead: false, q: [], qb: 0, part: null, hdr: null, rem: null, vpid: 0x100, bp: -1, bw: 0, last: 0, step: 66, blk: 0, paused: false, waitAt: 0, ended: false, inst: {}, nb: null, ce: 0, tm: null, wt: null, srv: null, cc: {} };
     (p.dlf = p.dlf || []).push(st);
     st.kill = () => { st.dead = true; clearInterval(st.tm); clearTimeout(st.wt); try { st.ff && st.ff.kill(); } catch {} st.ff = null; try { st.c && st.c.destroy(); } catch {} try { st.srv && st.srv.close(); } catch {} st.q = []; st.qb = 0; };
-    const next = () => {   // agla tukra (pehla = T0 wala, beech se) — band (likha ja chuka) hi
-      if (st.dead || !st.c || st.ff) return;
+    const next = () => {   // agla tukra (pehla = T0 wala, beech se) — band (likha ja chuka) hi · v2.8: mosaic jurne se pehle bhi (pehle se tayyar)
+      if (st.dead || st.ff) return;
       const now = Date.now(), segs = recSegs(ch); let i = -1, off = 0;
       if (!st.cur) { i = segs.findIndex(s => s.t0 <= T0 && T0 < s.t1); if (i < 0) i = segs.findIndex(s => s.t0 > T0); if (i >= 0 && segs[i].t0 < T0) off = (T0 - segs[i].t0) / 1000; }
       else i = segs.findIndex(s => s.t0 > st.cur.t0);
@@ -422,7 +431,7 @@ function dlFeeder(p, ch, ff, T0) {
       f.on('close', code => {
         if (st.ff === f) st.ff = null; if (st.dead) return;
         if (st.part) { st.q.push(st.part); st.part = null; }   // aakhri tasveer bhi line mein
-        if (code && er) log(`⏪ ch ${ch} tukra ${path.basename(s.f)}: ${er.trim().split(/\r?\n/).pop().slice(0, 100)}`);
+        if (code && er) { st.er = er.trim().split(/\r?\n/).pop().slice(0, 100); log(`⏪ ch ${ch} tukra ${path.basename(s.f)}: ${st.er}`); }
         st.ce = inst.ts0 >= 0 ? inst.cs + dlDiff(inst.ts1, inst.ts0) / 90 + st.step : s.t1;   // is tukre ki video asal mein kahan tak thi (agla waqfa naapne ke liye)
         st.cur = s; next();
       });
@@ -433,7 +442,7 @@ function dlFeeder(p, ch, ff, T0) {
       st.tm = setInterval(() => { try { dlPump(st); } catch {} }, 15); next();
     });
     st.srv = srv; srv.on('error', () => res(0));
-    srv.listen(0, '127.0.0.1', () => res(srv.address().port));
+    srv.listen(0, '127.0.0.1', () => { res(srv.address().port); next(); });   // v2.8: pehla tukra foran parhna shuru
   });
 }
 function startDelayed(codec, kind, ch, nm) {   // kind: a = 🎛 sab · g = 🏬 godam · s = ek camera
@@ -463,7 +472,9 @@ function startDelayed(codec, kind, ch, nm) {   // kind: a = 🎛 sab · g = 🏬
       proc.stderr.on('data', d => { const t = String(d); err += t; if (err.length > 2000) err = err.slice(-2000); const n = (t.match(DEC_ERR) || []).length; if (n) p.de = (p.de || 0) + n; });
       proc.on('error', e => { err += ' ' + e.message; });
       proc.on('close', code => {
-        dlStop(p); p.ff = null; const why = (err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).slice(0, 120);
+        const dw = dlWhy(p); dlStop(p); p.ff = null; let why = (err.trim().split(/\r?\n/).filter(Boolean).pop() || '').slice(0, 120);
+        if (!why) why = p.pk ? 'video ruk gayi' : `video nahi bani — ${dw.ok}/${dw.n} camera ki recording pohanchi${dw.ok < dw.n ? ' (baqi ki recording file nahi parh saka)' : ' (PC dheera?)'}`;
+        log(`⏪ haal: ${dw.det}`);
         if (p.stopped) return;
         if (p.pk > 100) p.tries = 0;
         p.tries++; p.err = why; log(`⏪ live ${p.ch} ruki (${why})`); try { p.sock && p.sock.close(); } catch {} p.sock = null;
@@ -688,7 +699,7 @@ setInterval(() => {
   for (const p of [...pipes.values()]) if (!p.tracks.size && p.idleAt && now - p.idleAt > (p.mo ? 300000 : 120000)) stopPipe(p, 'koi nahi dekh raha');   // v2.1: mosaic 5 min garam
   for (const p of pipes.values()) {   // v1.1: 🩺 video aa rahi hai ya nahi — app ko batao
     if (!p.tracks.size) continue;
-    if (p.mo || p.dl) { if (p.pk !== p.pkSeen) { p.pkSeen = p.pk; p.pkAt = now; } else if (p.ff && now - (p.at || now) > 15000 && now - (p.pkAt || now) > 15000) { log((p.dl ? '⏪ live ' + p.ch : '🏬 live ' + moLab(p)) + ': 15 s se video nahi — dobara (koi camera ruka)'); try { p.ff.kill(); } catch {} } }   // v1.9
+    if (p.mo || p.dl) { if (p.pk !== p.pkSeen) { p.pkSeen = p.pk; p.pkAt = now; } else if (p.ff && now - (p.at || now) > (p.dl && !p.pk ? 45000 : 15000) && now - (p.pkAt || now) > (p.dl && !p.pk ? 45000 : 15000)) { log((p.dl ? '⏪ live ' + p.ch : '🏬 live ' + moLab(p)) + ': 15 s se video nahi — dobara (koi camera ruka)'); try { p.ff.kill(); } catch {} } }   // v1.9
     if (p.share && p.ff && now - (p.at || now) > 8000 && !shareOk(p.ch)) { log(`🔗 live ch ${p.ch}: recording ki line ruk gayi — dobara`); try { p.ff.kill(); } catch {} continue; }   // v1.2
     { const xs = p.dl ? [] : p.mo ? (p.list || []).map(v => srcs.get(v.ch)).filter(Boolean) : [p.share ? srcs.get(p.ch) : null].filter(Boolean), gT = xs.reduce((a, x) => a + (x.gap || 0) + (x.drop || 0), 0);   // v2.6: mosaic = sab camera   // v1.7: 🩺 pichhle 10 s mein tukre kahan gire — app chip
       const fresh = now - (p.at || now) < 8000;   // shuru ke pehle pal (beech GOP se jurna) ki ghaltiyan nahi gintay

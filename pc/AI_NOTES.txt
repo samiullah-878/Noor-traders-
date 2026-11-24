@@ -5764,3 +5764,10 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - 10:11–10:34 pm: bill-clip 'rec ch N ruk gayi … Error number -138' paanchon channel ek saath, har ~17 s — recording nahi bani -> ⏪ Saaf khali, 15 s chowkidar = 'ffmpeg code null'.
 - ⏪ feeder har asal tukre par 'Error muxing a packet' (8:17 pm se bhi) — mera bug, abhi theek nahi; live-cam v2.8 (feeder pehle se tayyar + 45 s) mahalli bana, PUSH NAHI.
 - Mashwara malik ko: ⚙️ Camera setup -> 'Sub stream (halki)'. Malik ne OK kaha (23:00).
+
+=== 24 Nov 2026 raat — PC live-cam v2.8 (manifest 2026-11-24.10) ===
+- Malik ne 11:16:59 'Sub stream (halki)' lagaya (bill-clip log: recording band (setting badli), playback subtype=1).
+- Ghalti pakri: MO_FASTBAD 10:34 ki RTSP -138 (recording band) par hamesha ke liye laga -> 🎛 poori raat UDP fwd par. Ab: sirf jab 'rec⚡' input laga ho aur why mein rtsp:// na ho; 10 min baad khud dobara (p.how).
+- ⏪ Saaf: feeder pehle se (srv.listen ke foran) apna pehla tukra parhta hai; pehli tasveer ka intezar 45 s; band ho to 'N/M camera ki recording pohanchi' + log mein har camera ka haal (dlWhy).
+- Test: dl-test2 (6 s baad jura) prefetch q 1140, 15 s, sab se bara waqfa 0.083 s. HEVC RTSP sandbox: mpegts mein har keyframe par VPS (dump_extra ki zaroorat nahi). Asal recording ka 'Error muxing a packet' sandbox mein nahi aaya — asal file chahiye.
+- 🩺 'NVR→PC ghalti' asal mein PC ke andar (recording ffmpeg -> live-cam UDP) ke gire tukre hain.
