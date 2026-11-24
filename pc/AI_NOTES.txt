@@ -5748,3 +5748,12 @@ nahi = 'network ka naap abhi nahi'; nicOf -> '📶 Wi-Fi 144 Mbps' / '🔌 LAN t
 
 === 2026-11-24 shaam — 🎞 Grey camera: sabaq (koi code nahi badla) ===
 Malik: 'problem abhi bhi wohi hai'. v2.374 (relay) / v2.375 (scan) / v2.376 (network naap) se grey nahi gaya. Bill ki video bhi grey = recording hi tooti = NVR -> PC (RTSP TCP par NVR ne tukre giraye: network bhara / NVR par bojh / camera). Agla qadam malik ka 2 minute test: DMSS mein wohi camera grey? + Group videos / Sab cameras 15 min band. Jawab ke baad ilaaj (LAN taar / uploads rush ke baad). Server PC (desktop-oegi39u, C:\khata-sync) ki logs yahan se kholne ki ijazat auto-mode ne nahi di.
+
+
+=== v2.377.0 (2026-11-24 shaam) — PC live-cam v2.7: 📼 + ⏪ recording files se ===
+Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se; 'PC khud se live banaye jo kuch minute peeche chale' -> OK.
+- 📼 sab cameras group video: srMake (live-cam) recording ke band 1-min tukron se har 5 min (srSlot) ka tukra, 100 s ke baad, pichhle 50 min tak (srNext; srCovered = purani live wali file dobara nahi; srFence = abhi chalu ki to sirf ab se). Below normal darja. Status liveCamPc.sr {f:1, job, mk, made}.
+- ⏪ Saaf live: live.js chip '⏪ Saaf' (sam-lv-dl) -> pc '<naam>~' -> startDelayed (kind a / g / s) -> dlFeeder har camera (2 min peeche, T0) + dlParse / dlPump (CC dobara likhna, waqfa = ruki tasveer, 8 s agla tukra nahi = us khane ka input band). Jis camera ki recording nahi = khana nahi.
+- mosaic inputs se -skip_loop_filter hataya (dhabbe).
+- tally.js 📼 haal: '🎞 PC ki recording se ban rahi'. style.css .lv-tools wrap + .lv-dl.
+- Asal PC par azmaya nahi — malik se ⏪ Saaf ki screenshot aur group ki agli video poochho.

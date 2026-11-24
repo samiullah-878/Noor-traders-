@@ -37,6 +37,9 @@ const lvLbl = p => p === ALL ? '🎛 Sab cameras' : p === GD ? '🏬 Godam (sab)
 let cloud = null, notice = () => {}, list = [], cur = '', S = null, pcSt = null, pcStop = null, VP8 = false;   // VP8: v2.223.0 phone H.264 na chala sake to
 let B = { un: null, sid: 0, prev: new Map(), del: [], fl: new Map(), recv: 0, doc: null, t: null, cnt: 0 };
 const bOn = () => { try { return localStorage.getItem('sam-lv-bill') !== '0'; } catch { return true; } };
+// v2.377.0: ⏪ SAAF — PC ki apni recording files se ~2 min peeche (malik 24 Nov: 'PC khud se live banaye jo kuch minute peeche chale') · liveReq pc '<naam>~' (PC live-cam v2.7)
+const dlOn = () => { try { return localStorage.getItem('sam-lv-dl') === '1'; } catch { return false; } };
+const pcOld = () => { const a = String(pcSt?.ver || '').split('.').map(Number); return a.length > 1 && (a[0] < 2 || (a[0] === 2 && (a[1] || 0) < 7)); };
 
 export function openLive(o) {
   cloud = o.cloud; notice = o.notice || notice; xcs = Array.isArray(o.xc) ? o.xc : []; list = (o.list || []).filter(Boolean); list = [...(o.sab ? [ALL] : []), GD, ...list.filter(x => !isMoP(x))]; MO = null; moBack = false; cur = o.cur && list.includes(o.cur) ? o.cur : (list.find(x => !isMoP(x)) || list[0] || '');
@@ -45,7 +48,7 @@ export function openLive(o) {
   if (!d) { d = document.createElement('dialog'); d.id = 'lvDlg'; d.className = 'lv-dlg'; document.body.append(d); d.addEventListener('cancel', ev => { ev.preventDefault(); closeLive(); }); }
   d.innerHTML = `<div class="lv-head"><b>🔴 Live</b><span class="lv-chips">${list.map(p => `<button type="button" data-lv-pc="${esc(p)}" class="${p === cur ? 'is-in' : ''}${isMoP(p) ? ' lv-gd' : ''}">${lvLbl(p)}</button>`).join('') || '<small>Koi counter nahi mila — malik ⚙️ Bill tally setup mein counter ↔ camera jorein</small>'}</span><button type="button" class="lv-bt ${bOn() ? 'is-in' : ''}" data-lv-bt="1" title="Bill ki patti">🧾</button><button type="button" class="lv-x" data-lv-x="1">×</button></div>
     <div class="lv-body"><video id="lvVid" playsinline muted autoplay></video><div class="lv-st" id="lvSt">⏳ jor raha…</div><div class="lv-shot" id="lvShot" hidden></div><div class="lv-bill" id="lvBill" ${bOn() ? '' : 'hidden'}></div>
-      <div class="lv-tools"><button type="button" class="lv-mob" id="lvMoB" data-lv-mob="1" hidden>‹ 🏬 Sab</button><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" class="lv-cols" id="lvCols" data-lv-cols="1" hidden>▦ Auto</button><button type="button" class="lv-rk is-z" id="lvRk" data-lv-rk="1" title="Chhape magar 30 min se post nahi">⏰ Ruke …</button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
+      <div class="lv-tools"><button type="button" class="lv-mob" id="lvMoB" data-lv-mob="1" hidden>‹ 🏬 Sab</button><button type="button" class="lv-q" id="lvQ" data-lv-q="1" hidden></button><button type="button" class="lv-cols" id="lvCols" data-lv-cols="1" hidden>▦ Auto</button><button type="button" class="lv-rk is-z" id="lvRk" data-lv-rk="1" title="Chhape magar 30 min se post nahi">⏰ Ruke …</button><button type="button" class="lv-dl${dlOn() ? ' is-in' : ''}" data-lv-dl="1" title="PC ki recording se — 2 min peeche, grey nahi">⏪ Saaf</button><button type="button" data-lv-re="1">🔄 Dobara</button><button type="button" data-lv-full="1">⛶</button></div></div>`;
   d.onclick = ev => {
     const t = ev.target;
     if (t.closest('[data-lv-x]')) { closeLive(); return; }
@@ -55,6 +58,7 @@ export function openLive(o) {
     const mt = t.closest('[data-lv-mo]'); if (mt) { if (Date.now() - TL.lpT < 700) return; if (TL.arr) { tlMove(TL.arr, 0); return; } moGo(mt.dataset.lvMo); return; }   // v2.348.0: khane par tap = wohi camera akela
     if (t.closest('[data-lv-mob]')) { moGo(moHome); return; }
     if (t.closest('[data-lv-rk]')) { rkOpen(); return; }   // v2.370.0: ⏰ Ruke bills
+    const dlb = t.closest('[data-lv-dl]'); if (dlb) { const on = !dlOn(); try { localStorage.setItem('sam-lv-dl', on ? '1' : '0'); } catch {} dlb.classList.toggle('is-in', on); notice(on ? '⏪ Saaf — PC ki recording se, 2 min peeche (grey nahi)' : '🔴 Asal live — usi waqt'); start(); return; }   // v2.377.0
     if (t.closest('[data-lv-re]')) { start(); return; }
     const qb = t.closest('[data-lv-q]'); if (qb) { notice(qb.dataset.why || ''); return; }   // v2.322.0: 🩺 poori baat
     if (Date.now() - SPM < 450) return;   // v2.321.0: khiskane ke foran baad wala click (bara / chhota nahi)
@@ -95,7 +99,7 @@ function moPaint(mo) {   // v2.348.0: video ke upar har khane par naam — tap =
   const cb = $('lvCols'); if (cb) cb.hidden = false;
   tlLayout(); tlDraw();
   try { if (!localStorage.getItem('sam-lv-tlh')) { localStorage.setItem('sam-lv-tlh', '1'); notice('💡 Dabba daba kar rakhein = ▲ ▼ se upar neeche · ▦ = ek qatar mein kitne dabbe'); } } catch {}
-  tbSync(cur === ALL ? mo : null);
+  tbSync(cur === ALL && !dlOn() ? mo : null);   // v2.377.0: ⏪ saaf (2 min peeche) mein abhi ka bill / gate pass video se nahi milta — nahi dikhate
 }
 
 // ---------- 🎛 v2.368.0: dabbe — PC ki ek mosaic video se har camera ka alag canvas ----------
@@ -328,10 +332,12 @@ document.addEventListener('visibilitychange', () => { if (document.hidden) { if 
 
 async function start() {
   try { localStorage.setItem('sam-lv-last', moBack ? moHome : cur); } catch {}
-  stop(true); { const gd = isMoP(cur), dl = $('lvDlg'); dl?.classList.toggle('is-mo', gd); MO = null; moPaint(null); if (gd) billStop(); else billStart(); const mb = $('lvMoB'); if (mb) { mb.hidden = !(moBack && !gd); mb.textContent = moHome === ALL ? '‹ 🎛 Sab' : '‹ 🏬 Sab'; } }   // v2.348.0: godam = bill patti / POS screen nahi
+  const dlv = dlOn();   // v2.377.0: ⏪
+  stop(true); { const gd = isMoP(cur), dl = $('lvDlg'); dl?.classList.toggle('is-mo', gd); MO = null; moPaint(null); if (gd || dlv) billStop(); else billStart(); const mb = $('lvMoB'); if (mb) { mb.hidden = !(moBack && !gd); mb.textContent = moHome === ALL ? '‹ 🎛 Sab' : '‹ 🏬 Sab'; } }   // v2.348.0: godam = bill patti / POS screen nahi
   { const qe = $('lvQ'); if (qe) qe.hidden = true; }   // v2.322.0: naya rabta = 🩺 nayi ginti
   if (!cloud?.liveStart) { stat('✕ App update karein', true); return; }
-  if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + lvName(cur) + (isMoP(cur) ? ' jor raha…' : ' ka camera jor raha…'));
+  if (dlv && pcOld()) { stat(`⏳ PC ka live-cam purana (v${pcSt.ver}) — ⏪ Saaf 3-5 min mein khud aa jayega (PC update). Abhi asal live ke liye ⏪ dobara dabayein.`, true); return; }
+  if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + lvName(cur) + (dlv ? ' · ⏪ recording se (2 min peeche) jor raha…' : isMoP(cur) ? ' jor raha…' : ' ka camera jor raha…'));
   const s = S = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pc: new RTCPeerConnection({ iceServers: STUN }), ok: 0 };
   const v = $('lvVid');
   const tr = s.pc.addTransceiver('video', { direction: 'recvonly' });
@@ -339,7 +345,7 @@ async function start() {
   s.pc.ontrack = e => { if (S !== s) return; v.srcObject = e.streams[0] || new MediaStream([e.track]); v.play().catch(() => {}); };
   s.pc.onconnectionstatechange = () => {
     if (S !== s) return; const st = s.pc.connectionState;
-    if (st === 'connected') { s.ok = 1; stat('🟢 Live · ' + lvName(cur)); setTimeout(() => { if (S === s && s.ok) $('lvSt').hidden = true; }, 2500); }
+    if (st === 'connected') { s.ok = 1; stat((dlv ? '⏪ Saaf · 2 min peeche · ' : '🟢 Live · ') + lvName(cur)); setTimeout(() => { if (S === s && s.ok) $('lvSt').hidden = true; }, 2500); }
     else if (st === 'failed') stat('✕ Rabta nahi bana — is internet par seedha rabta band hai. Wi-Fi / doosra internet try karein, ya 🔄', true);
     else if (st === 'disconnected') stat('⏳ Rabta kamzor — wapas jor raha…');
   };
@@ -350,7 +356,7 @@ async function start() {
       s.pc.addEventListener('icecandidate', e => { if (e.candidate && / typ srflx/.test(e.candidate.candidate || '')) setTimeout(r, 120); });
       s.pc.addEventListener('icegatheringstatechange', () => { if (s.pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }); });
     if (S !== s) return;
-    await cloud.liveStart(s.id, { pc: cur, offer: s.pc.localDescription.sdp });
+    await cloud.liveStart(s.id, { pc: cur + (dlv ? '~' : ''), offer: s.pc.localDescription.sdp });
   } catch (e) { if (S === s) stat('✕ Shuru nahi hua: ' + (e?.message || e), true); return; }
   let answered = false;
   s.unsub = cloud.liveWatch(s.id, async r => {

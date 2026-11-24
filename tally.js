@@ -461,7 +461,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-live]')) { window.ntNazarLive?.(); return; }
 }
 
-function openCam() { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.376.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); }   // v2.373.0: menu card + ⋮ dono se
+function openCam() { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.377.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); }   // v2.373.0: menu card + ⋮ dono se
 // ---------- apni khirki (dialog) — phone back = band ----------
 const xcN = () => (Array.isArray(pcSt?.cams) ? pcSt.cams : []).filter(c => c && c.n && !c.c).map(c => String(c.n));   // v2.329.0: 📹 mazeed cameras (PC bill-clip v2.10)
 function dlg() {
@@ -649,6 +649,7 @@ function sbPaintSt() {
   el.textContent = !p ? '⏳ PC ka haal abhi nahi aaya' : Date.now() - (Number(p.at) || 0) > 5 * 60000 ? '🖥 PC chup (' + ago(p.at) + ') — PC on hote hi khud'
     : v && verLt(v, 2, 3) ? `⏳ PC ka live-cam purana (v${v}) — 3-5 min mein khud update`
     : !r || !r.on ? 'PC: recording band'
+    : r.f ? `${r.rec ? '🎞 PC ki recording se ban rahi (2-7 min peeche)' + (r.n ? ' — ' + r.n + ' camera' : '') + (r.job ? ' · abhi ' + r.job + ' wali ban rahi' : '') + (r.mk ? ' · ' + r.mk + ' s fi video' : '') : '⚪ abhi nahi ban rahi'}${r.err ? ' · ⚠ ' + r.err : ''}${r.g ? '' : ' · group nahi chuna'}${r.sent ? ' · aaj ' + r.sent + ' gayi' : ''}${r.last ? ' · aakhri ' + r.last : ''}`   // v2.377.0: PC live-cam v2.7 — live line se nahi, recording files se
     : `${r.rec ? '🔴 record ho rahi — ' + (r.n || 0) + ' camera' : '⚪ abhi record nahi ho rahi'}${r.err ? ' · ⚠ ' + r.err : ''}${r.g ? '' : ' · group nahi chuna'}${r.sent ? ' · aaj ' + r.sent + ' gayi' : ''}${r.last ? ' · aakhri ' + r.last : ''}`;
   // v2.372.0: WhatsApp ki video line (PC wa-out v1.35) — video ruki to yahan wajah (internet dheema / line mein kitni)
   const w = wlk, vl = w?.vl, vq = Number(w?.vq) || 0;
@@ -678,7 +679,7 @@ function sbHTML() {
       <div class="bt-wgrow"><b>🌙 Band</b><input type="time" data-sb-end value="${esc(sbHm(c.end) || '22:00')}"></div>
       <div class="bt-warow0"><button type="button" class="bt-sm bt-wago" data-sb-save="1">💾 Save</button></div>
       <p class="bt-sub" data-sb-stt></p>
-      <p class="bt-sub">🎛 Sab cameras EK video (har 5 min) khud is group mein — roz taqreeban 140. Har camera ki alag recording sirf 3 ghante rehti hai (bill / gate pass ki video usi se banti hai). Khane chhote hain: 'kya ho raha tha' dikhta hai, chehra / item saaf nahi.</p></div>`;
+      <p class="bt-sub">🎛 Sab cameras EK video (har 5 min) khud is group mein — roz taqreeban 140. PC apni saaf recording se banata hai (2-7 min peeche, grey nahi). Har camera ki alag recording sirf 3 ghante rehti hai (bill / gate pass ki video usi se banti hai). Khane chhote hain: 'kya ho raha tha' dikhta hai, chehra / item saaf nahi.</p></div>`;
 }
 async function openWg() {
   if (!isOwner() || !cloud?.setBillWaGroup) { notice(isOwner() ? 'App update karein' : 'Sirf malik'); return; }

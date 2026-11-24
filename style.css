@@ -8707,6 +8707,7 @@ html body .ir-ring.gd.z{opacity:.72}
 html body #lvDlg .lv-tools button.lv-q{font-size:12px;white-space:nowrap;padding:0 11px;border-radius:999px}
 html body #lvDlg .lv-tools button.lv-q.ok{background:linear-gradient(180deg,#14532d,#0f3d22)!important;color:#d1fae5!important;border:1px solid #22c55e66!important}
 html body #lvDlg .lv-tools button.lv-q.warn{background:linear-gradient(180deg,#78350f,#5b2a0c)!important;color:#fde68a!important;border:1px solid #f59e0b77!important}
+html body #lvDlg .lv-tools{flex-wrap:wrap;justify-content:flex-end;max-width:calc(100% - 24px)}html body #lvDlg .lv-tools button.lv-dl{font-size:12px;padding:0 11px}html body #lvDlg .lv-tools button.lv-dl.is-in{background:linear-gradient(180deg,#a16207,#713f12)!important;color:#fef3c7!important;border:1px solid #f59e0b99!important}
 html body #lvDlg .lv-tools button.lv-q.bad{background:linear-gradient(180deg,#7f1d1d,#5c1515)!important;color:#fecaca!important;border:1px solid #ef444477!important}
 /* v2.322.0: 📲 bill ki video WhatsApp par (tally ⋮) */
 #btDlg .bt-warow0{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:8px;align-items:center}
