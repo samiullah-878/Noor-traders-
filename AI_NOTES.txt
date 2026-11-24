@@ -9762,3 +9762,11 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - ⏪ Saaf: feeder pehle se (srv.listen ke foran) apna pehla tukra parhta hai; pehli tasveer ka intezar 45 s; band ho to 'N/M camera ki recording pohanchi' + log mein har camera ka haal (dlWhy).
 - Test: dl-test2 (6 s baad jura) prefetch q 1140, 15 s, sab se bara waqfa 0.083 s. HEVC RTSP sandbox: mpegts mein har keyframe par VPS (dump_extra ki zaroorat nahi). Asal recording ka 'Error muxing a packet' sandbox mein nahi aaya — asal file chahiye.
 - 🩺 'NVR→PC ghalti' asal mein PC ke andar (recording ffmpeg -> live-cam UDP) ke gire tukre hain.
+
+=== 25 Nov 2026 raat — live 4G par nahi chalta (sirf jaanch, code nahi badla) ===
+- Malik: Wi-Fi par live / 🎛 / ⏪ theek ('WiFi pr shi chlta ha'), 4G par '✕ Rabta nahi bana' / '⏳ Video aa rahi…'.
+- PC log 12:00–12:24: inputs rec⚡, ek bhi 🩺 line nahi (PC ki video saaf), har dekhne wala 6–40 s baad 'gaya (band)'.
+- Wajah (pakki): WebRTC sirf STUN (live.js + live-cam.js `STUN`), TURN nahi — 4G CGNAT par seedha rasta nahi banta.
+- Agla qadam (malik ke OK par): Cloudflare Realtime TURN (1,000 GB / mahina muft) — chaabi malik Settings mein (repo / chat mein KABHI nahi), PC roz chhota pass banaye, app + werift iceServers mein.
+- Meri ghalti: pehle PC bojh / ⏪ bug / PPS ko wajah kaha — malik ne CPU 19% dikhaya.
+- Chhota bug: live-cam '⏪ haal:' line aam band (koi nahi dekh raha) par khali chhapti hai — agli update mein sirf ghalti par.
