@@ -5721,3 +5721,14 @@ kOk(x) = 30 s mein keyframe dekha — na dekha ho to purana tareeqa (kabhi kaali
 kitne second (sab se lamba). q dobara sirf jab badle ya masla ho (kf akela har 10 s nahi likhta). App live.js qPaint: q.kf > 4 = chip ki baat mein NVR I-frame 2 s +
 Smart Codec band ka mashwara. Sandbox (nakli 6 s GOP mpegts): beech se jurna purana 246 decode ghaltiyan -> naya 0; dabba bharne par purana 5 -> naya 0; keyframe 5/5,
 vpid 0x100. Asal NVR / PC par azmaya nahi. AI nahi.
+
+=== v2.375.0 (2026-11-24) — 🧾 Live counter khana ki ghalti + 🩺 scan system ka haal (PC nt-print v1.38 / nt-scan v1.6) ===
+Malik ki photo (18:00): 🎛 Sab cameras ke teeno counter (OLD-SERVER, Q1SLV77, RN6QU6D) par '🩺 30 min mein scan 0 · kul ginti 0' — 'Live NT print ka data nahi aa raha'.
+Do baatein: (1) MERI GHALTI v2.370/2.371: live.js tbPaint mein 'k === c && TB.scan.get(n)' wali branch scan doc hote hi chalti thi aur scan khali ho to sirf 🩺 line
+dikhati — POS screen ki tasveer (posLive __shot) aur aakhri bill ki items (posLive) wali purani branch kabhi nahi chalti thi. Ab ek hi counter branch: ch (🖨 chhape
+magar post na hue bill) har counter par; scan ke naam (R) hon to wohi; warna purana (⏳ bill ban raha + tasveer / aakhri bill ki 5 items) + neeche 🩺 line. Scan doc
+na ho to purani '🔗 jorein' warning wahi. (2) Sab counter par 'kul ginti' (SND.ok) 0 = NT-PRINT ke keyboard hook ne koi sahi scan nahi pakra (restart ke baad se) — wajah
+pakki nahi (hook nahi laga / band / scan Chrome ya kisi aur window mein / scanner keyboard jaisa nahi). nt-scan v1.6 stat(): rd (READY aaya), al (child chal raha),
+rw (har SCAN line), sp (skipList / Chrome), er (ERR / exit ki wajah), fg (aakhri window). nt-print v1.38 __scan doc mein rd · al · rw · sp · w (SND.wrong) · er · fg.
+App 🩺: 'sahi N · pakre N · ghalat window N (naam) · Chrome mein N · ⚠ scan system shuru nahi hua / ruk gaya (wajah)'. NT-PRINT ki C# / DLL nahi badli (naya naam
+ki zaroorat nahi), nt-print-setup / nt-fix ki file list nahi badli (naya require nahi). Agla qadam malik ki photo se. Asal counter par azmaya nahi. AI nahi.
