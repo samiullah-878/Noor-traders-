@@ -1,6 +1,6 @@
 {
- "version": "2026-11-23.6",
- "note": "live-cam v2.3 (Sab cameras ki ek-screen recording 5-5 min -> WhatsApp group) + bill-clip v2.22 / kh-wa v1.16 / wa-out v1.34 (har camera ki alag recording ghanton mein: rkd 0.125 = 3 ghante)",
+ "version": "2026-11-24.1",
+ "note": "live-cam v2.4 (Sab cameras ki recording: phone khara wali shakal — 7 tak ek column, 8-9 do column, har khane par camera ka naam)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -101,7 +101,7 @@
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
   "bill-clip.js": "8ed6b862818e10e83318b86742776613ea8cb60495a15ce4e1b76e6b1c809c80",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
-  "live-cam.js": "cd3d83eb96adcfba44eac04a4ff1163c7c5ad71adc32ce01e4a5f133b2eb943d",
+  "live-cam.js": "8c0e5f8e4c5380832c4a0d8fea1931ddf0901b36f0fc182a7c8b7bfff23f7805",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
   "pc-vault.js": "6c27772a3b21166eecabdf7079615a394b1a9831a11e3622330809d5ecdf3abd",
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",

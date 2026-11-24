@@ -1,4 +1,8 @@
 // =========================================================
+//  live-cam.js  v2.4 (2026-11-24, malik ki screenshot: group ki video phone par beech mein patli patti — 3x2 chauri video, ek khana khali, baqi screen kaali):
+//    📼 sab cameras ki recording ab phone KHARA rakh kar dekhne wali shakal — 7 camera tak sab EK column (ek ke neeche ek), 8-9 = 2 column (srGrid); khana 5 tak 512x288,
+//    6-7 = 448x252, 8-9 = 384x216 (16 MB ki hadd wahi). Har khane ke upar baayein camera ka naam (counter = 'Counter <PC>') — drawtext: relative fontfile (clip-font) +
+//    textfile (sab-rec-t) + expansion=none, ffmpeg ka cwd = DIR; naam se ffmpeg na chale = khud bina naam (srNoTxt), recording kabhi nahi rukti. App ka Live screen nahi badla.
 //  live-cam.js  v2.3 (2026-11-23 raat, malik: 'recording ko PC mein save karne ki zaroorat nahi — us ki jagah SAB cameras ki live screen record karta rahe · group mein lagatar'):
 //    📼 blueAccess/sabRec {on, g (group jid), gn, kd din, st / end 'HH:MM'} — 🎛 Sab cameras wali EK video dukan ke waqt lagatar record (5-5 min, sab-rec\sab-YYYYMMDD-HHMMSS.mp4,
 //    recording wali line ki copy se — NVR par naya rabta NAHI), har band tukra wa-media\bv-sab-*.mp4 -> waOut {grp, vf} (wa-out group ki line). PC par kd din. Haal liveCamPc.sr.
@@ -48,7 +52,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.3';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.4';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -296,7 +300,28 @@ function startMosaic(codec, kind) {
 // Malik (23 Nov): 'recording ko save karne ki ab PC mein zaroorat nahi — us ki jagah jo sab cameras ki live screen hai us ko record karta rahe · group mein lagatar videos'.
 // Setting blueAccess/sabRec (sirf malik). Input = recording wali line ki copy (srcs) — NVR par naya rabta KABHI nahi; jis camera ki line na ho us ka khana khali.
 const SR_SEG = 300, SR_FILE = path.join(DIR, 'sab-rec-sent.json'), SR_WAM = path.join(DIR, 'wa-media'), SR_RE = /^sab-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.mp4$/;
-let SR = { on: false, g: '', gn: '', kd: 2, st: 480, end: 1320 }, sr = null, srBad = 0, srUdp = false, srTry = 0, srCleanAt = 0;
+let SR = { on: false, g: '', gn: '', kd: 2, st: 480, end: 1320 }, sr = null, srBad = 0, srUdp = false, srTry = 0, srCleanAt = 0, srNoTxt = false;
+// v2.4: phone khara = ek column (7 tak), 8-9 = 2 column; khana camera ginti ke hisaab se
+const srGrid = n => n <= 7 ? [1, Math.max(1, n)] : [2, Math.ceil(n / 2)];
+const srTs = n => n <= 5 ? { w: 512, h: 288 } : n <= 7 ? { w: 448, h: 252 } : ALL_T;
+const SR_TXD = 'sab-rec-t', srLab = x => ((x.k === 'c' ? 'Counter ' : '') + String(x.n || '')).replace(/[\r\n]+/g, ' ').slice(0, 34);
+function srFont() {   // bill-clip ka clip-font (b / r) — na ho to Windows Fonts se apni copy (s.ttf); drawtext ko 'C:' wala raasta nahi dete (':' filter tor deta hai)
+  const fd = path.join(DIR, 'clip-font'), win = path.join(process.env.WINDIR || 'C:\\Windows', 'Fonts');
+  for (const k of ['b', 'r', 's']) { try { if (fs.statSync(path.join(fd, k + '.ttf')).size > 10000) return 'clip-font/' + k + '.ttf'; } catch {} }
+  for (const n of ['segoeuib.ttf', 'arialbd.ttf', 'segoeui.ttf', 'arial.ttf', 'tahoma.ttf']) {
+    try { const f = path.join(win, n); if (fs.statSync(f).size > 10000) { fs.mkdirSync(fd, { recursive: true }); fs.copyFileSync(f, path.join(fd, 's.ttf')); return 'clip-font/s.ttf'; } } catch {}
+  }
+  return '';
+}
+function srTexts(L) {   // har khane ka naam alag likhai file mein (textfile = naam mein % ' : kuch bhi ho, filter nahi toot-ta)
+  if (srNoTxt) return null;
+  try {
+    const font = srFont(); if (!font) return null;
+    fs.mkdirSync(path.join(DIR, SR_TXD), { recursive: true });
+    const f = L.map((x, i) => { const n = SR_TXD + '/n' + i + '.txt'; fs.writeFileSync(path.join(DIR, n), srLab(x), 'utf8'); return n; });
+    return { font, f };
+  } catch { return null; }
+}
 const srSt = { rec: 0, n: 0, err: '', last: '', at: 0, sent: 0, day: '' };
 let srSent = {}; try { srSent = JSON.parse(fs.readFileSync(SR_FILE, 'utf8')) || {}; } catch {}
 function srSave() { try { const k = Object.keys(srSent).sort(); for (const x of k.slice(0, Math.max(0, k.length - 1500))) delete srSent[x]; fs.writeFileSync(SR_FILE, JSON.stringify(srSent)); } catch {} }
@@ -312,12 +337,12 @@ biz.collection('blueAccess').doc('sabRec').onSnapshot(s => {
   log(`📼 sab cameras ki recording: ${SR.on ? 'CHALU' : 'band'}${SR.g ? ' · group ' + (SR.gn || SR.g) : ' · group nahi chuna'} · ${SR.kd} din`);
   try { srTick(); pushSt(true); } catch {}
 }, e => log('⚠️ sabRec: ' + e.message));
-function srFilter(L, ok, w, h, fps) {   // khane ki jagah PAKKI (camera ki line na ho = khali khana) — taake group ki har video mein har camera wahi jagah
-  const [c, r] = moGrid(L.length), parts = [], lab = [], lay = []; let k = 0;
+function srFilter(L, ok, w, h, fps, tx) {   // khane ki jagah PAKKI (camera ki line na ho = khali khana) — taake group ki har video mein har camera wahi jagah
+  const [c, r] = srGrid(L.length), parts = [], lab = [], lay = [], fz = Math.max(14, Math.round(h / 13)); let k = 0;
   for (let i = 0; i < c * r; i++) {
-    if (i < L.length && ok[i]) parts.push(`[${k++}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x0b0f16,setsar=1[v${i}]`);
-    else parts.push(`color=c=0x0b0f16:s=${w}x${h}:r=${fps}[v${i}]`);
-    lab.push(`[v${i}]`); lay.push(`${(i % c) * w}_${Math.floor(i / c) * h}`);
+    let v = i < L.length && ok[i] ? `[${k++}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x0b0f16,setsar=1` : `color=c=0x0b0f16:s=${w}x${h}:r=${fps}`;
+    if (tx && tx.f[i]) v += `,drawtext=fontfile='${tx.font}':textfile='${tx.f[i]}':expansion=none:fontsize=${fz}:fontcolor=white:borderw=2:bordercolor=black@0.85:x=8:y=6`;
+    parts.push(v + `[v${i}]`); lab.push(`[v${i}]`); lay.push(`${(i % c) * w}_${Math.floor(i / c) * h}`);
   }
   parts.push(c * r === 1 ? `[v0]null[out]` : `${lab.join('')}xstack=inputs=${c * r}:layout=${lay.join('|')}[out]`);
   return parts.join(';');
@@ -328,8 +353,8 @@ function srStart() {
   const L = allList(); if (!L.length) { srSt.err = 'Koi camera ⚙️ Camera setup mein nahi'; return; }
   const ok = L.map(x => shareOk(x.ch)); if (!ok.some(Boolean)) { srSt.err = 'Kisi camera ki recording ki line nahi aa rahi (⚙️ Camera setup — ⏺ Rec ON?)'; return; }
   const dir = srDir(); try { fs.mkdirSync(dir, { recursive: true }); } catch (e) { srSt.err = 'recording ka folder nahi bana (' + String(e.code || e.message).slice(0, 40) + ')'; return; }
-  const T = L.length > 6 ? ALL_T : MO_T, f = srFilter(L, ok, T.w, T.h, ALL_FPS);
-  const p = sr = { fw: [], srv: [], L, ok, sig: ok.map(Number).join(''), lsig: L.map(x => x.n + ':' + x.ch).join('|'), at: Date.now(), grow: Date.now(), key: '', dir, udp: srUdp, made: 0 };
+  const T = srTs(L.length), tx = srTexts(L), f = srFilter(L, ok, T.w, T.h, ALL_FPS, tx);
+  const p = sr = { tx: !!tx, fw: [], srv: [], L, ok, sig: ok.map(Number).join(''), lsig: L.map(x => x.n + ':' + x.ch).join('|'), at: Date.now(), grow: Date.now(), key: '', dir, udp: srUdp, made: 0 };
   Promise.all(L.map((x, i) => ok[i] && !p.udp ? moTcp(p, x.ch) : 0)).then(tp => {
     if (sr !== p) { moUnfw(p); return; }
     const inArgs = [], pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt'];
@@ -344,7 +369,7 @@ function srStart() {
     // 380k x 300 s = ~14 MB (WhatsApp ki 16 MB hadd ke andar); crf = khara manzar chhoti file (internet kam)
     const args = ['-hide_banner', '-loglevel', 'error', ...inArgs, '-filter_complex', f, '-map', '[out]', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-pix_fmt', 'yuv420p', '-crf', '30', '-maxrate', '380k', '-bufsize', '760k', '-g', String(ALL_FPS * 10),
       '-f', 'segment', '-segment_time', String(SR_SEG), '-segment_atclocktime', '1', '-reset_timestamps', '1', '-strftime', '1', '-segment_format', 'mp4', '-segment_format_options', 'movflags=+faststart', path.join(dir, 'sab-%Y%m%d-%H%M%S.mp4')];
-    const proc = spawn(ff, args, { windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] }); p.ff = proc; let err = '';
+    const proc = spawn(ff, args, { cwd: DIR, windowsHide: true, stdio: ['pipe', 'ignore', 'pipe'] }); p.ff = proc; let err = '';
     proc.stdin.on('error', () => {});
     proc.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
     proc.on('error', e => { err += ' ' + e.message; });
@@ -352,10 +377,10 @@ function srStart() {
       moUnfw(p); p.ff = null; if (sr === p) sr = null; srSt.rec = 0;
       if (p.stopping) return;
       const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
-      if (!p.made) { srBad++; if (!p.udp && srBad >= 2) { srUdp = true; log('📼 sab recording: tez (TCP) tareeqa nahi chala — purana UDP tareeqa'); } }
+      if (!p.made) { if (p.tx && !srNoTxt) { srNoTxt = true; log('📼 sab recording: camera ke naam (drawtext) se nahi chali — ab bina naam'); } else { srBad++; if (!p.udp && srBad >= 2) { srUdp = true; log('📼 sab recording: tez (TCP) tareeqa nahi chala — purana UDP tareeqa'); } } }
       srSt.err = 'recording ruki: ' + why; log(`📼 sab recording ruki (${why})`);
     });
-    srSt.err = ''; log(`📼 sab recording shuru — ${ok.filter(Boolean).length}/${L.length} camera${p.udp ? ' (udp)' : ''} -> ${dir}`);
+    srSt.err = ''; log(`📼 sab recording shuru — ${ok.filter(Boolean).length}/${L.length} camera${p.udp ? ' (udp)' : ''} · ${srGrid(L.length).join('x')} ${T.w}x${T.h}${tx ? ' + naam' : ''} -> ${dir}`);
   }).catch(e => { if (sr === p) sr = null; moUnfw(p); log('⚠️ sab recording: ' + (e && e.message)); });
 }
 function srStop(why) {

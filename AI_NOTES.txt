@@ -9622,3 +9622,13 @@ Ilaaj: `keep(title)` = intezar mein WAHI <audio> 12 s ki 22 Hz bohat halki dhun 
 Azmaya: headless Chrome + nakli Gemini (fetch stub, 65 s timer chhota + Date.now aage): screen band -> TTS 429 -> dhun -> khud awaz · AI 429 -> khud dobara · AI der -> dhun -> agla
   hissa · TTS band + screen band -> 'Screen kholein' + dhun, screen khuli -> phone awaz · phone awaz ke beech band/khuli -> usi line se. Asal phone (Android ka sulana / play() mana)
   par nahi azmaya — malik se nateeja poochho. AI: wahi (Gemini sirf samjhane / awaz mein).
+
+
+=== 2026-11-24 — PC live-cam v2.4: 📼 WhatsApp group wali 'Sab cameras' recording phone par bari (app ki koi file nahi badli) ===
+Malik ki screenshot: group ki video phone par beech mein patli patti (screen ka ~17%) — moGrid 3x2 chauri video (1344x504), 5 camera = ek khana khali, baqi screen kaali.
+Ab srGrid: 7 camera tak EK column (ek ke neeche ek), 8-9 = 2 column; khana srTs: 5 tak 512x288 · 6-7 = 448x252 · 8-9 = 384x216 (crf 30 / maxrate 380k wahi = 16 MB ke andar).
+Har khane ke upar baayein camera ka naam (srLab: counter = 'Counter <PC naam>') — drawtext relative fontfile (clip-font/b|r, na ho to Windows Fonts se clip-font/s.ttf) +
+textfile (sab-rec-t/n<i>.txt) + expansion=none, ffmpeg spawn cwd = DIR. Naam ke saath ffmpeg na chale (file na bane) = srNoTxt, agli dafa bina naam (srBad / UDP mein nahi ginta).
+App ka Live screen (🎛 / ▦ dabbe) aur moGrid (live mosaic) NAHI badle — sirf sab-rec. Azmaya: ffmpeg testsrc2 se 5 camera (ek band) 512x1440 + naam (% : ' wale naam bhi) aur 8 camera
+768x864 — frame dekha, theek. Asal NVR / WhatsApp par nahi azmaya. AI nahi. Rules nahi badle.
+Malik ne Video samjhao ka '📖 Poori baat' plan NAHI chuna (24 Nov: 'wo Gemini wala plan OK nahi karna') — mat banao jab tak malik khud na kahe.
