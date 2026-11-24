@@ -9748,3 +9748,10 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - mosaic inputs se -skip_loop_filter hataya (dhabbe).
 - tally.js 📼 haal: '🎞 PC ki recording se ban rahi'. style.css .lv-tools wrap + .lv-dl.
 - Asal PC par azmaya nahi — malik se ⏪ Saaf ki screenshot aur group ki agli video poochho.
+
+=== 24 Nov 2026 raat — Live grey / ⏪ Saaf ki jaanch (sirf notes, code nahi badla) ===
+- Server PC (desktop-oegi39u, DESKTOP-Q1SLV77 naam se scripts) ka live-cam + bill-clip log parha (malik ne C:\khata-sync joda).
+- Recording sab camera Main stream (subtype=0) — live / 🎛 isi ki copy decode: 🩺 'PC ke andar gire' 3,000–1,21,000 fi 10 s (6:48–6:59 pm) = decode bojh.
+- 10:11–10:34 pm: bill-clip 'rec ch N ruk gayi … Error number -138' paanchon channel ek saath, har ~17 s — recording nahi bani -> ⏪ Saaf khali, 15 s chowkidar = 'ffmpeg code null'.
+- ⏪ feeder har asal tukre par 'Error muxing a packet' (8:17 pm se bhi) — mera bug, abhi theek nahi; live-cam v2.8 (feeder pehle se tayyar + 45 s) mahalli bana, PUSH NAHI.
+- Mashwara malik ko: ⚙️ Camera setup -> 'Sub stream (halki)'. Malik ne OK kaha (23:00).
