@@ -76,7 +76,7 @@ document.addEventListener('click', e => {
 }, true);
 
 // ---------- kholna (WAHI jagah) ----------
-const UP_CLOSE = ['ntShellClose', 'ntSdjClose', 'ntGtpClose', 'ntLvClose', 'ntDlvClose', 'ntNsClose', 'ntBtClose', 'ntRcClose', 'ntQtrClose', 'ntAwClose', 'ntKdClose', 'ntWebClose', 'ntGnClose', 'ntGvClose'];
+const UP_CLOSE = ['ntShellClose', 'ntPclClose', 'ntSdjClose', 'ntGtpClose', 'ntLvClose', 'ntDlvClose', 'ntNsClose', 'ntBtClose', 'ntRcClose', 'ntQtrClose', 'ntAwClose', 'ntKdClose', 'ntWebClose', 'ntGnClose', 'ntGvClose'];
 function upClose() {   // jo khirki khuli ho band (phone ke back jaisa — app.js popstate wali fehrist), phir aam khirki
   for (const h of UP_CLOSE) for (let n = 0; n < 10; n++) { const f = window[h]; if (typeof f !== 'function') break; let r = false; try { r = f(); } catch { break; } if (!r) break; }
   const d = document.getElementById('dialog'); if (d && d.open) { try { d.close(); } catch {} }

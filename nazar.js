@@ -3,7 +3,7 @@
 // Nigrani wale ke liye ek screen: har counter ka bara khana — bill bante waqt har scan ki line live (liveCarts/<counter>),
 // halki "tik" awaz, ⛔ ROKO (counter par laal, save band), ✓ Theek hai, aakhri 5 bills. Mobile aur PC dono par.
 // Data sale.js likhta hai (liveCartSet / liveSaved); yahan sirf parhna + stop likhna.
-import { tallySetup, renderTally, tallyStop } from './tally.js?v=2.372.0';   /* v2.204.0: 👀 Bill tally */
+import { tallySetup, renderTally, tallyStop } from './tally.js?v=2.373.0';   /* v2.204.0: 👀 Bill tally */
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const num = v => Number(v || 0).toLocaleString('en-PK', { maximumFractionDigits: 2 });
@@ -12,7 +12,7 @@ const tm = t => t ? new Date(Number(t)).toLocaleTimeString('en-US', { hour: 'num
 let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', uidOf = () => '';
 let un = null, carts = [], seen = new Map(), sound = true, ac = null, mounted = false;
 let pcUn = null, pcs = [], pcTick = null, pcOpen = true, nzMode = 'tally';
-try { nzMode = localStorage.getItem('sam-nz-mode') === 'live' ? 'live' : 'tally'; } catch {}
+// v2.373.0 (malik: 'jab bhi screen open karein seedha menu hi main screen ho'): purana 📺 Counter Nazar yaad NAHI rehta — har dafa screen khulte hi 🏠 menu (tally.js)
 const setMode = m => { nzMode = m; try { localStorage.setItem('sam-nz-mode', m); } catch {} const s = $('summary'); if (s) s.innerHTML = ''; renderNazar(); };
 window.ntNazarLive = () => setMode('live');
 
@@ -58,7 +58,7 @@ export function renderNazar() {
   watch(); paint(); watchPcs(); paintPcs();
 }
 
-export function nazarStop() { tallyStop(); if (!mounted) return; mounted = false; try { un?.(); } catch {} un = null; try { pcUn?.(); } catch {} pcUn = null; clearInterval(pcTick); pcTick = null; }
+export function nazarStop() { nzMode = 'tally'; tallyStop(); if (!mounted) return; mounted = false; try { un?.(); } catch {} un = null; try { pcUn?.(); } catch {} pcUn = null; clearInterval(pcTick); pcTick = null; }
 
 // ---------- v2.95.7: 🔔 COUNTER AWAZ (har PC ka NT-PRINT printPCs/<id>.snd likhta hai) ----------
 const dayKey = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`; };

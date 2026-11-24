@@ -23,7 +23,11 @@ let cloud = null, notice = () => {}, isOwner = () => false, byName = () => '', u
 let offs = [], mounted = false, bills = new Map(), clips = new Map(), tallies = new Map(), lines = new Map(), urls = new Map(), pcSt = null, reqs = new Map(), segIdx = 0, segBusy = '';
 let fPc = '', cur = '', mode = 'view', sel = new Set(), lastDone = '', reopen = '', order = 'new', speed = 1.5, loading = '', paintT = null;
 let fDay = 'aaj', skipped = new Set(), undoUntil = 0, undoT = null, tapT = null;
-let xcams = [], waPref = true; const xcReq = new Set();   // v2.332.0: 🎥 mazeed cameras (naam, max 2) · 🪟 WhatsApp jaisa view
+let xcams = [], waPref = true; const xcReq = new Set();
+// v2.373.0 (24 Nov, malik: 'is monitoring ki ab zaroorat nahi — WhatsApp par videos ja rahi hain · off karne ka option · screen khule to seedha menu hi main screen'):
+//   🏠 home = menu (har dafa screen khulte hi) · 👀 Bill tally sirf card se · tally BAND (har phone ka apna, sam-bt-off) = clips / tally ke listener hi nahi (data bachta).
+let home = true, offsT = [], homeSig = '';
+const tOff = () => { try { return localStorage.getItem('sam-bt-off') === '1'; } catch { return false; } };   // v2.332.0: 🎥 mazeed cameras (naam, max 2) · 🪟 WhatsApp jaisa view
 try { const a = JSON.parse(localStorage.getItem('sam-bt-xcam') || '[]'); if (Array.isArray(a)) xcams = a.filter(x => typeof x === 'string' && x).slice(0, 2); waPref = localStorage.getItem('sam-bt-wa') !== '0'; } catch {}
 const isWa = () => waPref && (!!window.ntPcm || window.innerWidth >= 900);
 const camKey = n => String(n || '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '').slice(0, 24) || 'cam';
@@ -38,8 +42,10 @@ export function tallySetup(o) { cloud = o.cloud; notice = o.notice || notice; ca
 export function renderTally(host) {
   mounted = true; document.documentElement.classList.add('bt-on');
   if (!host.querySelector('#btRoot')) {
-    host.innerHTML = `<div id="btRoot" class="bt-root">
-      <div class="bt-bar"><span class="bt-prog" id="btProg">…</span><button type="button" class="bt-warn" id="btPc" data-bt-pcst="1" hidden></button>
+    home = true; homeSig = '';   // v2.373.0: screen naye sire se khuli = menu
+    host.innerHTML = `<div id="btRoot" class="bt-root is-home">
+      <div class="bt-home" id="btHome"></div>
+      <div class="bt-bar" hidden><button type="button" class="bt-menu" data-bt-home="1" title="Menu">‹ Menu</button><span class="bt-prog" id="btProg">…</span><button type="button" class="bt-warn" id="btPc" data-bt-pcst="1" hidden></button>
         <span class="bt-chips" data-mn-box>
           <button type="button" data-bt-day="1" data-mn="bt.day" data-mn-i="📅" data-mn-t="Din" data-mn-s="Aaj · Kal · Dono ke bill" data-mn-g="👀 Bill tally">📅 Din</button>
           <button type="button" data-bt-pcf="1" data-mn="bt.pcf" data-mn-i="🖥" data-mn-t="Sab counter ke bill" data-mn-s="teeno counter ikathe" data-mn-g="👀 Bill tally">🖥 Sab counter</button>
@@ -70,18 +76,21 @@ export function renderTally(host) {
   }
   watch(); paint();
 }
-export function tallyStop() { document.documentElement.classList.remove('bt-on'); if (!mounted) return; mounted = false; for (const f of offs) { try { f(); } catch {} } offs = []; for (const u of urls.values()) { try { URL.revokeObjectURL(u); } catch {} } urls.clear(); }
+export function tallyStop() { document.documentElement.classList.remove('bt-on'); if (!mounted) return; mounted = false; for (const f of offs) { try { f(); } catch {} } offs = []; stopT(); for (const u of urls.values()) { try { URL.revokeObjectURL(u); } catch {} } urls.clear(); }
 
 // ---------- data ----------
 function watch() {
-  if (offs.length) return;
   const days = [dayKey(0), dayKey(1)];
-  for (const d of days) offs.push(cloud.listenPosSales(d, b => { if (!Array.isArray(b)) return; for (const [id, x] of [...bills]) if (x._d === d) bills.delete(id); for (const x of b) bills.set(String(x.id), { ...x, _d: d }); schedule(); }));
-  offs.push(cloud.listenBillClips(days, (l, e) => { if (!l) { if (e && $('btPc')) { $('btPc').hidden = false; $('btPc').textContent = '⚠'; $('btPc').dataset.full = '⚠ ' + (e.message || 'clip nahi parh sake'); $('btPc').classList.add('bad'); } return; } clips = new Map(l.map(c => [String(c.id), c])); schedule(); }));
-  offs.push(cloud.listenBillTally(days, l => { if (!l) return; tallies = new Map(l.map(t => [String(t.id), t])); schedule(); }));
-  offs.push(cloud.listenBillClipPc(s => { pcSt = s; paintPc(); wgPaintSt(); }));
-  offs.push(cloud.listenBillClipReq(dayKey(0), l => { if (!l) return; reqs = new Map(l.map(r => [String(r.id), r])); schedule(); if ($('btDlg')?.open && $('btDlg').dataset.unp) openUnposted(); }));
+  if (!offs.length) {
+    for (const d of days) offs.push(cloud.listenPosSales(d, b => { if (!Array.isArray(b)) return; for (const [id, x] of [...bills]) if (x._d === d) bills.delete(id); for (const x of b) bills.set(String(x.id), { ...x, _d: d }); schedule(); }));
+    offs.push(cloud.listenBillClipPc(s => { pcSt = s; paintPc(); wgPaintSt(); }));
+  }
+  if (tOff() || offsT.length) return;   // v2.373.0: tally BAND = video / tally ke listener nahi
+  offsT.push(cloud.listenBillClips(days, (l, e) => { if (!l) { if (e && $('btPc')) { $('btPc').hidden = false; $('btPc').textContent = '⚠'; $('btPc').dataset.full = '⚠ ' + (e.message || 'clip nahi parh sake'); $('btPc').classList.add('bad'); } return; } clips = new Map(l.map(c => [String(c.id), c])); schedule(); }));
+  offsT.push(cloud.listenBillTally(days, l => { if (!l) return; tallies = new Map(l.map(t => [String(t.id), t])); schedule(); }));
+  offsT.push(cloud.listenBillClipReq(dayKey(0), l => { if (!l) return; reqs = new Map(l.map(r => [String(r.id), r])); schedule(); if ($('btDlg')?.open && $('btDlg').dataset.unp) openUnposted(); }));
 }
+function stopT() { for (const f of offsT) { try { f(); } catch {} } offsT = []; clips = new Map(); tallies = new Map(); reqs = new Map(); cur = ''; }
 function schedule() { if (paintT) return; paintT = setTimeout(() => { paintT = null; paint(); if ($('btDlg')?.open && $('btDlg').dataset.list) openList(true); }, 120); }
 // v2.230.0: PRINT hote hi tally (malik: "first item likhte hi aur print ke baad hum tally kar sakein") — posted YA chhapa hua (ct)
 const inQ = b => Number(b.ps) === 2 || Number(b.ct) > 0, wq = b => Number(b.pt) || Number(b.ct) || 0;
@@ -283,8 +292,35 @@ function paintPc() {
   const bad = /⚠|chup|✕|band/.test(s);   // v2.224.0: screen par sirf chhota chip — tap = poori baat
   el.hidden = !(bad || c.wait); el.textContent = /chup/.test(s) ? '⚠ PC chup' : bad ? '⚠' : '⏳ ' + c.wait; el.dataset.full = s; el.title = s; el.classList.toggle('bad', bad);
 }
+// ---------- 🏠 v2.373.0: MENU = Nigrani ki pehli screen ----------
+function homeCards() {
+  const off = tOff(), c = off ? null : counts(), L = [], add = (show, k, i, t, sub) => { if (show) L.push([k, i, t, sub]); };
+  add(!off, 'tally', '👀', 'Bill tally', c ? `${c.q} bill baqi${c.wait ? ' · ⏳ ' + c.wait + ' ban rahi' : ''}` : '');
+  add(canK('nz.live'), 'cam', '🔴', 'Live camera', 'counter / godam ki seedhi video');
+  add(canK('nz.wa'), 'wa', '📲', 'Video WhatsApp par', 'bill number → malik + Mubeen');
+  add(isOwner(), 'wg', '👥', 'Group videos', 'har bill + 📼 sab cameras group mein');
+  add(canK('nz.ginti'), 'gn', '📦', 'Loading ginti', 'godam camera ki ginti');
+  add(canK('nz.gvid') && typeof window.ntGodamV === 'function', 'gv', '🏬', 'Godam videos', 'godam ke waqie ki video');
+  add(!off, 'list', '📋', 'Bills ki list', 'har bill ki video · ⚡ / 🐢 raftar');
+  add(!off, 'unp', '🔵', 'Un-posted bills', 'clip mangwao');
+  add(!off, 'sum', '📊', 'Aaj ka hisaab', '✓ theek / ✕ kam');
+  add(isOwner(), 'setup', '⚙️', 'Camera setup', 'NVR + counter ke camera');
+  add(isOwner() && typeof window.ntPcLoad === 'function', 'pcl', '🔥', 'PC ka bojh', 'CPU · RAM · network chart');
+  add(true, 'live', '📺', 'Counter Nazar', 'purani live screen');
+  return L;
+}
+function paintHome() {
+  const el = $('btHome'); if (!el) return;
+  const off = tOff(), L = homeCards(), sig = JSON.stringify([off, L]); if (sig === homeSig && el.firstChild) return; homeSig = sig;
+  el.innerHTML = `<div class="bt-hgrid">${L.map(([k, i, t, sub]) => `<button type="button" class="bt-hcard" data-bt-h="${k}"><span class="bt-hi">${i}</span><span class="bt-ht"><b>${esc(t)}</b>${sub ? `<small>${esc(sub)}</small>` : ''}</span></button>`).join('')}</div>
+    <div class="bt-hsw"><span><b>👀 Bill tally</b><small>${off ? 'BAND — is phone par bill ki videos load nahi hotin (data bachta hai). WhatsApp group videos pehle jaisi jati rahengi.' : 'CHALU — sirf 👀 card kholne par video chalti hai.'}</small></span><button type="button" class="bt-hswb${off ? '' : ' is-in'}" data-bt-toff="1">${off ? '⚪ BAND' : '🟢 CHALU'}</button></div>`;
+}
+function goHome() { home = true; const mn = $('btMain'); if (mn) mn.innerHTML = ''; mode = 'view'; sel = new Set(); paint(); }
 function paint() {
   if (!mounted || !$('btRoot')) return;
+  { const root = $('btRoot'), hm = home || tOff(), bar = root.querySelector('.bt-bar'), he = $('btHome');   // v2.373.0: 🏠 menu ya tally
+    root.classList.toggle('is-home', hm); if (bar && bar.hidden !== hm) bar.hidden = hm; if (he) he.hidden = !hm;
+    if (hm) { paintHome(); return; } }
   const c = counts(), q = queue();
   const pg = $('btProg'); if (pg) { const sig = pcChips().map(([k, n]) => k + ':' + n).join('|') + '|' + fPc + '|' + fDay + '|' + c.ok + '|' + c.bad + '|' + c.q;
     if (pg.dataset.sig !== sig) { pg.dataset.sig = sig; const sl = pg.scrollLeft;
@@ -375,6 +411,15 @@ async function save(ok, miss) {
 // ---------- click ----------
 async function onClick(e) {
   const t = e.target;
+  { const h = t.closest('[data-bt-h]'); if (h) { const k = h.dataset.btH;   // v2.373.0: 🏠 menu ke cards
+      if (k === 'tally') { if (tOff()) return; home = false; const mn = $('btMain'); if (mn) mn.innerHTML = ''; watch(); paint(); return; }
+      if (k === 'cam') { openCam(); return; } if (k === 'wa') { openWa(); return; } if (k === 'wg') { openWg(); return; } if (k === 'setup') { openSetup(); return; }
+      if (k === 'list') { openList(); return; } if (k === 'unp') { openUnposted(); return; } if (k === 'sum') { openSum(); return; }
+      if (k === 'gn') { try { window.ntGinti?.(); } catch (er) { notice('Loading ginti: ' + (er?.message || er)); } return; }
+      if (k === 'gv') { try { window.ntGodamV?.(); } catch {} return; } if (k === 'pcl') { window.ntPcLoad?.(); return; } if (k === 'live') { window.ntNazarLive?.(); return; }
+      return; } }
+  if (t.closest('[data-bt-toff]')) { const off = !tOff(); try { localStorage.setItem('sam-bt-off', off ? '1' : '0'); } catch {} if (off) stopT(); else watch(); home = true; homeSig = ''; paint(); notice(off ? '👀 Bill tally BAND — is phone par videos load nahi hongi' : '👀 Bill tally CHALU'); return; }
+  if (t.closest('[data-bt-home]')) { goHome(); return; }
   if (t.closest('[data-bt-ok]')) { save(true, []); return; }
   if (t.closest('[data-bt-bad]')) { mode = 'miss'; sel = new Set(); paintItems(); paintBtns(); return; }
   if (t.closest('[data-bt-cancel]')) { mode = 'view'; sel = new Set(); paintItems(); paintBtns(); return; }
@@ -394,7 +439,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-list]')) { openList(); return; }
   const pv = t.closest('[data-bt-pcv]'); if (pv) { setPc(fPc === pv.dataset.btPcv ? '' : pv.dataset.btPcv); return; }
   if (t.closest('[data-bt-pcf]')) { setPc(''); notice('🖥 Sab counter ke bill'); return; }
-  if (t.closest('[data-bt-cam]')) { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.372.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); return; }
+  if (t.closest('[data-bt-cam]')) { openCam(); return; }
   const rq = t.closest('[data-bt-rq]'); if (rq) { const id = rq.dataset.btRq, b = bills.get(id); rq.disabled = true; rq.textContent = '⏳'; cloud.reqBillClip(id, { no: b?.no, pc: b?.pc, day: dayKey(0) }).then(() => notice('🎥 PC ko hukum gaya — clip 1-2 min mein')).catch(e => { notice('Hukum nahi gaya: ' + (e?.message || e)); rq.disabled = false; rq.textContent = '🎥 Mangwao'; }); return; }
   const op = t.closest('[data-bt-open]'); if (op) { const c = clips.get(op.dataset.btOpen); if (!c || c.st !== 'ok') { notice(c?.st === 'err' || c?.st === 'skip' ? '⚠ Is bill ki clip nahi bani: ' + (c.err || '') : '⏳ Clip abhi ban rahi hai'); return; } reopen = op.dataset.btOpen; cur = op.dataset.btOpen; mode = 'view'; sel = new Set(); const dd = $('btDlg'); if (dd) { delete dd.dataset.list; delete dd.dataset.unp; dd.close(); } $('btMain').innerHTML = ''; paint(); return; }
   if (t.closest('[data-bt-gfull]')) { const tile = t.closest('.bt-gt'), v = tile?.querySelector('video'); try { if (document.fullscreenElement) document.exitFullscreen(); else if (v?.webkitEnterFullscreen && /iPhone|iPad/.test(navigator.userAgent)) v.webkitEnterFullscreen(); else tile?.requestFullscreen?.(); } catch {} return; }   // v2.337.0: 🚪 godam video
@@ -416,6 +461,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-live]')) { window.ntNazarLive?.(); return; }
 }
 
+function openCam() { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.373.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); }   // v2.373.0: menu card + ⋮ dono se
 // ---------- apni khirki (dialog) — phone back = band ----------
 const xcN = () => (Array.isArray(pcSt?.cams) ? pcSt.cams : []).filter(c => c && c.n && !c.c).map(c => String(c.n));   // v2.329.0: 📹 mazeed cameras (PC bill-clip v2.10)
 function dlg() {
@@ -423,7 +469,8 @@ function dlg() {
   if (!d) { d = document.createElement('dialog'); d.id = 'btDlg'; d.className = 'bt-dlg'; document.body.append(d); d.addEventListener('click', ev => { if (ev.target === d) d.close(); }); }
   return d;
 }
-window.ntBtClose = () => { const d = $('btDlg'); if (!d?.open) return false; try { d.close(); } catch { d.removeAttribute('open'); } return true; };
+window.ntBtClose = () => { const d = $('btDlg'); if (!d?.open) { if (mounted && !home && $('btRoot')) { goHome(); return true; } return false; } try { d.close(); } catch { d.removeAttribute('open'); } return true; };   // v2.373.0: tally se back = menu
+window.ntBtWg = () => openWg();   // v2.373.0: 📊 PC ka bojh ke mashwaray se
 
 function openSum() {
   const d = dlg();

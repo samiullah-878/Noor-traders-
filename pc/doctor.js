@@ -1,4 +1,6 @@
 // =========================================================
+//  v3.14 (2026-11-24, app v2.373.0): 📊 PC KA BOJH — cpuTick ke naap har 5 min ek nuqta (CPU / RAM average, network ↑ / ↓, har kaam ka CPU + RAM) → blueAccess/pcLoad
+//    (24 ghante, ek doc); network bytes usi PowerShell mein. 📼 sab cameras ki ffmpeg ab apne naam se (pehle 'bill ki clip' dikhti thi). Sirf naap. AI nahi.
 //  v3.13 (2026-11-17, app v2.319.0): 🚨 DUKAN KI NABZ — nabz.js (alag file) har 60 s dukan ka haal ek doc (pcBeat/<chaabi>) mein, malik ke phone ka
 //    MacroDroid '🚨 Dukan nigrani' parhta hai (PC / internet band, thermal phansa, WhatsApp toota, bill nahi …). Sirf server (BLOCKED nahi). AI nahi.
 //  doctor.js  v3.1 (2026-11-10: 🔥 CPU list ab WMI Win32_Process se — SQL Server / antivirus jaise SYSTEM program bhi; ek jaise program jama (×N); 'baqi' line.)
@@ -33,7 +35,7 @@ const crypto = require('crypto');
 const { execSync, execFileSync, execFile, spawn } = require('child_process');
 
 const DIR = __dirname;
-const VER = '3.13';
+const VER = '3.14';
 const EVERY = 30 * 60 * 1000;          // GitHub
 const QUICK = 2 * 60 * 1000;           // zinda + atka kaam
 const GITQ = 3 * 60 * 1000;            // v2.7: GitHub naya version? (chhota manifest)
@@ -230,9 +232,44 @@ const psRun = (cmd, ms) => new Promise(res => { try { execFile('powershell.exe',
 function cpuLabel(name, pid) {
   const c = CPU.cmd.get(pid) || '', n = String(name || '').toLowerCase();
   if (n === 'node') { const m = c.match(/([\w-]+)\.js/i); return m ? m[1] + '.js' : 'node'; }
-  if (n === 'ffmpeg') { const ch = (c.match(/clip-rec[\\/]ch(\d+)/i) || c.match(/channel=(\d+)/i) || [])[1]; return /clip-rec/i.test(c) && /segment/i.test(c) ? `ffmpeg · camera recording${ch ? ' ch ' + ch : ''}` : /rtp:\/\//i.test(c) ? 'ffmpeg · 🔴 live camera' : /clip-tmp|libx264/i.test(c) ? 'ffmpeg · 🎬 bill ki clip' : 'ffmpeg'; }
+  if (n === 'ffmpeg') { const ch = (c.match(/clip-rec[\\/]ch(\d+)/i) || c.match(/channel=(\d+)/i) || [])[1]; return /sab-rec/i.test(c) ? 'ffmpeg · 📼 sab cameras (group recording)' : /clip-rec/i.test(c) && /segment/i.test(c) ? `ffmpeg · camera recording${ch ? ' ch ' + ch : ''}` : /rtp:\/\//i.test(c) ? 'ffmpeg · 🔴 live camera' : /clip-tmp|libx264/i.test(c) ? 'ffmpeg · 🎬 bill ki clip' : 'ffmpeg'; }
   if (n === 'sqlservr') return 'SQL Server (POS ka data)'; if (n === 'msmpeng') return 'Windows Defender (antivirus)'; if (n === 'powershell') return 'PowerShell'; if (n === 'chrome' || n === 'msedge') return n === 'chrome' ? 'Chrome' : 'Edge';
   return String(name || '?').slice(0, 40);
+}
+// ---------- 📊 v3.14: PC KA BOJH — 24 GHANTE KA HISAAB (malik 24 Nov: 'PC ka mukammal data usage, CPU aur RAM ka · chart · taake PC par se bojh kam kiya ja sake') ----------
+//   cpuTick ke har 1 min ke naap jama → har 5 min EK nuqta (CPU / RAM ka average, network ↑ / ↓ KB, har kaam ka CPU + RAM) → blueAccess/pcLoad
+//   {n: JSON naam ki list, p: JSON [[minute, cpu, ram, upKB, dnKB, [[naam#, cpu×10, MB]…]]…]} — aakhri 24 ghante (288 nuqte), ek doc, har 5 min ek likhai.
+//   Shuru mein pehle purana doc parho (na parh sake = likhna band — warna 24 ghante ka hisaab mit jaye). Network = PC ke asli (physical) adapter ka kul —
+//   cameras ka LAN bhi is mein hai (Windows har program ka internet alag nahi deta). Sirf naap — koi program band / badla nahi jata. AI nahi.
+const loadRef = () => fb()?.collection('businesses').doc('noor-traders').collection('blueAccess').doc('pcLoad');
+const LOAD = { ready: false, tried: 0, pts: [], acc: null, at0: 0, net: null };
+const loadKey = l => String(l || '?').replace(/ ch \d+$/, '').replace(/ ×\d+$/, '').slice(0, 60);   // har camera ki recording ek line (ch 1, ch 2 … jama)
+async function loadInit() {
+  if (LOAD.ready || Date.now() - LOAD.tried < 60000) return LOAD.ready; LOAD.tried = Date.now();
+  const ref = loadRef(); if (!ref) return false;
+  try {
+    const s = await ref.get(), d = s.exists ? s.data() || {} : {};
+    const N = JSON.parse(d.n || '[]'), P = JSON.parse(d.p || '[]'), lim = Math.round(Date.now() / 60000) - 24 * 60;
+    LOAD.pts = (Array.isArray(P) ? P : []).filter(x => Array.isArray(x) && x[0] >= lim).map(x => ({ t: x[0], cpu: x[1], ram: x[2], up: x[3], dn: x[4], g: (Array.isArray(x[5]) ? x[5] : []).map(y => [String(N[y[0]] || '?'), (Number(y[1]) || 0) / 10, Number(y[2]) || 0]) }));
+    LOAD.ready = true; return true;
+  } catch (e) { log('⚠ pcLoad parhna: ' + String(e?.message || e).slice(0, 80)); return false; }
+}
+async function loadAdd(now, cpu, ram, grp, net) {
+  let dUp = 0, dDn = 0;
+  if (net && LOAD.net) { const a = net.rx - LOAD.net.rx, b = net.tx - LOAD.net.tx; if (a >= 0 && b >= 0 && a < 20e9 && b < 20e9) { dDn = a; dUp = b; } }
+  if (net) LOAD.net = net;
+  const A = LOAD.acc || (LOAD.acc = { n: 0, cpu: 0, ram: 0, up: 0, dn: 0, net: 0, g: new Map() }); if (!LOAD.at0) LOAD.at0 = now;
+  A.n++; A.cpu += cpu; A.ram += ram; A.up += dUp; A.dn += dDn; if (net) A.net++;
+  for (const g of grp.values()) { const k = loadKey(g.n), o = A.g.get(k) || { p: 0, m: 0 }; o.p += g.p; o.m += g.m; A.g.set(k, o); }
+  if (now - LOAD.at0 < 5 * 60000 - 15000) return;
+  const n = A.n; LOAD.acc = null; LOAD.at0 = now;   // agla nuqta theek 5 min baad
+  if (!(await loadInit())) return;   // purana hisaab parha nahi gaya = likhna nahi
+  const g = [...A.g.entries()].map(([k, o]) => [k, Math.round(o.p / n * 10) / 10, Math.round(o.m / n)]).filter(x => x[1] >= 0.3 || x[2] >= 300).sort((a, b) => b[1] - a[1]).slice(0, 10);
+  LOAD.pts.push({ t: Math.round(now / 60000), cpu: Math.round(A.cpu / n), ram: Math.round(A.ram / n), up: A.net ? Math.round(A.up / 1024) : -1, dn: A.net ? Math.round(A.dn / 1024) : -1, g });
+  const lim = Math.round(now / 60000) - 24 * 60; LOAD.pts = LOAD.pts.filter(x => x.t >= lim).slice(-300);
+  const N = [], ix = new Map(), id = k => { if (!ix.has(k)) { ix.set(k, N.length); N.push(k); } return ix.get(k); };
+  const P = LOAD.pts.map(x => [x.t, x.cpu, x.ram, x.up, x.dn, x.g.map(y => [id(y[0]), Math.round(y[1] * 10), y[2]])]);
+  const ref = loadRef(); if (ref) await ref.set({ at: now, ver: VER, host: os.hostname(), cores: os.cpus().length || 1, ramGb: Math.round(os.totalmem() / (1 << 30)), n: JSON.stringify(N), p: JSON.stringify(P) }).catch(e => log('⚠ pcLoad likhna: ' + String(e?.message || e).slice(0, 80)));
 }
 async function cpuTick() {
   if (BLOCKED || CPU.busy || process.platform !== 'win32') return; CPU.busy = true;
@@ -240,9 +277,11 @@ async function cpuTick() {
     const now = Date.now(), t = cpuTotal(), cores = os.cpus().length || 1;
     // v3.1: Win32_Process (WMI) — SYSTEM ke program (SQL Server, antivirus) ka CPU bhi deta hai (Get-Process bina admin 0 deta tha → "CPU 43%" magar list mein sirf 3%).
     //   Command line isi sawal mein (sirf node / ffmpeg ki) — sirf naam nikalne ko, memory mein; Firestore / log mein KABHI nahi.
-    const out = await psRun("Get-CimInstance Win32_Process | ForEach-Object { $n = [string]$_.Name; $cl = ''; if ($n -eq 'node.exe' -or $n -eq 'ffmpeg.exe') { $cl = [string]$_.CommandLine -replace '[\\r\\n|]', ' ' }; \"$($_.ProcessId)|$n|$([long](($_.KernelModeTime + $_.UserModeTime) / 10000))|$([int]($_.WorkingSetSize / 1MB))|$cl\" }");
-    const cur = new Map(); CPU.cmd = new Map();
-    for (const l of out.split(/\r?\n/)) { const a = l.trim().split('|'); const pid = Number(a[0]); if (a.length < 4 || !(pid > 0)) continue; const n = String(a[1] || '').replace(/\.exe$/i, ''); cur.set(pid, { n, c: Number(a[2]) || 0, m: Number(a[3]) || 0 }); if (a[4]) CPU.cmd.set(pid, a.slice(4).join(' ')); }
+    // v3.14: 📶 network ke bytes bhi ISI PowerShell mein (alag process nahi — PC par bojh na barhe); try/catch = purani Windows par sirf network khali, CPU list wahi
+    const out = await psRun("Get-CimInstance Win32_Process | ForEach-Object { $n = [string]$_.Name; $cl = ''; if ($n -eq 'node.exe' -or $n -eq 'ffmpeg.exe') { $cl = [string]$_.CommandLine -replace '[\\r\\n|]', ' ' }; \"$($_.ProcessId)|$n|$([long](($_.KernelModeTime + $_.UserModeTime) / 10000))|$([int]($_.WorkingSetSize / 1MB))|$cl\" }" +
+      '; try { $st = @(Get-NetAdapter -Physical -ErrorAction SilentlyContinue | Get-NetAdapterStatistics -ErrorAction SilentlyContinue); "NET|$(($st | Measure-Object -Property ReceivedBytes -Sum).Sum)|$(($st | Measure-Object -Property SentBytes -Sum).Sum)" } catch { "NET||" }; exit 0');
+    const cur = new Map(); CPU.cmd = new Map(); let net = null;
+    for (const l of out.split(/\r?\n/)) { const a = l.trim().split('|'); if (a[0] === 'NET') { const rx = Number(a[1]), tx = Number(a[2]); if (a[1] && a[2] && rx >= 0 && tx >= 0) net = { rx, tx }; continue; } const pid = Number(a[0]); if (a.length < 4 || !(pid > 0)) continue; const n = String(a[1] || '').replace(/\.exe$/i, ''); cur.set(pid, { n, c: Number(a[2]) || 0, m: Number(a[3]) || 0 }); if (a[4]) CPU.cmd.set(pid, a.slice(4).join(' ')); }
     const prev = CPU.prev, pt = CPU.pt, dt = now - CPU.pAt; CPU.prev = cur; CPU.pt = t; CPU.pAt = now;
     if (!prev || !pt || !cur.size || dt < 5000 || dt > 5 * 60000) return;
     const cpu = Math.max(0, Math.min(100, Math.round((1 - (t.idle - pt.idle) / Math.max(1, t.tot - pt.tot)) * 100)));
@@ -262,6 +301,7 @@ async function cpuTick() {
     CPU.hist.push([Math.round(now / 60000), cpu]); if (CPU.hist.length > 60) CPU.hist = CPU.hist.slice(-60);
     if (cpu >= 90) { if (!CPU.hot) CPU.hot = now; } else CPU.hot = 0;
     const ref = cpuRef(); if (ref) await ref.set({ at: now, host: os.hostname(), cores, cpu, ram, ramGb: Math.round(os.totalmem() / (1 << 30)), top: list, hj: JSON.stringify(CPU.hist), hot: CPU.hot || 0, ver: VER }).catch(() => {});
+    try { await loadAdd(now, cpu, ram, grp, net); } catch (e) { log('⚠ pcLoad: ' + String(e?.message || e).slice(0, 80)); }   // v3.14: 📊 24 ghante ka hisaab
   } catch (e) { log('⚠ cpu: ' + String(e?.message || e).slice(0, 80)); } finally { CPU.busy = false; }
 }
 

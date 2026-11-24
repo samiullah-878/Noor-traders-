@@ -9680,3 +9680,21 @@ line mein (gpPut). (5) Ghalti par dobara 20 s baad bina line roke (nxAt). (6) Gr
 ke neeche '📲 WhatsApp: N video line mein · aakhri video X MB ✓ Y s'. Azmaya: nakli Firestore + nakli WhatsApp — video upload ke dauran gate paigham 2.2 s par,
 jawab 0.15 s (nakli), bill video sab cameras se pehle, ghalti wala 20 s baad (beech mein doosra text gaya), waqt khatam wali video dohri nahi. Asal PC / internet par
 nahi azmaya. 'Videos nahi aa rahi' ki pakki wajah PC se pata chalegi — app ka 📼 haal + WhatsApp line dekh kar. AI nahi.
+
+
+=== 2026-11-24 — v2.373.0: 🏠 Nigrani = MENU + 👀 tally on/off · 📊 PC ka bojh (chart) — PC doctor v3.14 + wa-out v1.36 ===
+Malik: (1) 'script mein PC ka mukammal data usage, CPU aur RAM ka aaye · koi chart · taake PC par se bojh kam kiya ja sake' (plan ka OK). (2) 'is monitoring
+(Bill tally) ki ab zaroorat nahi — WhatsApp par videos ja rahi hain · off karne ka option · screen khule to seedha menu hi main screen' (+ 'oper wala bhi OK').
+🏠 tally.js: Nigrani screen har dafa khulte hi MENU (cards: 👀 Bill tally · 🔴 Live · 📲 Video WhatsApp · 👥 Group videos · 📦 Loading ginti · 🏬 Godam videos ·
+📋 Bills · 🔵 Un-posted · 📊 Aaj · ⚙️ Setup · 🔥 PC ka bojh · 📺 Counter Nazar; har card apni CAP / malik shart se). Tally sirf 👀 card se; tally ki patti mein '‹ Menu',
+phone back = menu (ntBtClose). Neeche '👀 Bill tally: 🟢 CHALU / ⚪ BAND' (har phone ka apna, sam-bt-off) — BAND = billClips / billTally / billClipReq ke listener
+hi nahi (stopT, data bachta), tally ke cards chhupe; posSales + billClipPc (Live list / Group videos) chalte rehte. nazar.js: 📺 Counter Nazar ab yaad nahi rehta
+(nazarStop = wapas menu). PC ki clip / WhatsApp group videos par koi asar NAHI.
+📊 PC doctor v3.14: cpuTick ke 1-1 min ke naap har 5 min ek nuqta -> blueAccess/pcLoad {n: naam JSON, p: [[minute, cpu, ram, upKB, dnKB, [[naam#, cpu×10, MB]…]]…]}
+(24 ghante, ek doc, shuru mein purana parh kar hi likhta). Network = Get-NetAdapter -Physical ke bytes ISI PowerShell mein (try/catch + exit 0); download mein
+cameras ka LAN bhi. 📼 sab cameras ki ffmpeg ab apne naam se (pehle libx264 ki wajah se 'bill ki clip' dikhti thi). wa-out v1.36: waLinkOut {vday, vn, vk} = aaj ki
+WhatsApp videos. App pc-load.js ('🔥 PC ka bojh', sirf malik; PC scripts ke 🔥 dabbe ka '📊 Poora hisaab' + Nigrani card): 🕒 1 / 6 / 24 ghante (chip + neeche list),
+patti (CPU abhi / avg / max · RAM · ↑ ↓ · aaj WhatsApp videos), chart 1 CPU % + RAM % (ek % paimana, 90% lakeer, 12 min khali = lakeer tooti), chart 2 network ↑ / ↓
+dandiyan, 'Kaun kitna kha raha' (average + max + RAM, ⚠ bhaari = avg 15% / max 50%) + mashwara + seedha button (👥 Group videos = window.ntBtWg, 🤖 Camera AI = PC
+scripts ka #pcAi). Tap = tooltip. Rang dataviz reference (neela / narangi). PC par khud kuch band nahi hota. Azmaya: Chromium + nakli cloud (menu, tally aana-jana,
+back, BAND / CHALU, chart + tooltip, 1 ghanta) + doctor ke hisaab ka nakli Firestore test (5 min nuqte, restart par purana parh kar). Asal PC par nahi. AI nahi.

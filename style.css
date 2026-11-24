@@ -9205,3 +9205,68 @@ html body #lvRkDlg button.rk-b.q{border-color:#fbbf24!important;color:#fde68a!im
 #lvRkDlg .rk-it.m{opacity:.7;font-size:12px}
 #lvRkDlg .rk-empty{padding:30px 10px;text-align:center;opacity:.85}
 #lvDlg .lv-tbd{font-weight:700;font-size:.78em;line-height:1.25;white-space:normal;color:#fde68a;border:1px dashed #fde68a99;border-radius:6px;padding:1px 5px;flex:0 0 auto;max-width:100%}
+/* v2.373.0: 📊 PC ka bojh (pc-load.js) — apni poori screen khirki, halka peecha (dataviz reference palette: CPU / upload = neela, RAM / download = narangi) */
+#pclDlg.pcl-dlg{inset:0;width:auto;height:auto;max-width:none;max-height:none;margin:0;border:0;padding:0;background:#fcfcfb;color:#0b0b0b;display:flex;flex-direction:column}
+#pclDlg.pcl-dlg:not([open]){display:none}
+#pclDlg::backdrop{background:rgba(9,18,40,.5)}
+#pclDlg .pcl-head{display:flex;align-items:center;gap:8px;padding:10px 12px;border-bottom:1px solid #e5e4df;position:relative;flex:0 0 auto}
+#pclDlg .pcl-head>b{font-size:17px;white-space:nowrap}
+#pclDlg .pcl-wsel{position:relative;margin-left:auto}
+#pclDlg .pcl-chip{min-height:0;height:34px;padding:0 14px;border-radius:999px;border:1px solid #c9d3e6;background:linear-gradient(#fff,#eef3fb);color:#13213f;font-size:14px;font-weight:700;white-space:nowrap}
+#pclDlg .pcl-dd{position:absolute;right:0;top:40px;z-index:5;display:flex;flex-direction:column;min-width:140px;background:#fff;border:1px solid #d7deea;border-radius:12px;box-shadow:0 10px 30px #0b1a3a33;overflow:hidden}
+#pclDlg .pcl-dd[hidden]{display:none}
+#pclDlg .pcl-dd button{min-height:0;height:40px;border:0;border-bottom:1px solid #eef1f6;background:#fff;text-align:left;padding:0 14px;font-size:15px;color:#13213f}
+#pclDlg .pcl-dd button.is-in{color:#1d5fd0;font-weight:800}
+#pclDlg .pcl-x{min-height:0;width:36px;height:36px;padding:0;border-radius:999px;border:1px solid #c9d3e6;background:#fff;font-size:20px;color:#13213f;flex:0 0 auto}
+#pclDlg .pcl-body{flex:1 1 auto;overflow:auto;padding:10px 12px 24px;-webkit-overflow-scrolling:touch}
+#pclDlg .pcl-pat{display:flex;flex-direction:column;gap:2px;padding:8px 10px;border:1px solid #e5e4df;border-radius:12px;background:#fff}
+#pclDlg .pcl-pat b{font-size:15px}
+#pclDlg .pcl-pat span{font-size:14px;color:#52514e}
+#pclDlg .pcl-warn{margin:8px 0;padding:7px 10px;border-radius:10px;background:#fff4e5;border:1px solid #f3c47a;color:#6b3d00;font-size:14px;font-weight:600}
+#pclDlg .pcl-h{margin:14px 2px 4px;font-size:15px;font-weight:800;display:flex;gap:8px;align-items:baseline}
+#pclDlg .pcl-h small{font-size:13px;color:#b45309;font-weight:700}
+#pclDlg .pcl-legend{display:flex;flex-wrap:wrap;gap:4px 12px;align-items:center;font-size:13px;color:#52514e;margin:0 2px 4px}
+#pclDlg .pcl-legend i,#pclDlg .pcl-tip i{display:inline-block;width:10px;height:10px;border-radius:3px;margin-right:4px;vertical-align:-1px}
+#pclDlg .pcl-legend small{margin-left:auto;font-size:12px;color:#7a7972}
+#pclDlg .pcl-cw{position:relative;border:1px solid #e5e4df;border-radius:12px;background:#fff;padding:4px 2px;touch-action:pan-y}
+#pclDlg .pcl-svg{display:block;width:100%;height:auto}
+#pclDlg .pcl-g{stroke:#e5e4df;stroke-width:1}
+#pclDlg .pcl-g90{stroke:#d97706;stroke-width:1;stroke-dasharray:4 3;opacity:.7}
+#pclDlg .pcl-cx{stroke:#52514e;stroke-width:1}
+#pclDlg .pcl-ax{font-size:9px;fill:#7a7972}
+#pclDlg .pcl-dl{font-size:10px;font-weight:700;fill:#0b0b0b}
+#pclDlg .pcl-tip{position:absolute;top:4px;max-width:70%;background:#1a1a19;color:#f0efec;font-size:12px;line-height:1.35;padding:5px 8px;border-radius:8px;pointer-events:none;white-space:normal}
+#pclDlg .pcl-tip[hidden]{display:none}
+#pclDlg .pcl-list{display:flex;flex-direction:column;gap:6px}
+#pclDlg .pcl-row{border:1px solid #e5e4df;border-radius:12px;background:#fff;padding:7px 10px}
+#pclDlg .pcl-row.hv{border-color:#f3c47a;background:#fffaf2}
+#pclDlg .pcl-r1{display:flex;justify-content:space-between;gap:8px;font-size:15px}
+#pclDlg .pcl-r1 b{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+#pclDlg .pcl-v{font-weight:800;font-variant-numeric:tabular-nums}
+#pclDlg .pcl-bar{height:6px;border-radius:4px;background:#eef1f6;margin:5px 0 3px;overflow:hidden}
+#pclDlg .pcl-bar i{display:block;height:100%;border-radius:4px;background:#2a78d6}
+#pclDlg .pcl-row.hv .pcl-bar i{background:#d97706}
+#pclDlg .pcl-r2{font-size:13px;color:#52514e}
+#pclDlg .pcl-r2 em{color:#b45309;font-style:normal;font-weight:700}
+#pclDlg .pcl-r3{font-size:13px;color:#3a3936;margin-top:4px;line-height:1.35}
+#pclDlg .pcl-go{min-height:0;height:30px;padding:0 12px;margin-left:4px;border-radius:999px;border:1px solid #b9cdf0;background:linear-gradient(#fff,#e8f0fd);color:#1d5fd0;font-size:13px;font-weight:700;white-space:nowrap}
+#pclDlg .pcl-empty{padding:16px 8px;text-align:center;color:#52514e;font-size:14px}
+#pclDlg .pcl-note{margin-top:12px;font-size:12px;color:#7a7972}
+#pcCpu .cpu-more{min-height:0;height:32px;margin-top:6px;padding:0 14px;border-radius:999px;border:1px solid #b9cdf0;background:linear-gradient(#fff,#e8f0fd);color:#1d5fd0;font-size:13px;font-weight:800;white-space:nowrap}
+/* v2.373.0: 🏠 Nigrani menu (tally.js home) — har dafa screen khulte hi; tally sirf 👀 card se */
+.bt-root.is-home>.bt-line,.bt-root.is-home>.bt-main,.bt-root.is-home>.bt-btns{display:none!important}
+.bt-home[hidden]{display:none!important}
+.bt-hgrid{display:grid;grid-template-columns:repeat(auto-fill,minmax(min(160px,100%),1fr));gap:8px;min-width:0}
+html body .bt-hcard{display:flex;align-items:center;gap:10px;min-width:0;min-height:62px;height:auto;padding:9px 12px;border-radius:16px;border:1px solid #d7deea;background:linear-gradient(160deg,#ffffff,#eef3fb);color:#13213f;text-align:left;box-shadow:0 2px 8px #0b1a3a12}
+html body .bt-hcard:active{transform:scale(.98)}
+.bt-hi{font-size:24px;line-height:1;flex:0 0 auto}
+.bt-ht{display:flex;flex-direction:column;min-width:0}
+.bt-ht b{font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.bt-ht small{font-size:12px;color:#52607a;line-height:1.25;margin-top:2px}
+.bt-hsw{display:flex;align-items:center;gap:10px;margin-top:10px;padding:9px 12px;border-radius:14px;border:1px solid #d7deea;background:#fff;color:#13213f}
+.bt-hsw>span{display:flex;flex-direction:column;min-width:0;flex:1 1 auto}
+.bt-hsw b{font-size:15px}
+.bt-hsw small{font-size:12px;color:#52607a;line-height:1.3}
+html body .bt-hswb{flex:0 0 auto;min-height:0;height:36px;padding:0 14px;border-radius:999px;border:1px solid #c9d3e6;background:linear-gradient(#fff,#eef2fa);color:#5b6475;font-size:14px;font-weight:800;white-space:nowrap}
+html body .bt-hswb.is-in{border-color:#5cc08a;background:linear-gradient(#ecfbf2,#cdf3dd);color:#11733f}
+html body .bt-menu{flex:0 0 auto;min-height:0;height:32px;padding:0 12px;border-radius:999px;border:1px solid #c9d3e6;background:linear-gradient(#fff,#eef2fa);color:#1d3a6e;font-size:13px;font-weight:800;white-space:nowrap}

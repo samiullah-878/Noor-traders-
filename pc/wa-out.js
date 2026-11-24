@@ -1,4 +1,5 @@
 // =========================================================
+// v1.36 (24 Nov): 📊 aaj ki WhatsApp videos ki ginti + KB waLinkOut {vday, vn, vk} — app ke '🔥 PC ka bojh' mein (internet ka sab se bara hissa). Baqi wahi.
 // v1.35 (24 Nov, malik: gate pass ka jawab 12:19 → paigham 12:22 — 'kuch seconds mein la aao' · 'cameras ki videos nahi aa rahi'): DO LINES — 't' tez line SIRF
 //        likhai (gate pass + us ka jawab, malik / Mubeen / jure number ka text) aur 'm' line (video / tasveer / group / gahak) SAATH saath chalti hain; pehle EK line thi
 //        aur 14 MB ki video (sab cameras / bill) ki upload 3 min tak sab ko rok deti thi. Video ka waqt us ke naap se (90 s + 30 s fi MB, 15 min tak); waqt khatam = DOBARA
@@ -58,7 +59,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.35';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.36';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -107,7 +108,7 @@ async function main() {
   const db = getFirestore(), biz = db.collection('businesses').doc(BUSINESS_ID), BA = biz.collection('blueAccess'), Q = biz.collection('waOut');
   const LINK = BA.doc('waLinkOut');
   let L = { st: 'off', qr: '', code: '', me: '', err: '', cmd: 0, day: '', n: 0 }, lw = Promise.resolve(), lastW = 0;
-  try { const x = await LINK.get(); if (x.exists) { const d = x.data() || {}; L.cmd = Number(d.cmd) || 0; L.me = String(d.me || ''); L.day = String(d.day || ''); L.n = Number(d.n) || 0; } } catch (e) { log('⚠️ waLinkOut: ' + e.message); }
+  try { const x = await LINK.get(); if (x.exists) { const d = x.data() || {}; L.cmd = Number(d.cmd) || 0; L.me = String(d.me || ''); L.day = String(d.day || ''); L.n = Number(d.n) || 0; L.vday = String(d.vday || ''); L.vk = Number(d.vk) || 0; L.vn = Number(d.vn) || 0; } } catch (e) { log('⚠️ waLinkOut: ' + e.message); }
   const setLink = p => { Object.assign(L, p || {}); L.at = Date.now(); L.host = os.hostname(); L.ver = VER; const snap = { ...L }; lastW = Date.now(); lw = lw.then(() => LINK.set(snap)).catch(e => log('⚠️ waLinkOut likha nahi: ' + e.message)); };
   let cfg = cfgOf(null);
   BA.doc('waOutCfg').onSnapshot(s => { cfg = cfgOf(s.exists ? s.data() : null); log(`⚙️ ${cfg.on ? 'chalu' : 'BAND'} · hadd ${cfg.lim}/din · faasla ${cfg.gap} s`); }, e => log('⚠️ waOutCfg: ' + e.message));
@@ -193,6 +194,7 @@ async function main() {
   //   Dono saath chalti hain (Baileys ek waqt mein kai sendMessage le leta hai) — 14 MB ki video upload ho rahi ho tab bhi gate ka jawab seconds mein.
   const LN = { t: { busy: false, at: 0, nm: 'tez line' }, m: { busy: false, at: 0, nm: 'video / gahak line' } };
   const inF = new Set(), gone = new Map(), nxAt = new Map(), gpWid = new Map();
+  const vAdd = bytes => { const dd = dayOf(Date.now()); if (L.vday !== dd) { L.vday = dd; L.vk = 0; L.vn = 0; } L.vk = (Number(L.vk) || 0) + Math.round(bytes / 1024); L.vn = (Number(L.vn) || 0) + 1; };
   let vBg = null;   // v1.35: waqt khatam wali video ki upload peeche chal rahi = agli video tab tak nahi (internet do mein na bate); 10 min baad khud saaf   // inF = abhi bhej rahe · gone = bhej diya (der se aaya snapshot dobara na bheje) · nxAt = dobara koshish ka waqt · gpWid = gate paigham ka WhatsApp id -> gate pass
   const goneSet = id => { gone.set(id, Date.now()); if (gone.size > 800) { const lim = Date.now() - 20 * 60000; for (const [k, t] of gone) if (t < lim) gone.delete(k); } };
   const plainOf = d => !d.vf && !d.im && !d.au && !d.doc && !d.loc;
@@ -628,7 +630,7 @@ async function main() {
       catch (e) {
         if (vb && /nahi hua/.test(String(e.message || ''))) {   // video ka waqt khatam — upload peeche chal rahi ho sakti hai: DOBARA NAHI (dohri video), der se pohanche to 'sent'
           const bg = vBg = p.catch(() => {}).finally(() => { if (vBg === bg) { vBg = null; kick(); } }); setTimeout(() => { if (vBg === bg) { vBg = null; kick(); } }, 10 * 60000);
-          p.then(rr => { log(`📤 (der se) ${grp ? '👥 ' + nm : phPretty(to)} 🎥 ${Math.round(vb.length / 1024)} KB · ${Math.round((Date.now() - t0) / 1000)} s`); setLink({ vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: Math.round((Date.now() - t0) / 1000), ok: 1, late: 1 } }); Q.doc(id).set({ st: 'sent', why: 'der se gayi', wid: String((rr && rr.key && rr.key.id) || ''), sentAt: Date.now() }, { merge: true }).catch(() => {}); if (d.rid && /^bv-/.test(id)) biz.collection('billClipWa').doc(String(d.rid)).set({ s: { [String(d.nm || 'x').replace(/[^A-Za-z0-9]/g, '').slice(0, 20) || 'x']: 'ok' }, sAt: Date.now() }, { merge: true }).catch(() => {}); }).catch(() => {});
+          p.then(rr => { vAdd(vb.length); log(`📤 (der se) ${grp ? '👥 ' + nm : phPretty(to)} 🎥 ${Math.round(vb.length / 1024)} KB · ${Math.round((Date.now() - t0) / 1000)} s`); setLink({ vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: Math.round((Date.now() - t0) / 1000), ok: 1, late: 1 } }); Q.doc(id).set({ st: 'sent', why: 'der se gayi', wid: String((rr && rr.key && rr.key.id) || ''), sentAt: Date.now() }, { merge: true }).catch(() => {}); if (d.rid && /^bv-/.test(id)) biz.collection('billClipWa').doc(String(d.rid)).set({ s: { [String(d.nm || 'x').replace(/[^A-Za-z0-9]/g, '').slice(0, 20) || 'x']: 'ok' }, sAt: Date.now() }, { merge: true }).catch(() => {}); }).catch(() => {});
           const why = `video ${Math.round(vt / 60000)} min mein upload nahi hui (internet dheema)`;
           log(`✕ ${grp ? '👥 ' + nm : phPretty(to)}: ${why}`); setLink({ vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: Math.round((Date.now() - t0) / 1000), ok: 0, why } });
           await done('err', why, { tries: (Number(d.tries) || 0) + 1 }); return;
@@ -642,6 +644,7 @@ async function main() {
       if (d.kind === 'bill') { CU[to] = { at: Date.now(), nm, bn: String(d.bn || ''), eid: id }; custSave(); }   // v1.5: is gahak ki location 24 ghante tak
       await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
       if (!grp) await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });   // v1.28: group ki 300-400 videos gahak ki log na dhakein
+      if (vb) vAdd(vb.length);   // v1.36: 📊 aaj kitni video / kitna MB (app ka 'PC ka bojh')
       const vq = [...pend.values()].filter(x => x && x.vf).length;
       setLink({ n: L.n, day, last: { at: Date.now(), to: grp ? '👥 ' + nm : phPretty(to), nm }, err: '', vq, ...(vb ? { vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: Math.round((Date.now() - t0) / 1000), ok: 1 } } : {}) });
       log(`📤 ${grp ? '👥 ' + nm : phPretty(to)} ${grp ? '' : nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : au ? ' 🔊' : vb ? ' 🎥 ' + Math.round(vb.length / 1024) + ' KB ' + Math.round((Date.now() - t0) / 1000) + ' s' : ''}${k === 't' ? ' ⚡' : ''} (aaj ${L.n}/${cfg.lim})`);
