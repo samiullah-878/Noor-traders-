@@ -1,4 +1,10 @@
 // =========================================================
+// v1.35 (24 Nov, malik: gate pass ka jawab 12:19 → paigham 12:22 — 'kuch seconds mein la aao' · 'cameras ki videos nahi aa rahi'): DO LINES — 't' tez line SIRF
+//        likhai (gate pass + us ka jawab, malik / Mubeen / jure number ka text) aur 'm' line (video / tasveer / group / gahak) SAATH saath chalti hain; pehle EK line thi
+//        aur 14 MB ki video (sab cameras / bill) ki upload 3 min tak sab ko rok deti thi. Video ka waqt us ke naap se (90 s + 30 s fi MB, 15 min tak); waqt khatam = DOBARA
+//        NAHI (upload peeche chal rahi ho to dohri video), der se pohanche to 'sent', aur tab tak agli video nahi (internet do mein na bate). 📼 sab cameras (kind bvs)
+//        line mein sab se peeche (bill video / gahak pehle). Gate jawab ka paigham yaad se (gpWid) + bante hi seedha line mein (gpPut). Ghalti par dobara koshish 20 s
+//        baad bina line roke (nxAt). Groups ki list har 15 min khud + waOutGroups.me (Business number). waLinkOut vq (line mein video) + vl (aakhri video: KB, s, ✓ / ✕).
 // v1.34 (23 Nov): sirf kh-wa v1.16 (recording ke GHANTE: billClip.rkd 0.125 = 3 ghante) ke liye dobara shuru — is file ka kaam wahi. Sab cameras ki recording (live-cam v2.3) ke waOut {grp, vf bv-sab-*.mp4} purane group raaste se hi jate hain.
 // v1.33 (20 Nov): sirf kh-wa v1.15 (recording ke din billClip.rkd) ke liye dobara shuru — is file ka kaam wahi.
 // v1.32 (20 Nov): sirf kh-wa v1.14 (waqt '11:06 se 7 minute' · 'kal 3:45' · 'subah / shaam') ke liye dobara shuru — is file ka kaam wahi.
@@ -52,7 +58,7 @@ const path = require('path');
 // v1.2 (8 Nov): .alive heartbeat (zinda.js) — doctor latki hui wa-out ko dobara chalaye (pehle .alive nahi tha: atka node 'zinda' dikhta, naya bat lock (3) par band, app mein 'PC chup')
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
 const { pathToFileURL } = require('url');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.34';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47842, VER = '1.35';
 const MODS = path.join(DIR, 'wa-mods'), AUTH_DIR = path.join(DIR, 'wa-auth-out'), PKG = '@whiskeysockets/baileys';
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
 const within = (p, ms, what) => { let t; return Promise.race([p, new Promise((_, rej) => { t = setTimeout(() => rej(Error(`${what} ${Math.round(ms / 1000)} sec mein nahi hua`)), ms); })]).finally(() => clearTimeout(t)); };
@@ -182,7 +188,14 @@ async function main() {
     logL = logL.concat([row]).slice(-60);
     const snap = logL.slice(); lgw = lgw.then(() => LOGD.set({ L: snap, at: Date.now() })).catch(e => log('⚠️ waOutLog: ' + e.message));
   }
-  const pend = new Map(); let busy = false, busyAt = 0, lastSent = 0, lastFast = 0, lastGrp = 0; const jidOk = new Map();
+  const pend = new Map(); let lastSent = 0, lastFast = 0, lastGrp = 0; const jidOk = new Map();
+  // v1.35: DO LINES — 't' = tez likhai (gate pass + us ka jawab, malik / Mubeen / jure number ka text) · 'm' = video / tasveer / group / gahak.
+  //   Dono saath chalti hain (Baileys ek waqt mein kai sendMessage le leta hai) — 14 MB ki video upload ho rahi ho tab bhi gate ka jawab seconds mein.
+  const LN = { t: { busy: false, at: 0, nm: 'tez line' }, m: { busy: false, at: 0, nm: 'video / gahak line' } };
+  const inF = new Set(), gone = new Map(), nxAt = new Map(), gpWid = new Map();
+  let vBg = null;   // v1.35: waqt khatam wali video ki upload peeche chal rahi = agli video tab tak nahi (internet do mein na bate); 10 min baad khud saaf   // inF = abhi bhej rahe · gone = bhej diya (der se aaya snapshot dobara na bheje) · nxAt = dobara koshish ka waqt · gpWid = gate paigham ka WhatsApp id -> gate pass
+  const goneSet = id => { gone.set(id, Date.now()); if (gone.size > 800) { const lim = Date.now() - 20 * 60000; for (const [k, t] of gone) if (t < lim) gone.delete(k); } };
+  const plainOf = d => !d.vf && !d.im && !d.au && !d.doc && !d.loc;
   // v1.28: 👥 group (bill-clip v2.9) — jid ki shakal pakki, warna kuch nahi
   const grpOf = d => { const g = String((d && d.grp) || ''); return /^[0-9]{6,30}(-[0-9]{6,20})?@g\.us$/.test(g) ? g : ''; };
   async function grpList(why) {   // app ⚙️ 'Group videos' mein chunne ke liye — sirf naam / ginti, paigham nahi
@@ -190,12 +203,14 @@ async function main() {
     try {
       const all = await within(sock.groupFetchAllParticipating(), 30000, 'groups ki list');
       const rows = Object.values(all || {}).map(g => [String(g.id || ''), String(g.subject || '').slice(0, 60), Array.isArray(g.participants) ? g.participants.length : 0, g.announce ? 1 : 0]).filter(r => /@g\.us$/.test(r[0])).sort((a, b) => a[1].localeCompare(b[1])).slice(0, 200);
-      await BA.doc('waOutGroups').set({ j: JSON.stringify(rows), n: rows.length, at: Date.now(), err: '', why: String(why || '').slice(0, 20) });
+      await BA.doc('waOutGroups').set({ j: JSON.stringify(rows), n: rows.length, at: Date.now(), err: '', why: String(why || '').slice(0, 20), me: String(L.me || '') });   // v1.35: me = Business number (app dikhaye: 'yehi number group mein add karein')
       log(`👥 ${rows.length} group ki list (${why})`);
     } catch (e) { log('⚠️ groups: ' + e.message); try { await BA.doc('waOutGroups').set({ err: String(e.message || e).slice(0, 120), at: Date.now() }, { merge: true }); } catch {} }
   }
   let grpReq = 0; BA.doc('waOutGroupsReq').onSnapshot(sn => { const t = Number(((sn.exists && sn.data()) || {}).at) || 0; if (t > grpReq) { const first = !grpReq; grpReq = t; if (!first || Date.now() - t < 5 * 60000) grpList('app'); } }, e => log('⚠️ waOutGroupsReq: ' + e.message));
+  setInterval(() => { if (sock && L.st === 'open') grpList('waqt'); }, 15 * 60000);   // v1.35: naya group (Business number add hua) app ki list mein khud — 🔄 ka intezar nahi
   const isFast = d => { try { return !!((KHW && KHW.who && KHW.who(normPh(d.to))) || (d && d.kind === 'gate')); } catch { return false; } };   // v1.15 (13 Nov, malik: 'WhatsApp ke jawab mein time lag raha hai'): apne (malik / Mubeen / jure) number = line mein aage, gahak wala faasla nahi
+  const tLane = d => !!d && !grpOf(d) && plainOf(d) && isFast(d);   // v1.35: tez line sirf LIKHAI — tasveer / video wala apna paigham 'm' line mein (sab se aage)
   // ---------- v1.5: 🚚 DELIVERY ----------
   const CUST_F = path.join(DIR, 'wa-out-cust.json'), DQ = biz.collection('deliveryReq');
   let CU = {}; try { CU = JSON.parse(fs.readFileSync(CUST_F, 'utf8')) || {}; } catch {}
@@ -220,7 +235,8 @@ async function main() {
   //   2 = nd {n, t} + malik ko khabar. Cancel / un-post = gpx- '⛔ maal mat dein'. Kisi aur number / kisi aur paigham ko yeh hissa nahi chhoota.
   const GP = biz.collection('gatePass'); let gpw = { on: false, since: 0, nums: [] }, gpMalik = '03450412515', gpStop = null, gpDay = '';
   const gpSent = new Set(), gpOffd = new Set();
-  const gpPut = (id, x) => Q.doc(id).create({ st: 'new', at: Date.now(), eid: id, ...x }).catch(e => { if (!/already exists/i.test(String(e.message))) log('⚠️ waOut ' + id + ': ' + e.message); });
+  // v1.35: ban gaya to seedha line mein bhi (snapshot ka intezar nahi) — dohra nahi: gone / inF / pend.has
+  const gpPut = (id, x) => { const doc = { st: 'new', at: Date.now(), eid: id, ...x }; return Q.doc(id).create(doc).then(() => { if (!gone.has(id) && !pend.has(id)) { pend.set(id, doc); kick(); } }).catch(e => { if (!/already exists/i.test(String(e.message))) log('⚠️ waOut ' + id + ': ' + e.message); }); };
   const gpNo = d => String((d && d.no) || '').replace(/^0+/, '') || '?';
   const gpNum = n => String(Math.round((Number(n) || 0) * 1000) / 1000);
   const gpQty = (q, pk) => { q = Number(q) || 0; pk = Number(pk) || 0; if (pk > 1) { const c = Math.floor(q / pk + 1e-9), p = Math.round((q - c * pk) * 1000) / 1000; return c && p ? `${gpNum(c)} ctn + ${gpNum(p)} pcs` : c ? `${gpNum(c)} ctn` : `${gpNum(p)} pcs`; } return `${gpNum(q)} pcs`; };
@@ -264,7 +280,8 @@ async function main() {
     if (!gpw.nums.length || !/^\s*[12]\s*$/.test(tx)) return false;
     const ctx = c.extendedTextMessage && c.extendedTextMessage.contextInfo, st = String((ctx && ctx.stanzaId) || ''); if (!st) return false;
     const from = await fromNum(m, s), me = gpw.nums.find(a => a.p === from); if (!me) return false;
-    let job = null; try { const q = await Q.where('wid', '==', st).limit(1).get(); if (!q.empty) job = q.docs[0].data() || {}; } catch (e) { log('⚠️ gate jawab: ' + e.message); }
+    let job = gpWid.get(st) || null;   // v1.35: pehle apni yaad (bheje gate paigham) — Firestore ka sawal sirf jab yaad mein na ho (PC dobara chala)
+    if (!job) { try { const q = await Q.where('wid', '==', st).limit(1).get(); if (!q.empty) job = q.docs[0].data() || {}; } catch (e) { log('⚠️ gate jawab: ' + e.message); } }
     if (!job || job.kind !== 'gate' || !job.gp) return false;
     const id = String(job.gp), ref = GP.doc(id), sn = await ref.get(), d = sn.exists ? sn.data() || {} : null, rid = 'gpr-' + String(m.key.id || Date.now()).replace(/[^a-zA-Z0-9]/g, '').slice(0, 40), say = txt => gpPut(rid, { to: from, nm: me.n, kind: 'gate', txt });
     if (!d) { await say('✕ Yeh gate pass ab nahi mila.'); return true; }
@@ -543,64 +560,100 @@ async function main() {
       log(`🔢 kharcha list ${n} number ko`);
     } catch (e) { log('⚠️ khWaSend: ' + e.message); }
   }, e => log('⚠️ khWaSend: ' + e.message));
-  Q.where('st', '==', 'new').onSnapshot(s => { for (const ch of s.docChanges()) { if (ch.type === 'removed') pend.delete(ch.doc.id); else pend.set(ch.doc.id, ch.doc.data() || {}); } kick(); }, e => log('⚠️ waOut: ' + e.message));
-  function kick() { if (!busy) work().catch(e => { busy = false; log('⚠️ bhejna: ' + e.message); }); }
-  async function work() {
-    busy = true; busyAt = Date.now();
+  Q.where('st', '==', 'new').onSnapshot(s => { for (const ch of s.docChanges()) { const id = ch.doc.id; if (ch.type === 'removed') pend.delete(id); else if (!gone.has(id)) { const x = ch.doc.data() || {}; if (!inF.has(id) || !pend.has(id)) pend.set(id, x); } } kick(); }, e => log('⚠️ waOut: ' + e.message));
+  function kick() { for (const k of ['t', 'm']) if (!LN[k].busy) work(k).catch(e => { LN[k].busy = false; log(`⚠️ bhejna (${LN[k].nm}): ` + e.message); }); }
+  async function work(k) {   // v1.35: k 't' = tez likhai · 'm' = baqi sab — dono alag chalti hain
+    const ln = LN[k]; ln.busy = true; ln.at = Date.now();
     try {
-      loop: while (pend.size) {
-        busyAt = Date.now();   // v1.3: har job par taza — lambi queue 'atki' na lage
-        const day0 = dayOf(Date.now()); if (L.day !== day0) { L.day = day0; L.n = 0; }
-        const limHit = L.n >= cfg.lim, custReady = cfg.gap * 1000 - (Date.now() - lastSent) <= 0;   // v1.28: gahak ki line ruki ho (faasla / hadd) to group aage
-        const rank = x => isFast(x) ? 3 : grpOf(x) ? 2 : custReady ? 2 : 1;
-        const cand = [...pend.entries()].filter(e => !limHit || isFast(e[1]) || grpOf(e[1]) || !!e[1].grp);
-        if (!cand.length) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }
-        const [id, d] = cand.sort((a, b) => (rank(b[1]) - rank(a[1])) || ((Number(a[1].at) || 0) - (Number(b[1].at) || 0)))[0]; const fast = isFast(d), grp = grpOf(d);
-        const done = async (st, why, extra) => { pend.delete(id); if (d.rid && /^bv-/.test(id)) { try { await biz.collection('billClipWa').doc(String(d.rid)).set({ s: { [String(d.nm || 'x').replace(/[^A-Za-z0-9]/g, '').slice(0, 20) || 'x']: st === 'sent' ? 'ok' : '✕ ' + String(why || st).slice(0, 80) }, sAt: Date.now() }, { merge: true });   /* set + merge = naqsha (map) mein jorna; '.' wala naam set mein seedha naam ban jata */ } catch (e) { log('⚠️ billClipWa: ' + e.message); } } if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(d.doc ? { doc: FieldValue.delete(), hadDoc: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
-        const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
-        const to = grp || normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
-        if (!cfg.on) { await done('skip', 'band hai (setting)'); continue; }
-        if (Number(d.at) && Date.now() - Number(d.at) > 6 * 3600000) { await done('skip', 'purana (6 ghante+)'); continue; }
-        if (d.grp && !grp) { await done('err', 'group ka jid ghalat'); continue; }
-        if ((!grp && !okPh(to)) || (!txt && !d.au && !d.loc && !d.doc && !d.vf)) { await done('err', !grp && !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); continue; }
-        if (!sock || L.st !== 'open') { break; }   // jur jaye to kick()
-        if (fast) { const g2 = 600 - (Date.now() - lastFast); if (g2 > 0) await sleep(g2); }
-        else if (grp) { const g3 = 2500 - (Date.now() - lastGrp); if (g3 > 0) await sleep(g3); }   // v1.28: group ki apni line (bill-clip khud 20 s faasla rakhta)
-        else { while (cfg.gap * 1000 - (Date.now() - lastSent) > 0) { await sleep(300); busyAt = Date.now(); if ([...pend.values()].some(x => isFast(x) || grpOf(x))) continue loop; } }
-        if (!sock || L.st !== 'open') break;
-        try {
-          const chk = grp ? [{ exists: true, jid: grp }] : fast && jidOk.has(to) ? [{ exists: true, jid: jidOk.get(to) }] : await within(sock.onWhatsApp(jidOf(to)), 15000, 'number check');
-          const okNo = Array.isArray(chk) && chk[0] && chk[0].exists;
-          if (!okNo) { await done('skip', 'yeh number WhatsApp par nahi'); await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'skip', why: 'WhatsApp par nahi' }); continue; }
-          const jid = (chk[0] && chk[0].jid) || jidOf(to);
-          const im = d.im && (Buffer.isBuffer(d.im) ? d.im : d.im.toUint8Array ? Buffer.from(d.im.toUint8Array()) : null);   // v1.0: bill ki tasveer (Bytes) ho to tasveer + caption
-          const au = d.au && (Buffer.isBuffer(d.au) ? d.au : d.au.toUint8Array ? Buffer.from(d.au.toUint8Array()) : null);   // 🔊 awaz (mp3) — Urdu TTS
-          const dc = d.doc && (Buffer.isBuffer(d.doc) ? d.doc : d.doc.toUint8Array ? Buffer.from(d.doc.toUint8Array()) : null);
-          let vb = null;   // v1.27: 🎥 bill ki video — sirf wa-media ki bv-*.mp4 (bill-clip v2.8)
-          if (d.vf) { const vn = String(d.vf); if (!/^bv-[A-Za-z0-9_-]{4,60}\.mp4$/.test(vn)) { await done('err', 'video ka naam ghalat'); continue; } try { vb = fs.readFileSync(path.join(DIR, 'wa-media', vn)); } catch { vb = null; } if (!vb || !vb.length) { await done('err', 'video file PC par nahi mili'); continue; } }
-          let quoted = null;
-          if (d.rq) {   // v1.4: reply mein — pehle yaad se, warna asal doc ka wid
-            quoted = sentM.get(String(d.rq)) || null;
-            if (!quoted) { try { const ps0 = await within(Q.doc(String(d.rq)).get(), 10000, 'reply ka asal'); const pd = ps0.exists ? ps0.data() : null; if (pd && pd.st === 'sent' && pd.wid) quoted = { key: { remoteJid: jid, fromMe: true, id: String(pd.wid) }, message: { conversation: String(pd.txt || '').slice(0, 300) } }; } catch {} }
-          }
-          const lc = d.loc && Number.isFinite(Number(d.loc.lat)) && Number.isFinite(Number(d.loc.lng)) ? { location: { degreesLatitude: Number(d.loc.lat), degreesLongitude: Number(d.loc.lng), name: String(d.loc.name || '').slice(0, 80), address: String(d.loc.adr || '').slice(0, 120) } } : null;   // v1.5: delivery boy ko location
-          const r = await within(sock.sendMessage(jid, lc || (vb ? { video: vb, caption: txt, mimetype: 'video/mp4' } : dc && dc.length ? { document: dc, mimetype: 'application/pdf', fileName: String(d.fn || 'Khata.pdf').slice(0, 60), caption: txt } : im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {}), vb ? 180000 : 60000, 'bhejna');
-          if (grp) lastGrp = Date.now(); else if (fast) { lastFast = Date.now(); jidOk.set(to, jid); } else lastSent = Date.now();
-          if (!grp) L.n++;   // v1.28: group gahak ki din ki hadd mein nahi
-          if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); if (r.key.id) { ownSent.add(String(r.key.id)); if (ownSent.size > 400) ownSent.delete(ownSent.values().next().value); } }
-          if (d.kind === 'bill') { CU[to] = { at: Date.now(), nm, bn: String(d.bn || ''), eid: id }; custSave(); }   // v1.5: is gahak ki location 24 ghante tak
-          await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
-          if (!grp) await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });   // v1.28: group ki 300-400 videos gahak ki log na dhakein
-          setLink({ n: L.n, day, last: { at: Date.now(), to: grp ? '👥 ' + nm : phPretty(to), nm }, err: '' });
-          log(`📤 ${grp ? '👥 ' + nm : phPretty(to)} ${grp ? '' : nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : au ? ' 🔊' : vb ? ' 🎥 ' + Math.round(vb.length / 1024) + ' KB' : ''} (aaj ${L.n}/${cfg.lim})`);
-        } catch (e) {
-          const why = String(e.message || e).slice(0, 120); log(`✕ ${phPretty(to)}: ${why}`);
-          const tries = (Number(d.tries) || 0) + 1;
-          if (tries < 3 && /nahi hua|timed? ?out|closed|socket/i.test(why)) { pend.set(id, { ...d, tries }); try { await Q.doc(id).set({ tries }, { merge: true }); } catch {} await sleep(20000); }   // 2 dafa dobara
-          else { await done('err', why, { tries }); if (!grp) await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'err', why }); }
+      while (pend.size) {
+        ln.at = Date.now();   // v1.3: har job par taza — lambi queue 'atki' na lage
+        const now = Date.now(), day0 = dayOf(now); if (L.day !== day0) { L.day = day0; L.n = 0; }
+        const free = [...pend.entries()].filter(([i, x]) => !inF.has(i) && !((nxAt.get(i) || 0) > now) && (k === 't' ? tLane(x) : !tLane(x) && !(vBg && x.vf)));
+        if (!free.length) break;
+        let pick;
+        if (k === 't') pick = free.sort((a, b) => (Number(a[1].at) || 0) - (Number(b[1].at) || 0))[0];
+        else {
+          const limHit = L.n >= cfg.lim, custReady = cfg.gap * 1000 - (now - lastSent) <= 0;   // v1.28: gahak ki line ruki ho (faasla / hadd) to group aage
+          // v1.35: 📼 sab cameras ki 5-min video (kind bvs) sab se peeche — bill ki video / gahak pehle; apna (malik / Mubeen) tasveer wala sab se aage
+          const rank = x => isFast(x) ? 5 : grpOf(x) ? (x.kind === 'bvs' ? 2 : 4) : custReady ? 3 : 1;
+          const cand = free.filter(e => !limHit || isFast(e[1]) || grpOf(e[1]) || !!e[1].grp);
+          if (!cand.length) { log(`⏸ aaj ki hadd ${cfg.lim} poori — baqi kal`); setLink({ err: `Aaj ki hadd ${cfg.lim} poori — baqi kal` }); break; }
+          pick = cand.sort((a, b) => (rank(b[1]) - rank(a[1])) || ((Number(a[1].at) || 0) - (Number(b[1].at) || 0)))[0];
         }
+        const [id, d] = pick; inF.add(id);
+        let r;
+        try { r = await sendOne(id, d, k, ln); } finally { inF.delete(id); }
+        if (r === 'stop') break;
       }
-    } finally { busy = false; }
+    } finally { ln.busy = false; }
+  }
+  async function sendOne(id, d, k, ln) {   // 'stop' = number juda nahi (jur jaye to kick) · 'again' = gahak ka faasla — pehle koi aur
+    const fast = isFast(d), grp = grpOf(d);
+    const done = async (st, why, extra) => { pend.delete(id); nxAt.delete(id); goneSet(id); if (d.rid && /^bv-/.test(id)) { try { await biz.collection('billClipWa').doc(String(d.rid)).set({ s: { [String(d.nm || 'x').replace(/[^A-Za-z0-9]/g, '').slice(0, 20) || 'x']: st === 'sent' ? 'ok' : '✕ ' + String(why || st).slice(0, 80) }, sAt: Date.now() }, { merge: true });   /* set + merge = naqsha (map) mein jorna; '.' wala naam set mein seedha naam ban jata */ } catch (e) { log('⚠️ billClipWa: ' + e.message); } } if (id.startsWith('kl-')) { try { await BA.doc('khWaSent').update({ ['r.' + normPh(d.to)]: { st, why: String(why || '').slice(0, 100), at: Date.now() } }); } catch (e) { log('⚠️ khWaSent: ' + e.message); } } try { await Q.doc(id).set({ st, why: String(why || '').slice(0, 140), sentAt: Date.now(), ...(d.im ? { im: FieldValue.delete(), hadIm: 1 } : {}), ...(d.au ? { au: FieldValue.delete(), hadAu: 1 } : {}), ...(d.doc ? { doc: FieldValue.delete(), hadDoc: 1 } : {}), ...(extra || {}) }, { merge: true }); } catch (e) { log('⚠️ waOut ' + id + ': ' + e.message); } };
+    const day = dayOf(Date.now()); if (L.day !== day) { L.day = day; L.n = 0; }
+    const to = grp || normPh(d.to), nm = String(d.nm || '').slice(0, 40), txt = String(d.txt || '').trim();
+    if (!cfg.on) { await done('skip', 'band hai (setting)'); return; }
+    if (Number(d.at) && Date.now() - Number(d.at) > 6 * 3600000) { await done('skip', 'purana (6 ghante+)'); return; }
+    if (d.grp && !grp) { await done('err', 'group ka jid ghalat'); return; }
+    if ((!grp && !okPh(to)) || (!txt && !d.au && !d.loc && !d.doc && !d.vf)) { await done('err', !grp && !okPh(to) ? 'mobile number ghalat' : 'paigham khali'); return; }
+    if (!sock || L.st !== 'open') return 'stop';   // jur jaye to kick()
+    if (fast) { const g2 = 600 - (Date.now() - lastFast); if (g2 > 0) await sleep(g2); }
+    else if (grp) { const g3 = 2500 - (Date.now() - lastGrp); if (g3 > 0) await sleep(g3); }   // v1.28: group ki apni line (bill-clip khud 20 s faasla rakhta)
+    else { while (cfg.gap * 1000 - (Date.now() - lastSent) > 0) { await sleep(300); ln.at = Date.now(); if ([...pend.entries()].some(([i, x]) => i !== id && !inF.has(i) && !((nxAt.get(i) || 0) > Date.now()) && !tLane(x) && (isFast(x) || grpOf(x)))) return 'again'; } }
+    if (!sock || L.st !== 'open') return 'stop';
+    let vb = null, tk = null;
+    try {
+      const chk = grp ? [{ exists: true, jid: grp }] : fast && jidOk.has(to) ? [{ exists: true, jid: jidOk.get(to) }] : await within(sock.onWhatsApp(jidOf(to)), 15000, 'number check');
+      const okNo = Array.isArray(chk) && chk[0] && chk[0].exists;
+      if (!okNo) { await done('skip', 'yeh number WhatsApp par nahi'); await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'skip', why: 'WhatsApp par nahi' }); return; }
+      const jid = (chk[0] && chk[0].jid) || jidOf(to);
+      const im = d.im && (Buffer.isBuffer(d.im) ? d.im : d.im.toUint8Array ? Buffer.from(d.im.toUint8Array()) : null);   // v1.0: bill ki tasveer (Bytes) ho to tasveer + caption
+      const au = d.au && (Buffer.isBuffer(d.au) ? d.au : d.au.toUint8Array ? Buffer.from(d.au.toUint8Array()) : null);   // 🔊 awaz (mp3) — Urdu TTS
+      const dc = d.doc && (Buffer.isBuffer(d.doc) ? d.doc : d.doc.toUint8Array ? Buffer.from(d.doc.toUint8Array()) : null);
+      // v1.27: 🎥 bill ki video — sirf wa-media ki bv-*.mp4 (bill-clip v2.8)
+      if (d.vf) { const vn = String(d.vf); if (!/^bv-[A-Za-z0-9_-]{4,60}\.mp4$/.test(vn)) { await done('err', 'video ka naam ghalat'); return; } try { vb = fs.readFileSync(path.join(DIR, 'wa-media', vn)); } catch { vb = null; } if (!vb || !vb.length) { await done('err', 'video file PC par nahi mili'); return; } }
+      let quoted = null;
+      if (d.rq) {   // v1.4: reply mein — pehle yaad se, warna asal doc ka wid
+        quoted = sentM.get(String(d.rq)) || null;
+        if (!quoted) { try { const ps0 = await within(Q.doc(String(d.rq)).get(), 10000, 'reply ka asal'); const pd = ps0.exists ? ps0.data() : null; if (pd && pd.st === 'sent' && pd.wid) quoted = { key: { remoteJid: jid, fromMe: true, id: String(pd.wid) }, message: { conversation: String(pd.txt || '').slice(0, 300) } }; } catch {} }
+      }
+      const lc = d.loc && Number.isFinite(Number(d.loc.lat)) && Number.isFinite(Number(d.loc.lng)) ? { location: { degreesLatitude: Number(d.loc.lat), degreesLongitude: Number(d.loc.lng), name: String(d.loc.name || '').slice(0, 80), address: String(d.loc.adr || '').slice(0, 120) } } : null;   // v1.5: delivery boy ko location
+      // v1.35: video ka waqt us ke naap se (14 MB = ~8 min tak; pehle har video 3 min — dheeme internet par 14 MB kat kar dobara = dohri upload, poori line atki)
+      const vt = vb ? Math.min(900000, 90000 + Math.ceil(vb.length / 1048576) * 30000) : 60000, t0 = Date.now();
+      tk = setInterval(() => { ln.at = Date.now(); }, 15000);   // lambi upload = line zinda (chowkidar ise 'atki' na samjhe; asal hadd 'vt')
+      const p = sock.sendMessage(jid, lc || (vb ? { video: vb, caption: txt, mimetype: 'video/mp4' } : dc && dc.length ? { document: dc, mimetype: 'application/pdf', fileName: String(d.fn || 'Khata.pdf').slice(0, 60), caption: txt } : im && im.length ? { image: im, caption: txt, mimetype: 'image/jpeg' } : au && au.length ? { audio: au, mimetype: 'audio/mpeg', ptt: false } : { text: txt }), quoted ? { quoted } : {});
+      if (vb) p.catch(() => {});
+      let r;
+      try { r = await within(p, vt, 'bhejna'); }
+      catch (e) {
+        if (vb && /nahi hua/.test(String(e.message || ''))) {   // video ka waqt khatam — upload peeche chal rahi ho sakti hai: DOBARA NAHI (dohri video), der se pohanche to 'sent'
+          const bg = vBg = p.catch(() => {}).finally(() => { if (vBg === bg) { vBg = null; kick(); } }); setTimeout(() => { if (vBg === bg) { vBg = null; kick(); } }, 10 * 60000);
+          p.then(rr => { log(`📤 (der se) ${grp ? '👥 ' + nm : phPretty(to)} 🎥 ${Math.round(vb.length / 1024)} KB · ${Math.round((Date.now() - t0) / 1000)} s`); setLink({ vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: Math.round((Date.now() - t0) / 1000), ok: 1, late: 1 } }); Q.doc(id).set({ st: 'sent', why: 'der se gayi', wid: String((rr && rr.key && rr.key.id) || ''), sentAt: Date.now() }, { merge: true }).catch(() => {}); if (d.rid && /^bv-/.test(id)) biz.collection('billClipWa').doc(String(d.rid)).set({ s: { [String(d.nm || 'x').replace(/[^A-Za-z0-9]/g, '').slice(0, 20) || 'x']: 'ok' }, sAt: Date.now() }, { merge: true }).catch(() => {}); }).catch(() => {});
+          const why = `video ${Math.round(vt / 60000)} min mein upload nahi hui (internet dheema)`;
+          log(`✕ ${grp ? '👥 ' + nm : phPretty(to)}: ${why}`); setLink({ vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: Math.round((Date.now() - t0) / 1000), ok: 0, why } });
+          await done('err', why, { tries: (Number(d.tries) || 0) + 1 }); return;
+        }
+        throw e;
+      }
+      if (grp) lastGrp = Date.now(); else if (fast) { lastFast = Date.now(); jidOk.set(to, jid); } else lastSent = Date.now();
+      if (!grp) L.n++;   // v1.28: group gahak ki din ki hadd mein nahi
+      if (r && r.key) { sentM.set(id, r); if (sentM.size > 200) sentM.delete(sentM.keys().next().value); if (r.key.id) { ownSent.add(String(r.key.id)); if (ownSent.size > 400) ownSent.delete(ownSent.values().next().value); } }
+      if (r && r.key && r.key.id && d.kind === 'gate' && d.gp) { gpWid.set(String(r.key.id), { kind: 'gate', gp: String(d.gp) }); if (gpWid.size > 600) gpWid.delete(gpWid.keys().next().value); }   // v1.35: reply aate hi yaad se
+      if (d.kind === 'bill') { CU[to] = { at: Date.now(), nm, bn: String(d.bn || ''), eid: id }; custSave(); }   // v1.5: is gahak ki location 24 ghante tak
+      await done('sent', '', { wid: String((r && r.key && r.key.id) || '') });
+      if (!grp) await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'sent' });   // v1.28: group ki 300-400 videos gahak ki log na dhakein
+      const vq = [...pend.values()].filter(x => x && x.vf).length;
+      setLink({ n: L.n, day, last: { at: Date.now(), to: grp ? '👥 ' + nm : phPretty(to), nm }, err: '', vq, ...(vb ? { vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: Math.round((Date.now() - t0) / 1000), ok: 1 } } : {}) });
+      log(`📤 ${grp ? '👥 ' + nm : phPretty(to)} ${grp ? '' : nm} · ${String(d.code || d.kind || '')}${im ? ' 🖼' : au ? ' 🔊' : vb ? ' 🎥 ' + Math.round(vb.length / 1024) + ' KB ' + Math.round((Date.now() - t0) / 1000) + ' s' : ''}${k === 't' ? ' ⚡' : ''} (aaj ${L.n}/${cfg.lim})`);
+    } catch (e) {
+      const why = String(e.message || e).slice(0, 120); log(`✕ ${grp ? '👥 ' + nm : phPretty(to)}: ${why}`);
+      const tries = (Number(d.tries) || 0) + 1;
+      if (tries < 3 && /nahi hua|timed? ?out|closed|socket/i.test(why)) {   // 2 dafa dobara — v1.35: line nahi rukti (20 s baad wohi job, beech mein baqi chalte)
+        pend.set(id, { ...d, tries }); nxAt.set(id, Date.now() + 20000); setTimeout(kick, 20500);
+        try { await Q.doc(id).set({ tries }, { merge: true }); } catch {}
+      }
+      else { await done('err', why, { tries }); if (!grp) await addLog({ at: Date.now(), to, nm, code: String(d.code || ''), st: 'err', why }); if (vb) setLink({ vl: { at: Date.now(), kb: Math.round(vb.length / 1024), s: 0, ok: 0, why } }); }
+    } finally { if (tk) clearInterval(tk); }
   }
 
   setInterval(() => { if (Date.now() - lastW > 5 * 60000) setLink({}); }, 60000);   // app ko pata rahe PC zinda — v1.1: juda na ho tab bhi (warna app mein '54 min pehle' aur pata nahi chal raha / band)
@@ -609,8 +662,8 @@ async function main() {
   // v1.3 (8 Nov — 10:57 ke baad kuch nahi gaya, heartbeat theek, app mein "juda"): (1) 📡 har 30 s Firestore se 'new' jobs khud bhi parho (onSnapshot chup ho jaye to bhi
   //   queue bhare) · (2) ⏱ bhejne wala 4 min se atka (busy) = dobara shuru (bat loop / doctor) — khamosh atakna kabhi nahi.
   setInterval(async () => {
-    if (busy && Date.now() - busyAt > 4 * 60000) { log('⚠️ bhejne wala 4 min se atka hua — dobara shuru'); setLink({ err: 'bhejne wala atka tha — dobara shuru' }); setTimeout(() => process.exit(2), 1500); return; }
-    try { const s = await within(Q.where('st', '==', 'new').limit(50).get(), 20000, 'queue parhna'); let add = 0; s.forEach(d => { if (!pend.has(d.id)) { pend.set(d.id, d.data() || {}); add++; } }); if (add) { log(`📡 queue se ${add} naya job (poll)`); kick(); } }
+    for (const k of ['t', 'm']) { const ln = LN[k]; if (ln.busy && Date.now() - ln.at > 4 * 60000) { log(`⚠️ ${ln.nm} 4 min se atki hui — dobara shuru`); setLink({ err: `${ln.nm} atki thi — dobara shuru` }); setTimeout(() => process.exit(2), 1500); return; } }   // v1.35: har line ka apna chowkidar (lambi video upload par ticker line ko zinda rakhta hai)
+    try { const s = await within(Q.where('st', '==', 'new').limit(50).get(), 20000, 'queue parhna'); let add = 0; s.forEach(d => { if (!pend.has(d.id) && !gone.has(d.id)) { pend.set(d.id, d.data() || {}); add++; } }); if (add) { log(`📡 queue se ${add} naya job (poll)`); kick(); } }
     catch (e) { log('⚠️ queue poll: ' + e.message); }
   }, 30000);
   if (has()) await connect('shuru'); else setLink({ st: 'off', qr: '', err: '' });

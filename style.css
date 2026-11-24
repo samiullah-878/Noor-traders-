@@ -8733,6 +8733,7 @@ html body #lvDlg .lv-tools button.lv-q.bad{background:linear-gradient(180deg,#7f
 #btDlg .bt-wgrow b{font-size:13px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:140px}
 #btDlg select[data-wg-gd],#btDlg .bt-wgrow select,#btDlg .bt-wgrow input{width:100%;min-width:0;height:38px;border-radius:11px;border:1px solid #c9d3e6;padding:0 10px;font-size:14px;background:#fff;color:#14213d}
 #btDlg [data-wg-gs]{margin:6px 0 0}
+#btDlg [data-sb-stt]{white-space:pre-line}   /* v2.372.0: doosri line = WhatsApp ki video line */
 /* v2.329.0: 📹 mazeed cameras (Camera setup) */
 #btDlg .bt-xcl{display:grid;gap:6px;margin:4px 0}
 #btDlg .bt-xc{display:grid;grid-template-columns:minmax(0,1fr) 52px auto auto auto;gap:5px;align-items:center}

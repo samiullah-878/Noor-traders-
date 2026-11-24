@@ -9664,3 +9664,19 @@ jab NT-PRINT sc 0) + '⏰ PC ghari ±N s' (counter ki ghari phone se 20 s+ alag 
 (lastPr) ab sirf ct (print) — pt (post) nahi (purana bill der se post hota to naye scan chhup jate). NT-PRINT v1.37: __scan doc mein ok / bad (SND kul ginti) +
 sc (nt-scan chalu 1/0) + dekhte waqt har 60 s taza. Agli photo ki 🩺 line se pakki wajah: scan 0 + ginti na barhe = counter par scan system; scan hain magar
 print ke waqt se pehle = ghari / waqt ka farq. Azmaya: nakli cloud + Chromium. AI nahi.
+
+
+=== 2026-11-24 — v2.372.0: ⚡ WhatsApp DO LINES — gate pass ka jawab seconds mein + 📼 videos ki line saaf (PC wa-out v1.35) ===
+Malik (godam phone ki photo): gate pass #140639 / #140640 par reply 12:19 / 12:20, jawab 12:22 — 'kuch seconds mein la aao'. Phir: 'cameras ki videos nahi aa rahi'.
+Wajah (code se — PC ka log yahan se nazar nahi aata): wa-out mein EK hi bhejne wali line thi. 📼 sab cameras ki 5-min video (10-14 MB) aur bill ki video ki upload
+3 min tak (within 180 s) poori line rok deti thi — gate ka jawab us ke peeche. Aur 3 min mein upload na ho to video kaat kar DOBARA (peeche purani upload bhi chal
+rahi = internet do mein bata, phir dheema, dohri video ka khatra) — dheeme internet par line ka poora jam.
+Ab: (1) 't' TEZ line sirf likhai (gate pass + jawab, malik / Mubeen / jure number ka text) aur 'm' line (video / tasveer / group / gahak) SAATH chalti hain
+(inF = ek job do lines na uthayein, gone = bheja hua der se aaye snapshot se dobara nahi). (2) Video ka waqt us ke naap se: 90 s + 30 s fi MB (15 min tak); waqt
+khatam = DOBARA NAHI, der se pohanche to waOut 'sent' (why 'der se gayi'), aur jab tak wo upload chal rahi agli video nahi (vBg, 10 min hadd). (3) 📼 kind bvs line
+mein sab se peeche — bill ki video / gahak pehle. (4) Gate paigham ka WhatsApp id yaad (gpWid) — jawab aate hi Firestore sawal nahi; jawab ka paigham bante hi seedha
+line mein (gpPut). (5) Ghalti par dobara 20 s baad bina line roke (nxAt). (6) Groups ki list har 15 min khud + waOutGroups.me = Business number. (7) waLinkOut vq
+(line mein kitni video) + vl (aakhri video KB, s, ✓ / ✕ wajah). App: 👥 Group videos mein '📲 Business number 03xx… — group mein YEHI number add karein' + 📼 haal
+ke neeche '📲 WhatsApp: N video line mein · aakhri video X MB ✓ Y s'. Azmaya: nakli Firestore + nakli WhatsApp — video upload ke dauran gate paigham 2.2 s par,
+jawab 0.15 s (nakli), bill video sab cameras se pehle, ghalti wala 20 s baad (beech mein doosra text gaya), waqt khatam wali video dohri nahi. Asal PC / internet par
+nahi azmaya. 'Videos nahi aa rahi' ki pakki wajah PC se pata chalegi — app ka 📼 haal + WhatsApp line dekh kar. AI nahi.
