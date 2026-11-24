@@ -28,6 +28,35 @@
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const STUN = [{ urls: 'stun:stun.l.google.com:19302' }, { urls: 'stun:stun1.l.google.com:19302' }];
+// v2.378.0: 🔁 RELAY (TURN) — malik 25 Nov: 'WiFi pr shi chlta ha' (4G par '✕ Rabta nahi bana' — mobile network seedha PC → phone rasta nahi banne deta).
+//   PC live-cam v2.9 malik ki Cloudflare chaabi se 24 ghante ka chhota pass liveIce/cur mein likhta hai → yahan STUN ke saath TURN; offer se pehle relay candidate
+//   ka intezar (3 s tak). Seedha rasta mile to seedha hi (relay sirf zaroorat par). Juda = getStats se rasta (🔁 relay / seedha) 🩺 chip ki baat mein.
+//   Pass na ho / na mile = pehle jaisa sirf STUN (kuch nahi tootta). AI NAHI.
+let ICE = null, iceT = 0, iceP = null, stT = 0;
+function iceGet() {
+  if (ICE && Date.now() - iceT < (ICE.none ? 120000 : 600000) && (ICE.none || ICE.exp - Date.now() > 20 * 60000)) return Promise.resolve(ICE.L);
+  if (iceP) return iceP;
+  iceP = (async () => {
+    try {
+      const d = cloud?.getLiveIce ? await cloud.getLiveIce() : null; let L = null;
+      try { L = d && d.j ? JSON.parse(d.j) : null; } catch {}
+      L = Array.isArray(L) ? L.filter(s => s && s.urls && s.username && s.credential) : [];
+      ICE = L.length && Number(d.exp) - Date.now() > 20 * 60000 ? { L, exp: Number(d.exp) } : { L: null, none: 1 };
+    } catch { ICE = { L: null, none: 1 }; }
+    iceT = Date.now(); iceP = null; return ICE.L;
+  })();
+  return iceP;
+}
+async function viaOf(pc) {   // juda hua rasta: relay (Cloudflare) ya seedha
+  try {
+    const st = await pc.getStats(); let pair = null;
+    st.forEach(x => { if (!pair && x.type === 'transport' && x.selectedCandidatePairId) pair = st.get(x.selectedCandidatePairId); });
+    if (!pair) st.forEach(x => { if (!pair && x.type === 'candidate-pair' && x.nominated && x.state === 'succeeded') pair = x; });
+    if (!pair) return '';
+    const l = st.get(pair.localCandidateId), r = st.get(pair.remoteCandidateId);
+    return (l && l.candidateType === 'relay') || (r && r.candidateType === 'relay') ? 'relay' : 'seedha';
+  } catch { return ''; }
+}
 let xcs = [];   // v2.329.0: 📹 mazeed cameras (chip par 📹)
 // v2.368.0: 🎛 DABBE SCREEN KE HISAAB SE (malik 23 Nov: 'dabbon ka size screen ke mutabiq adjust · upar neeche aur chhota bara apni marzi se'): PC ki EK mosaic video
 //   app mein har camera ka alag dabba (canvas, `TL`) — video ke us hisse se khinchta hai. ▦ chip = Auto (sab dabbe bina scroll ke sab se bare) · 1 · 2 · 3 fi qatar
@@ -338,22 +367,30 @@ async function start() {
   if (!cloud?.liveStart) { stat('✕ App update karein', true); return; }
   if (dlv && pcOld()) { stat(`⏳ PC ka live-cam purana (v${pcSt.ver}) — ⏪ Saaf 3-5 min mein khud aa jayega (PC update). Abhi asal live ke liye ⏪ dobara dabayein.`, true); return; }
   if (pcSt && Date.now() - (Number(pcSt.at) || 0) > 5 * 60000) stat('⚠ Shop PC chup lag raha (' + Math.round((Date.now() - pcSt.at) / 60000) + ' min) — phir bhi koshish…', true); else stat('⏳ ' + lvName(cur) + (dlv ? ' · ⏪ recording se (2 min peeche) jor raha…' : isMoP(cur) ? ' jor raha…' : ' ka camera jor raha…'));
-  const s = S = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pc: new RTCPeerConnection({ iceServers: STUN }), ok: 0 };
+  const myT = ++stT, turn = await Promise.race([iceGet(), new Promise(r => setTimeout(() => r(null), 1500))]);   // v2.378.0: 🔁 relay pass (aam taur par pehle se yaad)
+  if (myT !== stT || !$('lvDlg')?.open) return;
+  let rpc = null, useT = !!turn;
+  if (useT) { try { rpc = new RTCPeerConnection({ iceServers: [...STUN, ...turn] }); } catch { useT = false; ICE = { L: null, none: 1 }; iceT = Date.now(); } }   // ghalat pass = sirf STUN (live kabhi na ruke)
+  if (!rpc) rpc = new RTCPeerConnection({ iceServers: STUN });
+  const s = S = { id: Date.now().toString(36) + Math.random().toString(36).slice(2, 8), pc: rpc, ok: 0, turn: useT };
   const v = $('lvVid');
   const tr = s.pc.addTransceiver('video', { direction: 'recvonly' });
   if (VP8) { try { const cs = (RTCRtpReceiver.getCapabilities('video')?.codecs || []).filter(c => /vp8/i.test(c.mimeType)); if (cs.length) tr.setCodecPreferences(cs); } catch {} }
   s.pc.ontrack = e => { if (S !== s) return; v.srcObject = e.streams[0] || new MediaStream([e.track]); v.play().catch(() => {}); };
   s.pc.onconnectionstatechange = () => {
     if (S !== s) return; const st = s.pc.connectionState;
-    if (st === 'connected') { s.ok = 1; stat((dlv ? '⏪ Saaf · 2 min peeche · ' : '🟢 Live · ') + lvName(cur)); setTimeout(() => { if (S === s && s.ok) $('lvSt').hidden = true; }, 2500); }
-    else if (st === 'failed') stat('✕ Rabta nahi bana — is internet par seedha rabta band hai. Wi-Fi / doosra internet try karein, ya 🔄', true);
+    if (st === 'connected') {
+      s.ok = 1; const base = (dlv ? '⏪ Saaf · 2 min peeche · ' : '🟢 Live · ') + lvName(cur); stat(base); setTimeout(() => { if (S === s && s.ok) $('lvSt').hidden = true; }, 2500);
+      viaOf(s.pc).then(v => { if (S !== s) return; s.via = v; if (v === 'relay' && !$('lvSt').hidden && !$('lvSt').classList.contains('bad')) stat(base + ' · 🔁 relay se'); qPaint(s); });   // v2.378.0
+    }
+    else if (st === 'failed') { iceT = 0; stat(s.turn ? '✕ Rabta nahi bana (relay se bhi) — 🔄 dobara dabayein. Phir bhi na bane to Settings → 🖥️ PC scripts → 🔁 Relay ka haal dekhein' : '✕ Rabta nahi bana — is internet par seedha rabta nahi banta. Wi-Fi par chal jayega · 4G ke liye malik: Settings → 🖥️ PC scripts → 🔁 Relay lagayein · ya 🔄', true); }
     else if (st === 'disconnected') stat('⏳ Rabta kamzor — wapas jor raha…');
   };
   try {
     await s.pc.setLocalDescription(await s.pc.createOffer());
-    await new Promise(r => {   // v2.226.0: 3 s ka pakka intezar nahi — bahar ka raasta (srflx) milte hi aage (zyada se zyada 1.5 s)
-      if (s.pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, 1500);
-      s.pc.addEventListener('icecandidate', e => { if (e.candidate && / typ srflx/.test(e.candidate.candidate || '')) setTimeout(r, 120); });
+    await new Promise(r => {   // v2.226.0: 3 s ka pakka intezar nahi — bahar ka raasta (srflx) milte hi aage (zyada se zyada 1.5 s) · v2.378.0: relay pass ho to RELAY candidate ka intezar (3 s tak) — warna offer mein relay jata hi nahi
+      if (s.pc.iceGatheringState === 'complete') return r(); const t = setTimeout(r, s.turn ? 3000 : 1500);
+      s.pc.addEventListener('icecandidate', e => { const c = (e.candidate && e.candidate.candidate) || ''; if (s.turn ? / typ relay/.test(c) : / typ srflx/.test(c)) setTimeout(r, s.turn ? 250 : 120); });
       s.pc.addEventListener('icegatheringstatechange', () => { if (s.pc.iceGatheringState === 'complete') { clearTimeout(t); r(); } }); });
     if (S !== s) return;
     await cloud.liveStart(s.id, { pc: cur + (dlv ? '~' : ''), offer: s.pc.localDescription.sdp });
@@ -395,6 +432,7 @@ function qPaint(s) {
   else if ((s.loss || 0) >= 2) { k = 'warn'; t = `📱 Net kamzor ${Math.round(s.loss)}%`; why = `PC se video saaf ja rahi hai — aap ke phone ke internet par ${Math.round(s.loss)}% tukre gum ho rahe hain. Wi-Fi / doosra internet try karein.`; }
   else if (s.f) { k = 'ok'; t = '🩺 Saaf'; why = fr ? 'Camera → PC → phone: kahin tukre gum nahi ho rahe.' : 'Phone tak video saaf aa rahi hai (PC ka haal: live-cam update 3-5 min mein).'; }
   if (t && fr && Number(q.kf) > 4) why += ` · Camera ki poori tasveer (keyframe) har ${Number(q.kf)} second mein aati hai — tukra gire to itni der grey / ruki. Ilaaj: NVR mein us camera ka I-frame interval 2 second (fps x 2) aur Smart Codec / H.264+ band.`;   // v2.374.0 (live-cam v2.6)
+  if (t && s.via) why += s.via === 'relay' ? ' · Rasta: 🔁 relay (Cloudflare) — 4G / bahar ke internet par.' : ' · Rasta: seedha (PC → phone).';   // v2.378.0
   e.hidden = !t; e.textContent = t; e.className = 'lv-q' + (k ? ' ' + k : ''); e.dataset.why = why;
 }
 

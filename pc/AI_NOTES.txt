@@ -5779,3 +5779,12 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - Agla qadam (malik ke OK par): Cloudflare Realtime TURN (1,000 GB / mahina muft) — chaabi malik Settings mein (repo / chat mein KABHI nahi), PC roz chhota pass banaye, app + werift iceServers mein.
 - Meri ghalti: pehle PC bojh / ⏪ bug / PPS ko wajah kaha — malik ne CPU 19% dikhaya.
 - Chhota bug: live-cam '⏪ haal:' line aam band (koi nahi dekh raha) par khali chhapti hai — agli update mein sirf ghalti par.
+
+=== 25 Nov 2026 — v2.378.0: 🔁 Relay (TURN) = 4G par live (rules 2.111, PC live-cam v2.9, manifest 2026-11-25.1) ===
+- Malik: 'Plane ok ha' (relay). Wi-Fi par live theek, 4G par '✕ Rabta nahi bana' (WebRTC sirf STUN tha).
+- App pc-drives.js v1.2: 🔁 Relay dabba (Settings → 🖥️ PC scripts, sirf malik) — Turn Token ID + API Token → blueAccess/turnKey; haal liveCamPc.tu {ok, err, at, exp, k, k4}.
+- PC live-cam v2.9: turnKey onSnapshot → Cloudflare generate-ice-servers (https, ttl 86400) → liveIce/cur {j: sirf TURN JSON, exp, at}; 401/404 = 30 min, baqi ghalti = 5 min; chaabi hatai = liveIce mita. werift khud TURN nahi leta.
+- live.js: iceGet (liveIce/cur, 10 min yaad, 1.5 s hadd) → STUN + TURN; relay candidate ka intezar 3 s; viaOf (getStats) → '🔁 relay se' + 🩺 'Rasta'; pass ghalat = sirf STUN.
+- Rules 2.111: liveIce/{id} get = malik / Full / Nigrani. Asal chaabi blueAccess/turnKey sirf malik (generic).
+- Test: node-turn + Chrome (relay-only) + werift (bina TURN) = video chali, 'Rasta: 🔁 relay'; pass nahi / permission / dheera / purana / kachra = sirf STUN, seedha chali; PC relay hissa (nakli https / Firestore) 11/11 PASS; malik ka dabba Chrome mein (focus nahi toota, chaabi screen par nahi). Asal Cloudflare / asal 4G par azmaya NAHI — malik ki chaabi ke baad pehla 4G test.
+- Malik ka kaam: Cloudflare muft account → Realtime → TURN Server → Create → Turn Token ID + API Token app mein paste.

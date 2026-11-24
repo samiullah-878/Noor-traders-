@@ -7,6 +7,9 @@
 //  Purani jagah ki recording move NAHI hoti — wahin parhi jati hai aur din pure kar ke khud mitti hai. AI nahi.
 //  v1.1 (app v2.347.0, 22 Nov, malik: 'AI ko filhal band kar do aur script mein on karne ka option'): upar 🤖 Camera AI ki patli line (#pcAi) —
 //    switch → blueAccess/gintiCam.ai 1 / 0 (saveGintiCam) · PC ginti-cam v2.1 jawab gintiPc.ai → ⏳ / ✅ / ⚫ chip. Default BAND.
+//  v1.2 (app v2.378.0, 25 Nov, malik: 'WiFi pr shi chlta ha' — 4G par live '✕ Rabta nahi bana' · relay plan OK): sab se upar 🔁 Relay ka dabba (#pcRly) —
+//    malik Cloudflare ka Turn Token ID + API Token paste kare → blueAccess/turnKey (SIRF malik; chaabi screen par dobara nahi dikhti, sirf aakhri 4 harf) →
+//    PC live-cam v2.9 24 ghante ka chhota pass liveIce/cur → phone relay se jurta hai. Haal liveCamPc.tu (✅ pass N ghante / ✕ Cloudflare ki wajah / ⏳). AI nahi.
 // =========================================================
 let A = {}, wired = false, stop = null, pc = null, cfg = null, want = '', wantD = 0, busy = '';
 let gc = null, gp = null, aiStop = null, aiWant = null, aiBusy = false;   // v1.1: 🤖 Camera AI (gintiCam / gintiPc)
@@ -27,11 +30,19 @@ export function setup(deps) {
     if (k === 'd') pickDrive(t.dataset.d); else if (k === 'k') pickDays(Number(t.dataset.n)); else if (k === 'ref') open(true);
   });
   document.addEventListener('click', e => { const t = e.target.closest?.('[data-pai]'); if (t && aiBox()?.contains(t)) aiToggle(); });
+  document.addEventListener('click', e => {   // v1.2: 🔁 relay
+    const t = e.target.closest?.('[data-prl]'); if (!t || !rlBox()?.contains(t)) return;
+    const k = t.dataset.prl;
+    if (k === 'save') rlSave(); else if (k === 'rm') rlRemove();
+    else if (k === 'ed') { rlEdit = true; rlErr = ''; rlPaint(true); setTimeout(() => document.getElementById('prlId')?.focus(), 50); }
+    else if (k === 'cx') { rlEdit = false; rlErr = ''; rlPaint(true); }
+  });
+  document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target?.id === 'prlTok' && rlBox()?.contains(e.target)) { e.preventDefault(); rlSave(); } });
 }
 
 export async function open(force) {
   if (!box()) return;
-  aiOpen();
+  aiOpen(); rlOpen();
   paint();
   try { cfg = await A.cloud.getBillClipCfg(); } catch { cfg = cfg || {}; }
   paint();
@@ -139,4 +150,81 @@ async function aiToggle() {
   try { await A.cloud.saveGintiCam({ ai: nx ? 1 : 0 }); A.notice?.(nx ? '🤖 Camera AI chalu — PC 1 min mein' : '⚫ Camera AI band — PC 1 min mein'); }
   catch (e) { aiWant = null; A.notice?.('✕ ' + (e?.message || e)); }
   aiBusy = false; aiPaint();
+}
+
+// ---------- 🔁 v1.2: RELAY — 4G par live (Cloudflare TURN chaabi · sirf malik) ----------
+let rl = null, rlPc = null, rlStop = null, rlBusy = false, rlEdit = false, rlErr = '';
+const rlBox = () => document.getElementById('pcRly');
+const CF_URL = 'https://dash.cloudflare.com/?to=/:account/calls';
+const RL_ID = /^[A-Za-z0-9_-]{16,80}$/, RL_TOK = /^[A-Za-z0-9_.-]{20,300}$/;
+function rlOpen() {
+  if (!rlBox()) { const ref = aiBox() || box(); if (!ref) return; const d = document.createElement('div'); d.id = 'pcRly'; ref.before(d); }
+  rlPaint(true);
+  if (A.cloud?.getTurnKey) A.cloud.getTurnKey().then(d => { rl = d || {}; rlPaint(true); })
+    .catch(e => { rl = { _err: /permission|insufficient/i.test(String(e?.code || '') + ' ' + String(e?.message || '')) ? 'sirf malik' : 'parh nahi saka — 🔄' }; rlPaint(true); });
+  if (!rlStop && A.cloud?.listenLiveCamPc) rlStop = A.cloud.listenLiveCamPc(d => { if (!rlBox()) { try { rlStop && rlStop(); } catch {} rlStop = null; return; } rlPc = d; rlPaint(false); });
+}
+const rlHas = () => !!(rl && RL_ID.test(String(rl.id || '')) && RL_TOK.test(String(rl.tok || '')));
+const rlMine = t => !!(t && rl && t.k4 === String(rl.id || '').slice(-4));   // PC ka haal ISI chaabi ka hai (aakhri 4 harf)
+function rlChip() {
+  const c = (k, s) => `<span id="prlSt" class="pai-st${k ? ' ' + k : ''}">${s}</span>`;
+  if (!rl) return c('w', '⏳');
+  if (rl._err) return c('r', '✕ ' + esc(rl._err));
+  if (rlBusy) return c('w', '⏳ lag rahi…');
+  if (!rlHas()) return c('', '⚫ Band');
+  const t = rlPc && rlPc.tu, at = Number(rlPc?.at) || 0;
+  if (!at) return c('w', '⏳ PC ka jawab nahi');
+  if (Date.now() - at > 6 * 60000) return c('r', `🔴 PC chup (${esc(ago(at))})`);
+  if (!t) return c('w', '⏳ PC update (3-5 min)');
+  if (!rlMine(t)) return c('w', '⏳ PC pass bana raha…');
+  if (t.ok && Number(t.exp) > Date.now()) return c('g', '✅ Chalu');
+  if (t.err) return c('r', '✕ Nahi laga');
+  return c('w', '⏳ PC pass bana raha…');
+}
+function rlMsg() {
+  if (rlErr) return `<p class="pdv-ln r">✕ ${esc(rlErr)}</p>`;
+  const t = rlPc && rlPc.tu;
+  if (rlHas() && rlMine(t) && t.err) return `<p class="pdv-ln r">✕ ${esc(t.err)}</p>`;
+  if (rlHas() && rlMine(t) && t.ok && Number(t.exp) > Date.now()) return `<p class="pai-note">4G par live ab relay se judegi (pass ${Math.max(1, Math.round((Number(t.exp) - Date.now()) / 3600000))} ghante · PC khud naya banata hai) · Wi-Fi par seedha hi.</p>`;
+  return '';
+}
+function rlForm() {
+  return `<div class="prl-f"><input id="prlId" class="prl-in" placeholder="Turn Token ID" autocomplete="off" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <input id="prlTok" class="prl-in" type="password" placeholder="API Token" autocomplete="new-password" autocapitalize="off" autocorrect="off" spellcheck="false">
+    <button type="button" class="pdv-c is-in" data-prl="save"${rlBusy ? ' disabled' : ''}>💾 Lagao</button>${rlHas() ? '<button type="button" class="pdv-c" data-prl="cx" aria-label="Rehne do">✕</button>' : ''}</div>
+    <details class="prl-how"${rlHas() ? '' : ' open'}><summary>Chaabi kaise milegi? (ek dafa, muft)</summary><ol>
+      <li><a href="${CF_URL}" target="_blank" rel="noopener">Cloudflare kholein</a> — muft account banayein (email + password · card nahi chahiye).</li>
+      <li>Baayein menu: <b>Realtime</b> → <b>TURN Server</b> → <b>Create</b>.</li>
+      <li>Naam <b>noor</b> likh kar <b>Create</b>.</li>
+      <li><b>Turn Token ID</b> aur <b>API Token</b> copy kar ke upar paste → 💾 Lagao.</li></ol>
+      <p class="pdv-note">Har mahine 1,000 GB muft — live dekhne mein is ka thora sa hissa lagta hai. Yeh chaabi chat / WhatsApp mein kabhi na bhejein.</p></details>`;
+}
+function rlPaint(full) {
+  const b = rlBox(); if (!b) return;
+  const st = b.querySelector('#prlSt'), ms = b.querySelector('#prlMsg');
+  if (!full && st && ms) { st.outerHTML = rlChip(); ms.innerHTML = rlMsg(); return; }   // haal badla = sirf chip / line (likhte waqt form dobara nahi — focus na toote)
+  const has = rlHas();
+  const body = !rl || rl._err ? '' : (!has || rlEdit) ? rlForm()
+    : `<div class="prl-r2"><span>🔑 Chaabi lagi (…${esc(String(rl.id).slice(-4))})</span><button type="button" class="pdv-c sm" data-prl="ed">✏️ Badlo</button><button type="button" class="pdv-c sm" data-prl="rm">✕ Hatao</button></div>`;
+  const vi = document.getElementById('prlId')?.value || '', vt = document.getElementById('prlTok')?.value || '';
+  b.innerHTML = `<div class="pai-box prl-box"><div class="pai-r"><span class="pai-ic">🔁</span><span class="pai-nm"><b>Relay — 4G par live</b><small>Wi-Fi par live seedha · 4G / dukan ke bahar is relay se</small></span>${rlChip()}</div><div id="prlMsg">${rlMsg()}</div>${body}</div>`;
+  if (vi) { const e = document.getElementById('prlId'); if (e) e.value = vi; }
+  if (vt) { const e = document.getElementById('prlTok'); if (e) e.value = vt; }
+}
+async function rlSave() {
+  if (rlBusy) return;
+  const id = (document.getElementById('prlId')?.value || '').replace(/\s+/g, ''), tok = (document.getElementById('prlTok')?.value || '').replace(/\s+/g, '');
+  if (!RL_ID.test(id)) { rlErr = 'Turn Token ID theek nahi lag raha — Cloudflare se poora copy karein'; rlPaint(true); return; }
+  if (!RL_TOK.test(tok)) { rlErr = 'API Token theek nahi lag raha — Cloudflare se poora copy karein'; rlPaint(true); return; }
+  rlErr = ''; rlBusy = true; rlPaint(true);
+  try { await A.cloud.saveTurnKey({ id, tok }); rl = { id, tok, at: Date.now() }; rlEdit = false; A.notice?.('⏳ Relay lag raha — PC 1 min mein pass bana kar yahan ✅ dikhayega'); }
+  catch (e) { rlErr = 'Save nahi hua: ' + String(e?.message || e); }
+  rlBusy = false; rlPaint(true);
+}
+async function rlRemove() {
+  if (rlBusy || !confirm('🔁 Relay hatayein?\n\n4G par live phir nahi judegi (Wi-Fi par chalti rahegi).')) return;
+  rlBusy = true; rlPaint(true);
+  try { await A.cloud.saveTurnKey({ id: '', tok: '' }); rl = { id: '', tok: '', at: Date.now() }; rlEdit = false; A.notice?.('⚫ Relay hata diya'); }
+  catch (e) { rlErr = 'Nahi hua: ' + String(e?.message || e); }
+  rlBusy = false; rlPaint(true);
 }

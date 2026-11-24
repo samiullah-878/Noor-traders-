@@ -1,5 +1,11 @@
 // =========================================================
-//  live-cam.js  v2.8 (2026-11-24 raat, malik ki photo 22:37: ⏪ Saaf = sab khane kaale + 'ffmpeg code null'): har camera ka feeder ab
+//  live-cam.js  v2.9 (2026-11-25, malik: 'WiFi pr shi chlta ha' — 4G par '✕ Rabta nahi bana' · relay plan OK): 🔁 RELAY (TURN) — malik ki
+//    Cloudflare chaabi blueAccess/turnKey {id, tok} (SIRF malik + PC; log / app / phone ko kabhi nahi) se PC 24 ghante ka chhota pass banata hai
+//    (rtc.live.cloudflare.com generate-ice-servers, 18 ghante se kam baqi = naya) → liveIce/cur {j: sirf TURN JSON (:53 bahar), exp, at}
+//    (malik / Full / Nigrani sirf get). Phone wahi pass le kar relay candidate offer mein daalta hai = 4G par bhi video. PC (werift) apni taraf
+//    TURN NAHI leta (werift setLocalDescription TURN allocation ka intezar karta hai — Cloudflare dheera ho to jawab hi ruk jata; phone ka relay kaafi).
+//    Haal liveCamPc.tu {ok, err, at, exp, k}. Pass na bane = purana pass (agar abhi chalu) rehta hai, sirf haal mein ghalti. AI NAHI.
+//  v2.8 (2026-11-24 raat, malik ki photo 22:37: ⏪ Saaf = sab khane kaale + 'ffmpeg code null'): har camera ka feeder ab
 //    mosaic ke jurne se PEHLE hi apna pehla tukra parh kar tayyar (pehle ek ek kar ke = Windows par 9 camera x process + seek > 15 s,
 //    chowkidar 15 s par band kar deta tha); ⏪ ko pehli tasveer ke liye 45 s; band ho to wajah saaf: 'N/M camera ki recording pohanchi' + har
 //    camera ka haal log mein. ⚡ Tez raasta (TCP) ab kisi aur ki ghalti (recording band = RTSP -138) par hamesha ke liye band nahi hota —
@@ -68,10 +74,10 @@ const os = require('os');
 const dgram = require('dgram');
 const { spawn, exec } = require('child_process');
 const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } catch (e) { const f = path.join(__dirname, path.basename(__filename, '.js') + '.alive'); setInterval(() => { try { fs.writeFileSync(f, String(Date.now())); } catch {} }, 30000); return { guard: fn => fn }; } })();
-if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter, srBuild, srGrid, srTs, dlDiff }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
+if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter, srBuild, srGrid, srTs, dlDiff, iceOf }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.8';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.9';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -99,6 +105,75 @@ function werift() {
   return null;
 }
 function ffPath() { try { const p = require(require.resolve('ffmpeg-static', { paths: [CLIP_MODS] })); if (p && fs.existsSync(p)) return p; } catch {} return ''; }
+
+// ---------- 🔁 v2.9: RELAY (TURN) — 4G par live: malik ki Cloudflare chaabi (blueAccess/turnKey) se 24 ghante ka chhota pass → liveIce/cur ----------
+// Chaabi (tok) kabhi log / Firestore ke kisi aur doc / app ko nahi jati — sirf Cloudflare ko (Authorization header). Phone ko sirf chhota pass.
+const https = require('https');
+const TU_TTL = 86400, TU_MIN = 18 * 3600000;   // pass 24 ghante ka · 18 ghante se kam baqi = naya (PC dukan ke waqt chalta hai)
+let TK = null, TU = { ok: 0, err: '', at: 0, exp: 0, kid: '' }, tuBusy = false, tuNext = 0;
+function iceOf(j) {   // Cloudflare ka jawab → sirf TURN (Google STUN pehle se) · :53 browser mein atak jata hai (bina trickle) = bahar
+  const raw = j && j.iceServers, arr = Array.isArray(raw) ? raw : raw ? [raw] : [], out = [];
+  for (const s of arr) {
+    if (!s || typeof s !== 'object' || !s.username || !s.credential) continue;
+    const urls = (Array.isArray(s.urls) ? s.urls : [s.urls]).map(u => String(u || '').trim()).filter(u => /^turns?:/i.test(u) && !/:53(\?|$)/.test(u));
+    if (urls.length) out.push({ urls: urls.slice(0, 6), username: String(s.username).slice(0, 300), credential: String(s.credential).slice(0, 300) });
+  }
+  return out.slice(0, 2);
+}
+function turnGen(k) {
+  return new Promise((res, rej) => {
+    const body = JSON.stringify({ ttl: TU_TTL });
+    const rq = https.request({ host: 'rtc.live.cloudflare.com', path: '/v1/turn/keys/' + encodeURIComponent(k.id) + '/credentials/generate-ice-servers', method: 'POST', timeout: 15000,
+      headers: { Authorization: 'Bearer ' + k.tok, 'Content-Type': 'application/json', 'Content-Length': Buffer.byteLength(body) } }, r => {
+      let s = ''; r.setEncoding('utf8'); r.on('data', c => { if (s.length < 65536) s += c; });
+      r.on('end', () => {
+        const c = r.statusCode || 0;
+        if (c === 401 || c === 403) return rej(Object.assign(new Error(`Cloudflare ne chaabi nahi maani (${c}) — Turn Token ID / API Token dobara copy karein`), { auth: 1 }));
+        if (c === 404) return rej(Object.assign(new Error('Cloudflare: yeh Turn Token ID nahi mila (404) — dobara copy karein'), { auth: 1 }));
+        if (c < 200 || c >= 300) return rej(new Error(`Cloudflare ka jawab ${c} — thori der baad khud dobara`));
+        let j = null; try { j = JSON.parse(s); } catch {}
+        const L = iceOf(j); if (!L.length) return rej(new Error('Cloudflare ke jawab mein relay pass nahi'));
+        res(L);
+      });
+    });
+    rq.on('timeout', () => rq.destroy(new Error('Cloudflare 15 s mein nahi bola (internet?)')));
+    rq.on('error', e => rej(new Error('Cloudflare tak rasta nahi: ' + String((e && e.message) || e).slice(0, 80))));
+    rq.end(body);
+  });
+}
+const ICE_DOC = biz.collection('liveIce').doc('cur');
+function turnTick() {
+  if (tuBusy || !TK) return;
+  const now = Date.now();
+  if (now < tuNext) return;
+  if (TU.ok && TU.kid === TK.id && TU.exp - now > TU_MIN) return;
+  tuBusy = true; const k = TK;
+  turnGen(k).then(async L => {
+    if (TK !== k) return;   // beech mein chaabi badli — agla chakkar naya pass banayega
+    const exp = Date.now() + TU_TTL * 1000 - 10 * 60000;
+    await ICE_DOC.set({ j: JSON.stringify(L), exp, at: Date.now() });
+    TU = { ok: 1, err: '', at: Date.now(), exp, kid: k.id }; tuNext = 0;
+    log(`🔁 relay pass bana (24 ghante · ${L.reduce((a, s) => a + s.urls.length, 0)} raaste) — 4G par live ab relay se jur sakti hai`);
+  }).catch(e => {
+    const same = TU.kid === k.id && TU.exp > Date.now();   // purana pass abhi chalu = wohi rehta hai, sirf haal mein ghalti
+    TU = { ok: same ? 1 : 0, err: String((e && e.message) || e).slice(0, 160), at: Date.now(), exp: same ? TU.exp : 0, kid: same ? k.id : '' };
+    tuNext = Date.now() + (e && e.auth ? 30 : 5) * 60000;
+    log('✕ relay pass: ' + TU.err);
+  }).finally(() => { tuBusy = false; pushSt(true); });
+}
+biz.collection('blueAccess').doc('turnKey').onSnapshot(s => {
+  const d = s.exists ? s.data() || {} : {};
+  const id = String(d.id || '').replace(/\s+/g, ''), tok = String(d.tok || '').replace(/\s+/g, '');
+  const nk = /^[A-Za-z0-9_-]{16,80}$/.test(id) && /^[A-Za-z0-9_.-]{20,300}$/.test(tok) ? { id, tok } : null;
+  const was = TK ? TK.id + '|' + TK.tok : '', cur = nk ? nk.id + '|' + nk.tok : '';
+  TK = nk;
+  if (!nk) {
+    const bad = !!(id || tok);
+    if (TU.kid) { ICE_DOC.delete().catch(() => {}); log(bad ? '🔁 relay band (chaabi ki shakal ghalat)' : '🔁 relay band (malik ne chaabi hata di)'); }
+    TU = { ok: 0, err: bad ? 'Chaabi ki shakal ghalat — Turn Token ID aur API Token dobara copy karein' : '', at: Date.now(), exp: 0, kid: '' }; pushSt(true); return;
+  }
+  if (was !== cur) { TU = { ok: 0, err: '', at: Date.now(), exp: 0, kid: '' }; tuNext = 0; turnTick(); pushSt(true); }
+}, e => log('⚠️ turnKey: ' + e.message));
 
 // ---------- setting (bill-clip wali — malik ⚙️) ----------
 let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', ch: {} }, cfSig = '', AUTHBAD = 0;
@@ -720,13 +795,13 @@ let ST = { err: '' }, stAt = 0;
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const cams = [...pipes.values()].map(p => ({ ch: p.ch, n: p.tracks.size, on: p.ff ? 1 : 0, err: p.err || '' }));
-  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams, mo: moList().map(x => x.n), all: allList().map(x => x.n), sr: { on: SR.on ? 1 : 0, g: SR.g ? 1 : 0, kd: SR.kd, rec: srSt.rec, n: srSt.n, err: String(srSt.err || '').slice(0, 140), last: srSt.last, at: srSt.at, sent: srSt.sent, f: 1, job: srSt.job || '', mk: srSt.mk || 0, made: srSt.made || '' } }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }   // v1.9: mo = godam cameras
+  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams, mo: moList().map(x => x.n), all: allList().map(x => x.n), sr: { on: SR.on ? 1 : 0, g: SR.g ? 1 : 0, kd: SR.kd, rec: srSt.rec, n: srSt.n, err: String(srSt.err || '').slice(0, 140), last: srSt.last, at: srSt.at, sent: srSt.sent, f: 1, job: srSt.job || '', mk: srSt.mk || 0, made: srSt.made || '' }, tu: { ok: TU.ok ? 1 : 0, err: TU.err, at: TU.at, exp: TU.exp, k: TK ? 1 : 0, k4: TK ? TK.id.slice(-4) : '' } }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }   // v1.9: mo = godam cameras · v2.9: tu = 🔁 relay ka haal (chaabi kabhi nahi)
 }
 
 function main() {
   log(`🔴 live-cam v${VER} shuru — ${os.hostname()} · lock ${LOCK_PORT}`);
   werift(); pushSt(true);
-  setInterval(ZINDA.guard ? ZINDA.guard(() => { werift(); pushSt(); }, 10 * 60000, 'tick') : () => { werift(); pushSt(); }, 30000);
+  setInterval(ZINDA.guard ? ZINDA.guard(() => { werift(); pushSt(); turnTick(); }, 10 * 60000, 'tick') : () => { werift(); pushSt(); turnTick(); }, 30000);   // v2.9: 🔁 relay pass (sasta — zaroorat ho tab hi Cloudflare)
   setInterval(() => { try { srTick(); } catch (e) { log('⚠️ sab recording: ' + e.message); } }, 20000);   // v2.3: 📼
   process.on('exit', () => { for (const p of pipes.values()) { try { p.ff && p.ff.kill(); } catch {} } try { srJob && srJob.ff && srJob.ff.kill(); } catch {} for (const p of pipes.values()) { try { p.dl && dlStop(p); } catch {} } });
 }
