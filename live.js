@@ -154,7 +154,9 @@ function tbSync(mo) {
   mo.n.forEach((n, i) => {
     if (mo.k[i] !== 'c') return;
     if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive(n, (d, err) => { if (err || !d || TB.mo !== mo) return; let L = [], sn = {}; try { L = JSON.parse(d.j || '[]'); } catch {} try { sn = JSON.parse(d.sn || '{}') || {}; } catch {} TB.bill.set(n, { d, L, sn, at: Date.now() }); tbPaint(i); }));
-    if (cloud.listenPosScan) TB.un.push(cloud.listenPosScan(n, (d, err) => { if (err || TB.mo !== mo) return; if (d) TB.scan.set(n, { a: d.a || [], ver: d.ver || '', at: Date.now() }); else TB.scan.delete(n); tbPaint(i); }));   // v2.370.0
+    if (cloud.listenPosScan) TB.un.push(cloud.listenPosScan(n, (d, err, cache) => { if (err || TB.mo !== mo) return; const o = TB.scan.get(n);
+      // v2.371.0: 🩺 PC ki ghari ka farq — sirf taza (doosri ya baad wali, cache nahi) snapshot par: likhai ke ~1 s mein pohanchti hai
+      if (d) TB.scan.set(n, { a: d.a || [], ver: d.ver || '', ok: d.ok, sc: d.sc, at: Date.now(), ns: (o ? o.ns : 0) + 1, sk: o && !cache && Number(d.at) ? Number(d.at) - Date.now() : (o ? o.sk : null) }); else TB.scan.delete(n); tbPaint(i); }));   // v2.370.0
     if (cloud.listenPosShot) TB.un.push(cloud.listenPosShot(n, (d, err, cache) => { if (err || cache || TB.mo !== mo) return; const o = TB.shot.get(n); try { o && o.url && URL.revokeObjectURL(o.url); } catch {}
       const on = d && Number(d.on) === 1 && d.im; TB.shot.set(n, { url: on ? URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })) : '', at: Date.now() }); tbPaint(i); }));
   });
@@ -197,7 +199,7 @@ function tbPaint(i) {
   const k = mo.k[i], n = mo.n[i], now = Date.now(); let h = '', img = '';
   let ch = '';   // v2.370.0: baayein — is counter ke chhape magar post na hue bill
   if (k === 'c' && TB.scan.get(n)) {   // v2.370.0: NT-PRINT v1.36 — scan ke barcode se BANTE BILL ke naam
-    const P = rkPcBills(n), lastPr = P.reduce((m, x) => Math.max(m, Number(x.ct) || Number(x.pt) || 0), 0), sn = (TB.bill.get(n) || {}).sn || {};
+    const P = rkPcBills(n), lastPr = P.reduce((m, x) => Math.max(m, Number(x.ct) || 0), 0), sn = (TB.bill.get(n) || {}).sn || {};   // v2.371.0: sirf PRINT ka waqt (post ka nahi — purana bill post hua to naye scan chhup jate)
     const U = P.filter(rkUnp).sort((a, b) => (Number(b.ct) || 0) - (Number(a.ct) || 0));
     ch = U.slice(0, 5).map(x => `<i class="lv-tbk">🖨 #${escB(rkNo(x))} · Rs ${nf(x.t)}</i>`).join('') + (U.length > 5 ? `<i class="lv-tbk m">+${U.length - 5} bill</i>` : '');
     const A = (TB.scan.get(n).a || []).filter(x => Array.isArray(x) && Number(x[0]) > lastPr + 500), G = new Map();
@@ -207,6 +209,12 @@ function tbPaint(i) {
       const row = o => { const v = sn[o.c], nm = Array.isArray(v) ? v[0] : '', q = Array.isArray(v) ? Number(v[1]) || 1 : 1;
         return `<div class="lv-tbr${now - o.t < 4000 ? ' nw' : ''}">${nm ? escB(nm) : '🔖 ' + escB(String(o.c).slice(-10))}${q !== 1 ? ` <small>(${q3(q)})</small>` : ''} <b>×${o.n}</b></div>`; };
       h = `<div class="lv-tbh nw">🧾 Bill ban raha · ${R.length} item</div>` + R.slice(0, 6).map(row).join('') + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
+    } else {   // v2.371.0: 🩺 items nahi — kyun? (malik: 'dekh kar batao kahan issue') — scan aaye / aakhri scan / aakhri print / PC ghari
+      const S0 = TB.scan.get(n), L0 = (S0.a || []).filter(Array.isArray), lst = L0.reduce((m, x) => Math.max(m, Number(x[0]) || 0), 0);
+      const tm = t => t ? new Date(t).toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Karachi' }) : '—';
+      let dg = L0.length ? `🩺 scan ${L0.length} · aakhri ${tm(lst)} · print ${tm(lastPr)}` : `🩺 30 min mein scan 0${S0.ok != null ? ` · kul ginti ${S0.ok}` : ''}${S0.sc === 0 ? ' · ⚠ scan system band' : ''}`;
+      if (S0.sk != null && Math.abs(S0.sk) > 20000) dg += ` · ⏰ PC ghari ${S0.sk > 0 ? '+' : ''}${Math.round(S0.sk / 1000)} s`;
+      h = `<div class="lv-tbd">${escB(dg)}</div>`;
     }
   } else if (k === 'c') {
     const b = TB.bill.get(n), sh = TB.shot.get(n), d = b && b.d, shOn = !!(sh && sh.url && !sh.empty && now - sh.at < 45000);   // v2.363.0: khali screen = tasveer nahi, bill ki items

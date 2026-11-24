@@ -9654,3 +9654,13 @@ post ho jaye to wahan se bhi khud hat jaye · sab auto · screen yahi · 5 bills
    items (getPosSaleLines); video na ho = 🎬 maango (reqBillClip -> billClipReq). Post hote hi list se hat-ta; jo khula ho wo '📌 Post ho gaya' ke saath rehta jab tak band na karo.
    cloud.js listenPosScan naya. Rules nahi badle (posLive read wahi). Azmaya: nakli cloud + Chromium (tile naam / chips / post par ghayab / naye print par saaf / Ruke list /
    video / maango / back). Asal counter / NVR par nahi. AI nahi.
+
+
+=== 2026-11-24 — v2.371.0: 🩺 Live counter khane par 'items kyun nahi' ki line + bill khatam = sirf PRINT ka waqt (PC nt-print v1.37) ===
+Malik ki photo (12:39): 🎛 Sab cameras par baayein 🖨 bill chips aaye (= naya NT-PRINT jura, __scan doc hai) magar daayein BANTE BILL ke naam nahi.
+Data yahan se nazar nahi aata — 2 shak: (1) scan aate hi nahi (nt-scan hook), (2) waqt — scan sirf counter ke aakhri chhape bill (ct) ke baad wale dikhte hain.
+Ab: live.js tile mein items na hon to peeli .lv-tbd line: 'scan N · aakhri <waqt> · print <waqt>' ya '30 min mein scan 0 · kul ginti X' (+ '⚠ scan system band'
+jab NT-PRINT sc 0) + '⏰ PC ghari ±N s' (counter ki ghari phone se 20 s+ alag — sirf taza snapshot, cloud.listenPosScan teesra arg fromCache). Bill khatam
+(lastPr) ab sirf ct (print) — pt (post) nahi (purana bill der se post hota to naye scan chhup jate). NT-PRINT v1.37: __scan doc mein ok / bad (SND kul ginti) +
+sc (nt-scan chalu 1/0) + dekhte waqt har 60 s taza. Agli photo ki 🩺 line se pakki wajah: scan 0 + ginti na barhe = counter par scan system; scan hain magar
+print ke waqt se pehle = ghari / waqt ka farq. Azmaya: nakli cloud + Chromium. AI nahi.
