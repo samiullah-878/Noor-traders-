@@ -9735,3 +9735,7 @@ GetIPv4Statistics apne try mein; NET|rx|tx|types (types = 'Wireless80211~144~naa
 process line na aaye (PowerShell parse ghalti) to CPU.noNet++ — 2 dafa = network hissa band, sirf purana CPU sawal (CPU list kabhi na ruke). App pc-load.js: hasNet
 nahi = 'network ka naap abhi nahi'; nicOf -> '📶 Wi-Fi 144 Mbps' / '🔌 LAN taar 1000 Mbps'; sirf Wi-Fi = pcl-warn (taar lagao). Sandbox mein PowerShell nahi chala
 (download ki ijazat nahi mili) — script hath se jaanchi (braces / parens / string). Asal PC par 10 min baad 📊 se dekhna. AI nahi.
+
+
+=== 2026-11-24 shaam — 🎞 Grey camera: sabaq (koi code nahi badla) ===
+Malik: 'problem abhi bhi wohi hai'. v2.374 (relay) / v2.375 (scan) / v2.376 (network naap) se grey nahi gaya. Bill ki video bhi grey = recording hi tooti = NVR -> PC (RTSP TCP par NVR ne tukre giraye: network bhara / NVR par bojh / camera). Agla qadam malik ka 2 minute test: DMSS mein wohi camera grey? + Group videos / Sab cameras 15 min band. Jawab ke baad ilaaj (LAN taar / uploads rush ke baad). Server PC (desktop-oegi39u, C:\khata-sync) ki logs yahan se kholne ki ijazat auto-mode ne nahi di.
