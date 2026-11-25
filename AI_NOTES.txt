@@ -9897,3 +9897,12 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
 - javac test (logic hissa): 13 case OK. MCP validator VALID. pkg diff: sirf naya macro + cnSeen.
 - Pehle se aaya number (0319…) par notification nahi — malik ko WhatsApp ka apna 'Add to contacts' bataya.
 - Phone par azmaya nahi. Jaanch: agli email "NT phone macros v77" mein macro ON; agle unsaved paigham / call par notification.
+
+=== md pkg v78 (25 Nov 2026 raat) — 👁 Aankh ka aram ===
+- Malik ne 6 mashwaron (aankh, gardan break, chori, gaari, hotspot, battery) mein se SIRF 1 chuna.
+- md/tools/aankh.py: RegularInterval 5 min + Screen ON + Boot + MacroEnabled -> Java: ghanta >= 19 ya < 7 = raat.
+  Raat shuru (akOn != 1): pehle ki haalat yaad (akNd0 night_display_activated, akBm0 screen_brightness_mode, akUi0 UiModeManager.getNightMode),
+  phir night_display_activated 1 + brightness mode 1 (auto), akNd = read-back, akOn 1; ui == 1 (light) ho to DarkThemeAction Enable.
+  Din shuru (akOn == 1): night display + brightness mode wapas pehle wale, akOn 0; ui == 1 tha to DarkThemeAction Disable.
+- Koi paigham / toast nahi. AI nahi. MCP validator VALID. pkg.py: mak + vak (5 int globals), validator copy pkg_e.json.
+- Phone par azmaya nahi. Jaanch: agli email "NT phone macros v78" mein macro ON + akOn 1 + akNd 1; malik se poochho screen peeli hui ya sirf dark.
