@@ -5871,3 +5871,19 @@ Malik: 5 MacroDroid template screenshots — "Whtsapp pr SMS bajhna without numb
 - MCP validator: dono VALID. pkg diff: sirf 2 naye macro, off / del / patch / vars wahi. Koi chaabi / number nahi (md/ PUBLIC).
 - Malik ka kaam: notification patti -> ✏️ -> MacroDroid tile 1 (💬) + tile 2 (🌐) upar lagayein. Template wale macro phone par hon to khud band.
 - Phone par azmaya nahi. Jaanch: agli email "NT phone macros v76" mein dono naye macro ON.
+
+=== md pkg v77 (25 Nov 2026) — 📇 Naya number save (app / rules / PC nahi badle) ===
+Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa — auto save karne ka tile aa jaye ya upar notification aa jaye"
++ "calls par bhi" -> plan -> "Ok".
+- Naya md/tools/cnsave.py -> pkg.py: mcn h64('claude|cnsave') '📇 Naya number save'. Global naya: cnSeen (string).
+- Triggers: NotificationTrigger com.whatsapp (received, ongoing bhi, supress multiples) · CallEndedTrigger any · CallMissedTrigger any.
+  WhatsApp = cn {not_title}, cs w · call = cn {call_number}, cs c (TriggerThatInvoked).
+- Java CNJ: WhatsApp title se '(N messages)' kaat kar sirf "+92 …" jaisa = number, warna 'naam' (saved / group / '~ naam' = kuch nahi).
+  Number: 00… -> bina 00 · 0… -> 92… · 10 hindse 3… -> 92… · + wala waise hi · 10–15 hindse. cnSeen mein ho = 'dekha'.
+  PhoneLookup (CONTENT_FILTER_URI) mein mila = 'saved' (ghalti par aage). Phir apni notification: channel nt_cnsave (importance 3),
+  title "Naya number: 0319 8682104", text "WhatsApp/Call - dabayein, naam likh kar Save karein", tap = PendingIntent ACTION_INSERT
+  vnd.android.cursor.dir/raw_contact + phone "+92…" + finishActivityOnSaveCompleted (id = 7300 + hash, IMMUTABLE|UPDATE_CURRENT), autoCancel.
+  Phir cnSeen += number (3600 se lamba = aakhri 3000).
+- javac test (logic hissa): 13 case OK. MCP validator VALID. pkg diff: sirf naya macro + cnSeen.
+- Pehle se aaya number (0319…) par notification nahi — malik ko WhatsApp ka apna 'Add to contacts' bataya.
+- Phone par azmaya nahi. Jaanch: agli email "NT phone macros v77" mein macro ON; agle unsaved paigham / call par notification.
