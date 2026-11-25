@@ -9822,3 +9822,23 @@ Malik: "Mera sara droid Dekho Jo bekar ha un Ka batao" -> list di -> malik: "Ok"
   "Mobiel locked" phone par hai hi nahi (list se nikla).
 - Shak wala "NT Shorts band (YouTube)" malik ne nahi chhera — rehne do jab tak na kahe.
 - Jaanch: agli email "NT phone macros v75" mein dono delete wale naam na hon, 3 / 4 "off".
+
+=== v2.382.0 (25 Nov 2026) — 💳 Card ka ALAG khata (card.js v1.1; rules / PC nahi badle) ===
+Malik: "dosra card jaise 4917 ka khata alehda banao — baqi khaton jaisa apna khata, khata ka naam card ka number" +
+"Alflah ka khata alag hai — wo account hai, ya card (credit wala)" -> plan -> "Ok".
+Masla: v2.381.0 ka "💳 Apna card" kisi bhi khate par card laga deta tha — malik ne ••4917 'Alflah Noor Traders' (bank account
+ka khata) par laga diya -> us ke upar limit / 'Zyada jama' / bill dikhne laga.
+- ccNew (card.js): '💳 Naya card khata' form — bank chips (Alfalah · HBL · Meezan · MCB · UBL · Bank Al Habib, ya likho), aakhri 4
+  hindse (poora number paste = sirf aakhri 4 + paigham), bill ki tareekh, limit, 'Abhi kitna istemal' (opening = dena), naam KHUD
+  (cardName = '<bank> Card <4>', haath se badla to auto band), 🔔 reminder, 🖥 POS mein bhi (default ON). Save = NAYA party
+  {type party, category Supplier, card 1, ccd, posSync, opening −istemal}. Dohra card (card 1 + wohi l4) = mana; wohi naam
+  (band khate samet, C.band) = mana. Bana -> khud khulta (C.open = route khata) + reminder (ccTick).
+- Purane khate se move: kisi aam khate (card flag nahi) par wohi l4 laga ho (ya ccSet ki patti se {from}) = naya khata + us se
+  ccd null (entries / baqaya wahi); nx (aaj ka bill reminder) saath aata hai jab tareekh wahi -> dohra reminder nahi.
+- Kahan se: (1) Naya account form mein 4th qism '💳 Card' (data-cc-new, sirf malik, .af-cc, .af-types 4 khane);
+  (2) khate ka ⋮: card wala khata = '💳 Card ki setting' (ccSet), baqi khate = '💳 Naya card khata'.
+  ccSet ab sirf jahan ccd ho; aam khate par card = upar narangi patti '.cc-mv' + '💳 Alag card khata banao'.
+- Khaton ki list print (khata-list.js rowsOf) mein card khata nahi (p.card).
+- AI NAHI. Sirf aakhri 4 hindse save — poora number kabhi nahi.
+- Test (namoona page, nakli data): Alflah se move (ccd null, nx copy, opening −20000, posSync true), HBL fresh (naam khud,
+  paste = 3456, band naam mana, POS off), dohra 4917 mana, bina card ccSet = ccNew. Naya account ka chip asal app mein nahi azmaya.

@@ -14,7 +14,7 @@ export function rowsOf(cat, parties, es, balance) {
   }
   const R = [];
   for (const p of parties) {
-    if (!p || p.category !== cat || p.kharcha || p.bank || p.active === false) continue;
+    if (!p || p.category !== cat || p.kharcha || p.bank || p.card || p.active === false) continue;   // v2.382.0: 💳 card khata bhi nahi
     const b = Math.round(Number(balance(p, es)) || 0); if (Math.abs(b) < 100) continue;
     const e = last.get(p.id);
     R.push([A(p.name).slice(0, 40) || '?', e ? dmy(e.date) : '', e ? Math.round(Number(e.amount) || 0) : 0, b]);
