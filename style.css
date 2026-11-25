@@ -9379,3 +9379,9 @@ html.dk body #dialogBody .cc-mv{background:rgba(249,115,22,.14);border-color:rgb
 .af-types:has(.af-cc){grid-template-columns:repeat(4,minmax(0,1fr))}
 .af-types button.af-cc{background:linear-gradient(180deg,#f5f3ff,#ede9fe);border-color:#c4b5fd;color:#4c1d95}
 html.dk .af-types button.af-cc{background:rgba(124,58,237,.16)!important;border-color:rgba(196,181,253,.35)!important;color:#ddd6fe!important}
+/* v2.383.0: 👤 Customers / 🏭 Suppliers card dabao = sirf wohi khate + raqam khule · ✕ Sab = wapas */
+html body #summary .bq-grid.one{position:relative}
+html body #summary .bq-card.is-in{box-shadow:0 0 0 2px #3b82f6,0 6px 18px #12203b18!important}
+html.dk body #summary .bq-card.is-in{box-shadow:0 0 0 2px #60a5fa!important}
+html body #summary .bq-all{position:absolute;top:6px;right:6px;z-index:2;min-height:30px!important;height:30px;padding:0 12px!important;border-radius:999px!important;border:1px solid #c7d4f5!important;background:linear-gradient(180deg,#fff,#eef3ff)!important;color:#1e3a8a!important;font-size:12px!important;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px #12203b1a}
+html.dk body #summary .bq-all{background:linear-gradient(180deg,#1e293b,#0f172a)!important;color:#bfdbfe!important;border-color:#334155!important}

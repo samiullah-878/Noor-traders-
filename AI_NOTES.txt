@@ -9862,3 +9862,12 @@ Malik: 5 MacroDroid template screenshots — "Whtsapp pr SMS bajhna without numb
 - MCP validator: dono VALID. pkg diff: sirf 2 naye macro, off / del / patch / vars wahi. Koi chaabi / number nahi (md/ PUBLIC).
 - Malik ka kaam: notification patti -> ✏️ -> MacroDroid tile 1 (💬) + tile 2 (🌐) upar lagayein. Template wale macro phone par hon to khud band.
 - Phone par azmaya nahi. Jaanch: agli email "NT phone macros v76" mein dono naye macro ON.
+
+=== v2.383.0 (25 Nov 2026) — 👤 Customers / 🏭 Suppliers card = filter (rules / PC nahi badle) ===
+Malik: "Customer ke khaton par click karein to un ka baqaya aur neeche customers ke khate aa jayein · aisa hi supplier ka bhi".
+- Khata list ke upar baqayaHTML ke card par ab data-bq-cat (Customer / Supplier). Dabao = WAHI purana `tab`
+  filter (tab = 'Customer' / 'Supplier') + raqam khule (bqShow true, 30 s baad khud chhupe — pehle jaisa).
+- Ek card chuna ho to card par neela kinara (.bq-card.is-in) + kone mein '✕ Sab' (.bq-all, data-bq-all) = tab 'all'.
+  Chune card ko dobara dabao = sirf raqam chhupao / dikhao.
+- Koi naya data / hisaab nahi; ⭐ Aksar chips + list wahi tab se. AI nahi.
+- Click handler app.js line ~184 (capture). Test: /tmp/bqtest.mjs (baqayaHTML + click logic) PASS.
