@@ -5819,3 +5819,15 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - Apna card (ccSet): aakhri 4 · bill ki tareekh · limit · ☑ 🔔 reminder. Khate ke upar 2 line patti ccHeroHTML (•• l4 · istemal · bar · Limit / Baqi · 🔔 Bill tareekh, 3 din pehle peela) + POS milan line — p.ccd ho to loanHero (sood) nahi.
 - 🔔 Reminder = WAHI notes (phone push): ccTick — bill se 3 din pehle + bill ke din 10:00, nag 0 (ek dafa), pakki ID cc-<khata>-<YYYYMMDD>a/b (notes.js noteAgentSave ko naya `id` param — maujood ho to dobara nahi banta, ✓ wala dobara nahi khulta), phir party ccd.nx = us bill ki tareekh. ccBoot: malik login ke 9 s baad + har 3 ghante (data aate hi).
 - Test: node (nextDue / mahina chhota / dPlus / ID) + Chromium harness (nakli context): counter / khata gahak + cash wapas / apna card / setup + reminder notes — entries sahi, galla tick sahi jagah. Asal app par azmaya NAHI. AI NAHI.
+
+=== md pkg v75 (25 Nov 2026) — 🧹 Phone macros ki safai (app / rules / PC nahi badle) ===
+Malik: "Mera sara droid Dekho Jo bekar ha un Ka batao" -> list di -> malik: "Ok" (1, 2 delete · 3, 4 band).
+- DELETE (pkg "del", Remote Replace all): "⌨️ Keyboard haptics ON (Battery saver)" (purana, band, naya "⌨️ Haptics ON" chalta hai)
+  + "Pani 15 min baad dobara" (band, koi trigger nahi, khali tukda).
+- BAND (pkg "off"): "Pani aur Fruit Reminder" (malik ka purana, har 45 min paani / 11 fruit / 5 nuts notification — Paani / Coffee
+  pehle se band the) + "📱 Screen time" (har 1 min Java, sirf Paani popup ke liye — mst pkg ke macros se bhi bahar).
+  Paani dobara chalu ho to mst wapas macros mein + off se hatao.
+- off list (5): 📸 Sehat lock · 💧 Paani · ☕ Coffee · Fruit · Nuts · 📱 Screen time · Pani aur Fruit Reminder.
+  "Mobiel locked" phone par hai hi nahi (list se nikla).
+- Shak wala "NT Shorts band (YouTube)" malik ne nahi chhera — rehne do jab tak na kahe.
+- Jaanch: agli email "NT phone macros v75" mein dono delete wale naam na hon, 3 / 4 "off".
