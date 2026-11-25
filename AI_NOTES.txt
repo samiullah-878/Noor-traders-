@@ -9793,3 +9793,9 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - style.css (aakhir mein, global — media query nahi): rang `.pp-pur …` (phone + PC, !important), layout `.pp-wide …` grid ('nm g1 g2' / 'tl g1 g2'), container query 1220px = do qatar, 760px = purani shakal; `.pp-rs` PC par chhupa (Raqam dabba wahi raqam).
 - % ki jaanch: W / R ka rate khud likhein to % foran badalta hai (azmaya); Kh badle to 'purana nafa' / W % mode W / R khud barhata hai, is liye % wahi rehta hai — kuch nahi badla.
 - Test: Chromium harness (pos-stock stub) — 1366 / 1920 / 1180 = ek qatar, 1100 = do qatar, phone 390 = layout wahi sirf rang (pehle / baad tasveer milayi); % labels pehle jaisa (W CTN 3000 -> 3.4%). Asal PC / phone par azmaya NAHI.
+
+=== md pkg v74 (25 Nov 2026) — 🛠 Accessibility khud ON: har 1 min + screen ON (app / rules / PC nahi badle) ===
+- Malik: 'MacroDroid accessibility se auto off ho raha ha' -> plan ('har 1 minute jaanche + screen ON hote hi') par 'Ok ha'.
+- md/tools/acc.py: RegularIntervalTrigger 600 -> 60 s + naya ScreenOnOffTrigger (m_screenOn true, SIGUID 112233445566775). Baqi wahi: unlock / Falcon / service band trigger, dono services band hon to AccessibilityServiceAction Enable, bank app saamne (ActiveApplicationConstraint mechanismOption 2 = SIRF Usage Access — accessibility band ho tab bhi chalta, schema se pakka) ya bankOn = nahi.
+- pkg.py note badla; macros / off / ONCE list wahi (khaasvol dobara nahi gaya). MCP validator VALID.
+- Asal wajah (Android / OnePlus battery MacroDroid ko maarta hai) is se khatam nahi — sirf 1 min mein wapas. Malik ko phone setting bataye: Battery Unrestricted, recents mein lock, Auto-launch ON. Poocha: bank app ke baad off hoti hai? (jawab baqi). Phone par azmaya NAHI.
