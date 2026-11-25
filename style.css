@@ -9283,3 +9283,38 @@ html body #dialogBody .prl-how ol{margin:4px 0 4px 20px;padding:0;display:grid;g
 html body #dialogBody .prl-how a{color:#1f6fe6;font-weight:700}
 @media (max-width:560px){html body #dialogBody .prl-f{grid-template-columns:minmax(0,1fr) auto auto}html body #dialogBody .prl-f .prl-in{grid-column:1/-1}html body #dialogBody .prl-f .pdv-c{justify-self:start}}
 html.dk body #dialogBody .prl-in{background:#151c28;border-color:#2c3a52;color:#dbe4f3}html.dk body #dialogBody .prl-r2,html.dk body #dialogBody .prl-how{color:#c9d4e8}html.dk body #dialogBody .prl-how summary{color:#dfe8ff}html.dk body #dialogBody .prl-how a{color:#7fb2ff}
+/* ===== v2.380.0 (malik 25 Nov, PC '📱 Mobile jaisa' Purchase): gehri likhai · W (wholesale) laal · R (parchoon) neela · Raqam peela · CTN / PCS / Kh ka rang WAHI.
+   .pp-pur = sirf purchase ki lines (wa-sale ki .pp-cr nahi) — phone par bhi yehi rang (layout wahi). .pp-wide = PC: naam baayein + har item ek qatar, dabbe sirf hindson jitne. ===== */
+html body #list .pp-pur .pp-cr .pp-k small{color:#1f2937!important}
+html body #list .pp-pur .pp-cr .pp-k input{color:#0b1220!important}
+html body #list .pp-pur .pp-cr .pp-cr1 b{color:#0b1220}html body #list .pp-pur .pp-cr .pp-cr1 small{color:#334155}
+html body #list .pp-pur .pp-cr .pp-k.ppk-w input{background:#fff0f0!important;border-color:#f0a3a3!important;color:#9f1239!important}
+html body #list .pp-pur .pp-cr .pp-k.ppk-w small{color:#b91c1c!important}
+html body #list .pp-pur .pp-cr .pp-k.ppk-r input{background:#ecf3ff!important;border-color:#9dbbf5!important;color:#1e3a8a!important}
+html body #list .pp-pur .pp-cr .pp-k.ppk-r small{color:#1d4ed8!important}
+html body #list .pp-pur .pp-cr .pp-k.ppk-a input{background:#ffe566!important;border-color:#d4a800!important;color:#3b2a00!important}
+html body #list .pp-pur .pp-cr .pp-k.ppk-w input.chg{border:2px solid #dc2626!important}
+html body #list .pp-pur .pp-cr .pp-k.ppk-r input.chg{border:2px solid #2563eb!important}
+html body #list .pp-pur .pp-cr .pp-k input:focus{border-color:#4f46e5!important;box-shadow:0 0 0 3px rgba(79,70,229,.22)!important}
+html body #list .pp-wide{container-type:inline-size}
+html body #list .pp-wide .pp-cr{display:grid;grid-template-columns:280px max-content max-content;grid-template-areas:"nm g1 g2" "tl g1 g2";column-gap:18px;row-gap:3px;align-items:center;padding:7px 12px;margin:0 0 6px}
+html body #list .pp-wide .pp-cr>.pp-cr1{grid-area:nm;display:block;white-space:normal;overflow:visible;line-height:1.3;min-width:0}
+html body #list .pp-wide .pp-cr>.pp-cr1 b{display:inline;font-size:15.5px;max-width:none;overflow:visible;white-space:normal}
+html body #list .pp-wide .pp-cr>.pp-cr1 .pp-no{font-size:13px;color:#334155}
+html body #list .pp-wide .pp-cr>.pp-cr1 small{display:block;font-size:12.5px;white-space:normal;overflow:visible;margin-top:2px}
+html body #list .pp-wide .pp-cr>.pp-cr1 .pp-rs{display:none}
+html body #list .pp-wide .pp-cr>.pp-jl{grid-area:tl;margin:2px 0 0;min-width:0;flex-wrap:wrap}
+html body #list .pp-wide .pp-cr>.ppk-g1{grid-area:g1}html body #list .pp-wide .pp-cr>.ppk-g2{grid-area:g2}
+html body #list .pp-wide .pp-cr .pp-cg{display:flex;gap:7px;margin:0}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k{flex:none;width:78px;gap:2px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k small{font-size:12.5px;font-weight:800;overflow:visible;letter-spacing:0;padding-left:1px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k input{font-size:17px;font-weight:800;height:36px;min-height:36px;padding:0 7px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k input::placeholder{font-size:14px;font-weight:600}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k.ppk-q{width:66px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k.ppk-kc{width:92px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k.ppk-kp{width:82px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k.ppk-a{width:104px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k.ppk-c{width:88px}
+html body #list .pp-wide .pp-cr .pp-cg .pp-k.ppk-p,html body #list .pp-wide .pp-cr .pp-cg .pp-k.ppk-m{width:76px}
+@container (max-width:1220px){html body #list .pp-wide .pp-cr{grid-template-columns:250px max-content;grid-template-areas:"nm g1" "tl g2"}}
+@container (max-width:760px){html body #list .pp-wide .pp-cr{display:block}html body #list .pp-wide .pp-cr .pp-cg{flex-wrap:wrap;margin-top:4px}}

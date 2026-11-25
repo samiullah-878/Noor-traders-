@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.379.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.379.0';
-import { blurScore, blurText } from './pic-check.js?v=2.379.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.380.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.380.0';
+import { blurScore, blurText } from './pic-check.js?v=2.380.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -884,7 +884,7 @@ export function renderPP() {
   const pinned = billPin && billPics.length ? (billHide ? `<div class="pp-billbar pp-billmin"><button type="button" class="pp-bmin" data-pp-bshow="1">📄 Bill${billPics.length > 1 ? ' ' + (billIx + 1) + '/' + billPics.length : ''} · ▼ Dikhao</button><button type="button" data-pp-pin="1" aria-label="Hatao">✕</button></div>`   // v2.146.0: ▲ Chhupao = patli patti, items upar (malik)
     : `<div class="pp-billbar" data-zoom="${billZoom}"><div class="pp-billwrap"><img src="${billPics[Math.min(billIx, billPics.length - 1)]}" alt="bill"></div><div class="pp-billacts"><button type="button" class="pp-bhide" data-pp-bhide="1">▲ Chhupao</button><button type="button" data-pp-zoom="-1">−</button><button type="button" data-pp-zoom="1">+</button>${billPics.length > 1 ? `<button type="button" data-pp-nextpic="1">${billIx + 1}/${billPics.length} ›</button>` : ''}<button type="button" data-pp-pic="${billIx}">⤢ Poori screen</button>${aiBillOf && !aiRows ? '<button type="button" class="pp-picai" data-pp-picai="1">🤖 Is se items</button>' : ''}<button type="button" data-pp-pin="1">✕</button></div></div>`) : '';
   const pj = aiRows && aiRows.length ? posJbar() : '', showTbl = cart.length || (pj && aiRows.some(r => !r.skip && !r.key));
-  $('list').innerHTML = (navBusy ? `<div class="pp-navbusy">⏳ ${esc(navBusy)} khul raha hai…</div>` : '') + flowHTML() + (pj ? '' : pinned) + pj + camRow + found + (showTbl ? bar + (isGrid() || isRows() ? '' : foldBarHTML()) + `<div class="sale-cart${isGrid() || isRows() ? ' pp-gridc' : ''}">${rows || '<p class="stat-note">Is chunao mein koi item nahi</p>'}</div>` + foot :
+  $('list').innerHTML = (navBusy ? `<div class="pp-navbusy">⏳ ${esc(navBusy)} khul raha hai…</div>` : '') + flowHTML() + (pj ? '' : pinned) + pj + camRow + found + (showTbl ? bar + (isGrid() || isRows() ? '' : foldBarHTML()) + `<div class="sale-cart${isGrid() || isRows() ? ' pp-gridc' : ''}${isRows() ? ' pp-pur' + (isPcW() ? ' pp-wide' : '') : ''}">${rows || '<p class="stat-note">Is chunao mein koi item nahi</p>'}</div>` + foot :
     (q ? '' : (navCur && !navBusy ? navHTML(!ppFlow) : '') + `<div class="empty"><strong>Naya purchase bill</strong><p>Upar supplier chunein, phir item ka naam likhein ya 📷 se scan karein.</p></div>`));
   if (Date.now() - ppAddAt < 1800 && ppAddAt !== ppScrolled) { ppScrolled = ppAddAt; requestAnimationFrame(() => keepScan(document.querySelector('.pp-line.fresh'))); }   // scan box upar rahe (nayi line us ke neeche)
   $('actions').parentElement && $('actions').classList.toggle('pp-foot', CBAR_ON && !pos && cart.length > 0 && (isGrid() || isRows()));   // v2.121.0: chips ki patti footer ke andar
@@ -896,28 +896,31 @@ export function renderPP() {
 }
 // v2.121.0: ☰ COMPACT LINES (phone) — malik ne preview OK kiya: har item 3 line (naam · pehle · Rs / tadad + khareed / W · R · Retail), nafa % khane ke upar;
 // chips screen par NAHI — neeche ek chipki patti (cbarHTML) chune hue item ke liye (W / R chips · ↺ · 🏷 = Retail · 🏬 godam · ✕).
+// v2.380.0 (malik 25 Nov, PC '📱 Mobile jaisa' ki tasveer: 'likhai gehri + bari · dabba sirf hindson jitna · naam dabbon ki seedh mein · W laal · parchoon neela ·
+//   raqam peela · carton / piece ka rang na chherna'): sale-cart par .pp-pur (sirf purchase — wa-sale ki .pp-cr nahi) + PC (isPcW) par .pp-wide = har item EK qatar
+//   (naam baayein, phir 10 chhote dabbe; tang screen par container query se do qatar). Dabbon par ppk-* (q · kc · kp · a · w · r · c · p · m), groups ppk-g1 / ppk-g2. Rang phone par bhi.
 const nfI = (n, lo) => n == null ? '' : `<i class="${n < 0 ? 'neg' : lo ? 'lo' : ''}">${n}%</i>`;
 function rowsHTML(s, gopts) {
   const gd = s.branches.length > 1, rt = canRetail();
   const inp = (k, i, v, ph, cls = '', q = false) => `<input class="${cls}${q ? ' q' : ''}" type="number" min="0" step="${q && k === 'ctn' ? '1' : 'any'}" inputmode="${q && k === 'ctn' ? 'numeric' : 'decimal'}" data-pp-${k}="${i}" value="${v === 0 || v === '' || v == null ? '' : v}" placeholder="${ph || ''}">`;
   const ch = (o, now) => o > 0 && Math.abs((Number(now) || 0) - o) > 0.004 ? 'chg' : '';
   const hint = v => v > 0 ? num(v) : '';
-  const K = (lab, html) => `<label class="pp-k"><small>${lab}</small>${html}</label>`;
+  const K = (lab, html, c = '') => `<label class="pp-k${c ? ' ' + c : ''}"><small>${lab}</small>${html}</label>`;   // v2.380.0: c = ppk-* (rang / chaurai)
   const jOn = aiRows && aiRows.length, jAt = new Map(), jNo = []; let jDone = 0;   // v2.286.0: AI ki lines seedhi yahan
   if (jOn) aiRows.forEach((r, ix) => { if (r.skip) return; if (r.key) jAt.set(r.key, ix); else jNo.push(ix); });
   return cart.map((l, i) => {
     const pk = packOf(l), fl = lineFlags(l), wcO = pk ? ctnOf(wcBase(l), pk) : 0, rcO = pk ? ctnOf(l.oldR, pk) : 0, oR = pk ? l.oldR2 : l.oldR, v = mrpOf(l), U = esc(l.uName || 'Pcs'), C = esc(l.cName || 'Ctn');
     const wc = nafaNow(l, 'wc'), wp = nafaNow(l, 'wp'), rc = nafaNow(l, 'rc'), rp = nafaNow(l, 'rp');
     const lo = (a, b) => a != null && b != null && a < b - 0.5;
-    const g1 = pk ? [K(C, inp('ctn', i, l.ctn, '', '', true)), K(U, inp('pcs', i, l.pcs, '', '', true)), K('Kh / ' + C, inp('costc', i, l.costP ? r2(l.costP * pk) : '', hint(l.oldCost > 0 ? r2(l.oldCost * pk) : 0), ch(l.oldCost > 0 ? r2(l.oldCost * pk) : 0, l.costP ? r2(l.costP * pk) : 0))), K('Kh / ' + U, inp('costp', i, l.costP ? r2(l.costP) : '', hint(l.oldCost), ch(l.oldCost, l.costP))), K('Raqam', inp('amt', i, lineTotal(l) ? r2(lineTotal(l)) : '', 'raqam', 'a'))]
-      : [K(U, inp('pcs', i, l.pcs, '', '', true)), K('Kh / ' + U, inp('costp', i, l.costP ? r2(l.costP) : '', hint(l.oldCost), ch(l.oldCost, l.costP))), K('Raqam', inp('amt', i, lineTotal(l) ? r2(lineTotal(l)) : '', 'raqam', 'a'))];
-    const g2 = pk ? [K('W ' + C + ' ' + nfI(wc, lo(wc, wp)), inp('wctn', i, l.wctn, hint(wcO), ch(wcO, l.wctn))), K('W ' + U + ' ' + nfI(wp, lo(wp, wc)), inp('wpcs', i, l.wpcs, hint(l.oldW), ch(l.oldW, l.wpcs))), K('R ' + C + ' ' + nfI(rc, lo(rc, rp)), inp('rctn', i, l.rctn, hint(rcO), ch(rcO, l.rctn))), K('R ' + U + ' ' + nfI(rp, lo(rp, rc)), inp('rpcs', i, l.rpcs, hint(oR), ch(oR, l.rpcs))), rt ? K('🏷 Retail', inp('mrp', i, v || '', l.oldMrp ? num(l.oldMrp) : 'retail')) : '']
-      : [K('W ' + U + ' ' + nfI(wp), inp('wpcs', i, l.wpcs, hint(l.oldW), ch(l.oldW, l.wpcs))), K('R ' + U + ' ' + nfI(rp), inp('rpcs', i, l.rpcs, hint(oR), ch(oR, l.rpcs))), rt ? K('🏷 Retail', inp('mrp', i, v || '', l.oldMrp ? num(l.oldMrp) : 'retail')) : ''];
+    const g1 = pk ? [K(C, inp('ctn', i, l.ctn, '', '', true), 'ppk-q'), K(U, inp('pcs', i, l.pcs, '', '', true), 'ppk-q'), K('Kh / ' + C, inp('costc', i, l.costP ? r2(l.costP * pk) : '', hint(l.oldCost > 0 ? r2(l.oldCost * pk) : 0), ch(l.oldCost > 0 ? r2(l.oldCost * pk) : 0, l.costP ? r2(l.costP * pk) : 0)), 'ppk-kc'), K('Kh / ' + U, inp('costp', i, l.costP ? r2(l.costP) : '', hint(l.oldCost), ch(l.oldCost, l.costP)), 'ppk-kp'), K('Raqam', inp('amt', i, lineTotal(l) ? r2(lineTotal(l)) : '', 'raqam', 'a'), 'ppk-a')]
+      : [K(U, inp('pcs', i, l.pcs, '', '', true), 'ppk-q'), K('Kh / ' + U, inp('costp', i, l.costP ? r2(l.costP) : '', hint(l.oldCost), ch(l.oldCost, l.costP)), 'ppk-kp'), K('Raqam', inp('amt', i, lineTotal(l) ? r2(lineTotal(l)) : '', 'raqam', 'a'), 'ppk-a')];
+    const g2 = pk ? [K('W ' + C + ' ' + nfI(wc, lo(wc, wp)), inp('wctn', i, l.wctn, hint(wcO), ch(wcO, l.wctn)), 'ppk-w ppk-c'), K('W ' + U + ' ' + nfI(wp, lo(wp, wc)), inp('wpcs', i, l.wpcs, hint(l.oldW), ch(l.oldW, l.wpcs)), 'ppk-w ppk-p'), K('R ' + C + ' ' + nfI(rc, lo(rc, rp)), inp('rctn', i, l.rctn, hint(rcO), ch(rcO, l.rctn)), 'ppk-r ppk-c'), K('R ' + U + ' ' + nfI(rp, lo(rp, rc)), inp('rpcs', i, l.rpcs, hint(oR), ch(oR, l.rpcs)), 'ppk-r ppk-p'), rt ? K('🏷 Retail', inp('mrp', i, v || '', l.oldMrp ? num(l.oldMrp) : 'retail'), 'ppk-m') : '']
+      : [K('W ' + U + ' ' + nfI(wp), inp('wpcs', i, l.wpcs, hint(l.oldW), ch(l.oldW, l.wpcs)), 'ppk-w ppk-p'), K('R ' + U + ' ' + nfI(rp), inp('rpcs', i, l.rpcs, hint(oR), ch(oR, l.rpcs)), 'ppk-r ppk-p'), rt ? K('🏷 Retail', inp('mrp', i, v || '', l.oldMrp ? num(l.oldMrp) : 'retail'), 'ppk-m') : ''];
     const jx = jOn ? jAt.get(l.k) : null, jc = jx != null && aiRows[jx].j ? aiRows[jx].j.conf : '';
     let pre = ''; if (jOn && jx != null) while (jDone < jNo.length && jNo[jDone] < jx) pre += jnDiv(jNo[jDone++]);
     return pre + `<div class="sale-line pp-line pp-cr${jc === 'y' ? ' jy' : jc === 'r' ? ' jr' : ''}${l.k === selKey ? ' sel' : ''}${fl.warn.length ? ' warn' : ''}${i === cart.length - 1 && Date.now() - ppAddAt < 1800 ? ' fresh' : ''}" data-pp-line="${i}" data-pp-sel="${esc(l.k)}">
       <div class="pp-cr1"><span class="pp-no">${i + 1}.</span><b${jx != null ? ` data-pp-pick="${jx}"` : ''}>${esc(l.name)}</b><small>${pk ? '1 ' + C + ' = ' + num(pk) + ' · ' : ''}pehle ${l.oldCost > 0 ? num(l.oldCost) : '—'}${fl.warn.length ? ' · <i>⚠ ' + esc(fl.warn.join(', ')) + '</i>' : ''}</small><em class="pp-rs" data-pp-rs="${i}">Rs ${num(r2(lineTotal(l)))}</em></div>${jTagHTML(l, `<span class="pp-tl">${gd ? `<select class="pp-gsel${Number(l.godam) ? '' : ' need'}" data-pp-lg="${i}" aria-label="Godam">${gopts(l.godam)}</select>` : ''}${lblChip(i)}${oldBtn(l, i, 'ppCr')}<button type="button" class="pp-tx" data-pp-del="${i}" aria-label="Hatao">✕</button></span>`)}
-      <div class="pp-cg pp-cg${g1.length}">${g1.join('')}</div><div class="pp-cg pp-cg${pk ? 5 : 3}">${g2.join('')}</div>
+      <div class="pp-cg ppk-g1 pp-cg${g1.length}">${g1.join('')}</div><div class="pp-cg ppk-g2 pp-cg${pk ? 5 : 3}">${g2.join('')}</div>
     </div>`;
   }).join('') + (jOn ? jNo.slice(jDone).map(jnDiv).join('') : '') + `<div class="pp-crf"><b>${cart.length} items</b><b id="ppTblTot">Total Rs ${num(cartTotal())}</b></div>`;
 }

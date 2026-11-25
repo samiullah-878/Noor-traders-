@@ -9786,3 +9786,10 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - Asar: ‹ Pichhla / Agla ›, ☐ check → agla (tickNext), ✓ Check + 📌 Post → agla (ppBcgo) — teeno wahi numNbr / navGo.
 - Test: numNbr nakli bills (2902 / 2908 / 2909 posted) 7/7 PASS; navGo + openBillForEdit (khata purana 'khula', PC doc POSTED = sawal nahi, seedha agla; sab posted = paigham; list se kholo = Unpost sawal pehle jaisa) 7/7 PASS. Asal phone par azmaya nahi.
 - Deploy (.github/workflows/deploy.yml): upload-pages-artifact ke baad `sleep 25` — 25 Nov ko 4 dafa 'No artifacts named github-pages' (artifact upload ho chuka tha, GitHub API foran 0 batata tha, thori der baad 1). Deploy phir isi wajah se fail ho to pehle dobara chalao; yeh intezar mat hatao.
+
+=== 25 Nov 2026 — v2.380.0: 🎨 POS Purchase lines — gehri bari likhai, W laal · R neela · Raqam peela, PC par har item ek qatar (rules wahi 2.111, PC files nahi badli) ===
+- Malik ki tasveer (PC '📱 Mobile jaisa'): fonts dark + bare, dabba sirf hindson jitna, naam dabbon ki seedh mein, W laal, parchoon neela, kul raqam peela, carton / piece ka rang wahi. % wala kaam: malik 'filhal rehne do'.
+- purchase.js rowsHTML: K(lab, html, cls) — ppk-q / kc / kp / a / w / r / c / p / m; groups ppk-g1 / ppk-g2; sale-cart `.pp-pur` (isRows) + `.pp-wide` (isRows && isPcW).
+- style.css (aakhir mein, global — media query nahi): rang `.pp-pur …` (phone + PC, !important), layout `.pp-wide …` grid ('nm g1 g2' / 'tl g1 g2'), container query 1220px = do qatar, 760px = purani shakal; `.pp-rs` PC par chhupa (Raqam dabba wahi raqam).
+- % ki jaanch: W / R ka rate khud likhein to % foran badalta hai (azmaya); Kh badle to 'purana nafa' / W % mode W / R khud barhata hai, is liye % wahi rehta hai — kuch nahi badla.
+- Test: Chromium harness (pos-stock stub) — 1366 / 1920 / 1180 = ek qatar, 1100 = do qatar, phone 390 = layout wahi sirf rang (pehle / baad tasveer milayi); % labels pehle jaisa (W CTN 3000 -> 3.4%). Asal PC / phone par azmaya NAHI.
