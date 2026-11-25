@@ -4326,6 +4326,7 @@ html.dk body #mnRoot .mn-hb .hchip:not(.bad):not(.warn):not(.ok):not(.hot){backg
   html body:not(.mnf) main [data-mn-box]:not([data-mn-keep]){display:none!important}
   html body main .pp-modes{display:none!important}
   html body:not(.mnf) main .pp-tools:not(:has([data-mn-keep])){display:none!important}
+  html body:not(.mnf) main #list .th-tiles:not(:has([data-mn-keep])){display:none!important}   /* v2.384.0: Transfer ki upar wali chips sab ⋮ mein — khali qatar bhi nahi */
   html body main .puh .puh-chips{display:none!important}
   /* chhoti patti: "📅 Aaj · 🔎 Sab — ⋮ se badlein" / "⚙️ +5% · Mazdoori — badlo" */
   html body main .pu .pu-flt{display:flex!important;align-items:center;gap:6px;width:100%;min-height:44px!important;margin:0 0 10px;padding:8px 10px 8px 14px!important;border-radius:14px!important;background:var(--surf,#fff)!important;color:var(--ink,#16274a)!important;border:1px solid var(--line,#dfe5f0)!important;box-shadow:0 2px 10px rgba(20,40,80,.06)!important;font-size:13.5px!important;font-weight:700!important;text-align:left}
@@ -9385,3 +9386,5 @@ html body #summary .bq-card.is-in{box-shadow:0 0 0 2px #3b82f6,0 6px 18px #12203
 html.dk body #summary .bq-card.is-in{box-shadow:0 0 0 2px #60a5fa!important}
 html body #summary .bq-all{position:absolute;top:6px;right:6px;z-index:2;min-height:30px!important;height:30px;padding:0 12px!important;border-radius:999px!important;border:1px solid #c7d4f5!important;background:linear-gradient(180deg,#fff,#eef3ff)!important;color:#1e3a8a!important;font-size:12px!important;font-weight:800;white-space:nowrap;box-shadow:0 2px 8px #12203b1a}
 html.dk body #summary .bq-all{background:linear-gradient(180deg,#1e293b,#0f172a)!important;color:#bfdbfe!important;border-color:#334155!important}
+/* v2.384.0: Transfer note card — ⏰ / ✓ chip naam ke NEECHE (naam poora: 'Godam 2 ➜ Noor Traders') */
+.th-mid>.th-chip{align-self:flex-start;margin-top:3px;max-width:100%;overflow:hidden;text-overflow:ellipsis}

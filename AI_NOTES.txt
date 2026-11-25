@@ -9871,3 +9871,13 @@ Malik: "Customer ke khaton par click karein to un ka baqaya aur neeche customers
   Chune card ko dobara dabao = sirf raqam chhupao / dikhao.
 - Koi naya data / hisaab nahi; ⭐ Aksar chips + list wahi tab se. AI nahi.
 - Click handler app.js line ~184 (capture). Test: /tmp/bqtest.mjs (baqayaHTML + click logic) PASS.
+
+=== v2.384.0 (25 Nov 2026) — ⇄ Transfer screen saaf (rules / PC nahi badle) ===
+Malik (screenshot): "jo saamne aa raha hai is ki zaroorat nahi — Transfer main screen par upar ke sab chips (rack bharo wagera)" + plan OK.
+- pos-stock.js renderTransferHub `tile()`: data-mn-keep HATA -> phone (aur PC 'mobile jaisa' pcm) par saari tiles
+  (Naya transfer note · Stock milao · Rack bharo · Transfer check · Register · Barcode · Gate pass · Packet / Item / Larka report)
+  saamne NAHI, header ⋮ mein (group '⇄ Transfer'). Rack bharo ki ginti + Transfer check ki baqi = data-mn-n (⋮ mein ginti).
+  Khali .th-tiles qatar phone par chhupi (style.css mobile block + pcm.css `tools/pcm.py` se dobara bani). Purana PC (?pc=old) pehle jaisa.
+- Neeche ka bara '➕ Naya transfer note' button wahi.
+- Note card: ⏰ / ✓ chip ab .th-mid ke ANDAR naam ke neeche (naam poora 'Godam 2 ➜ Noor Traders', pehle 'Go...' kat-ta tha).
+- AI nahi. Harness: /tmp/thv (390px) — tiles display none, naam poora.
