@@ -5851,3 +5851,23 @@ ka khata) par laga diya -> us ke upar limit / 'Zyada jama' / bill dikhne laga.
 - AI NAHI. Sirf aakhri 4 hindse save — poora number kabhi nahi.
 - Test (namoona page, nakli data): Alflah se move (ccd null, nx copy, opening −20000, posSync true), HBL fresh (naam khud,
   paste = 3456, band naam mana, POS off), dohra 4917 mana, bina card ccSet = ccNew. Naya account ka chip asal app mein nahi azmaya.
+
+=== md pkg v76 (25 Nov 2026) — 💬 WhatsApp bina save + 🌐 Koi bhi site (app / rules / PC nahi badle) ===
+Malik: 5 MacroDroid template screenshots — "Whtsapp pr SMS bajhna without number saving . Or koi bi site kholna ye dono mumkin Kam ha"
+(template wale chal nahi rahe) -> plan -> malik: "Ok ... Firefox focus install Kar leta ho".
+- Naya md/tools/wasite.py (WA + SITE exports) -> pkg.py: mwa h64('claude|wa') '💬 WhatsApp bina save', mws h64('claude|site') '🌐 Koi bhi site'.
+- 💬 WhatsApp bina save: QuickSettingsTileTrigger tile 0 ('💬 WhatsApp' / 'Bina save', collapse) + ShortcutTrigger.
+  SetVariable prompt (local num, empty start, StopAfterCancel FALSE) -> JavaAction WAJ -> wn:
+  "" = kuch nahi (cancel / khali) · "x" = samajh nahi aaya (toast) · warna hindse (923001234567).
+  Shakal: pehla tukda jis mein 10+ hindse; '+' / '00' = bahar ka (waise hi); warna 0… -> 92…, 10 hindse 3… -> 92…; 920 + 13 hindse -> 92…; 10–15 hindse.
+  javac test 20 cases OK (0300-1234567, +92 0300…, 0092…, +966…, "Ahmed: 0345-…", 042-…, (0300) 123-4567, abc / 12345 = x).
+  Khulna: ApplicationInstalled com.whatsapp -> SendIntent VIEW https://api.whatsapp.com/send?phone={lv=wn} (pkg com.whatsapp, NEW_TASK);
+  na ho com.whatsapp.w4b; dono na hon = OpenWebPage https://wa.me/{lv=wn}. Alag paigham ka popup NAHI (WhatsApp mein likhna behtar).
+- 🌙 Raat 12-11 band + 📸 Sehat lock MacroDroid ki khirki ko Home karte hain -> popup se pehle oA/oS = sbAsk/shAsk, phir sbAsk = shAsk =
+  {system_time}+40 (askAge > 20 hone mein 60 s), aakhir mein (WhatsApp khulne ke 2 s baad / cancel par foran) purani qeemat wapas.
+  Python simulator: 5 raaste (x, khali, WA + Business, sirf Business, koi nahi) — har raaste par aakhir mein wapsi.
+- 🌐 Koi bhi site: tile 1 ('🌐 Site' / 'Koi bhi site') + ShortcutTrigger -> ApplicationInstalled org.mozilla.focus -> LaunchActivity
+  (Focus ka apna search bar; band = history saaf); warna OpenWebPage https://www.google.com. Koi MacroDroid popup nahi.
+- MCP validator: dono VALID. pkg diff: sirf 2 naye macro, off / del / patch / vars wahi. Koi chaabi / number nahi (md/ PUBLIC).
+- Malik ka kaam: notification patti -> ✏️ -> MacroDroid tile 1 (💬) + tile 2 (🌐) upar lagayein. Template wale macro phone par hon to khud band.
+- Phone par azmaya nahi. Jaanch: agli email "NT phone macros v76" mein dono naye macro ON.
