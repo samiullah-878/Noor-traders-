@@ -102,6 +102,8 @@ import cnsave as CNM
 mcn, vcn = fix(json.loads(json.dumps(CNM.CN)), h64('claude|cnsave'), '📇 Naya number save')   # v77 (25 Nov, malik ka OK): WhatsApp / call par unsaved number -> notification -> 'Naya contact' screen
 import aankh as AKM
 mak, vak = fix(json.loads(json.dumps(AKM.AK)), h64('claude|aankh'), '👁 Aankh ka aram')   # v78 (25 Nov, malik: 'only 1'): shaam 7 - subah 7 peeli roshni + dark + auto brightness, subah wapas pehle jaisa
+import calls as CLM
+mcl, vcl = fix(json.loads(json.dumps(CLM.CL)), h64('claude|calldiary'), '📞 Call diary')   # v79 (26 Nov, malik ka OK): har SIM + WhatsApp call ki line 'NT Awaz/Calls/Calls <mahina>.csv' mein (FolderSync -> Drive)
 # ⚠️ ONCE: har pkg update Overwrite by ID karta hai — yeh macro SIRF v59 mein, warna malik ke chune contacts mit jayenge. Agle version mein kabhi mat daalo.
 ONCE = {'60': [mkv, mkb]}   # v59 = [mkv] (purana ringer 20%)
 vars_, seen = [], set()
@@ -109,12 +111,12 @@ vars_, seen = [], set()
 def _gv(n, t, **kw):
     v = {"m_name": n, "m_type": t, "isLocalVar": False, "m_booleanValue": False, "m_intValue": 0, "m_stringValue": ""}; v.update(kw); return v
 vb = [_gv("bankOn", 0), _gv("bkSave", 2), _gv("bkRes", 2), _gv("bkBeat", 1), _gv("bkAge", 1)]
-for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb + vsl + val + vwa + vws + vcn + vak:
+for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb + vsl + val + vwa + vws + vcn + vak + vcl:
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "👁 Naya: Aankh ka aram — shaam 7 se subah 7 tak peeli roshni + dark theme + brightness auto, subah sab wapas pehle jaisa. Baqi sab wahi.",
-       "macros": [ma, mr, mt, mq, mf, ms, mb, mh, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, mal, mwa, mws, mcn, mak] + ONCE.get(ver, []),   # v77: mcn 📇 Naya number save   # v76 (25 Nov): mwa 💬 WhatsApp bina save + mws 🌐 Koi bhi site (naye)   # v75 (25 Nov): mst (📱 Screen time) RUKA — malik ka OK (Paani band, har 1 min faltu)   # v71 (23 Nov raat): msl RUKA — malik: 'wo paani wala droid band kar do abhi'   # v69 (22 Nov raat): msl wapas CHALU (8 baje hisaab) — malik: 'us ko on kar do'   # v68 (22 Nov): msl RUKA — malik: 'wo off kar do paani coffee wala'   # v63 (21 Nov raat): msl wapas CHALU — malik: 'paani wala on kar do'   # v62 (21 Nov): msl (📸 Sehat lock) RUKA — malik: 'abhi pause kar do, shop par nahi hoon' (dobara chalu = msl wapas yahan + off se hatao)   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
+       "note": "📞 Naya: Call diary — har call (SIM + WhatsApp, aayi / gayi / missed) ki ek line phone ke NT Awaz/Calls folder ki mahine wali file mein: naam ya number + kitni der. FolderSync se Drive. Baqi sab wahi.",
+       "macros": [ma, mr, mt, mq, mf, ms, mb, mh, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, mal, mwa, mws, mcn, mak, mcl] + ONCE.get(ver, []),   # v79: mcl 📞 Call diary   # v77: mcn 📇 Naya number save   # v76 (25 Nov): mwa 💬 WhatsApp bina save + mws 🌐 Koi bhi site (naye)   # v75 (25 Nov): mst (📱 Screen time) RUKA — malik ka OK (Paani band, har 1 min faltu)   # v71 (23 Nov raat): msl RUKA — malik: 'wo paani wala droid band kar do abhi'   # v69 (22 Nov raat): msl wapas CHALU (8 baje hisaab) — malik: 'us ko on kar do'   # v68 (22 Nov): msl RUKA — malik: 'wo off kar do paani coffee wala'   # v63 (21 Nov raat): msl wapas CHALU — malik: 'paani wala on kar do'   # v62 (21 Nov): msl (📸 Sehat lock) RUKA — malik: 'abhi pause kar do, shop par nahi hoon' (dobara chalu = msl wapas yahan + off se hatao)   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  # v65 (21 Nov): Remote 5 ka patch HATA — patch phone ki PURANI copy ko dobara package mein daal deta tha (wahi ID) = Remote ka naya code kabhi na lagta; 60 s ab remote.py mein
                  {"nm": "Falcon km", "cls": "DeviceUnlockedTrigger", "set": {"m_isDisabled": True}}],   # v24 (10 Nov, malik: raat wala band, haath se theek)
@@ -135,7 +137,7 @@ assert not re.search(r'(?=[A-Za-z0-9_-]*[0-9])[A-Za-z0-9_-]{30,}', chk), 'lambi 
 open(os.path.join(REPO, 'pkg.json'), 'w').write(s)
 open(os.path.join(REPO, 'ver.txt'), 'w').write(ver + '\n')
 # validator ke liye har macro alag .macro shakal mein bhi
-for nm, m in (('p', mp), ('k', mk), ('s', msl), ('a', mal), ('v', mkv), ('b', mkb), ('r', mrb), ('w', mwa), ('i', mws), ('n', mcn), ('e', mak)):
+for nm, m in (('p', mp), ('k', mk), ('s', msl), ('a', mal), ('v', mkv), ('b', mkb), ('r', mrb), ('w', mwa), ('i', mws), ('n', mcn), ('e', mak), ('c', mcl)):
     json.dump({"macroExportVersion": 1, "macro": m, "globalVariables": vars_, "userIcons": None},
               open(os.path.join(D, f'pkg_{nm}.json'), 'w'), ensure_ascii=False, separators=(',', ':'))
 print('pkg', len(s), [m['m_name'] for m in pkg['macros']])

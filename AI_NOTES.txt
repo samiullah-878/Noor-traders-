@@ -9906,3 +9906,19 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
   Din shuru (akOn == 1): night display + brightness mode wapas pehle wale, akOn 0; ui == 1 tha to DarkThemeAction Disable.
 - Koi paigham / toast nahi. AI nahi. MCP validator VALID. pkg.py: mak + vak (5 int globals), validator copy pkg_e.json.
 - Phone par azmaya nahi. Jaanch: agli email "NT phone macros v78" mein macro ON + akOn 1 + akNd 1; malik se poochho screen peeli hui ya sirf dark.
+
+=== md pkg v79 (26 Nov 2026) — 📞 Call diary (app / rules / PC nahi badle) ===
+- Malik ne MacroDroid template 'Save Incoming Call Detail As Text File' dikha kar kaha: aisa bana do · data Google Drive mein · kitne minute baat hui ·
+  contact saved ho to naam, warna number · phir 'WhatsApp calls bhi' · OK.
+- md/tools/calls.py -> macro '📞 Call diary' (GUID h64('claude|calldiary')). Triggers: CallEnded (any) · CallMissed (any) · Notification WhatsApp / w4b
+  received (message contains regex incoming|ongoing|missed) · Notification cleared (message contains 'ongoing').
+- Ek JavaAction (BeanShell, background thread) — cm = s (SIM, 3 s ruk kar; missed par 6 s) / w (WA notification) / r (WA ongoing hata):
+  SIM: CallLog.Calls (number, name, duration, type, date, subscription_component_name) 'date DESC', cdL (aakhri likhi call ka ms) se naye 10 tak,
+  pehli dafa sirf aakhri (10 min ke andar), 2 din se purani nahi; whatsapp component wali line chhodo; naam khali = PhoneLookup display_name.
+  Qism: 1 Aayi · 2 Gayi / Gayi (utha nahi) · 3 Missed · 5 Kaati · 6 Block. Call log na khule = '? (call log nahi khula)' + {call_number}.
+  WA: incoming = cdWI; ongoing = shuru (wahi naam 4 ghante ke andar = 'wahi call'; doosre ka pichhla khula ho = us ki line '? khatam ka waqt nahi mila');
+  2 min ke andar incoming dikha = WA Aayi warna WA Gayi, video = '(video)'; cleared = der (now - cdWS), cdWS 0; missed = sirf jab likhai 'missed …' / '2 missed …' se shuru.
+- File: /storage/emulated/0/NT Awaz/Calls/Calls YYYY-MM.csv — nayi file par BOM + header, har khana quote, CRLF. Number '0319 8682104' (space = Sheets mein text).
+- javac test (android stubs, logic hissa): 17 case OK (dohra nahi, PhoneLookup naam, whatsapp CallLog skip, permission fail, WA aayi / gayi / video / missed,
+  chat ka 'I missed your call' = aam paigham). MCP validator VALID. pkg.py: mcl + vcl (6 string globals cd*), validator copy pkg_c.json.
+- Koi popup / toast nahi. AI nahi. Phone par azmaya nahi. Jaanch: email 'NT phone macros v79' mein macro ON; pehli call ke baad Drive > NT Awaz > Calls.
