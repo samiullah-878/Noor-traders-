@@ -5788,3 +5788,9 @@ Malik: grey sirf Live par (DMSS theek, bill ki video theek), 11 baje ke baad se;
 - Rules 2.111: liveIce/{id} get = malik / Full / Nigrani. Asal chaabi blueAccess/turnKey sirf malik (generic).
 - Test: node-turn + Chrome (relay-only) + werift (bina TURN) = video chali, 'Rasta: 🔁 relay'; pass nahi / permission / dheera / purana / kachra = sirf STUN, seedha chali; PC relay hissa (nakli https / Firestore) 11/11 PASS; malik ka dabba Chrome mein (focus nahi toota, chaabi screen par nahi). Asal Cloudflare / asal 4G par azmaya NAHI — malik ki chaabi ke baad pehla 4G test.
 - Malik ka kaam: Cloudflare muft account → Realtime → TURN Server → Create → Turn Token ID + API Token app mein paste.
+
+=== 25 Nov 2026 — v2.379.0: ⏭ ‹ › mein posted bill khud chhoot (POS Purchase; rules wahi 2.111, PC files nahi badli) ===
+- Malik ki screenshot: Agla dabane par 'Bill 2909 POS mein POSTED hai. OK = ↩ Unpost kar ke kholo / Cancel = isay chhor kar agla bill'. Malik: 'yahan posted bill na aaye — agla posted ho to skip ho kar agla un-posted aaye'.
+- purchase.js: numNbr ab sab ke liye !posted (pehle sirf mulazim ke liye); openBillForEdit nav mein docStatus 2 / 3 = foran 'skip' (waitBill ka intezar bhi nahi), posted par confirm sirf list se kholne par (non-nav); navGo: sab chhoot gaye = notice 'Aage / Pichhe koi khula bill nahi'; likhai 'Aakhri bill' → 'Aage koi khula bill nahi'.
+- Asar: ‹ Pichhla / Agla ›, ☐ check → agla (tickNext), ✓ Check + 📌 Post → agla (ppBcgo) — teeno wahi numNbr / navGo.
+- Test: numNbr nakli bills (2902 / 2908 / 2909 posted) 7/7 PASS; navGo + openBillForEdit (khata purana 'khula', PC doc POSTED = sawal nahi, seedha agla; sab posted = paigham; list se kholo = Unpost sawal pehle jaisa) 7/7 PASS. Asal phone par azmaya nahi.

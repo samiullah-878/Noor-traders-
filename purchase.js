@@ -41,9 +41,9 @@
 // banata hai (POS ke apne procedures, DocStatusID 1 — baqi bills jaisa) aur naye rates POS items par lagata hai.
 // POS mein Qty = PIECES, Rate = FI PIECE khareed. Yahan sab RUPAY (paisa nahi).
 
-import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.378.0';
-import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.378.0';
-import { blurScore, blurText } from './pic-check.js?v=2.378.0';   // v2.103.43: 📷 dhundli check
+import { stockNewItemOpen, saleStock, setSaleScanHook, setSaleQtyHook, setSaleFindHook, setSaleCartHook, setSaleDelHook, setSaleLineGodamHook, openSaleCamera, stockWaitHTML } from './pos-stock.js?v=2.379.0';
+import { smartSearch, noteHit, voiceSearch, notePartyPick, aliasOf, fold, smartHit } from './smart-search.js?v=2.379.0';
+import { blurScore, blurText } from './pic-check.js?v=2.379.0';   // v2.103.43: 📷 dhundli check
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
@@ -632,12 +632,13 @@ function navFromPc(id) {
 }
 // v2.310.0 (malik 17 Nov: "10 number bill khula ho to agla 11, pichhla 09"): ‹ › aur ☐ check / Check + Post ke baad agla = POS BILL NUMBER ki
 //   tarteeb (pcBillsOf = khate ki POS purchase entries). Number na ho (cancel / ghayab) = agla maujood number. Cancel bill khud chhoot jata;
-//   POSTED = sawal (OK = ↩ Unpost kar ke kholo, Cancel = chhor kar agla); mulazim = sirf aaj ke khule (posted / purane khud chhoot-te).
+//   mulazim = sirf aaj ke khule. v2.379.0 (malik 25 Nov: "posted bill na aaye — agla posted ho to skip ho kar agla un-posted aaye"):
+//   POSTED bhi SAB ke liye khud chhoot-ta (pehle malik se OK / Cancel sawal hota tha) — posted kholna / ↩ Unpost = Purchase list se do tap.
 const billN = v => { const n = Number(String(v || '').replace(/\D/g, '')); return n > 0 ? n : 0; };
 function numNbr(d) {
   const cur = navCur; if (!cur) return [];
   const t = todayStr(), own = isOwner(), seen = new Set(), out = [];
-  const L = pcBillsOf().map(r => ({ r, n: billN(r.billNo) })).filter(x => x.n && !x.r.deleted && Number(x.r.posStatus) !== 3 && (d > 0 ? x.n > cur : x.n < cur) && (own || (x.r.date === t && !x.r.posted)))
+  const L = pcBillsOf().map(r => ({ r, n: billN(r.billNo) })).filter(x => x.n && !x.r.deleted && Number(x.r.posStatus) !== 3 && !x.r.posted && (d > 0 ? x.n > cur : x.n < cur) && (own || x.r.date === t))
     .sort((a, b) => d > 0 ? a.n - b.n : b.n - a.n);
   for (const x of L) { if (seen.has(x.n)) continue; seen.add(x.n); out.push(x.r); if (out.length >= 15) break; }
   return out;
@@ -646,15 +647,15 @@ const nbrLbl = r => `Bill ${billN(r.billNo)} · ${r.partyName || partyOf(r.party
 function navHTML(after) {
   if (!navCur) return '';
   const prev = numNbr(-1)[0], next = numNbr(1)[0]; if (!prev && !next && !after) return '';
-  return `<div class="pp-nav${after ? ' after' : ''}">${after ? `<p>✅ Bill ${navCur} bhej diya${next ? '' : ' · ye aakhri bill tha'}</p>` : ''}
+  return `<div class="pp-nav${after ? ' after' : ''}">${after ? `<p>✅ Bill ${navCur} bhej diya${next ? '' : ' · aage koi khula bill nahi'}</p>` : ''}
     <div class="pp-nav-row"><button type="button" data-pp-nav="-1"${prev ? '' : ' disabled'}>‹ Pichhla</button>
-    <span><b>Bill ${navCur}</b><small>${next ? 'Agla: ' + esc(nbrLbl(next)) : 'Aakhri bill'}</small></span>
+    <span><b>Bill ${navCur}</b><small>${next ? 'Agla: ' + esc(nbrLbl(next)) : 'Aage koi khula bill nahi'}</small></span>
     <button type="button" class="got" data-pp-nav="1"${next ? '' : ' disabled'}>Agla ›</button></div></div>`;
 }
 async function navGo(d) {
   if (bcBusy) { notice('⏳ Pehla bill abhi post ho raha hai…'); return false; }
   if (navBusy) return false;
-  const L = numNbr(d); if (!L.length) { notice(d > 0 ? 'Is ke baad koi bill nahi' : 'Is se pehle koi bill nahi'); return false; }
+  const L = numNbr(d); if (!L.length) { notice(d > 0 ? 'Is ke baad koi khula bill nahi' : 'Is se pehle koi khula bill nahi'); return false; }
   if (cart.length && (!edit || editSnap !== cartSig()) && !confirm(`Is bill mein tabdeeli SAVE nahi hui — chhor kar ${d > 0 ? 'agla' : 'pichhla'} bill kholein?`)) return false;
   for (const r of L) {   // purana bill tab tak screen par — naya poora aaye tab hi badle (khali "naya bill" screen nahi)
     navBusy = 'Bill ' + billN(r.billNo); rerender(); notice('⏳ ' + nbrLbl(r) + ' khul raha hai…');
@@ -662,19 +663,20 @@ async function navGo(d) {
     if (res === 'skip') continue;
     rerender(); return res === true;
   }
-  rerender(); return false;
+  rerender(); notice(d > 0 ? 'Aage koi khula bill nahi (posted / cancel chhor diye)' : 'Pichhe koi khula bill nahi (posted / cancel chhor diye)'); return false;   // v2.379.0: sab chhoot gaye = khamosh nahi
 }
 async function openBillForEdit(id, partyId, minUpdated, unposted, opt = {}) {
   const nav = Number(opt.nav) || 0, nx = nav > 0 ? 'agla' : 'pichhla';
   let b = await cloud.purchaseBill(id).catch(() => null);
-  if (nav && b && Number(b.docStatus ?? b.status) === 3) return 'skip';   // v2.310.0: cancel bill — tafseel ka intezar bhi nahi
+  if (nav && b && [2, 3].includes(Number(b.docStatus ?? b.status))) return 'skip';   // v2.310.0: cancel · v2.379.0: POSTED bhi — tafseel ka intezar bhi nahi
   if (!billReady(b, minUpdated)) { b = await waitBill(id, minUpdated); if (!b) return false; }
   const st = Number(b.docStatus ?? b.status);
   if (st === 3) { if (nav) return 'skip'; alert('Yeh bill POS mein CANCEL hai.'); return false; }
   if (!isOwner() && b.date !== todayStr()) { if (nav) return 'skip'; alert('Mulazim sirf AAJ ka khula bill edit kar sakta hai.'); return false; }
   if (st === 2 && !unposted) {   // v2.149.0: malik = "↩ Unpost kar ke kholo" (PC jawab ke baad khulta hai)
-    if (!isOwner() || typeof window.ntPostWait !== 'function') { if (nav) return 'skip'; alert('Yeh bill POSTED hai — pehle malik Unpost kare, phir edit.'); return false; }
-    if (!confirm(nav ? `Bill ${billN(b.billNo) || ''} POS mein POSTED hai.\n\nOK = ↩ Unpost kar ke kholo\nCancel = isay chhor kar ${nx} bill` : 'Yeh bill POS mein POSTED hai.\n\n↩ Unpost kar ke edit ke liye kholein?')) return nav ? 'skip' : false;
+    if (nav) return 'skip';   // v2.379.0 (malik): ‹ › / agla mein posted bill khud chhoot — sawal NAHI
+    if (!isOwner() || typeof window.ntPostWait !== 'function') { alert('Yeh bill POSTED hai — pehle malik Unpost kare, phir edit.'); return false; }
+    if (!confirm('Yeh bill POS mein POSTED hai.\n\n↩ Unpost kar ke edit ke liye kholein?')) return false;
     const pid = Number(b.purchaseId) || Number(String(id).replace(/^pos-/, '')) || 0;
     ppFlow = { pid, partyId, label: 'Bill ' + (b.billNo || b.purchaseNo || pid), st: 'unpost' }; rerender();
     const r = await window.ntPostWait('unpost', [pid]);
