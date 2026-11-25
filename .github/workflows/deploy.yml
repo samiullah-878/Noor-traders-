@@ -22,5 +22,7 @@ jobs:
       - uses: actions/upload-pages-artifact@v3
         with:
           path: .
+      # 25 Nov 2026: upload ke foran baad GitHub API artifact '0' batata tha (4 dafa deploy fail) — thora intezar
+      - run: sleep 25
       - id: dep
         uses: actions/deploy-pages@v4
