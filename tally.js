@@ -461,7 +461,7 @@ async function onClick(e) {
   if (t.closest('[data-bt-live]')) { window.ntNazarLive?.(); return; }
 }
 
-function openCam() { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.380.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); }   // v2.373.0: menu card + ⋮ dono se
+function openCam() { const td = dayKey(0), L = [...new Set([...[...bills.values()].filter(b => b._d === td && b.pc).sort((a, b) => (Number(b.ct || b.pt) || 0) - (Number(a.ct || a.pt) || 0)).map(b => String(b.pc)), ...(Array.isArray(pcSt?.pcs) ? pcSt.pcs.map(String) : []), ...xcN()])];   /* v2.222.0: camera setting ke counter bhi (bina bill ke live) · v2.329.0: 📹 mazeed cameras bhi */ import('./live.js?v=2.381.0').then(m => m.openLive({ cloud, notice, list: L, cur: fPc, xc: xcN(), sab: canK('nz.sab') /* v2.360.0: 🎛 sab cameras ek screen */ })).catch(e => notice('Live nahi khula: ' + (e?.message || e))); }   // v2.373.0: menu card + ⋮ dono se
 // ---------- apni khirki (dialog) — phone back = band ----------
 const xcN = () => (Array.isArray(pcSt?.cams) ? pcSt.cams : []).filter(c => c && c.n && !c.c).map(c => String(c.n));   // v2.329.0: 📹 mazeed cameras (PC bill-clip v2.10)
 function dlg() {
