@@ -10006,3 +10006,13 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
   (7) naam setting / config / company / print / default … wale table (<= 2000 qatar): show / print / bal / prev / whole khanon ki qeemat + 'prev' / 'balance' wali qatar;
   (8) Consus: Get-Process naam + CIM ExecutablePath + Desktop / Start Menu shortcut ka target + C / D / Program Files mein consus / cognit folder -> files + config (.config / .ini / .xml / .json / .txt)
   ki sirf prev / balance / wholesale lines (connection / password / data source wali KABHI nahi). Mock test: password khana nahi chhua, chhupi line chhupi.
+
+=== POS wholesale 'Previous Balance' — report files mil gayi (26 Nov 2026 14:50, malik ne Reports folder Claude app mein joda) ===
+- Folder: C:\Program Files (x86)\Consus\Consus Enterprise Solution\Reports (Accounts / Documents / Parties / PayRoll / Purchase / Sale / Stock + POS_Customer_Upgrade_18Oct.sql).
+- Sale bill ke layout (Documents): rptdsSale.rpt (19-Oct-2026 19:28 — sab se taza, upgrade SQL 18-Oct 17:46 ke agle din), rptSaleEng.rpt (14-Oct-2026), rptdsSale4inc (Nov 2025),
+  rptSale / rptSaleThermal / rptdsSaleKP / rptSalemandi / rptSaleOtherDefaultCustomer / rptdsSaleBardana / rptSaleEngMultiple (Sep 2025). rptdsSale.zip = 2022 ki copy.
+- .cs (typed report): rptdsSale + rptSaleEng ke parameter pStatus · pINVType · pBranchName (rptSale sirf pStatus) — bill ki qism report ko jaati hai = 'sirf wholesale par chhupao' shart lag sakti hai.
+- Upgrade SQL: Defaults mein previous balance ki setting nahi (IsPrintInvoice / IsEPrint / IsHideWholeSaleCheckbox / IsShowSaleDiscount / isUrdu …); uf_WA_PartyBalance = usp_Party_Get.PreviousBalance ka formula.
+- .rpt 'Contents' stream = Crystal ki encoded shakal (header fc00ffff07…, zlib nahi) — yahan Linux par objects nahi parhe ja sakte. Agla qadam (malik ke OK par): PC par POS ke apne
+  Crystal engine se rptdsSale / rptSaleEng temp copy khol kar SIRF parhna (Previous Balance wala object + pINVType); badlaav = alag OK, .bak + wapsi, ya Consus wale designer mein.
+- Local patch /tmp/pj-v4-local.patch (pos-jaanch v4) push NAHI hua (classifier ne roka tha) — OK mile to sirf in do files tak tang kar ke.
