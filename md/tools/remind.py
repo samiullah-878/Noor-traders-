@@ -7,6 +7,9 @@
 #     (bacha.macro wala azmaya raasta) -> local dictionary ra -> SelectionDialogAction option 1, chuna key -> rk.
 #   🌙 Raat 12-11 band + 📸 Sehat lock MacroDroid ki khirki Home kar dete hain (askAge > 20) — popup ke dauran sbAsk / shAsk = abhi + 100,
 #     popup ke baad PURANI qeemat wapas (wasite.py jaisa). Dohra unlock 20 s mein = ek hi dafa (rmAt).
+#   v81 (26 Nov, malik: 'do click karni parti hain · Baad mein wali click khatam · Nahi dabaya to ye bhi hat jaye · alehda nahi, ikattha —
+#     falsafa neeche, ye upar' + 'us ki peeli likhai ho' + OK): unlock ka popup ab 🧠 Falsafa (qaide.py) dikhata hai — EK SelectionDialog: upar
+#     reminder, neeche falsafa, 😴 Sona hai / ✕ Nahi; "Baad mein" HATA; 15 s = Nahi. Yahan sirf likhna (tile / shortcut) + BUILD / DIALOG / DEL ka maal.
 #   Reminder ki likhai SIRF phone mein (md/ PUBLIC). Blue Khata ki Reminder screen / WhatsApp reminder se alag. AI nahi. Phone par azmaya nahi.
 import json, os, re
 from cb import iff, END, ELSE, expr, lvar, var, NOW, strne, trig, gt, pause
@@ -32,12 +35,15 @@ ADD = '\n'.join([
  '  return "ok";',
  '} catch (Throwable e) { return "err " + e; }'])
 
-# Java: dialog ke liye JSON object. "" = koi reminder nahi. Braces char se (scriptText magic text hai).
+# Java (v81): unlock ka MILA HUA popup — upar reminder (☐, tap = ✓), neeche 🧠 falsafa (lv qs), phir 😴 Sona hai / ☀️ Jaag gaya, ✕ Nahi.
+#   Keys: r01… < t (falsafa) < u (sona / jaag) < w (nahi) — alfabet aur jorne ki tarteeb ek. "" = koi reminder nahi.
 BUILD = '\n'.join([
  'try {',
  '  String t = magicText.evaluateString("{" + "v=rmT}"); if (t == null) t = "";',
+ '  String qs = magicText.evaluateString("{" + "lv=qs}"); if (qs == null) qs = "";',
+ '  String ro = magicText.evaluateString("{" + "v=recOff}"); if (ro == null) ro = "0";',
  '  String[] a = t.split("\\n");',
- '  String LB = String.valueOf((char) 123), RB = String.valueOf((char) 125), Q = String.valueOf((char) 34), BS = String.valueOf((char) 92);',
+ '  String LB = String.valueOf((char) 123), RB = String.valueOf((char) 125), Q = String.valueOf((char) 34), BS = String.valueOf((char) 92), NL = String.valueOf((char) 10);',
  '  StringBuilder sb = new StringBuilder(LB);',
  '  int n = 0;',
  '  for (int i = 0; i < a.length; i++) {',
@@ -49,7 +55,14 @@ BUILD = '\n'.join([
  '    sb.append(Q).append(k).append(Q).append(":").append(Q).append("☐ ").append(s).append(Q).append(",");',
  '  }',
  '  if (n == 0) return "";',
- '  sb.append(Q).append("z").append(Q).append(":").append(Q).append("⏭ Baad mein").append(Q).append(RB);',
+ '  qs = qs.replace("<br><br>", NL).replaceAll("<[^>]+>", "").trim();',
+ '  if (qs.length() > 0) {',
+ '    qs = qs.replace(BS, BS + BS).replace(Q, BS + Q).replace(NL, BS + "n");',
+ '    sb.append(Q).append("t").append(Q).append(":").append(Q).append("🧠 ").append(qs).append(Q).append(",");',
+ '  }',
+ '  String sn = ro.trim().equals("1") ? "☀️ Jaag gaya" : "😴 Sona hai";',
+ '  sb.append(Q).append("u").append(Q).append(":").append(Q).append(sn).append(Q).append(",");',
+ '  sb.append(Q).append("w").append(Q).append(":").append(Q).append("✕ Nahi").append(Q).append(RB);',
  '  return sb.toString();',
  '} catch (Throwable e) { return ""; }'])
 
@@ -91,33 +104,9 @@ DIALOG = {"m_classType": "SelectionDialogAction", "m_SIGUID": 0, "option": 1, "d
           "message": "<font color='#FFD600'><b>📝 Aap ke reminder</b></font><br><small>Jo ho gaya us par tap karein ✓</small>",
           "htmlFormat": True, "textColor": YEL, "bgColor": BG, "buttonStyle": 3, "titleAlignment": 0,
           "saveKeyVariable": {"variableName": "rk"}, "preventBackButtonClose": False, "continueMacroOnBackPress": True,
-          "showDictionaryKeys": False, "hasDefault": False}
+          "showDictionaryKeys": False, "hasDefault": True, "defaultKey": "w", "defaultTimeOutSecs": 15}   # 15 s = Nahi (falsafa jaisa); timeout ka jawab kabhi kaam nahi karta (dd guard, qaide.py)
 
 acts = [
-    iff([trig(T3, "Unlock")]),
-      iff([strne("rmT", "")]),
-        expr("ag", NOW + "-{v=rmAt}", True),
-        iff([gt("ag", 20, True)]),
-          expr("rmAt", NOW),
-          pause(1),
-          *SAVE,
-          LOOP,
-            *OPEN,
-            sstr("rk", ""),
-            java(BUILD, "rj"),
-            iff([streq("rj", "", True)]), BREAK, END,
-            {"m_classType": "JsonParseAction", "m_SIGUID": 0, "stringVarName": "rj", "dictionaryVarName": "ra", "parseColors": False},
-            DIALOG,
-            iff([streq("rk", "", True)]), BREAK, END,
-            iff([streq("rk", "z", True)]), BREAK, END,
-            java(DEL, "rc"),
-            iff([streq("rc", "0", True)]), BREAK, END,
-            iff([streq("rc", "x", True)]), BREAK, END,
-          ENDLOOP,
-          *RESTORE,
-        END,
-      END,
-    ELSE,
       *SAVE, *OPEN,
       sstr("rn", ""),
       {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "rn", "m_type": 2, "isLocalVar": True}, "m_userPrompt": True,
@@ -127,17 +116,15 @@ acts = [
       *RESTORE,
       iff([streq("rr", "ok", True)]), toast("✅ Reminder save — unlock par dikhega"), END,
       iff([streq("rr", "full", True)]), toast("⚠️ 40 reminder ho gaye — pehle purane ✓ karein"), END,
-    END,
 ]
 RM = {"macroExportVersion": 1, "macro": {
     "m_name": "📝 Reminder",
-    "m_description": "Notification patti ka tile 3 (ya home shortcut): reminder likho. Har unlock par baqi reminder peeli likhai mein; jo ho gaya us par tap = ✓ hat jata hai, '⏭ Baad mein' = agle unlock par phir. Koi reminder na ho to kuch nahi. AI nahi.",
+    "m_description": "Notification patti ka tile 3 (ya home shortcut): reminder likho. Unlock par 🧠 Falsafa ke popup mein upar peeli likhai mein dikhte hain; tap = ✓ hat jata hai, Nahi = agle unlock par phir. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [lvar("rn", 2), lvar("rr", 2), lvar("rj", 2), lvar("rk", 2), lvar("rc", 2), lvar("ra", 4), lvar("ag"), lvar("oA"), lvar("oS")],
-    "m_triggerList": [tile(T1, 2, "📝 Reminder", "Likhein"), {"m_classType": "ShortcutTrigger", "m_SIGUID": T2},
-                      {"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T3}],
+    "localVariables": [lvar("rn", 2), lvar("rr", 2), lvar("oA"), lvar("oS")],
+    "m_triggerList": [tile(T1, 2, "📝 Reminder", "Likhein"), {"m_classType": "ShortcutTrigger", "m_SIGUID": T2}],   # v81: unlock trigger HATA — Falsafa ke popup mein
     "m_actionList": acts},
-    "globalVariables": [var("rmT", 2), var("rmAt"), var("sbAsk"), var("shAsk")], "userIcons": None}
+    "globalVariables": [var("rmT", 2), var("sbAsk"), var("shAsk")], "userIcons": None}
 
 if __name__ == '__main__':
     json.dump(RM, open(os.path.join(D, 'remind.json'), 'w'), ensure_ascii=False, separators=(',', ':'))

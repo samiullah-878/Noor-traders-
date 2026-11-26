@@ -9935,3 +9935,16 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
 - javac test (ADD / BUILD / DEL): khali, quote, newline, 40 hadd, hatana — sab sahi; BUILD ka JSON python se parse hua. MCP validator VALID.
 - pkg.py: mrm + vrm (rmT, rmAt), validator copy pkg_d.json. Koi popup / toast sirf malik ke apne kaam par. AI nahi. Phone par azmaya nahi.
 - Jaanch: email 'NT phone macros v80' mein macro ON; tile 3 malik khud Quick Settings mein lagaye; pehla reminder likh kar lock / unlock.
+
+=== md pkg v81 (26 Nov 2026) — 📝 Reminder + 🧠 Falsafa EK popup (app / rules / PC nahi badle) ===
+- Malik (v80 ki screenshot ke saath): 'tile reminder wala aur doosra ab do click karni parti hain · Baad mein wali click khatam · Nahi dabaya to ye bhi
+  hat jaye · alehda alehda na aaye, ikattha — falsafa neeche, ye upar' -> plan -> 'us ki peeli likhai ho' + OK.
+- qaide.py (🧠 Falsafa, unlock): rmT khali nahi = COMBO: falsafa Java (qs) -> 20 s dohra nahi (rmAt) -> 1 s -> loop 15: sbAsk / shAsk +100 ->
+  remind.BUILD = JSON {r01: '☐ …', …, t: '🧠 qoul\n— naam', u: '😴 Sona hai' | '☀️ Jaag gaya' (recOff), w: '✕ Nahi'} -> JsonParse -> SelectionDialog
+  (kaala dabba, sab likhai peeli, hasDefault defaultKey w 15 s) -> dd = dialog kitni der khula; dd > 13 = timeout -> break (kuch nahi);
+  rk t / w / khali = break; u = recording band / shuru (purane popup wala kaam) + break; r.. = DEL -> baqi dobara. Loop ke baad chhoot wapas.
+  rmT khali = purana GATE (safed ElseIfConfirmedThen popup) waise hi.
+- remind.py: DeviceUnlockedTrigger + unlock branch HATA (sirf tile 3 / shortcut se likhna); BUILD (naya mila hua) / DIALOG / DEL / SAVE / OPEN /
+  RESTORE qaide.py import karta hai. '⏭ Baad mein' ab kahin nahi.
+- javac test: BUILD ka JSON (quote / newline escape, recOff 0/1, qoul khali) python se parse hua. MCP validator: Falsafa VALID (88 actions).
+- pkg.py: validator copy pkg_q.json (Falsafa). AI nahi. Phone par azmaya nahi (defaultKey ka countdown kis button par dikhta hai — malik ki screenshot se dekho).

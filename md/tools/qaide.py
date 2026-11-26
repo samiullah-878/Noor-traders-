@@ -24,10 +24,12 @@ JV = "\n".join(['try {', '  String[] q = new String[] {'] +
       '  int i = (from + (int) (Math.random() * per)) % n;', '  return q[i];',
       '} catch (Throwable t) {', '  return "Aaj ka sab se zaroori kaam kaun sa hai?";', '}'])
 JAVA = {"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": JV, "blockNextAction": True, "responseVariableName": "qs", "runInBackgroundThread": True}
-acts = [
+HEAD = [
     lexpr("pLeft", "{v=pnDue}-{system_time}"),       # Paani aane mein kitne sec (manfi = abhi aayega)
     lexpr("pShow", "{v=pnShowEnd}-{system_time}"),   # > 0 = Paani popup screen par
     lexpr("kShow", "{v=kpShowEnd}-{system_time}"),   # > 0 = Khana popup screen par
+]
+GATE = [
     iff([lgt("pLeft", 120), llt("pShow", 1), llt("kShow", 1), gbool("kpPend", False)] if PAANI_ON else [lbool("never", False)]),
       JAVA,
 ]
@@ -38,7 +40,7 @@ from cb import lt as glt, sint
 def dlg(state, pos, neg): return {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "🧠 Soch",
      "text": "{lv=qs}<br><br>" + state, "positiveText": pos, "negativeText": neg,
      "cancelAfterTimeout": True, "timeoutSeconds": 15, "htmlFormat": True, "useCustomColors": True, "textColor": -15658735, "bgColor": -1}
-acts += [
+GATE += [
     iff([glt("recOff", 1)]),
       iff([lbool("never", True)]),
       dlg("😴 <b>Sona hai?</b>", "😴 Sona hai", "Nahi"),
@@ -52,15 +54,61 @@ acts += [
     END,
     END,
 ]
+
+# v81 (26 Nov, malik: 'tile reminder wala aur doosra — do click karni parti hain · Baad mein wali click khatam · Nahi dabaya to ye bhi hat jaye ·
+#   alehda nahi, ikattha — falsafa neeche, ye upar' + 'us ki peeli likhai ho' + OK): reminder baqi hon (rmT) to EK SelectionDialog (remind.py ka maal):
+#   upar ☐ reminder (tap = ✓ hata, baqi ke saath dobara), neeche 🧠 falsafa (tap = band), 😴 Sona hai / ☀️ Jaag gaya (recording, phir band), ✕ Nahi.
+#   15 s = Nahi (defaultKey w). HIFAZAT: dialog 14+ s khula raha = timeout samjho, KUCH na karo (default ghalat button chune tab bhi reminder na mite).
+#   Reminder na hon = purana safed popup (GATE) waise hi. 📝 Reminder macro ka apna unlock trigger HATA (warna do popup).
+import remind as RM
+from cb import gt as cgt, expr as cexpr, pause as cpause, NOW, strne as cstrne
+from wasite import streq
+def BR(k, v): return [iff([streq(k, v, True)]), RM.BREAK, END]
+COMBO = [
+    JAVA,
+    cexpr("ag", NOW + "-{v=rmAt}", True),
+    iff([cgt("ag", 20, True)]),                      # 20 s mein dohra unlock = ek hi dafa
+      cexpr("rmAt", NOW),
+      cpause(1),
+      *RM.SAVE,
+      RM.LOOP,
+        *RM.OPEN,
+        RM.sstr("rk", ""),
+        RM.java(RM.BUILD, "rj"),
+        *BR("rj", ""),
+        {"m_classType": "JsonParseAction", "m_SIGUID": 0, "stringVarName": "rj", "dictionaryVarName": "ra", "parseColors": False},
+        cexpr("dt", NOW, True),
+        RM.DIALOG,
+        cexpr("dd", NOW + "-{lv=dt}", True),
+        iff([cgt("dd", 13, True)]), RM.BREAK, END,  # timeout (15 s) = Nahi — kuch mat karo
+        *BR("rk", ""), *BR("rk", "t"), *BR("rk", "w"),
+        iff([streq("rk", "u", True)]),
+          iff([glt("recOff", 1)]),
+            sint("recOff", 1), REC.STOP,
+          ELSE,
+            sint("recOff", 0), *REC.restart(),
+          END,
+          RM.BREAK,
+        END,
+        RM.java(RM.DEL, "rc"),
+        *BR("rc", "0"), *BR("rc", "x"),
+      RM.ENDLOOP,
+      *RM.RESTORE,
+    END,
+]
+acts = HEAD + [iff([cstrne("rmT", "")]), *COMBO, ELSE, *GATE, END]
 out = {"macroExportVersion": 1, "macro": {
     "m_name": "🧠 Falsafa",
-    "m_description": "Unlock par falasifa ka ek qoul (random, Urdu, 12 s baad khud band) — Paani popup jaisa dabba. Paani 2 min mein aane wala ho / Paani ya Khana popup screen par ho to nahi. 🔕 Aaj nahi = aaj phir nahi.",
+    "m_description": "Unlock par falasifa ka ek qoul (random, 15 s baad khud band) + 😴 Sona hai. 📝 Reminder baqi hon to EK popup: upar peeli likhai mein reminder (tap = ✓), neeche qoul, Sona hai / Nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lint("pLeft"), lint("pShow"), lint("kShow"), lint("qi"), {"m_name": "qs", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
-                       {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}],
+                       {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
+                       lint("ag"), lint("oA"), lint("oS"), lint("dt"), lint("dd"), {"m_name": "rj", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
+                       {"m_name": "rk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, {"m_name": "rc", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
+                       {"m_name": "ra", "m_type": 4, "isLocalVar": True, "m_stringValue": ""}],
     "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}],
     "m_actionList": acts, "m_constraintList": []},
-    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1)] + REC.GV,
+    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1), var("rmT", 2), var("rmAt", 1), var("sbAsk", 1), var("shAsk", 1)] + REC.GV,
     "userIcons": None, "aiFeedback": "Display over other apps ijazat."}
 json.dump(out, open(os.path.join(D, "qaide.json"), "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(acts))
