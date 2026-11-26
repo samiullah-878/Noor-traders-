@@ -5929,3 +5929,8 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
   RESTORE qaide.py import karta hai. '⏭ Baad mein' ab kahin nahi.
 - javac test: BUILD ka JSON (quote / newline escape, recOff 0/1, qoul khali) python se parse hua. MCP validator: Falsafa VALID (88 actions).
 - pkg.py: validator copy pkg_q.json (Falsafa). AI nahi. Phone par azmaya nahi (defaultKey ka countdown kis button par dikhta hai — malik ki screenshot se dekho).
+
+=== md pkg v82 (26 Nov 2026) — 📝 Reminder popup safed + kaali likhai ===
+- Malik (v81 ki screenshot 13:43 — mila hua popup chala, countdown 'Nahi (9)' sahi button par): 'is ka background white aur fonts colour black'.
+- remind.py DIALOG: bgColor -1 (safed), textColor #111111 (falsafa wala), sar-khi '📝 Aap ke reminder' kaali bold + chhoti line grey. Logic wahi.
+- Peeli likhai (v80 / v81) ab nahi — wapas sirf malik ke kehne par. AI nahi.

@@ -19,6 +19,7 @@ T1, T2, T3 = 112233445568001, 112233445568002, 112233445568003
 
 def argb(h): v = int('FF' + h, 16); return v - (1 << 32)
 YEL, BG = argb('FFD600'), argb('1C1C1E')
+INK, WHITE = argb('111111'), -1   # v82: safed dabba, kaali likhai
 
 # Java: naya reminder jorna. "" = kuch nahi likha · "full" = 40 se zyada.
 ADD = '\n'.join([
@@ -101,8 +102,8 @@ SAVE = [expr("oA", "{v=sbAsk}", True), expr("oS", "{v=shAsk}", True)]           
 OPEN = [expr("sbAsk", NOW + "+100"), expr("shAsk", NOW + "+100")]                 # popup ke dauran raat-band / sehat lock Home na karein
 RESTORE = [expr("sbAsk", "{lv=oA}"), expr("shAsk", "{lv=oS}")]                    # chhoot khatam
 DIALOG = {"m_classType": "SelectionDialogAction", "m_SIGUID": 0, "option": 1, "dictionaryVarName": "ra",
-          "message": "<font color='#FFD600'><b>📝 Aap ke reminder</b></font><br><small>Jo ho gaya us par tap karein ✓</small>",
-          "htmlFormat": True, "textColor": YEL, "bgColor": BG, "buttonStyle": 3, "titleAlignment": 0,
+          "message": "<b>📝 Aap ke reminder</b><br><small><font color='#555555'>Jo ho gaya us par tap karein ✓</font></small>",
+          "htmlFormat": True, "textColor": INK, "bgColor": WHITE,   # v82 (malik: 'background white aur fonts colour black' — falsafa popup jaisa) "buttonStyle": 3, "titleAlignment": 0,
           "saveKeyVariable": {"variableName": "rk"}, "preventBackButtonClose": False, "continueMacroOnBackPress": True,
           "showDictionaryKeys": False, "hasDefault": True, "defaultKey": "w", "defaultTimeOutSecs": 15}   # 15 s = Nahi (falsafa jaisa); timeout ka jawab kabhi kaam nahi karta (dd guard, qaide.py)
 
