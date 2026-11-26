@@ -20,7 +20,12 @@
 //  (beej / paudha / mitti — AI dekhe) = phone ko `nt_sehat?shOk=c:sabzi&shT=` -> Claude 30 min (sirf Claude; baqi list wahi band) · ✅ Kaam = sirf record.
 //  📊 Hisaab = har sahi photo is phone ki IndexedDB 'nt-sehat' (store log {d, t, k, th}) mein — service worker bhi wahi likhta hai (app band ho tab bhi);
 //  sabzi ki chhoti tasveer (320px) sirf isi phone par, Firestore / server par kuch nahi. Aaj · Kal · Parson chips. Purani localStorage ginti ek dafa idhar.
+//  v1.5 (2026-11-27, app v2.390.0, md pkg v84, rules 2.112 — malik: 'lock screen wale popup mein Paani pee lo neeli line · check box lage to counting Blue Khata
+//  mein · nuts / fruit / coffee time par, dabane par ghayab' + OK): phone ka 🧠 Falsafa popup ☐ tick par din ka POORA haal sehatTick/<din> {p, c, f, n, at}
+//  mein likhta hai (MacroDroid, chaabi blueAccess/awazKey) → yahan 📊 Hisaab ki har line par ☑ (popup) + 📸 (AI photo) alag. Phone ko link + chaabi
+//  (ntU / ntK, `nt_notes` — wahi jo 🎙 Meri baatein bhejti hai) yeh screen bhi din mein ek dafa bhejti hai. AI nahi (tick sirf ginti).
 // =========================================================
+import { firebaseConfig as F } from './config.js?v=2.390.0';
 const K = {
   paani: { i: '💧', t: 'Paani ka glass', d: 'a glass, cup or bottle with drinking water in it' },
   coffee: { i: '☕', t: 'Coffee ka cup', d: 'a cup or mug of coffee (hot or cold, coffee liquid visible)' },
@@ -56,6 +61,31 @@ async function mig() {   // purani ginti (localStorage 'sam-sehat-YYYY-MM-DD' {k
 let CNT = {};   // aaj ki ginti {kind: n} — chips ke liye
 async function loadCnt() { try { await mig(); const c = {}; for (const r of await logDay(ymd())) c[r.k] = (c[r.k] || 0) + 1; CNT = c; } catch {} const tl = $('shTl'); if (tl && S) tl.innerHTML = tallyHTML(); }
 const withT = (p, ms, why) => Promise.race([p, new Promise((_, no) => setTimeout(() => no(Error(why)), ms))]);
+// ---------- v1.5: ☑ phone popup ki ginti (sehatTick) ----------
+async function cl() {   // khamosh login ka intezar (camera screen ki status line nahi chhoti)
+  if (A?.cloud) return A.cloud;
+  if (!A?.ready) return null;
+  try { Object.assign(A, await withT(A.ready(), 60000, 'login')); } catch { return null; }
+  return A.cloud || null;
+}
+async function phoneLink(c) {   // phone ke ntU / ntK (awazNotes ka link + chaabi) — din mein ek dafa; phone ka macro sehatTick ka link isi se banata hai
+  try {
+    const k = String((await c?.getAwazKey?.()) || ''); if (k.length < 16) return;
+    const C = (await c.getFxCfg?.()) || {}, m = String(C.wh || '').trim().match(/^(https:\/\/trigger\.macrodroid\.com\/[A-Za-z0-9_-]{6,})\//); if (!m) return;
+    const sig = ymd() + '|' + k.slice(0, 5) + '|' + m[1].slice(-5);
+    try { if (localStorage.getItem('sam-sh-ntk') === sig) return; } catch {}
+    const u = `https://firestore.googleapis.com/v1/projects/${F.projectId}/databases/(default)/documents/businesses/noor-traders/awazNotes?key=${F.apiKey}`;
+    await withT(fetch(m[1] + '/nt_notes?ntU=' + encodeURIComponent(u) + '&ntK=' + encodeURIComponent(k) + '&t=' + Date.now(), { method: 'GET', mode: 'no-cors', cache: 'no-store' }), 12000, 'net');
+    try { localStorage.setItem('sam-sh-ntk', sig); } catch {}
+  } catch {}
+}
+const TK = {};   // din -> { t, v } · v: {p,c,f,n,at} | null (kuch nahi aaya) — 30 s yaad
+async function tickOf(day) {   // undefined = khul nahi saka
+  const h = TK[day]; if (h && Date.now() - h.t < 30000) return h.v;
+  const c = await cl(); if (!c?.getSehatTick) return undefined;
+  let v; try { v = await withT(c.getSehatTick(day), 8000, 'net'); } catch { return undefined; }
+  TK[day] = { t: Date.now(), v }; return v;
+}
 
 function css() {
   if ($('shCss')) return;
@@ -147,6 +177,7 @@ export async function open(deps) {
   try { d.showModal(); } catch { d.setAttribute('open', ''); }
   window.ntShClose = () => { if ($('shHis')) hisClose(); else close(); return true; };   // v1.4: pehle 📊 hisaab band, phir camera
   listen(); loadCnt();
+  cl().then(c => c && phoneLink(c));   // v1.5: peeche — camera ka intezar nahi
   await cam();
 }
 
@@ -295,17 +326,26 @@ async function hisPaint() {
   let rows = []; try { await mig(); rows = await logDay(key); } catch (e) { const bd = $('hsBody'); if (bd) bd.innerHTML = `<div class="hs-s">✕ Hisaab nahi khula — ${esc(e?.message || e)}</div>`; return; }
   if (!$('shHis') || ymd(dayOf(HD)) !== key) return;
   rows.sort((a, b) => (a.t || 0) - (b.t || 0));
+  const h0 = TK[key], tk = h0 ? h0.v : undefined;   // v1.5: ☑ phone popup — pehle IndexedDB foran, ginti peeche se (neeche)
   const of = k => rows.filter(r => r.k === k);
   const times = L => L.filter(r => r.t).map(r => hm(r.t)).join(' · ');
   const line = (k, label) => {
     const L = of(k), v = K[k], n = L.length, tt = times(L);
-    const main = k === 'paani' ? (n ? `${n} glass` : 'Koi glass nahi') : n ? '✓ ho gaya' + (n > 1 ? ` (${n} dafa)` : '') : '— nahi';
-    return `<div class="hs-r${n ? ' ok' : ''}"><div class="hs-i">${v.i}</div><div class="hs-m"><div class="hs-n">${esc(label)} · ${esc(main)}</div>${tt ? `<div class="hs-s">🕒 ${esc(tt)}</div>` : ''}</div></div>`;
+    const tn = !tk ? 0 : k === 'paani' ? (Number(tk.p) || 0) : (Number(tk[k[0]]) ? 1 : 0);   // coffee c · fruit f · nuts n
+    const main = k === 'paani' ? ([tn ? `${tn} bottle ☑` : '', n ? `${n} glass 📸` : ''].filter(Boolean).join(' + ') || 'Koi nahi') + ' · hadaf 6'
+      : (tn || n) ? '✓ ho gaya' + (tn ? ' ☑' : '') + (n ? ' 📸' + (n > 1 ? ` (${n} dafa)` : '') : '') : '— nahi';
+    return `<div class="hs-r${(n || tn) ? ' ok' : ''}"><div class="hs-i">${v.i}</div><div class="hs-m"><div class="hs-n">${esc(label)} · ${esc(main)}</div>${tt ? `<div class="hs-s">🕒 ${esc(tt)}</div>` : ''}</div></div>`;
   };
+  const tkLine = tk === undefined ? (h0 ? ' · ☑ popup ki ginti nahi khuli (internet?)' : ' · ☑ ⏳') : tk === null ? ' · ☑ popup se kuch nahi aaya' : tk.at ? ' · ☑ aakhri tick ' + hm(tk.at) : '';
   const G = rows.filter(r => K[r.k]?.g);
   const sab = `<div class="hs-r${G.length ? ' ok' : ''}"><div class="hs-i">🌱</div><div class="hs-m"><div class="hs-n">Sabzi · ${G.length ? of('sabzi').length + ' beej / paudha · ' + of('kaam').length + ' kaam' : '— nahi'}</div>
     ${G.length ? `<div class="hs-ph">${G.map(r => `<figure data-hs="ph">${r.th ? `<img src="${esc(r.th)}" alt="">` : ''}<figcaption>${K[r.k].i} ${r.k === 'sabzi' ? 'Beej' : 'Kaam'} ${esc(hm(r.t))}</figcaption></figure>`).join('')}</div>` : ''}</div></div>`;
   const bd = $('hsBody'); if (!bd) return;
-  bd.innerHTML = `<div class="hs-s">📅 ${esc(day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))} · sirf sahi (AI) photo ginti mein</div>`
+  bd.innerHTML = `<div class="hs-s">📅 ${esc(day.toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short' }))} · ☑ = phone popup ka tick · 📸 = AI photo${esc(tkLine)}</div>`
     + line('paani', 'Paani') + line('coffee', 'Coffee') + line('fruit', 'Fruit') + line('nuts', 'Nuts') + sab;
+  if (!h0 || Date.now() - h0.t >= 30000) {   // v1.5: ginti peeche se — aaye to sirf isi din ka dobara paint
+    const v = await tickOf(key);
+    if (v === undefined) TK[key] = { t: Date.now() - 25000, v: TK[key]?.v };   // na khuli = purani (ho to) dikhao, agla paint 5 s baad hi dobara koshish — chakkar nahi
+    if ($('shHis') && ymd(dayOf(HD)) === key) hisPaint();
+  }
 }

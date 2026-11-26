@@ -61,9 +61,93 @@ GATE += [
 #   15 s = Nahi (defaultKey w). HIFAZAT: dialog 14+ s khula raha = timeout samjho, KUCH na karo (default ghalat button chune tab bhi reminder na mite).
 #   Reminder na hon = purana safed popup (GATE) waise hi. 📝 Reminder macro ka apna unlock trigger HATA (warna do popup).
 import remind as RM
-from cb import gt as cgt, expr as cexpr, pause as cpause, NOW, strne as cstrne
+from cb import gt as cgt, lt as clt, expr as cexpr, pause as cpause, NOW, strne as cstrne
 from wasite import streq
 def BR(k, v): return [iff([streq(k, v, True)]), RM.BREAK, END]
+
+# v84 (26 Nov, malik: 'lock screen par jo notification aa raha hai us mein Paani pee lo — neeli line · check box lage to counting Blue Khata app mein ·
+#   har dafa wo majood ho · nuts / fruit / coffee time par aaye, dabane par ghayab' + OK): ISI popup mein upar NEELI likhai (message, htmlFormat)
+#   + ☐ button (SelectionDialog ke sab button ek rang ke hote hain — is liye 🔵). Sirf SK_FROM–SK_TO (subah 9 – raat 9). Koi app band NAHI.
+#   💧 Paani (s1) = har popup mein · tap = +1 bottle (skP), popup band. ☕ s2 / 🍎 s3 / 🥜 s4 = apne waqt ke baad · tap = us din ghayab (skX 'c' / 'f' / 'n'),
+#   popup dobara (baqi ke saath, reminder jaisa). Din badla = khud 0 (skD). Har tick = din ka POORA haal (skB) -> Blue Khata sehatTick/<din> (PATCH,
+#   wahi chaabi + link jo 🌙 Raat ke sawal ka ✍️ Likho istemal karta hai: ntU / ntK — md/ mein KABHI nahi). Net na ho = skQ 1, har unlock ke aakhir mein dobara.
+#   Purane 💧 Paani / ☕ Coffee macro + 📸 Sehat lock band hi hain (malik). AI nahi. Phone par azmaya nahi.
+SK_FROM, SK_TO = 9 * 60, 21 * 60      # 9:00 – 20:59 (malik 20 Nov: 'raat 9 ke baad paani ki zaroorat nahi')
+SK_GOAL = 6                           # bottle / din (malik ka hadaf, sehat.py GOAL)
+SK_ITEMS = (("s2", "c", 14 * 60, "☕ Coffee pee lo", "🔵 ☐ Coffee pee li"),
+            ("s3", "f", 14 * 60 + 30, "🍎 Fruit kha lo", "🔵 ☐ Fruit kha liya"),
+            ("s4", "n", 16 * 60, "🥜 Nuts kha lo", "🔵 ☐ Nuts kha liye"))   # waqt sehat.py ITEMS jaisa
+BLUE = "#1565C0"
+_SKH = ['  java.util.Calendar c = java.util.Calendar.getInstance();',
+        '  String dy = new java.text.SimpleDateFormat("yyyy-MM-dd").format(c.getTime());',
+        '  int mi = c.get(java.util.Calendar.HOUR_OF_DAY) * 60 + c.get(java.util.Calendar.MINUTE);',
+        '  String od = magicText.evaluateString("{" + "v=skD}"); if (od == null) od = "";',
+        '  String x = magicText.evaluateString("{" + "v=skX}"); if (x == null) x = "";',
+        '  int p = 0; try { p = Integer.parseInt(magicText.evaluateString("{" + "v=skP}").trim()); } catch (Throwable e1) { p = 0; }',
+        '  if (!od.trim().equals(dy)) { p = 0; x = ""; }',
+        '  String Q = String.valueOf((char) 34);']
+# SKL: aaj ke sehat button (JSON ka tukda, har ek ke baad ',') -> lv sj · popup ka message -> global skM
+SKL = '\n'.join(['try {'] + _SKH + [
+    '  String t = magicText.evaluateString("{" + "v=rmT}"); if (t == null) t = "";',
+    '  String[] a = t.split("\\n"); int n = 0;',
+    '  for (int i = 0; i < a.length; i++) if (a[i].trim().length() > 0) n++;',
+    '  StringBuilder sj = new StringBuilder(), msg = new StringBuilder();',
+    '  if (mi >= %d && mi < %d) {' % (SK_FROM, SK_TO),
+    '    msg.append("<font color=\'%s\'><b>💧 Paani pee lo — aaj " + p + "/%d" + (p >= %d ? " ✅" : "") + "</b></font><br>");' % (BLUE, SK_GOAL, SK_GOAL),
+    '    sj.append(Q + "s1" + Q + ":" + Q + "🔵 ☐ Paani pee li  (+1 bottle)" + Q + ",");'] +
+    sum([['    if (mi >= %d && x.indexOf("%s") < 0) {' % (at, ch),
+          '      msg.append("<font color=\'%s\'><b>%s</b></font><br>");' % (BLUE, ln),
+          '      sj.append(Q + "%s" + Q + ":" + Q + "%s" + Q + ",");' % (k, bt),
+          '    }'] for k, ch, at, ln, bt in SK_ITEMS], []) + [
+    '  }',
+    '  if (n > 0) msg.append("<b>📝 Aap ke reminder</b> <small><font color=\'#555555\'>· jo ho gaya us par tap ✓</font></small>");',
+    '  else if (sj.length() > 0) msg.append("<small><font color=\'#555555\'>☐ par tap = gin liya (Blue Khata mein)</font></small>");',
+    '  variableSetter.setString("skM", msg.toString());',
+    '  return sj.toString();',
+    '} catch (Throwable e) { return ""; }'])
+# NEEDJ: mila hua popup chahiye? (reminder ya sehat line) — "1" / ""
+NEEDJ = '\n'.join(['try {',
+    '  String t = magicText.evaluateString("{" + "v=rmT}"); if (t == null) t = "";',
+    '  String sj = magicText.evaluateString("{" + "lv=sj}"); if (sj == null) sj = "";',
+    '  return (t.trim().length() > 0 || sj.trim().length() > 0) ? "1" : "";',
+    '} catch (Throwable e) { return ""; }'])
+# SKT: chuna button s1…s4 = gin lo + Blue Khata ka body. Jawab: "p" paani (popup band) · "x" coffee / fruit / nuts (popup dobara) · "" = sehat ka button nahi
+SKT = '\n'.join(['try {',
+    '  String k = magicText.evaluateString("{" + "lv=rk}"); if (k == null) k = "";',
+    '  if (!k.matches("s[1-4]")) return "";'] + _SKH + [
+    '  if (k.equals("s1")) p = p + 1;'] +
+    ['  else if (k.equals("%s") && x.indexOf("%s") < 0) x = x + "%s";' % (k, ch, ch) for k, ch, _a, _l, _b in SK_ITEMS] + [
+    '  variableSetter.setString("skD", dy); variableSetter.setInt("skP", p); variableSetter.setString("skX", x);',
+    '  String u = magicText.evaluateString("{" + "v=ntU}"); if (u == null) u = "";',
+    '  String kk = magicText.evaluateString("{" + "v=ntK}"); if (kk == null) kk = "";',
+    '  kk = kk.trim();',
+    '  if (u.indexOf("/awazNotes?") > 0 && kk.length() > 0 && kk.indexOf(Q) < 0) {',
+    '    String LB = String.valueOf((char) 123), RB = String.valueOf((char) 125);',
+    '    String b = LB + Q + "fields" + Q + ":" + LB'
+    ' + Q + "k" + Q + ":" + LB + Q + "stringValue" + Q + ":" + Q + kk + Q + RB + ","'
+    ' + Q + "d" + Q + ":" + LB + Q + "stringValue" + Q + ":" + Q + dy + Q + RB + ","'
+    ' + Q + "p" + Q + ":" + LB + Q + "integerValue" + Q + ":" + Q + p + Q + RB + ","'
+    ' + Q + "c" + Q + ":" + LB + Q + "integerValue" + Q + ":" + Q + (x.indexOf("c") >= 0 ? 1 : 0) + Q + RB + ","'
+    ' + Q + "f" + Q + ":" + LB + Q + "integerValue" + Q + ":" + Q + (x.indexOf("f") >= 0 ? 1 : 0) + Q + RB + ","'
+    ' + Q + "n" + Q + ":" + LB + Q + "integerValue" + Q + ":" + Q + (x.indexOf("n") >= 0 ? 1 : 0) + Q + RB + ","'
+    ' + Q + "at" + Q + ":" + LB + Q + "integerValue" + Q + ":" + Q + System.currentTimeMillis() + Q + RB'
+    ' + RB + RB;',
+    '    variableSetter.setString("skU", u.replace("/awazNotes?", "/sehatTick/" + dy + "?"));',
+    '    variableSetter.setString("skB", b); variableSetter.setInt("skQ", 1);',
+    '  }',
+    '  return k.equals("s1") ? "p" : "x";',
+    '} catch (Throwable e) { return ""; }'])
+import re as _re
+for _j in (SKL, NEEDJ, SKT):
+    assert not _re.search(r'\{(?![\s"])', _j), ('magic text jaisa {', _j)
+def gieq(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 1), "m_intValue": v}
+SEND = [iff([gieq("skQ", 1), cstrne("skU", ""), cstrne("skB", "")]),
+    {"m_classType": "SetVariableAction", "m_SIGUID": 0, "m_variable": {"m_name": "hc", "m_type": 1, "isLocalVar": True}, "m_newIntValue": 0},
+    {"m_classType": "HttpRequestAction", "m_SIGUID": 0, "requestConfig": {"requestType": 4, "urlToOpen": "{v=skU}", "requestTimeOutSeconds": 8, "contentType": "application/json",
+     "contentBodySource": 0, "contentBodyText": "{v=skB}", "blockNextAction": True, "followRedirects": True, "headerParams": [], "queryParams": [],
+     "saveResponseType": 0, "saveReturnCodeToVariable": True, "returnCodeVariableName": "hc", "useStaticContentBodyFile": True}},
+    iff([cgt("hc", 199, True), clt("hc", 300, True)]), sint("skQ", 0), END,
+    END]
 COMBO = [
     JAVA,
     cexpr("ag", NOW + "-{v=rmAt}", True),
@@ -74,6 +158,7 @@ COMBO = [
       RM.LOOP,
         *RM.OPEN,
         RM.sstr("rk", ""),
+        RM.java(SKL, "sj"),                            # v84: aaj ke sehat button + neela message (har chakkar taza — tick ke baad ginti badli)
         RM.java(RM.BUILD, "rj"),
         *BR("rj", ""),
         {"m_classType": "JsonParseAction", "m_SIGUID": 0, "stringVarName": "rj", "dictionaryVarName": "ra", "parseColors": False},
@@ -90,25 +175,34 @@ COMBO = [
           END,
           RM.BREAK,
         END,
-        RM.java(RM.DEL, "rc"),
-        *BR("rc", "0"), *BR("rc", "x"),
+        RM.java(SKT, "sk"),                            # v84: s1…s4 = gin lo (sk p / x), baqi = ""
+        *BR("sk", "p"),                                # 💧 paani = +1 aur popup band (agle unlock par phir)
+        iff([cstrne("sk", "x", True)]),                # ☕ / 🍎 / 🥜 = popup dobara (baqi ke saath) — reminder ka DEL nahi
+          RM.java(RM.DEL, "rc"),
+          *BR("rc", "0"), *BR("rc", "x"),
+        END,
       RM.ENDLOOP,
       *RM.RESTORE,
     END,
 ]
-acts = HEAD + [iff([cstrne("rmT", "")]), *COMBO, ELSE, *GATE, END]
+# v84: mila hua popup jab reminder YA sehat line ho (pehle sirf reminder) · aakhir mein Blue Khata ko baqi tick (skQ) — popup ke baad, intezar nahi
+acts = HEAD + [RM.sstr("sj", ""), RM.java(SKL, "sj"), RM.java(NEEDJ, "nd"),
+               iff([streq("nd", "1", True)]), *COMBO, ELSE, *GATE, END] + SEND
 out = {"macroExportVersion": 1, "macro": {
     "m_name": "🧠 Falsafa",
-    "m_description": "Unlock par falasifa ka ek qoul (random, 15 s baad khud band) + 😴 Sona hai. 📝 Reminder baqi hon to EK popup: upar peeli likhai mein reminder (tap = ✓), neeche qoul, Sona hai / Nahi.",
+    "m_description": "Unlock par falasifa ka ek qoul (random, 15 s baad khud band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), qoul, Sona hai / Nahi. Koi app band nahi. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lint("pLeft"), lint("pShow"), lint("kShow"), lint("qi"), {"m_name": "qs", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        lint("ag"), lint("oA"), lint("oS"), lint("dt"), lint("dd"), {"m_name": "rj", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "rk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, {"m_name": "rc", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
-                       {"m_name": "ra", "m_type": 4, "isLocalVar": True, "m_stringValue": ""}],
+                       {"m_name": "ra", "m_type": 4, "isLocalVar": True, "m_stringValue": ""},
+                       {"m_name": "sj", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, {"m_name": "nd", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
+                       {"m_name": "sk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, lint("hc")],
     "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}],
     "m_actionList": acts, "m_constraintList": []},
-    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1), var("rmT", 2), var("rmAt", 1), var("sbAsk", 1), var("shAsk", 1)] + REC.GV,
+    "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1), var("rmT", 2), var("rmAt", 1), var("sbAsk", 1), var("shAsk", 1),
+                        var("skP", 1), var("skD", 2), var("skX", 2), var("skQ", 1), var("skB", 2), var("skU", 2), var("skM", 2), var("ntU", 2), var("ntK", 2)] + REC.GV,
     "userIcons": None, "aiFeedback": "Display over other apps ijazat."}
 json.dump(out, open(os.path.join(D, "qaide.json"), "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(acts))

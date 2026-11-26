@@ -10,6 +10,7 @@
 #   v81 (26 Nov, malik: 'do click karni parti hain · Baad mein wali click khatam · Nahi dabaya to ye bhi hat jaye · alehda nahi, ikattha —
 #     falsafa neeche, ye upar' + 'us ki peeli likhai ho' + OK): unlock ka popup ab 🧠 Falsafa (qaide.py) dikhata hai — EK SelectionDialog: upar
 #     reminder, neeche falsafa, 😴 Sona hai / ✕ Nahi; "Baad mein" HATA; 15 s = Nahi. Yahan sirf likhna (tile / shortcut) + BUILD / DIALOG / DEL ka maal.
+#   v84 (26 Nov): BUILD mein qaide.py ke 💧 sehat button (lv sj: s1…s4) bhi; DIALOG ka message = global skM (neeli sehat lines + reminder ki sar-khi).
 #   Reminder ki likhai SIRF phone mein (md/ PUBLIC). Blue Khata ki Reminder screen / WhatsApp reminder se alag. AI nahi. Phone par azmaya nahi.
 import json, os, re
 from cb import iff, END, ELSE, expr, lvar, var, NOW, strne, trig, gt, pause
@@ -55,7 +56,9 @@ BUILD = '\n'.join([
  '    String k = "r" + (n < 10 ? "0" : "") + n;',
  '    sb.append(Q).append(k).append(Q).append(":").append(Q).append("☐ ").append(s).append(Q).append(",");',
  '  }',
- '  if (n == 0) return "";',
+ '  String sj = magicText.evaluateString("{" + "lv=sj}"); if (sj == null) sj = "";',   # v84: 💧 sehat ke button (qaide.py SKL — keys s1…s4, r… ke baad, t se pehle)
+ '  sb.append(sj);',
+ '  if (n == 0 && sj.length() == 0) return "";',
  '  qs = qs.replace("<br><br>", NL).replaceAll("<[^>]+>", "").trim();',
  '  if (qs.length() > 0) {',
  '    qs = qs.replace(BS, BS + BS).replace(Q, BS + Q).replace(NL, BS + "n");',
@@ -102,7 +105,7 @@ SAVE = [expr("oA", "{v=sbAsk}", True), expr("oS", "{v=shAsk}", True)]           
 OPEN = [expr("sbAsk", NOW + "+100"), expr("shAsk", NOW + "+100")]                 # popup ke dauran raat-band / sehat lock Home na karein
 RESTORE = [expr("sbAsk", "{lv=oA}"), expr("shAsk", "{lv=oS}")]                    # chhoot khatam
 DIALOG = {"m_classType": "SelectionDialogAction", "m_SIGUID": 0, "option": 1, "dictionaryVarName": "ra",
-          "message": "<b>📝 Aap ke reminder</b><br><small><font color='#555555'>Jo ho gaya us par tap karein ✓</font></small>",
+          "message": "{v=skM}",   # v84: qaide.py SKL banata hai — upar NEELI sehat lines (💧 paani aaj N/6 · ☕ · 🍎 · 🥜), phir '📝 Aap ke reminder' (sirf jab hon)
           "htmlFormat": True, "textColor": INK, "bgColor": WHITE,   # v82 (malik: 'background white aur fonts colour black' — falsafa popup jaisa) "buttonStyle": 3, "titleAlignment": 0,
           "saveKeyVariable": {"variableName": "rk"}, "preventBackButtonClose": False, "continueMacroOnBackPress": True,
           "showDictionaryKeys": False, "hasDefault": True, "defaultKey": "w", "defaultTimeOutSecs": 15}   # 15 s = Nahi (falsafa jaisa); timeout ka jawab kabhi kaam nahi karta (dd guard, qaide.py)

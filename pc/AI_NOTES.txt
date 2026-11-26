@@ -6045,3 +6045,28 @@ Test: node — asal bank-inbox nakli DOM / data (teeno chip · list + mashwara �
   phir bhi kuch aur hai (malik se us notification ki screenshot maango).
 - Sabaq: phone par Java se notification banao to channel importance 4 (popup) — 3 par sirf chhota icon aata hai; aur WhatsApp ke
   title / naam / number mein chhupe harf (U+202A / U+202C / U+200E / NBSP) hamesha saaf karo, phir milao.
+
+=== app v2.390.0 + md pkg v84 + rules 2.112 (27 Nov 2026) — 💧 Phone ke 🧠 Falsafa popup mein NEELI sehat lines + ☐ ginti Blue Khata mein ===
+Malik (26 Nov): "lock screen par jo notification aa raha hai us mein Pani pee lo — blue fonts se line · check box lag jaye to counting Blue Khata
+apps mein · har dafa wo majood ho · nuts kha lo, fruit, coffee bhi time par aaye, dabane par ghayab" + plan par "Ok".
+- md/tools/qaide.py (🧠 Falsafa, unlock popup): subah 9:00 – raat 8:59 (SK_FROM / SK_TO) har unlock par MILA HUA SelectionDialog (pehle sirf jab
+  📝 reminder hon). Message (htmlFormat, global skM) mein NEELI likhai (#1565C0): '💧 Paani pee lo — aaj N/6' (hamesha) + '☕ Coffee pee lo' (2:00 ke
+  baad) · '🍎 Fruit kha lo' (2:30) · '🥜 Nuts kha lo' (4:00) — waqt sehat.py ITEMS jaisa. Button keys s1…s4 (r01… reminder ke baad, t qoul se pehle;
+  SelectionDialog ke sab button EK rang ke hote hain — is liye '🔵 ☐ …').
+  · 💧 s1 tap = skP +1 aur popup band (agle unlock par phir, ginti nayi). ☕ s2 / 🍎 s3 / 🥜 s4 tap = skX mein c / f / n (us din ghayab), popup dobara
+    baqi ke saath (reminder jaisa). Din badla (skD 'yyyy-MM-dd') = khud 0. Timeout (15 s, dd guard) = kuch nahi ginta.
+  · Har tick = din ka POORA haal JSON (skB) + link (skU = ntU mein '/awazNotes?' -> '/sehatTick/<din>?') -> skQ 1 -> macro ke AAKHIR mein (popup ke
+    baad, intezar nahi) HttpRequest PATCH; 2xx = skQ 0, warna agle unlock par dobara. Chaabi + link = wahi ntU / ntK jo 🌙 Raat ke sawal ka
+    ✍️ Likho istemal karta hai (md/ mein KABHI nahi).
+  · Raat 9 ke baad / subah 9 se pehle aur reminder na hon = purana safed falsafa popup (GATE) waise hi.
+  · Java: SKL (button + message), NEEDJ (mila popup chahiye?), SKT (gin lo + body). remind.py BUILD ab lv sj (sehat button) jorta hai; DIALOG
+    message = {v=skM}. javac harness (/tmp, stubs) se poora chakkar chala ke dekha: 8:30 = purana popup, 10:00 = paani, 16:10 = sab 4 + 2 reminder,
+    tick ke baad ginti / ghayab, agla din 0, 21:30 = purana, body JSON sahi. If / Loop balance + har variable declared (local jaanch).
+  · Purane 💧 Paani / ☕ Coffee macro aur 📸 Sehat lock BAND hi hain (off list wahi). Koi app band NAHI. AI nahi. Phone par azmaya nahi.
+- firestore.rules 2.112: sehatTick/{day} — create / update sirf: day 'YYYY-MM-DD', keys {k,d,p,c,f,n,at}, d == day, p 0–60, c/f/n 0|1, at int,
+  k == blueAccess/awazKey.k. Parhna / mitana sirf malik. (PC rules-publish khud lagata hai.)
+- cloud.js getSehatTick(day). sehat.js v1.5: 📊 Sehat hisaab ki har line par ☑ (popup) + 📸 (AI photo) alag (Paani: 'N bottle ☑ + M glass 📸 · hadaf 6');
+  upar 'aakhri tick' waqt; IndexedDB pehle foran, ginti peeche (8 s, 30 s yaad, na khule = 'nahi khuli' — chakkar nahi). Camera / ☰ 📸 Sehat photo
+  khulte hi phone ko ntU / ntK din mein ek dafa (`nt_notes`, sam-sh-ntk) — taake phone ke macro ke paas link ho (pehle sirf 🎙 Meri baatein bhejti thi).
+- Sabaq: SelectionDialog mein rang sirf MESSAGE (htmlFormat) mein lag sakta hai — button ka rang alag alag nahi. Phone ka 'har tick ka paigham'
+  bhejna ho to din ka poora haal (snapshot) bhejo, ek ek tick nahi — net na ho to agla tick / unlock sab khud theek kar deta hai.
