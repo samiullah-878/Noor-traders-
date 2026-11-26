@@ -10079,3 +10079,20 @@ Malik (22:56, Bank screen ki photo): "yahan payment par chip — wasooli · us p
    card / kharcha khata nahi. CSS top level (pcm.py ki zaroorat nahi). CAP 'hbl.wsl' Mulazim list mein.
 Test: node — asal bank-inbox nakli DOM / data (teeno chip · list + mashwara · wasooli entry · yaad · doosri dafa ek OK · dohra nahi · mulazim kal nahi ·
   ↩ dono · delete = chip wapas) 18/18 PASS; dyBkCls snippet. Asal phone par azmaya nahi. AI NAHI.
+
+=== md pkg v83 (26 Nov 2026 raat) — 📇 Naya number save theek (malik: "MacroDroid nahi chal raha — save karne wala number") ===
+- Phone report v82 (26 Nov 13:48): macro ON, cnSeen = 40 harf = 3 number = Java 3 dafa poora chala (notification bani) — andaza: teeno CALL wale;
+  WhatsApp wala kabhi nahi. (Malik ne baad mein "4 already ho raha hai" bhi kaha — payment screenshot se wasooli wala mashwara, us ko chhor diya.)
+- Wajah (andaza, pakka nahi): WhatsApp unsaved number ke gird chhupe harf lagata hai (U+202A ... U+202C, kabhi NBSP) — purana check
+  "[+][0-9 ()-]+" fail = "naam" = kuch nahi. Ab saaf(): Character.FORMAT wala har harf hatao + NBSP / figure / narrow space = space
+  (javac test 20/20: purana logic in titles par "naam", naya 0319 8682104). Regex mein { } nahi (scriptText magic text).
+- Notification channel nt_cnsave (importance 3 = sirf status bar ka chhota icon, popup NAHI — malik ko nazar hi nahi aata) -> nt_cnsave2
+  importance 4 = UPAR popup (malik ne shuru mein "upar notification aa jaye" maanga tha); purana channel deleteNotificationChannel.
+- WhatsApp Business (com.whatsapp.w4b) bhi trigger mein.
+- cnSeen EK dafa khali (global int cnV 2) — pehle ke 3 chupke number (agar ab bhi save nahi) dobara aa sakein.
+- Phone report ke liye ginti (int — export mein hindse dikhte hain, number / naam kabhi nahi): cnW WhatsApp · cnC call · cnOk notification bani ·
+  cnR aakhri nateeja (1 bani · 2 naam / number nahi · 3 pehle dikha · 4 saved · 5 khali · 6 chhota · 9 ghalti) · cnV 2 = naya code chala.
+- MacroDroid validator VALID. Phone par azmaya nahi — agli email (NT phone macros v83+): cnW > 0 aur cnOk 0 + cnR 2 = WhatsApp title
+  phir bhi kuch aur hai (malik se us notification ki screenshot maango).
+- Sabaq: phone par Java se notification banao to channel importance 4 (popup) — 3 par sirf chhota icon aata hai; aur WhatsApp ke
+  title / naam / number mein chhupe harf (U+202A / U+202C / U+200E / NBSP) hamesha saaf karo, phir milao.

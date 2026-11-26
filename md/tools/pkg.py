@@ -99,7 +99,7 @@ import wasite as WSM
 mwa, vwa = fix(json.loads(json.dumps(WSM.WA)), h64('claude|wa'), '💬 WhatsApp bina save')   # v76 (25 Nov, malik ka OK): tile 1 -> number likho / paste -> WhatsApp chat (bina save)
 mws, vws = fix(json.loads(json.dumps(WSM.SITE)), h64('claude|site'), '🌐 Koi bhi site')   # v76: tile 2 -> Firefox Focus (na ho to google.com)
 import cnsave as CNM
-mcn, vcn = fix(json.loads(json.dumps(CNM.CN)), h64('claude|cnsave'), '📇 Naya number save')   # v77 (25 Nov, malik ka OK): WhatsApp / call par unsaved number -> notification -> 'Naya contact' screen
+mcn, vcn = fix(json.loads(json.dumps(CNM.CN)), h64('claude|cnsave'), '📇 Naya number save')   # v77 (25 Nov, malik ka OK): WhatsApp / call par unsaved number -> notification -> 'Naya contact' screen   # v83 (26 Nov raat, malik: 'nahi chal raha'): WhatsApp ke chhupe harf saaf, channel HIGH (upar popup), w4b, ginti cnW / cnC / cnOk / cnR
 import aankh as AKM
 mak, vak = fix(json.loads(json.dumps(AKM.AK)), h64('claude|aankh'), '👁 Aankh ka aram')   # v78 (25 Nov, malik: 'only 1'): shaam 7 - subah 7 peeli roshni + dark + auto brightness, subah wapas pehle jaisa
 import calls as CLM
@@ -117,7 +117,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📝 Reminder ka popup ab safed dabba + kaali likhai (falsafa jaisa). Baqi sab wahi.",
+       "note": "📇 Naya number save theek: WhatsApp number ke chhupe harf saaf + notification ab UPAR popup + WhatsApp Business bhi + report ke liye ginti. Baqi sab wahi.",
        "macros": [ma, mr, mt, mq, mf, ms, mb, mh, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, mal, mwa, mws, mcn, mak, mcl, mrm] + ONCE.get(ver, []),   # v80: mrm 📝 Reminder   # v79: mcl 📞 Call diary   # v77: mcn 📇 Naya number save   # v76 (25 Nov): mwa 💬 WhatsApp bina save + mws 🌐 Koi bhi site (naye)   # v75 (25 Nov): mst (📱 Screen time) RUKA — malik ka OK (Paani band, har 1 min faltu)   # v71 (23 Nov raat): msl RUKA — malik: 'wo paani wala droid band kar do abhi'   # v69 (22 Nov raat): msl wapas CHALU (8 baje hisaab) — malik: 'us ko on kar do'   # v68 (22 Nov): msl RUKA — malik: 'wo off kar do paani coffee wala'   # v63 (21 Nov raat): msl wapas CHALU — malik: 'paani wala on kar do'   # v62 (21 Nov): msl (📸 Sehat lock) RUKA — malik: 'abhi pause kar do, shop par nahi hoon' (dobara chalu = msl wapas yahan + off se hatao)   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  # v65 (21 Nov): Remote 5 ka patch HATA — patch phone ki PURANI copy ko dobara package mein daal deta tha (wahi ID) = Remote ka naya code kabhi na lagta; 60 s ab remote.py mein
