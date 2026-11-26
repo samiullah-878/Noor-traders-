@@ -1,6 +1,6 @@
 {
- "version": "2026-11-25.1",
- "note": "live-cam v2.9 (🔁 relay: malik ki Cloudflare chaabi se 24 ghante ka pass liveIce/cur — 4G par live; werift khud TURN nahi leta)",
+ "version": "2026-11-26.1",
+ "note": "nt-print v1.39 + nt-posui v1.16 (🔤 Live: POS screen ki tasveer par Windows ka apna OCR — bante bill ki items ke naam + tadad posLive/<naam>__ocr, sirf jab Live dekha ja raha ho; internet / AI nahi)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -40,7 +40,7 @@
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
   "pos-sales-dekho.js": "86e7bded2848ac450ec90179b8afeb924ddb91e49928a20a089946de25c04844",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
-  "nt-print.js": "7da7ff2294a3a686b7819eab33329c53cfd1c38d13dc71d176dae61f36f86ba1",
+  "nt-print.js": "b8dd57f6974f9f2859c1fb7f30bc657317c7785477c22c9f5270c2114236c6cb",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",
   "nt-parchi.js": "732ac2752f0aa819ebc3cf6c43d58159858042ba74342037b5b8b1fb7c56bed8",
   "auto-backup.js": "9ceb8697422b590c1ba0594c2ef6925bc62af6b1addac2d6ab6ad6d73859e3c8",
@@ -48,7 +48,7 @@
   "nt-scan.js": "068a8aa131976aabbb52ef3adfea13628d8c59a65dff92f0726b92236cdab5c3",
   "urdu-names.js": "a53269517b1409ab45ffd4377473a8104e4d4acc8b9b6422adf6fd8f386e1739",
   "urdu-shape.js": "ebe13a89fa07b6cc827dcc8b30d527ffb4db214e8fd06bc7934e8535deaa7441",
-  "nt-posui.js": "3af4ad8c93c2632360285b10ef64d5b3cf39f40854b75f2d591a1ec697584e2c",
+  "nt-posui.js": "6d126afc42dfd16cc5ab25ce238d3621404caaaa028ee7d9ef5cd5f0374db09e",
   "purchase-parchi.js": "2d4027987c2e96ce6cbbdec5afc8dd14dfd9afbb5d0f49727c713b41447270aa",
   "raat-report.js": "eea9d98592b5d31e8c45679c0f19bfadd307b73acef23d3ad59cb5b09f7cc2d4",
   "report-auto.bat": "867f58bc2fee20409d1682975ebaa305d5cf287a3dad6e1cd3e4f08708130af8",

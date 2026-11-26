@@ -178,10 +178,10 @@ function tlMove(b, dir) {
 }
 
 // ---------- 🎛 v2.360.0: har khane ka apna data — counter = bill + POS screen · godam = gate pass ----------
-let TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), gp: null, mo: null, cv: null };
+let TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), ocr: new Map(), gp: null, mo: null, cv: null };
 const tbMs = v => typeof v === 'number' ? v : v?.toMillis ? v.toMillis() : v?.seconds ? v.seconds * 1000 : 0;
 const tbDay = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-function tbStop() { for (const f of TB.un) { try { f && f(); } catch {} } for (const o of TB.shot.values()) { try { o.url && URL.revokeObjectURL(o.url); } catch {} } clearInterval(TB.t); TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), gp: null, mo: null, cv: null }; }
+function tbStop() { for (const f of TB.un) { try { f && f(); } catch {} } for (const o of TB.shot.values()) { try { o.url && URL.revokeObjectURL(o.url); } catch {} } clearInterval(TB.t); TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), ocr: new Map(), gp: null, mo: null, cv: null }; }
 function tbSync(mo) {
   tbStop(); if (!mo || !Array.isArray(mo.k) || !cloud) return; TB.mo = mo; TB.t0 = Date.now();
   mo.n.forEach((n, i) => {
@@ -191,7 +191,9 @@ function tbSync(mo) {
       // v2.371.0: 🩺 PC ki ghari ka farq — sirf taza (doosri ya baad wali, cache nahi) snapshot par: likhai ke ~1 s mein pohanchti hai
       if (d) TB.scan.set(n, { a: d.a || [], ver: d.ver || '', ok: d.ok, sc: d.sc, rw: d.rw, w: d.w, sp: d.sp, rd: d.rd, al: d.al, er: String(d.er || '').slice(0, 60), fg: String(d.fg || '').slice(0, 24), at: Date.now(), ns: (o ? o.ns : 0) + 1, sk: o && !cache && Number(d.at) ? Number(d.at) - Date.now() : (o ? o.sk : null) }); else TB.scan.delete(n); tbPaint(i); }));   // v2.370.0
     if (cloud.listenPosShot) TB.un.push(cloud.listenPosShot(n, (d, err, cache) => { if (err || cache || TB.mo !== mo) return; const o = TB.shot.get(n); try { o && o.url && URL.revokeObjectURL(o.url); } catch {}
-      const on = d && Number(d.on) === 1 && d.im; TB.shot.set(n, { url: on ? URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })) : '', at: Date.now() }); tbPaint(i); }));
+      const on = d && Number(d.on) === 1 && d.im; TB.shot.set(n, { url: on ? URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })) : '', at: Date.now(), ex: !!d, ver: d ? String(d.ver || '') : '' }); tbPaint(i); }));
+    // v2.385.0: 🔤 POS screen ka OCR (counter NT-PRINT v1.39) — bante bill ki items ke naam + tadad
+    if (cloud.listenPosOcr) TB.un.push(cloud.listenPosOcr(n, (d, err, cache) => { if (err || cache || TB.mo !== mo) return; TB.ocr.set(n, { d, rt: Date.now() }); tbPaint(i); }));
   });
   if (mo.k.includes('g') && cloud.listenGatePass) TB.un.push(cloud.listenGatePass(tbDay(1), tbDay(0), list => { if (!list || TB.mo !== mo) return; TB.gp = list; tbAll(); }));
   TB.t = setInterval(tbAll, 5000);
@@ -227,44 +229,100 @@ function tbFollow(img) {   // POS list mein nayi item neeche judti hai — sab s
   } catch {}
   return false;
 }
+// ---------- 🔤 v2.385.0: POS screen ka OCR (counter NT-PRINT v1.39 — Windows ka apna OCR, internet / AI nahi) -> bante bill ki items ----------
+// r = [[y, h, [[x, w, 'lafz'], ...]], ...] upar se neeche. Header (Code / Item Name / Qty …) mile to har lafz us ke khane mein; na mile = andaza (naam + hindse).
+const OC_K = [['no', /^(s\s*no|s\s*#|sr(\s*no)?|no|#|sno|sl(\s*no)?)$/i], ['code', /^((item|bar)\s*)?(code|barcode)$/i], ['unit', /^(unit|uom)$/i],
+  ['qty', /^(qty|quantity|pcs|pieces?|peices?|ctn|cartons?|crtn|pack\s*qty|packs?)$/i], ['rate', /(rate|price)/i], ['amt', /(amount|amt|total|net)/i],
+  ['name', /(item|description|desc|name|product|particulars?|detail)/i]];
+const ocKind = t => { const s = String(t || '').replace(/[.:]/g, '').replace(/\s+/g, ' ').trim(); for (const [k, re] of OC_K) if (re.test(s)) return k; return ''; };
+const ocNum = t => { const s = String(t || '').replace(/,/g, ''); return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN; };
+function ocCells(ws, gap) {   // paas paas wale lafz = ek khana
+  const C = []; for (const [x, w, t] of ws) { const c = C[C.length - 1]; if (c && x - c.x2 <= gap) { c.t += ' ' + t; c.x2 = Math.max(c.x2, x + w); } else C.push({ x1: x, x2: x + w, t: String(t) }); } return C;
+}
+function ocParse(r) {
+  const R = (Array.isArray(r) ? r : []).filter(x => Array.isArray(x) && Array.isArray(x[2]) && x[2].length);
+  const hs = R.map(x => Number(x[1]) || 0).filter(Boolean).sort((a, b) => a - b), mh = hs[Math.floor(hs.length / 2)] || 12;
+  const clean = s => String(s || '').split(/\s+/).filter(w => w && !/^\d{7,}$/.test(w)).join(' ').trim();   // naam mein ghus aaya barcode hatao
+  const bad = s => !/[a-z]{2,}/i.test(s) || /^(total|grand|net\s|sub\s*total|items?\b|bill\b)/i.test(s);
+  let hi = -1, cols = null;
+  for (let i = 0; i < R.length && i < 8; i++) {   // header sirf upar ki 8 qataron mein
+    const C = ocCells(R[i][2], mh * 0.8).map(c => ({ ...c, k: ocKind(c.t) })), K = new Set(C.map(c => c.k).filter(Boolean));
+    if (K.size >= 3 || (K.size >= 2 && (K.has('name') || K.has('qty')))) { hi = i; cols = C; break; }
+  }
+  const items = [];
+  if (cols) {
+    const b = cols.slice(0, -1).map((c, j) => Math.max(c.x2, cols[j + 1].x1 - mh * 0.3)), hq = cols.filter(c => c.k === 'qty');
+    const ys = R.slice(hi).map(x => Number(x[0]) || 0), ds = ys.slice(1).map((y, j) => y - ys[j]).filter(d => d > 0).sort((a, c) => a - c), md = ds[Math.floor(ds.length / 2)] || mh * 1.8;
+    for (let i = hi + 1; i < R.length; i++) {
+      if (i > hi + 1 && (Number(R[i][0]) || 0) - (Number(R[i - 1][0]) || 0) > md * 3.5) break;   // bara khali faasla = list khatam (neeche total waghera)
+      const by = cols.map(() => []);
+      for (const [x, w, t] of R[i][2]) { const cx = x + w / 2; let j = b.findIndex(v => cx < v); if (j < 0) j = cols.length - 1; by[j].push(t); }
+      const nm = clean(cols.map((c, j) => c.k === 'name' ? by[j].join(' ') : '').filter(Boolean).join(' '));
+      if (bad(nm)) continue;
+      items.push({ nm, q: hq.map(c => ({ l: c.t, v: by[cols.indexOf(c)].join(' ') })).filter(o => o.v), un: cols.map((c, j) => c.k === 'unit' ? by[j].join(' ') : '').filter(Boolean).join(' ') });
+    }
+  } else {
+    for (const x of R) {
+      const C = ocCells(x[2], mh * 0.9).map(c => c.t.trim()).filter(Boolean);
+      if (C.length && /^\d{1,3}[.)]?$/.test(C[0])) C.shift();   // qatar ka number
+      const L = C.filter(t => !/^\d{7,}$/.test(t)), ni = L.findIndex(t => /[a-z]{2,}/i.test(t)); if (ni < 0) continue;
+      const nm = clean(L[ni]); if (bad(nm)) continue;
+      items.push({ nm, n: L.slice(ni + 1).filter(t => !isNaN(ocNum(t))).slice(0, 4) });
+    }
+  }
+  return { hdr: !!cols, cols: cols ? cols.map(c => c.t) : [], items: items.slice(-40) };
+}
+function ocQ(it) {   // tadad ki likhai: ×2 · 1 CTN · 6 PCS · (header na ho) sab hindse chhote
+  if (it.q && it.q.length === 1) { const v = ocNum(it.q[0].v); return `<b>×${escB(isNaN(v) ? it.q[0].v : q3(v))}${it.un ? ' ' + escB(it.un) : ''}</b>`; }
+  if (it.q && it.q.length) { const L = it.q.filter(o => ocNum(o.v) !== 0); return L.length ? `<b>${L.map(o => escB(o.v) + ' ' + escB(o.l)).join(' · ')}</b>` : ''; }
+  if (it.n && it.n.length) return `<small>${it.n.map(escB).join(' · ')}</small>`;
+  return '';
+}
+const OC_SEEN = new Map();   // naya item 4 s hara: key -> {m: Map(sig -> pehli dafa), k: kitni dafa dekha}
+function ocSeen(key, items, now) {
+  const o = OC_SEEN.get(key) || { m: new Map(), k: 0 }, sig = x => x.nm + '|' + (x.q || []).map(q => q.v).join(',') + '|' + (x.n || []).join(','), cur = new Set();
+  for (const x of items) { const s = sig(x); cur.add(s); if (!o.m.has(s)) o.m.set(s, o.k ? now : 0); }
+  for (const s of [...o.m.keys()]) if (!cur.has(s)) o.m.delete(s);
+  o.k++; OC_SEEN.set(key, o);
+  return x => { const t = o.m.get(sig(x)); return !!t && now - t < 4000; };
+}
+const ocFresh = (O, now) => { const d = O && O.d; if (!d || Number(d.on) !== 1 || now - O.rt > 60000) return false; const t = Number(d.hb) || Number(d.at) || 0; return !(t && Date.now() - t > 30 * 60000); };
+function ocWhy(O, sh, now, t0) {   // OCR kyun nahi — saaf wajah (khamosh nahi)
+  const d = O && O.d;
+  if (d && Number(d.on) === 0 && d.why) return '🔤 ' + String(d.why).slice(0, 120);
+  if (d && Number(d.on) === 1) return '🔤 OCR ruka hua — counter PC / NT-PRINT dekhein';
+  const v = sh && sh.ver ? parseFloat(sh.ver) : 0;
+  if (v && v < 1.39) return `🔤 NT-PRINT v${sh.ver} purana — naya (v1.39) 3-5 min mein khud aayega`;
+  if (v && now - (t0 || now) > 20000) return '🔤 OCR ka jawab nahi (is PC par band — posOcr?)';
+  return '';
+}
+function ocTileHTML(n, d, now) {
+  const it = ocParse(d.r).items;
+  if (!it.length) return '<div class="lv-tbr m">🧾 POS khali — naya bill shuru hote hi yahan</div>';
+  const nw = ocSeen('t:' + n, it, now), R = [...it].reverse();   // POS mein nayi item NEECHE judti hai — yahan UPAR
+  return `<div class="lv-tbh nw">🧾 Bill ban raha · ${it.length} item</div>` + R.slice(0, 6).map(x => { const q = ocQ(x); return `<div class="lv-tbr${nw(x) ? ' nw' : ''}">${escB(x.nm)}${q ? ' ' + q : ''}</div>`; }).join('')
+    + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
+}
 function tbPaint(i) {
   const mo = TB.mo, e = mo && $('lvMo')?.querySelector(`[data-tb="${i}"]`); if (!e) return;
   const k = mo.k[i], n = mo.n[i], now = Date.now(); let h = '', img = '';
-  let ch = '';   // v2.370.0: baayein — is counter ke chhape magar post na hue bill
-  if (k === 'c') {   // v2.375.0: ek hi counter branch — scan ke naam hon to wohi, warna PEHLE jaisa (POS screen / aakhri bill) + neeche chhoti 🩺 line (v2.370 mein scan doc hote hi baqi sab chhup jata tha)
-    const S0 = TB.scan.get(n), P = rkPcBills(n), lastPr = P.reduce((m, x) => Math.max(m, Number(x.ct) || 0), 0), sn = (TB.bill.get(n) || {}).sn || {};   // v2.371.0: sirf PRINT ka waqt (post ka nahi)
-    const U = P.filter(rkUnp).sort((a, b) => (Number(b.ct) || 0) - (Number(a.ct) || 0));
-    ch = U.slice(0, 5).map(x => `<i class="lv-tbk">🖨 #${escB(rkNo(x))} · Rs ${nf(x.t)}</i>`).join('') + (U.length > 5 ? `<i class="lv-tbk m">+${U.length - 5} bill</i>` : '');
-    const A = ((S0 && S0.a) || []).filter(x => Array.isArray(x) && Number(x[0]) > lastPr + 500), G = new Map();
-    for (const [t, c] of A) { const o = G.get(c) || { c, n: 0, t: 0 }; o.n++; o.t = Math.max(o.t, Number(t) || 0); G.set(c, o); }
-    const R = [...G.values()].sort((a, b) => b.t - a.t);
-    if (R.length) {   // v2.370.0: NT-PRINT v1.36 — scan ke barcode se BANTE BILL ke naam
-      const row = o => { const v = sn[o.c], nm = Array.isArray(v) ? v[0] : '', q = Array.isArray(v) ? Number(v[1]) || 1 : 1;
-        return `<div class="lv-tbr${now - o.t < 4000 ? ' nw' : ''}">${nm ? escB(nm) : '🔖 ' + escB(String(o.c).slice(-10))}${q !== 1 ? ` <small>(${q3(q)})</small>` : ''} <b>×${o.n}</b></div>`; };
-      h = `<div class="lv-tbh nw">🧾 Bill ban raha · ${R.length} item</div>` + R.slice(0, 6).map(row).join('') + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
-    } else {
-      const b = TB.bill.get(n), sh = TB.shot.get(n), d = b && b.d, shOn = !!(sh && sh.url && !sh.empty && now - sh.at < 45000);   // v2.363.0: khali screen = tasveer nahi, bill ki items
-      if (shOn) h = '<div class="lv-tbh nw">⏳ bill ban raha…</div>';
-      else if (d && d.sid) {
-        const L = b.L || [], sum = L.reduce((a, x) => a + (Number(x[2]) || 0) * (Number(x[3]) || 0), 0), tot = (d.pr || Number(d.st) === 2) && Number(d.t) > 0 ? Number(d.t) : sum;
-        const st = Number(d.st) === 3 ? '✕' : Number(d.st) === 2 ? '📌' : d.pr ? '🖨' : '⏳';
-        h = `<div class="lv-tbh">${st} #${escB(d.no || d.sid)} · Rs ${nf(tot)}</div>`;
-        h += [...L].reverse().slice(0, 5).map(x => `<div class="lv-tbr">${escB(x[1])} <b>×${q3(x[2])}</b></div>`).join('') + (L.length > 5 ? `<div class="lv-tbr m">+${L.length - 5} items</div>` : '');
-      }
-      if (shOn) img = sh.url;
-      if (S0) {   // v2.371.0 / v2.375.0: 🩺 scan ke naam kyun nahi — NT-PRINT v1.38 scan system ka haal (pakre · ghalat window · Chrome · band / shuru nahi)
-        const L0 = (S0.a || []).filter(Array.isArray), lst = L0.reduce((m, x) => Math.max(m, Number(x[0]) || 0), 0);
-        const tm = t => t ? new Date(t).toLocaleTimeString('en-GB', { hour12: false, timeZone: 'Asia/Karachi' }) : '—';
-        let dg = L0.length ? `🩺 scan ${L0.length} · aakhri ${tm(lst)} · print ${tm(lastPr)}` : `🩺 30 min mein scan 0${S0.ok != null ? ` · sahi ${S0.ok}` : ''}`;
-        if (!L0.length && S0.rw != null) dg += ` · pakre ${S0.rw}`;
-        if (Number(S0.w) > 0) dg += ` · ghalat window ${S0.w}${S0.fg ? ' (' + S0.fg + ')' : ''}`;
-        if (Number(S0.sp) > 0) dg += ` · Chrome mein ${S0.sp}`;
-        if (S0.sc === 0) dg += ' · ⚠ scan system band (setting)';
-        else if (S0.rd === 0) dg += ` · ⚠ scan system shuru nahi hua${S0.er ? ' (' + S0.er + ')' : ''}`;
-        else if (S0.al === 0) dg += ` · ⚠ scan system ruk gaya${S0.er ? ' (' + S0.er + ')' : ''}`;
-        if (S0.sk != null && Math.abs(S0.sk) > 20000) dg += ` · ⏰ PC ghari ${S0.sk > 0 ? '+' : ''}${Math.round(S0.sk / 1000)} s`;
-        h += `<div class="lv-tbd">${escB(dg)}</div>`;
-      } else if (!h && now - (TB.t0 || now) > 12000) h = '<div class="lv-tbh un">⚠ is naam ka bill / screen nahi mil rahi</div><div class="lv-tbr m">⚙️ Camera setup mein ⚪ ' + escB(n) + ' ko 🔗 se asal PC se jorein</div>';   // v2.366.0: khamosh nahi
+  const ch = '';   // v2.385.0: khane par 🖨 ruke bill ke chips NAHI (malik: 'yahan pending bill nahi chahiye') — ⏰ Ruke bills apni jagah wahi
+  if (k === 'c') {   // v2.385.0: SIRF bante bill ki items — ① POS screen ka OCR (NT-PRINT v1.39) ② na ho = scan ke naam ③ na ho = POS screen ki tasveer. Pichhla 📌 bill khane par nahi.
+    const O = TB.ocr.get(n), sh = TB.shot.get(n);
+    if (ocFresh(O, now)) h = ocTileHTML(n, O.d, now);
+    else {
+      const S0 = TB.scan.get(n), P = rkPcBills(n), lastPr = P.reduce((m, x) => Math.max(m, Number(x.ct) || 0), 0), sn = (TB.bill.get(n) || {}).sn || {};   // v2.371.0: sirf PRINT ka waqt (post ka nahi)
+      const A = ((S0 && S0.a) || []).filter(x => Array.isArray(x) && Number(x[0]) > lastPr + 500), G = new Map();
+      for (const [t, c] of A) { const o = G.get(c) || { c, n: 0, t: 0 }; o.n++; o.t = Math.max(o.t, Number(t) || 0); G.set(c, o); }
+      const R = [...G.values()].sort((a, b) => b.t - a.t);
+      if (R.length) {   // v2.370.0: scan ke barcode se (POS ke andar aksar nahi pakra jata — 26 Nov sabaq)
+        const row = o => { const v = sn[o.c], nm = Array.isArray(v) ? v[0] : '', q = Array.isArray(v) ? Number(v[1]) || 1 : 1;
+          return `<div class="lv-tbr${now - o.t < 4000 ? ' nw' : ''}">${nm ? escB(nm) : '🔖 ' + escB(String(o.c).slice(-10))}${q !== 1 ? ` <small>(${q3(q)})</small>` : ''} <b>×${o.n}</b></div>`; };
+        h = `<div class="lv-tbh nw">🧾 Bill ban raha · ${R.length} item</div>` + R.slice(0, 6).map(row).join('') + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
+      } else if (sh && sh.url && !sh.empty && now - sh.at < 45000) { h = '<div class="lv-tbh nw">⏳ bill ban raha…</div>'; img = sh.url; }   // v2.363.0: khali screen = tasveer nahi
+      const why = ocWhy(O, sh, now, TB.t0);
+      if (why) h += `<div class="lv-tbd">${escB(why)}</div>`;
+      else if (!h && !(O && O.d) && !(sh && sh.ex) && !TB.bill.get(n) && !S0 && now - (TB.t0 || now) > 12000) h = '<div class="lv-tbh un">⚠ is naam ka bill / screen nahi mil rahi</div><div class="lv-tbr m">⚙️ Camera setup mein ⚪ ' + escB(n) + ' ko 🔗 se asal PC se jorein</div>';   // v2.366.0: khamosh nahi
     }
   } else if (k === 'g') {
     const G = tbGate(i);
@@ -440,13 +498,14 @@ function qPaint(s) {
 const escB = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const nf = v => Math.round(Number(v) || 0).toLocaleString('en-US');
 const q3 = v => String(Math.round((Number(v) || 0) * 1000) / 1000);
-function billStop() { shotStop(); try { B.un && B.un(); } catch {} clearInterval(B.t); B = { un: null, sid: 0, prev: new Map(), del: [], fl: new Map(), recv: 0, doc: null, t: null, cnt: 0, pc: '' }; }
+function billStop() { shotStop(); try { B.un && B.un(); } catch {} try { B.uo && B.uo(); } catch {} clearInterval(B.t); B = { un: null, uo: null, ocr: null, sid: 0, prev: new Map(), del: [], fl: new Map(), recv: 0, doc: null, t: null, cnt: 0, pc: '' }; }
 function billStart() {
   if (!cloud?.listenPosLive) return;
   if (B.pc === cur && B.un) return;
   billStop(); B.pc = cur; B.st0 = Date.now();
   billPaint();
   B.un = cloud.listenPosLive(cur, (d, err) => { if (err) { B.err = err.message || String(err); billPaint(); return; } if (d) { B.recv = Date.now(); billGot(d); } });
+  if (cloud.listenPosOcr) { const pc = cur; B.uo = cloud.listenPosOcr(pc, (d, err, cache) => { if (err || cache || B.pc !== pc) return; B.ocr = { d, rt: Date.now() }; billPaint(true); }); }   // v2.385.0: 🔤 bante bill ki items (POS screen ka OCR)
   B.t = setInterval(billPaint, 4000);
   shotStart();
 }
@@ -519,7 +578,19 @@ function billGot(d) {
 function billPaint(scroll) {
   const e = $('lvBill'); if (!e) return;
   const d = B.doc, now = Date.now();
-  if (!d) { e.innerHTML = `<div class="lvb-h"><b>🧾 Bill</b></div><div class="lvb-e">${B.err ? '✕ ' + escB(B.err) : now - (B.st0 || now) > 15000 ? '⏳ PC se bill nahi aa raha — PC on? (update 3-5 min)' : '⏳ bill dekh raha…'}</div>`; return; }
+  if (ocFresh(B.ocr, now)) {   // v2.385.0: 🔤 POS screen par bill ban raha ho to WOHI (OCR) — khali ho to neeche pehle jaisa (pichhla bill)
+    const od = B.ocr.d, P = ocParse(od.r);
+    if (P.items.length) {
+      const nw = ocSeen('b:' + B.pc, P.items, now);
+      const rows = [...P.items].reverse().map(x => `<div class="lvb-r${nw(x) ? ' is-new' : ''}"><span class="n">${escB(x.nm)}</span><span class="q">${ocQ(x)}</span><span class="a"></span></div>`).join('');
+      e.innerHTML = `<div class="lvb-h"><b>🧾 Bill ban raha</b><small class="lvb-old">POS screen se</small><span class="lvb-st w">⏳ ${P.items.length} items</span></div><div class="lvb-l">${rows}</div>`
+        + `<div class="lvb-dg">🔤 ${P.hdr ? 'khane: ' + escB(P.cols.join(' · ').slice(0, 90)) : 'header nahi mila — naam + hindse andaze se'}${Number(od.ms) ? ' · ' + Math.round(Number(od.ms)) + ' ms' : ''}</div>`;
+      if (scroll) { const l = e.querySelector('.lvb-l'); if (l) l.scrollTop = 0; }
+      return;
+    }
+  }
+  const ow = ocWhy(B.ocr, SH.d ? { ver: SH.d.ver } : null, now, B.st0), owH = ow ? `<div class="lvb-dg">${escB(ow)}</div>` : '';   // v2.385.0
+  if (!d) { e.innerHTML = `<div class="lvb-h"><b>🧾 Bill</b></div><div class="lvb-e">${B.err ? '✕ ' + escB(B.err) : now - (B.st0 || now) > 15000 ? '⏳ PC se bill nahi aa raha — PC on? (update 3-5 min)' : '⏳ bill dekh raha…'}</div>${owH}`; return; }
   B.del = B.del.filter(r => now - r.at < 12000);
   const L = B.L || [], sum = L.reduce((a, x) => a + (Number(x[2]) || 0) * (Number(x[3]) || 0), 0);
   const st = Number(d.st) === 3 ? '<span class="lvb-st x">✕ Cancel</span>' : Number(d.st) === 2 ? '<span class="lvb-st ok">📌 Post ✓</span>' : d.pr ? '<span class="lvb-st ok">🖨 Print ✓</span>' : d.sid ? '<span class="lvb-st w">⏳ ban raha</span>' : '';
@@ -527,7 +598,7 @@ function billPaint(scroll) {
   const rows = B.del.map(r => row(r.x, 'is-del')).join('') + [...L].reverse().map(x => { const f = B.fl.get(x[0]); return row(x, f && now - f.at < 4000 ? (f.k === 'n' ? 'is-new' : 'is-chg') : ''); }).join('');   // v2.226.0: nayi item UPAR (malik: "list upar se neeche aaye")
   const stale = B.recv && now - B.recv > 60000 ? '<div class="lvb-e">⚠ PC se bill ruka hua (1 min+)</div>' : '';
   const tot = (d.pr || Number(d.st) === 2) && Number(d.t) > 0 ? Number(d.t) : sum;
-  e.innerHTML = `<div class="lvb-h"><b>${d.sid ? '#' + escB(d.no || d.sid) : '🧾 Aaj koi bill nahi'}</b>${d.sid && d.src === 'aakhri' && (Number(d.st) === 2 || (d.pr && !(now - (Number(d.la) || 0) < 90000))) ? '<small class="lvb-old">pichhla · naya bill shuru hote hi yahan</small>' : d.src === 'andaza' ? '<small class="lvb-old">⏳ ban raha (andaza — counter pakka nahi)</small>' : ''}${st}</div>${stale}<div class="lvb-l">${rows || (d.sid ? '<div class="lvb-e">pehli item ka intezar…</div>' : '')}</div>${d.sid ? `<div class="lvb-f"><span>${L.length} items</span><b>Rs ${nf(tot)}</b></div>` : ''}${d.dg && d.src !== 'chalu' ? `<div class="lvb-dg">🩺 ${escB(d.dg)}</div>` : ''}`;
+  e.innerHTML = `<div class="lvb-h"><b>${d.sid ? '#' + escB(d.no || d.sid) : '🧾 Aaj koi bill nahi'}</b>${d.sid && d.src === 'aakhri' && (Number(d.st) === 2 || (d.pr && !(now - (Number(d.la) || 0) < 90000))) ? '<small class="lvb-old">pichhla · naya bill shuru hote hi yahan</small>' : d.src === 'andaza' ? '<small class="lvb-old">⏳ ban raha (andaza — counter pakka nahi)</small>' : ''}${st}</div>${stale}<div class="lvb-l">${rows || (d.sid ? '<div class="lvb-e">pehli item ka intezar…</div>' : '')}</div>${d.sid ? `<div class="lvb-f"><span>${L.length} items</span><b>Rs ${nf(tot)}</b></div>` : ''}${d.dg && d.src !== 'chalu' ? `<div class="lvb-dg">🩺 ${escB(d.dg)}</div>` : ''}${owH}`;
   if (scroll) { const l = e.querySelector('.lvb-l'); if (l) l.scrollTop = 0; }
 }
 

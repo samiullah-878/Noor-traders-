@@ -1,5 +1,10 @@
 // ============================================================
-//  nt-posui.js  v1.15 (2026-11-17: 🧠 memory chowkidar — malik ke PC par watcher 9:19 se 4.5 GB (managed UI Automation memory nahi chhorta,
+//  nt-posui.js  v1.16 (2026-11-26: 🔤 POS screen ka OCR — malik: 'Live par item ke naam'. Scanner ki keys POS ke andar NT-PRINT tak nahi
+//                   pohanchti (pakre 0), is liye shot() ki Sale list wali tasveer par Windows ka APNA OCR (Windows.Media.Ocr — internet / AI nahi):
+//                   tasveer 2 guna bari, har ~1 s se zyada nahi (OCR ke waqt ka 3 guna), pehle dekhi shakal yaad se (cursor ki jhapak), BelowNormal;
+//                   'OCR\t w \t h \t ms \t [[x,y,w,h,"lafz"],...] \t mode' -> ocrRows() qataren -> NT-PRINT posLive/<naam>__ocr. Sirf jab NT-PRINT
+//                   ocr:true bheje (purana NT-PRINT = OCR band) · local-config "posOcr": false = band · ghalti = sirf OCR band, tasveer chalti rahe)
+//                   · v1.15 (2026-11-17: 🧠 memory chowkidar — malik ke PC par watcher 9:19 se 4.5 GB (managed UI Automation memory nahi chhorta,
 //                   ~800 MB / ghanta). Har 2 min tasklist se watcher ki memory; 600 MB (local-config posUiMem) se upar = band + 2 s mein naya (30 s
 //                   wala intezar / fails ginti nahi). POS / printer / spooler ko haath nahi.) · v1.14 (2026-11-10: 🖥 shot tez — har 0.2 s dekh, 0.35 s gap; malik: "kuch seconds ka farq") · v1.13 (2026-11-10: 🖥 shot() — live camera ke saath POS ki Sale list ki chhoti tasveer, sirf jab koi Live dekh raha ho; neeche tafseel)
 //                   · v1.12 (2026-10-08: 🔎 Abdurehman PC: Search khirki POS ke ANDAR (child form) — v1.10/1.11 us ka PARENT (Sale screen) parhta
@@ -248,7 +253,7 @@ Add-Type -Path $dll
 //  SIRF jab koi Live dekh raha ho (nt-print set(true)) — warna yeh PowerShell chalta hi nahi. Sirf screen PARHTA hai, POS ko haath nahi lagata.
 //  Alag PowerShell (bina C# compile) — fail ho to awaz system par asar nahi. local-config "posShot": false = band.
 // ============================================================
-const SHOT_TXT = String.raw`param([string]$Title='Retail Solution',[int]$Pp=0)
+const SHOT_TXT = String.raw`param([string]$Title='Retail Solution',[int]$Pp=0,[int]$Ocr=0)
 $ErrorActionPreference='Stop'
 function Say($s){ [Console]::Out.WriteLine($s); [Console]::Out.Flush() }
 try{
@@ -265,6 +270,89 @@ $ep=New-Object System.Drawing.Imaging.EncoderParameters(1)
 $ep.Param[0]=New-Object System.Drawing.Imaging.EncoderParameter([System.Drawing.Imaging.Encoder]::Quality,50L)
 $md5=[System.Security.Cryptography.MD5]::Create()
 $T=[char]9
+# v1.16: OCR = Windows ka apna (internet / AI nahi). Sirf jab NT-PRINT -Ocr 1 bheje. Ghalti = sirf OCR band, tasveer chalti rahe.
+$OCRON=$false; $OcrEng=$null; $GA=$null; $TyEng=$null; $TyRes=$null; $TyDec=$null; $TySbm=$null; $TyFile=$null; $TyFam=$null; $TyRas=$null; $ocrMax=2600; $oFile=$false
+if($Ocr -eq 1){
+ try{
+  try{ (Get-Process -Id $PID).PriorityClass='BelowNormal' }catch{}
+  Add-Type -AssemblyName System.Runtime.WindowsRuntime
+  $TyEng=[Windows.Media.Ocr.OcrEngine,Windows.Foundation,ContentType=WindowsRuntime]
+  $TyRes=[Windows.Media.Ocr.OcrResult,Windows.Foundation,ContentType=WindowsRuntime]
+  $TyDec=[Windows.Graphics.Imaging.BitmapDecoder,Windows.Foundation,ContentType=WindowsRuntime]
+  $TySbm=[Windows.Graphics.Imaging.SoftwareBitmap,Windows.Foundation,ContentType=WindowsRuntime]
+  $GA=[System.WindowsRuntimeSystemExtensions].GetMember('GetAwaiter') | Where-Object { $_.GetParameters()[0].ParameterType.Name -eq ('IAsyncOperation'+[char]96+'1') } | Select-Object -First 1
+  if($GA -eq $null){ throw 'GetAwaiter nahi mila' }
+  $OcrEng=$TyEng::TryCreateFromUserProfileLanguages()
+  if($OcrEng -eq $null){ $TyLang=[Windows.Globalization.Language,Windows.Foundation,ContentType=WindowsRuntime]; $OcrEng=$TyEng::TryCreateFromLanguage($TyLang::new('en-US')) }
+  if($OcrEng -eq $null){ throw 'Windows OCR ki zaban (English) is PC par nahi' }
+  try{ $mx=[int]$TyEng::MaxImageDimension; if($mx -ge 500){ $ocrMax=$mx } }catch{}
+  $ocLang=''; try{ $ocLang=[string]$OcrEng.RecognizerLanguage.LanguageTag }catch{}
+  $OCRON=$true
+  Say ("OCRON"+$T+$ocLang+$T+$ocrMax)
+ }catch{ Say ("OCRERR"+$T+"OCR shuru nahi hua: "+$_.Exception.Message) }
+}
+function AwaitR($op,$rt){ $a=$GA.MakeGenericMethod($rt).Invoke($null,@($op)); return ,($a.GetResult()) }
+function OcrSoft($big){
+ if(-not $script:oFile){
+  $m=New-Object System.IO.MemoryStream
+  try{
+   $big.Save($m,[System.Drawing.Imaging.ImageFormat]::Bmp); $m.Position=0
+   $ras=[System.IO.WindowsRuntimeStreamExtensions]::AsRandomAccessStream($m)
+   $dec=AwaitR ($TyDec::CreateAsync($ras)) $TyDec
+   return ,(AwaitR ($dec.GetSoftwareBitmapAsync()) $TySbm)
+  }catch{ $script:oFile=$true; Say ("OCRINFO"+$T+"stream nahi chala, ab file se: "+$_.Exception.Message) }finally{ $m.Dispose() }
+ }
+ if($script:TyFile -eq $null){
+  $script:TyFile=[Windows.Storage.StorageFile,Windows.Storage,ContentType=WindowsRuntime]
+  $script:TyFam=[Windows.Storage.FileAccessMode,Windows.Storage,ContentType=WindowsRuntime]
+  $script:TyRas=[Windows.Storage.Streams.IRandomAccessStream,Windows.Storage.Streams,ContentType=WindowsRuntime]
+ }
+ $sf=$script:TyFile; $fam=$script:TyFam; $rs=$script:TyRas
+ $tf=Join-Path $env:TEMP ('nt-ocr-'+$PID+'.bmp')
+ $big.Save($tf,[System.Drawing.Imaging.ImageFormat]::Bmp)
+ $f=AwaitR ($sf::GetFileFromPathAsync($tf)) $sf
+ $st=AwaitR ($f.OpenAsync($fam::Read)) $rs
+ try{ $dec=AwaitR ($TyDec::CreateAsync($st)) $TyDec; return ,(AwaitR ($dec.GetSoftwareBitmapAsync()) $TySbm) }finally{ try{ $st.Dispose() }catch{} }
+}
+function JEsc([string]$s){
+ $o=New-Object System.Text.StringBuilder
+ foreach($c in $s.ToCharArray()){
+  $i=[int]$c
+  if($i -eq 34 -or $i -eq 92){ [void]$o.Append([char]92); [void]$o.Append($c) }
+  elseif($i -lt 32 -or $i -gt 126){ [void]$o.Append([char]92); [void]$o.Append(('u{0:x4}' -f $i)) }
+  else{ [void]$o.Append($c) }
+ }
+ return $o.ToString()
+}
+# grid ki tasveer 2 guna bari (OCR chhoti likhai behtar parhta hai, MaxImageDimension ke andar) -> lafz + jagah: [[x,y,w,h,"lafz"],...] asal pixel mein
+function OcrRun($src,$cw,$ch){
+ $s=2.0; $lim=[double]$ocrMax-8
+ if($cw*$s -gt $lim){ $s=$lim/$cw }
+ if($ch*$s -gt $lim){ $s=$lim/$ch }
+ $bw=[int]($cw*$s); $bh=[int]($ch*$s)
+ $big=New-Object System.Drawing.Bitmap($bw,$bh,[System.Drawing.Imaging.PixelFormat]::Format24bppRgb)
+ try{
+  $gg=[System.Drawing.Graphics]::FromImage($big)
+  try{ $gg.InterpolationMode=[System.Drawing.Drawing2D.InterpolationMode]::HighQualityBicubic; $gg.DrawImage($src,0,0,$bw,$bh) }finally{ $gg.Dispose() }
+  $sbm=OcrSoft $big
+ }finally{ $big.Dispose() }
+ try{ $res=AwaitR ($OcrEng.RecognizeAsync($sbm)) $TyRes }finally{ try{ $sbm.Dispose() }catch{} }
+ $o=New-Object System.Text.StringBuilder
+ [void]$o.Append('[')
+ $n=0
+ foreach($ln in $res.Lines){
+  foreach($wd in $ln.Words){
+   $tx=[string]$wd.Text; if(-not $tx){ continue }
+   $r=$wd.BoundingRect
+   if($n -gt 0){ [void]$o.Append(',') }
+   [void]$o.Append('['+[int]($r.X/$s)+','+[int]($r.Y/$s)+','+[int]($r.Width/$s)+','+[int]($r.Height/$s)+','+[char]34+(JEsc $tx)+[char]34+']')
+   $n++
+  }
+  if($n -ge 700){ break }
+ }
+ [void]$o.Append(']')
+ return $o.ToString()
+}
 function FindWin{
  foreach($x in $AE::RootElement.FindAll($TS::Children,[System.Windows.Automation.Condition]::TrueCondition)){
   $n=''; try{ $n=[string]$x.Current.Name }catch{}
@@ -288,17 +376,19 @@ function FindGrid($w,$wr){
  return $best
 }
 $sw=[System.Diagnostics.Stopwatch]::StartNew(); $w=$null; $wr=$null; $gr=$null; $gt=0; $grAt=0; $last=''; $lastSend=-99999; $off=''; $buf=$null; $bad=0; $panes=0; $wkey=''
+$oc=@{}; $oj=''; $oAt=-99999; $oGap=900; $oBad=0; $memAt=0
 Say 'READY'
 while($true){
  try{
   if($Pp -gt 0 -and -not (Get-Process -Id $Pp -ErrorAction SilentlyContinue)){ exit 0 }
   $now=[long]$sw.ElapsedMilliseconds
+  if($OCRON -and ($now-$memAt) -gt 60000){ $memAt=$now; $wsz=0; try{ $wsz=(Get-Process -Id $PID).WorkingSet64 }catch{}; if($wsz -gt 700MB){ Say ("OCRINFO"+$T+"memory "+[int]($wsz/1MB)+" MB - dobara shuru"); exit 5 } }
   if($w -eq $null){ $w=FindWin; $gt=$now; $wkey='' }
   elseif(($now-$gt) -gt 15000){ $w=FindWin; $gt=$now }
   if(($now-$grAt) -gt 60000){ $wkey='' }
-  if($w -eq $null){ if($off -ne 'nowin'){ $off='nowin'; $last=''; Say ("OFF"+$T+"POS ki Sale screen khuli nahi") }; Start-Sleep -Milliseconds 1500; continue }
+  if($w -eq $null){ if($off -ne 'nowin'){ $off='nowin'; $last=''; $oj=''; Say ("OFF"+$T+"POS ki Sale screen khuli nahi") }; Start-Sleep -Milliseconds 1500; continue }
   $wr=$null; try{ $wr=$w.Current.BoundingRectangle }catch{ $w=$null; continue }
-  if($wr.IsEmpty -or $wr.Left -lt -10000 -or $wr.Width -lt 300 -or $wr.Height -lt 200){ if($off -ne 'min'){ $off='min'; $last=''; Say ("OFF"+$T+"POS ki khirki chhoti (minimize) hai") }; Start-Sleep -Milliseconds 1500; continue }
+  if($wr.IsEmpty -or $wr.Left -lt -10000 -or $wr.Width -lt 300 -or $wr.Height -lt 200){ if($off -ne 'min'){ $off='min'; $last=''; $oj=''; Say ("OFF"+$T+"POS ki khirki chhoti (minimize) hai") }; Start-Sleep -Milliseconds 1500; continue }
   $k=''+[int]$wr.Left+','+[int]$wr.Top+','+[int]$wr.Width+','+[int]$wr.Height
   if($k -ne $wkey){ $wkey=$k; $grAt=$now; $gr=$null; try{ $gr=FindGrid $w $wr }catch{ $gr=$null } }
   $mode='g'; $r=$gr; if($r -eq $null){ $mode='w'; $r=$wr }
@@ -329,11 +419,31 @@ while($true){
     Say ("IMG"+$T+$mode+$T+$ow+$T+$oh+$T+$dg+$T+$b)
     $last=$sig; $lastSend=$now; $off=''
    }
+   # v1.16: OCR — tasveer badli ho to (pehle dekhi hui shakal = yaad se, OCR nahi; cursor ki jhapak 2 shaklein), har ~1 s se zyada nahi
+   if($OCRON -and ($now-$oAt) -ge $oGap){
+    if($oc.ContainsKey($sig)){ $ov=$oc[$sig]; if($ov[0] -ne $oj){ Say ("OCR"+$T+$cw+$T+$ch+$T+$ov[1]+$T+$ov[0]+$T+$mode); $oj=$ov[0]; $oAt=$now } }
+    else{
+     $t0=[long]$sw.ElapsedMilliseconds
+     try{
+      $j=OcrRun $bmp $cw $ch
+      $oms=[long]$sw.ElapsedMilliseconds-$t0
+      if($oc.Count -ge 6){ $oc.Clear() }
+      $oc[$sig]=@($j,$oms)
+      if($j -ne $oj){ Say ("OCR"+$T+$cw+$T+$ch+$T+$oms+$T+$j+$T+$mode); $oj=$j }
+      $oBad=0; $oGap=[Math]::Max(900,[int]($oms*3)); if($mode -ne 'g' -and $oGap -lt 2000){ $oGap=2000 }
+     }catch{
+      $oBad++; $oGap=4000; $oj=''
+      Say ("OCRERR"+$T+$_.Exception.Message)
+      if($oBad -ge 5){ $OCRON=$false; Say ("OCRERR"+$T+"5 dafa ghalti - OCR band (tasveer chalti rahegi)") }
+     }
+     $oAt=[long]$sw.ElapsedMilliseconds
+    }
+   }
   }finally{ $bmp.Dispose() }
   $bad=0
   Start-Sleep -Milliseconds 200
  }catch{
-  $bad++
+  $bad++; $oj=''
   try{ Say ("ERR"+$T+$_.Exception.Message) }catch{ exit 3 }
   if($bad -ge 8){ exit 4 }
   $w=$null
@@ -341,13 +451,17 @@ while($true){
  }
 }
 `;
-function shot({ dir, log, cfg, onMsg }) {
+function shot({ dir, log, cfg, onMsg, ocr }) {   // v1.16: ocr = true sirf naya NT-PRINT (v1.39+) bhejta hai — purana NT-PRINT OCR ki line ko ghalti samajhta
   const C = () => { try { return cfg() || {}; } catch { return {}; } };
   const PS = path.join(dir, 'nt-posshot.ps1');
   let k = null, want = false, buf = '', fails = 0, timer = null;
   const emit = m => { try { onMsg && onMsg(m); } catch (e) { log('🖥 POS tasveer: ' + (e.message || e)); } };
   const line = l => {
     if (l.startsWith('IMG\t')) { const a = l.split('\t'); if (a.length >= 6 && a[5]) { fails = 0; emit({ k: 'img', mode: a[1], w: Number(a[2]) || 0, h: Number(a[3]) || 0, dg: a[4], b64: a[5] }); } }
+    else if (l.startsWith('OCR\t')) { const a = l.split('\t'); if (ocr && a.length >= 5) emit({ k: 'ocr', w: Number(a[1]) || 0, h: Number(a[2]) || 0, ms: Number(a[3]) || 0, j: a[4], mode: a[5] || '' }); }
+    else if (l.startsWith('OCRON\t')) { const a = l.split('\t'); if (ocr) emit({ k: 'ocron', lg: a[1] || '', mx: Number(a[2]) || 0 }); }
+    else if (l.startsWith('OCRERR\t')) { if (ocr) emit({ k: 'ocrerr', why: l.slice(7).slice(0, 200) }); }
+    else if (l.startsWith('OCRINFO\t')) log('🔤 POS OCR: ' + l.slice(8).slice(0, 200));
     else if (l.startsWith('OFF\t')) emit({ k: 'off', why: l.slice(4) });
     else if (l.startsWith('ERR\t')) { log('🖥 POS tasveer: ' + l.slice(4).slice(0, 200)); emit({ k: 'err', why: l.slice(4).slice(0, 200) }); }
   };
@@ -358,7 +472,7 @@ function shot({ dir, log, cfg, onMsg }) {
     const TXT = '﻿' + SHOT_TXT.replace(/\r?\n/g, '\r\n');
     try { if (!fs.existsSync(PS) || fs.readFileSync(PS, 'utf8') !== TXT) fs.writeFileSync(PS, TXT); } catch (e) { log('🖥 POS tasveer: ' + e.message); emit({ k: 'err', why: e.message }); return; }
     let err = '';
-    const w = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS, '-Title', String(C().posTitle || 'Retail Solution'), '-Pp', String(process.pid)], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
+    const w = spawn('powershell.exe', ['-NoProfile', '-ExecutionPolicy', 'Bypass', '-File', PS, '-Title', String(C().posTitle || 'Retail Solution'), '-Pp', String(process.pid), '-Ocr', ocr && C().posOcr !== false ? '1' : '0'], { windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'] });
     k = w; buf = '';
     w.stdout.setEncoding('utf8');
     w.stdout.on('data', d => { buf += d; let i; while ((i = buf.indexOf('\n')) >= 0) { const l = buf.slice(0, i).replace(/\r$/, ''); buf = buf.slice(i + 1); line(l); } if (buf.length > 4e6) buf = ''; });
@@ -371,4 +485,26 @@ function shot({ dir, log, cfg, onMsg }) {
   };
   return { set(on) { on = !!on; if (on === want) return; want = on; if (on) { fails = 0; run(); } else { if (timer) { clearTimeout(timer); timer = null; } try { k && k.kill(); } catch {} } }, on: () => want, alive: () => !!k };
 }
-module.exports = { start, shot };
+// v1.16: OCR ke lafz -> qataren. words [[x, y, w, h, 'lafz'], ...] (grid ke asal pixel) -> [[y, h, [[x, w, 'lafz'], ...]], ...]
+//   upar se neeche, har qatar baayein se daayein. Qatar = lafz jin ka beech (cy) ek doosre se 0.6 x aam oonchai ke andar.
+//   Kaun sa lafz kis khane ka (naam / tadad) — app header dekh kar khud tay karti hai (live.js ocParse) taake qaida app update se badle.
+function ocrRows(words) {
+  const W = (Array.isArray(words) ? words : []).filter(a => Array.isArray(a) && a.length >= 5 && String(a[4] == null ? '' : a[4]).trim())
+    .slice(0, 800).map(a => ({ x: Number(a[0]) || 0, y: Number(a[1]) || 0, w: Math.max(1, Number(a[2]) || 0), h: Math.max(1, Number(a[3]) || 0), t: String(a[4]).trim().slice(0, 60) }));
+  if (!W.length) return [];
+  const hs = W.map(o => o.h).sort((a, b) => a - b), mh = hs[Math.floor(hs.length / 2)] || 10;
+  W.forEach(o => { o.cy = o.y + o.h / 2; });
+  W.sort((a, b) => a.cy - b.cy || a.x - b.x);
+  const R = [];
+  for (const o of W) {
+    const r = R[R.length - 1];
+    if (r && Math.abs(o.cy - r.cy) <= mh * 0.6) { r.ws.push(o); r.cy += (o.cy - r.cy) / r.ws.length; }
+    else R.push({ cy: o.cy, ws: [o] });
+  }
+  return R.slice(0, 60).map(r => {
+    r.ws.sort((a, b) => a.x - b.x);
+    let y = Infinity, y2 = -Infinity; for (const o of r.ws) { y = Math.min(y, o.y); y2 = Math.max(y2, o.y + o.h); }
+    return [Math.round(y), Math.round(y2 - y), r.ws.slice(0, 40).map(o => [Math.round(o.x), Math.round(o.w), o.t])];
+  });
+}
+module.exports = { start, shot, ocrRows };

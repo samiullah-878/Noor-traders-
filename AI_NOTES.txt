@@ -9960,3 +9960,27 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
 - Purana saboot (8 Oct, upar): server par scan Windows search mein pakra gaya (GHALAT JAGAH searchapp), POS ke andar kabhi nahi; Abdurehman PC par bhi "scan NAHI pakra".
 - GHALTI: v2.370 (24 Nov) ka scanLive / scan-naam raasta isi hook par bana — 8 Oct ki note nahi dekhi. Larke naam se item chunein to scan banta hi nahi.
 - Malik ko mashwara (OK baqi): naam POS ki screen se (nt-posui shot ki nayi line par Windows ka apna OCR, internet / Gemini nahi), counter camera live rahe; pehle ek counter par azmana; na chale to 2 min peeche wala plan.
+
+=== v2.385.0 (26 Nov 2026) — 🔤 Live tile: POS screen ka OCR (nt-print v1.39 · nt-posui v1.16) ===
+- Malik (13:39 + 13:45): 'RP screen mein pending bill nahi chahiye — live bill sirf NT print wala · item ke naam kyun nahi aate'. Plan OK 13:52
+  ('Ok ye kr dekhte hain'). Wajah: scanner ki keys POS ke andar NT-PRINT ke hook tak nahi pohanchti (Live 🩺 'pakre 0', 8 Oct se maloom — upar sabaq).
+- PC nt-posui v1.16 (shot): Live dekhte waqt jo Sale list ki tasveer pehle se banti thi, usi par Windows ka APNA OCR (Windows.Media.Ocr, WinRT —
+  internet / Gemini / AI NAHI): grid ki poori tasveer 2 guna bari (MaxImageDimension ke andar, 24bpp BMP -> MemoryStream -> AsRandomAccessStream ->
+  BitmapDecoder -> SoftwareBitmap; na chale = temp file + StorageFile) -> lafz + jagah 'OCR \t w \t h \t ms \t [[x,y,w,h,"lafz"],...] \t mode'.
+  Har ~1 s se zyada nahi (gap = OCR ke waqt ka 3 guna, kam az kam 0.9 s; poori khirki 'w' mode 2 s), pehle dekhi shakal (md5) yaad se dobara
+  (OCR nahi — cursor ki jhapak), process BelowNormal, 700 MB se upar = khud band (Node 6 s mein naya). OCRON (zaban + px) / OCRERR / OCRINFO lines.
+  5 dafa lagatar ghalti = sirf OCR band, tasveer chalti rahe. -Ocr 1 SIRF jab NT-PRINT shot({ocr:true}) bheje (purana NT-PRINT = OCR band).
+  ocrRows(words) = lafz -> qataren [[y, h, [[x, w, 'lafz'], ...]], ...] (beech 0.6 x aam oonchai ke andar = ek qatar).
+  PowerShell sabaq: variable ke naam case-insensitive hain — $bd (LockBits) aur $BD (decoder) EK hi tha, $ocr aur param $Ocr bhi — sab Ty* / OcrEng naam.
+- PC nt-print v1.39: posLive/<naam>__ocr {on: 1, r: JSON qataren, n, ms, w, h, mode, lg, hb} sirf badle to (0.4 s mein ek), chalte waqt har 20 s hb
+  (sirf jab tasveer wala program zinda). Live band / server chup / POS screen band / program ki ghalti / OCR ghalti = {on: 0, why}.
+  local-config posOcr: false = band. Firestore rules nahi badle (posLive/* malik / Full / Nigrani parhte, PC admin likhta).
+- App live.js: 🎛 counter khana = ① OCR taza ho (on 1, 60 s mein snapshot) to sirf bante bill ki items — header (Code / Item Name / Qty / CTN / PCS
+  / Rate / Amount) dhoond kar har lafz us ke khane mein (ocParse), naam + tadad (×2 · 1 CTN · 6 PCS), nayi item UPAR + 4 s hari, POS khali =
+  '🧾 POS khali — naya bill shuru hote hi yahan'; header na mile = naam + hindse chhote (andaza). ② warna scan ke naam ③ warna POS screen ki tasveer.
+  🖨 ruke bill ke chips + pichhla 📌 bill khane se HATA (⏰ Ruke bills apni jagah wahi). OCR na ho to chhoti 🔤 line wajah ke saath (ocWhy:
+  doc ki why · NT-PRINT purana · jawab nahi). Single camera (#lvBill): OCR mein items hon to '🧾 Bill ban raha · POS screen se' + 🔤 khane ki line,
+  khali / na ho = pehle jaisa. cloud.listenPosOcr.
+- Test: fake PowerShell lines se shot() parse (ocr true / false) · ocrRows + ocParse namoone (header ✓, bina header, CTN + PCS, khali POS, Total
+  qatar bahar). Asal Windows / POS par AZMAYA NAHI (PowerShell yahan nahi chal saka) — malik ek counter ka Live khol kar photo bheje; 🔤 line
+  ki wajah se agla qadam. Na chale = 2 min peeche wala plan (malik ka). AI nahi.
