@@ -6012,3 +6012,19 @@ Malik (21:44, Sale ki report ki photo): "yahan wholesale wala bill ka data bhi c
    Setting blueAccess/reportConfig.waWs (na ho = ON) — app 📊 Reports mere number par → "📦 Har wholesale bill WhatsApp par" (cloud.setReportConfig
    ab waWs bhi). Haal blueAccess/wsWa {day, n, at, no, err, errAt, ver} → app wahi screen (cloud.listenWsWa). POS mein kuch nahi. AI NAHI.
    Test: node vm (plan / text / nakli Firestore + nakli SQL ka poora chakkar: intezar · naya · badla · cancel · band) PASS. Asal POS par azmaya nahi.
+
+=== app v2.389.0 (26 Nov 2026) — 💰 Bank screen: AAYE payment par laal 'Wasooli' chip + 📒 Daily mein HBL laal / Alfalah peela (PC kuch nahi badla) ===
+Malik (22:56, Bank screen ki photo): "yahan payment par chip — wasooli · us par click karein to usi payment ki raqam ki wasooli auto lag jaye · chip laal ·
+  Daily Sale mein HBL ka account laal, Alfalah ka peela" -> plan -> OK (23:05).
+1) bank-inbox.js: har AAYE done entry (bk<doc>a, bank khate ko 'payment' = Daily Akhrajat, bankSms, transfer / posNo nahi) ki doosri line par laal
+   `.bkp-wsl` chip (wslOf / wslCan: CAP hbl.wsl, mulazim sirf aaj ki). Tap (wslTap): gahak = chip ki yaad alias['@w:<naam>'] -> ek confirm -> lag gayi;
+   warna usi line ke neeche `.bkp-wpk` (mashwara guessParty + search smartSearch + haal hi ke gahak) -> naam tap (wslApply). Wasooli = bk<doc>w
+   {kind collection, gahak, WAHI raqam + tareekh, dailyIncluded true, bankSms, note = bank wali note + ' · 💰 Wasooli'} — v2.99.58 wala do-entry jora
+   (galla barabar, gahak ka baqaya kam; PC pos-khata-sync voucher + parchi jaise purane jore par). Bank entry wahi rehti hai. Lag gayi = pill
+   'Wasooli · naam' (laal halka). Wasooli Delete (Daily / khata) = chip wapas. ↩ undo (bank entry wapas) = bk<doc>w bhi saath. Note bank ki note se
+   shuru (PC bankSlip ^Alfalah se bank pehchanta hai — Alfalah ki wasooli par HBL na chhape). Chip memory '@w:' alag (GAYE ka auto alias nahi chhuta).
+   Search likhte waqt sirf list badalti hai; renderHbl naye data par focus wapas (wf).
+2) app: dyBkCls — Daily entry (dyEntryHTML) ka khata naam HBL (\bhbl\b / habib bank) = .dy-hbl laal, Alfalah (alfalah / alflah / bafl) = .dy-alf peela;
+   card / kharcha khata nahi. CSS top level (pcm.py ki zaroorat nahi). CAP 'hbl.wsl' Mulazim list mein.
+Test: node — asal bank-inbox nakli DOM / data (teeno chip · list + mashwara · wasooli entry · yaad · doosri dafa ek OK · dohra nahi · mulazim kal nahi ·
+  ↩ dono · delete = chip wapas) 18/18 PASS; dyBkCls snippet. Asal phone par azmaya nahi. AI NAHI.

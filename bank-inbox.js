@@ -1,8 +1,8 @@
-// bank-inbox.js — v2.99.33 (2026-10-12): 📩 HBL INBOX — HBL ke SMS (paise AAYE, phone par MacroDroid) aur email (paise GAYE, Gmail Apps Script)
+// bank-inbox.js — v2.389.0 (26 Nov 2026): 💰 AAYE payment par laal 'Wasooli' chip (wslTap / wslApply — bk<doc>w gahak ki wasooli, wahi raqam) · v2.99.33 (2026-10-12): 📩 HBL INBOX — HBL ke SMS (paise AAYE, phone par MacroDroid) aur email (paise GAYE, Gmail Apps Script)
 // Firestore businesses/noor-traders/bankSms (rules 2.38) mein aate hain. Yahan: parhna (bank-sms.js), khata ka andaza (yaad + naam),
 // ✓ par HBL khate mein entry: aaye = khata -> HBL transfer · gaye = HBL -> khata transfer · Cash Deposit = closing ka cash HBL ko ("Cash diya").
 // Bina ✓ kuch nahi lagta. Ek len-den ek hi dafa (TXN ID). Malik: Setup (chaabi, MacroDroid ki body, Gmail ka script).
-import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.388.0';
+import { parseBank, bankKeyOf, guessParty, aliasKey } from './bank-sms.js?v=2.389.0';
 const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const $ = id => document.getElementById(id);
 let testBusy = false, testMsg = '', testOk = false;
@@ -683,6 +683,7 @@ async function undo(docId) {
     if (!main) { /* sirf charges the */ }
     else if (main.includes('|') || /^bk.+a$/.test(main)) { await O.unpost(main.split('|')); }
     else if (e) { const ok = await O.pay({ id: e.transferId, rev: e.rev, remove: true, fromPartyId: e.fromPartyId, toPartyId: e.toPartyId, amount: e.amount, date: e.date, note: e.note }); if (ok === false) throw Error('Transfer nahi hata'); }
+    { const wE = (O.entries ? O.entries() : []).find(z => z && z.id === wslId(docId) && !z.deleted); if (wE && !ids.includes(wE.id)) await O.unpost([wE.id]); }   // v2.389.0: 💰 chip wali wasooli bhi saath
     await O.cloud.bankSmsSet(docId, { st: '', by: '', byName: '', doneAt: 0, partyId: '', entryId: '', kind: '' });
     autoFail.add(docId);   // v2.99.59: wapas liya = is phone par khud dobara nahi lagega
     O.notice?.('↩ Wapas — ab sahi account mein ☐ tick karein');
@@ -786,6 +787,86 @@ function pPend(x) {
       <div class="bkp-acts"><button type="button" class="bkp-go" data-bk-ok="${id}"${can ? '' : ' disabled'}>${b ? '⏳ Lag raha hai…' : old ? '✓ Haan, lagao' : r.dir === 'out' ? '✓ Khate mein lagao' : '✓ Lagao'}</button>${capOk('hbl.skip') ? `<button type="button" class="bkp-no" data-bk-skip="${id}"${b ? ' disabled' : ''}>${old ? '✕ Nahi' : '✕'}</button>` : ''}${noteBtn(r.txn, 'p:' + x.d.id).replace('bk-nb', 'bkp-ic bk-nb')}${memoIn(mh) ? mh : ''}</div>${memoIn(mh) ? '' : mh}</div>
     <div class="bkp-amt ${r.dir}">${r.dir === 'in' ? '+' : '−'}${m(r.amt)}<small>⏳ Baqi</small></div></article>`;
 }
+// ================= v2.389.0 💰 AAYE paise par WASOOLI chip =================
+// malik (26 Nov): 'yahan payment par chip — wasooli · us par click = usi payment ki raqam ki wasooli khud lag jaye · chip laal'.
+// Bank ki AAYE entry bk<doc>a (bank khate ko 'payment' = Daily Akhrajat) WAHI rehti hai + gahak ki WASOOLI bk<doc>w (wahi raqam + tareekh, dailyIncluded)
+// = v2.99.58 wala do-entry jora (galla barabar, gahak ka baqaya kam, PC voucher + parchi jaise har wasooli). Gahak: chip ki yaad '@w:<naam>' → khate
+// ki yaad → naam milta → warna usi line ke neeche list + search. Wasooli hatani ho = us entry ko Daily / khate se Delete (chip wapas). ↩ (bank entry
+// wapas) = wasooli bhi saath. Mulazim sirf aaj ki payment. CAP hbl.wsl. AI NAHI.
+let wsOpen = '', wsQ = '';
+const wsBusy = new Set();
+const wslId = sid => 'bk' + sid + 'w';
+function wslOf(v) {
+  if (!v || v.cash || v.dir !== 'in' || !v.e || v.e.kind !== 'payment' || !v.e.bankSms || v.e.transferId || v.e.posNo || v.e.id !== 'bk' + v.e.bankSms + 'a') return null;
+  const w = (O.entries ? O.entries() : []).find(z => z && z.id === wslId(v.e.bankSms) && !z.deleted) || null;
+  return { sid: v.e.bankSms, w };
+}
+const wslCan = e => !!O.post && capOk('hbl.wsl') && (!!(O.owner && O.owner()) || e.date === (O.today ? O.today() : ''));
+const wslList = () => (O.parties ? O.parties() : []).filter(p => p && !p.deleted && p.active !== false && !p.bank && !p.card && !p.kharcha);
+function wslSug(name) {
+  const k = aliasKey(name || ''); if (!k) return null;
+  const id = alias['@w:' + k], p = id && O.party ? O.party(id) : null;
+  if (p && !p.deleted && p.active !== false) return { p, why: 'yaad' };
+  return guessParty(name, wslList(), alias);
+}
+function wslResHTML(rid, q0, name) {
+  const q = normQ(q0).trim(), L = wslList(), out = [], seen = new Set(), add = p => { if (p && !seen.has(p.id) && out.length < 8) { seen.add(p.id); out.push(p); } };
+  if (q.length >= 2) (O.smartSearch ? O.smartSearch(L, q, 8) : L.filter(p => normQ(p.name).includes(q))).forEach(add);
+  else {
+    const n = String(name || '').trim(); if (n.length >= 2 && O.smartSearch) O.smartSearch(L, n, 5).forEach(add);
+    const E = O.entries ? O.entries() : [], ok = new Set(L.map(p => p.id));
+    for (let i = E.length - 1; i >= 0 && out.length < 8; i--) { const e = E[i]; if (e && !e.deleted && (e.kind === 'credit' || e.kind === 'collection') && ok.has(e.partyId)) add(O.party ? O.party(e.partyId) : null); }   // haal hi ke gahak
+  }
+  return out.map(p => `<button type="button" data-bk-wpk="${esc(rid)}|${esc(p.id)}">${esc(p.name)}${p.phone ? ' <small>' + esc(p.phone) + '</small>' : ''}</button>`).join('') || (q.length >= 2 ? '<small class="bk-none">Nahi mila — spelling badal kar dekhein</small>' : '');
+}
+function wslPickHTML(v, name) {
+  const s = wslSug(name);
+  return `<div class="bkp-wpk"><div class="bkp-wh"><b>💰 ${m(v.amt)} — kis gahak ki wasooli?</b><button type="button" class="bkp-wx" data-bk-wx="1" aria-label="Band">✕</button></div>
+    ${s ? `<button type="button" class="bkp-wsug" data-bk-wpk="${esc(v.id)}|${esc(s.p.id)}">✓ ${esc(s.p.name)}<small>${esc(s.why)}</small></button>` : ''}
+    <input type="search" class="bkp-wq" data-bk-wq="${esc(v.id)}" placeholder="🔍 gahak ka naam likhein…" autocomplete="off" value="${esc(wsQ)}">
+    <div class="bkp-wres" data-bk-wres="1">${wslResHTML(v.id, wsQ, name)}</div>
+    <small class="bkp-wnote">Raqam + tareekh wahi · Daily: Wasooli khana · bank wali entry wahi rahegi</small></div>`;
+}
+function wslPayer(e) { const d = e && e.bankSms ? (docs || []).find(z => z.id === e.bankSms) : null, r = d ? parseBank(d.text, d.src, d.subj) : null; return String((r && r.name) || nameFromNote(e && e.note) || '').trim(); }
+async function wslApply(rid, pid) {
+  const a = (O.entries ? O.entries() : []).find(z => z && z.id === rid && !z.deleted), p = pid && O.party ? O.party(pid) : null;
+  if (!a || !a.bankSms || a.kind !== 'payment') { O.notice?.('⚠️ Payment ki entry nahi mili'); return; }
+  if (!p) { O.notice?.('⚠️ Khata nahi mila'); return; }
+  const wid = wslId(a.bankSms);
+  if ((O.entries ? O.entries() : []).some(z => z && z.id === wid && !z.deleted)) { O.notice?.('✓ Is payment ki wasooli pehle se lagi hai'); wsOpen = ''; paint(); return; }
+  if (!wslCan(a)) { O.notice?.(capOk('hbl.wsl') ? 'Purane din ki wasooli sirf malik laga sakta hai' : 'Wasooli lagane ki ijazat nahi — malik se kahein'); return; }
+  if (wsBusy.has(rid)) return;
+  wsBusy.add(rid); wsOpen = ''; wsQ = ''; paint();
+  try {
+    const note = ((a.note ? a.note + ' · ' : '') + '💰 Wasooli').slice(0, 900);   // note bank wali (HBL / Alfalah aaye …) se shuru — PC parchi ka bank sahi
+    await O.post([{ id: wid, kind: 'collection', partyId: p.id, amount: a.amount, date: a.date, note, dailyIncluded: true, posPending: false, bankSms: a.bankSms }]);
+    const k = aliasKey(wslPayer(a)); if (k && alias['@w:' + k] !== p.id) { alias = { ...alias, ['@w:' + k]: p.id }; O.cloud?.bankAliasSet?.(alias).catch(() => {}); }
+    O.notice?.(`✅ ${m(a.amount)} wasooli — ${p.name} (Daily: Wasooli)`);
+  } catch (e) { O.notice?.('⚠️ Wasooli nahi lagi: ' + (e?.message || e)); }
+  finally { wsBusy.delete(rid); paint(); }
+}
+function wslTap(rid) {
+  const a = (O.entries ? O.entries() : []).find(z => z && z.id === rid && !z.deleted); if (!a) return;
+  if (!wslCan(a)) { O.notice?.(capOk('hbl.wsl') ? 'Purane din ki wasooli sirf malik laga sakta hai' : 'Wasooli lagane ki ijazat nahi — malik se kahein'); return; }
+  const name = wslPayer(a), s = wslSug(name);
+  if (s && s.why === 'yaad' && wsOpen !== rid) {   // yaad gahak = ek OK
+    if (confirm(`💰 Wasooli\n\n${m(a.amount)} — ${s.p.name} ke khate mein?\n(Daily: Wasooli khana · bank wali entry wahi rahegi)\n\nCancel = doosra gahak chunein`)) { wslApply(rid, s.p.id); return; }
+  }
+  wsOpen = wsOpen === rid ? '' : rid; wsQ = ''; paint();
+  if (wsOpen) setTimeout(() => { try { document.querySelector(`[data-bk-wq="${CSS.escape(rid)}"]`)?.scrollIntoView({ block: 'nearest' }); } catch {} }, 60);
+}
+document.addEventListener('click', e => {
+  const t = e.target.closest?.('[data-bk-wsl],[data-bk-wpk],[data-bk-wx]'); if (!t) return;
+  e.preventDefault(); e.stopPropagation();
+  if (t.dataset.bkWx) { wsOpen = ''; wsQ = ''; paint(); return; }
+  if (t.dataset.bkWsl) { wslTap(t.dataset.bkWsl); return; }
+  const [rid, pid] = String(t.dataset.bkWpk || '').split('|'); if (rid && pid) wslApply(rid, pid);
+});
+document.addEventListener('input', e => {
+  const i = e.target; if (!i.matches?.('[data-bk-wq]')) return;
+  wsQ = i.value; const a = (O.entries ? O.entries() : []).find(z => z && z.id === i.dataset.bkWq), b = i.closest('.bkp-wpk')?.querySelector('[data-bk-wres]');
+  if (b) b.innerHTML = wslResHTML(i.dataset.bkWq, wsQ, a ? wslPayer(a) : '');   // sirf list — poori screen dobara nahi (focus na toote)
+});
 function pDone(v) {
   const txn = (String(v.note).match(/TXN (\S+)/) || [])[1] || '', src = v.e ? (docs || []).find(d => d.st === 'done' && d.entryId && (d.entryId === v.e.transferId || String(d.entryId).split('|').includes(v.e.id))) : null;
   const name = v.e && !v.e.transferId && !(v.e.bankSms) ? (nameFromNote(v.note) || v.name) : v.name;
@@ -794,12 +875,15 @@ function pDone(v) {
   const mvB = mvTarget(v, src, r), mvBtn = mvB ? `<button type="button" class="bkp-ic mv" data-bk-mv="${esc(src.id)}|${esc(v.e.id)}">⇄ ${esc(mvB.name)} mein</button>` : '';   // v2.311.0
   const kx = kxName(src);   // v2.113.0: 🧾 kharcha mein laga
   const mh = src ? memoHTML(src, true, v.id) : '', pc = v.e && O.printChip ? shortCode(O.printChip(v.e)) : '';
-  const kindTag = v.cash ? 'Closing cash' : kx ? '🧾 ' + kx : v.e && v.e.posNo ? 'Bill · kharcha' : v.e && v.e.transferId ? 'Khate mein' : 'Daily + khata';
+  const ws = wslOf(v), wsP = ws && ws.w && O.party ? O.party(ws.w.partyId) : null;   // v2.389.0: 💰 wasooli chip
+  const wsChip = ws && !ws.w && wslCan(v.e) ? `<button type="button" class="bkp-wsl${wsOpen === v.id ? ' is-in' : ''}" data-bk-wsl="${esc(v.id)}"${wsBusy.has(v.id) ? ' disabled' : ''}>${wsBusy.has(v.id) ? '⏳ Lag rahi…' : '💰 Wasooli'}</button> ` : '';
+  const kindTag = v.cash ? 'Closing cash' : kx ? '🧾 ' + kx : ws && ws.w ? 'Wasooli · ' + (wsP ? (wsP.name.length > 16 ? wsP.name.slice(0, 15) + '…' : wsP.name) : 'gahak') : v.e && v.e.posNo ? 'Bill · kharcha' : v.e && v.e.transferId ? 'Khate mein' : 'Daily + khata';
   const nt = noteOf(txn), ic = (v.e && v.e.posPrintErr ? '⚠️' : v.e && v.e.posPrintedAt ? '🖨✓' : v.e && v.e.posCode ? '🧾' : '') + (nt && !nt.done ? ' 🔔' : '') + (src && String(src.note || '').trim() ? ' 📝' : '') + (mvB ? ' ⇄❗' : '');
-  return `<article class="bkp-row done cmp ${v.dir}${rowOpen === v.id ? ' is-in' : ''}" data-bk-row="${esc(v.id)}"><div class="bkp-av ${v.dir}">${v.dir === 'in' ? '↓' : '↑'}<i>${esc(initials(name))}</i></div>
-    <div class="bkp-mid"><div class="bkp-top"><b class="bkp-nm">${esc(name)}</b></div><div class="bkp-meta">${ic ? `<span class="bkp-ics">${ic}</span> ` : ''}${showDt && v.date ? `<span class="bkp-dt">${esc(dShort(v.date))}</span> ` : ''}${esc(meta)}${txn ? ` <span class="bkp-txn">${esc(txn)}</span>` : ''}</div><div class="bkp-x">${kx ? `<div class="bkp-who kxd"><span class="bkp-pk kx">🧾 Kharcha</span><b>${esc(kx)}</b><small>Akhrajat mein · Daily mein nahi</small></div>` : ''}
+  const wsPk = wsChip && wsOpen === v.id ? wslPickHTML(v, wslPayer(v.e) || (r && r.name) || name) : '';
+  return `<article class="bkp-row done cmp ${v.dir}${rowOpen === v.id ? ' is-in' : ''}${wsPk ? ' wsl-on' : ''}" data-bk-row="${esc(v.id)}"><div class="bkp-av ${v.dir}">${v.dir === 'in' ? '↓' : '↑'}<i>${esc(initials(name))}</i></div>
+    <div class="bkp-mid"><div class="bkp-top"><b class="bkp-nm">${esc(name)}</b></div><div class="bkp-meta">${ic ? `<span class="bkp-ics">${ic}</span> ` : ''}${showDt && v.date ? `<span class="bkp-dt">${esc(dShort(v.date))}</span> ` : ''}${wsChip}${esc(meta)}${txn ? ` <span class="bkp-txn">${esc(txn)}</span>` : ''}</div><div class="bkp-x">${kx ? `<div class="bkp-who kxd"><span class="bkp-pk kx">🧾 Kharcha</span><b>${esc(kx)}</b><small>Akhrajat mein · Daily mein nahi</small></div>` : ''}
       ${v.cash ? '' : `<div class="bkp-acts sm">${mvBtn}${noteBtn(txn, 'v:' + v.id).replace('bk-nb', 'bkp-ic bk-nb')}${undo}${memoIn(mh) ? mh : ''}${pc}</div>`}${memoIn(mh) ? '' : mh}${v.cash && pc ? `<div class="bkp-acts sm">${pc}</div>` : ''}</div></div>
-    <div class="bkp-amt ${v.dir}">${v.dir === 'in' ? '+' : '−'}${m(v.amt)}<small class="ok">✓ ${kindTag}</small></div></article>`;
+    <div class="bkp-amt ${v.dir}">${v.dir === 'in' ? '+' : '−'}${m(v.amt)}<small class="ok${ws && ws.w ? ' ws' : ''}">✓ ${esc(kindTag)}</small></div>${wsPk}</article>`;
 }
 function spark(H) {
   const t = O.today ? O.today() : '', mv = hblMoves(H).filter(v => !v.cash), days = [];
@@ -876,12 +960,14 @@ export function renderHbl() {
       return `<section class="bkp-day"><header class="bkp-dh"><b>${esc(gHead(d))}</b><span>${di ? `<i class="in">+${m(di)}</i>` : ''}${dO ? `<i class="out">−${m(dO)}</i>` : ''}${g.p.length ? `<i class="pd">⏳ ${g.p.length}</i>` : ''}</span></header>${g.p.map(pPend).join('')}${g.v.map(pDone).join('')}</section>`; }).join('') || `<div class="bkp-empty">🔍<b>${q ? '"' + esc(q) + '" — kuch nahi mila' : 'Is muddat mein HBL mein kuch nahi'}</b></div>`;
   }
   const qv = qOpen && $('list').querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`)?.value;
+  const wf = !!document.activeElement?.matches?.('[data-bk-wq]');   // v2.389.0: wasooli search likhte waqt naya data aaye to bhi focus wahi
   $('list').innerHTML = `<div class="bk-screen bkp">${H ? '' : `<div class="bk-warn">⚠️ HBL khata chunein: ${banks.length ? `<select data-bk-bank><option value="">— chunein —</option>${banks.map(p => `<option value="${esc(p.id)}">${esc(p.name)}</option>`).join('')}</select>` : 'pehle bank ka khata banayein'}</div>`}
     <div class="bkp-seg">${seg('hbl-tab', 'sab', stab, '📅 Din-war')}${seg('hbl-tab', 'baqi', stab, `⏳ Baqi${R.pend.length ? ' <b>' + R.pend.length + '</b>' : ''}`)}</div>
     ${stab === 'baqi' ? '' : `<div class="bkp-seg sm" data-mn-seg="hbl.range" data-mn-i="📅" data-mn-t="Kis muddat ka" data-mn-g="🏦 Bank">${[['aaj', 'Aaj'], ['7', '7 din'], ['mahina', 'Mahina'], ['sab', 'Sab']].map(([v, l]) => seg('hbl-range', v, range, l)).join('')}</div>`}
     <details class="bkp-info" data-mn-box="hbl.info" data-mn-i="ⓘ" data-mn-t="Kaise kaam karta hai" data-mn-g="🏦 Bank"><summary>ⓘ Kaise kaam karta hai</summary><p>🟢 <b>Aaye</b>: koi khata nahi poochha jata — seedha HBL Noor Traders mein (Daily: Akhrajat), Server PC khud lagata hai aur HBL parchi foran nikalti hai. 🔴 <b>Gaye</b>: "kis ko diya?" — seedha us ke khate mein (Daily mein nahi); yaad naam khud lagte hain. 🧾 <b>Bill</b> (GEPCO waghera HBL Mobile se): HBL se minus + aap ka chuna kharcha khata (Daily / POS mein nahi). 🏦 SMS / email mein doosra account number (maslan loan) ho to pehle poochta hai. 📅 Purani tareekh wale pehle poochte hain. Upar search mein naam / raqam / TXN likhein.</p></details>
     ${list}</div>`;
   if (qOpen) { const i = $('list').querySelector(`[data-bk-q="${CSS.escape(qOpen)}"]`); if (i) { i.value = qv || ''; i.focus(); search(i); } }
+  if (wf && wsOpen) { const i = $('list').querySelector('[data-bk-wq]'); if (i) { try { i.focus({ preventScroll: true }); const n = i.value.length; i.setSelectionRange(n, n); } catch {} } }
   if (memoOpen) { const ta = $('list').querySelector(`[data-bk-memo-t="${CSS.escape(memoOpen)}"]`); if (ta && document.activeElement !== ta) { try { ta.focus({ preventScroll: true }); const n = ta.value.length; ta.setSelectionRange(n, n); } catch {} } }   // v2.113.0: likhte waqt naya SMS aaye to bhi likha hua wahi
   if (own && !pstop && O.cloud?.listenPrintConfig) pstop = O.cloud.listenPrintConfig(c => { pcfg = c || {}; if (onScreen()) renderHbl(); if (prnOpen()) $('dialogBody').innerHTML = prnHTML(); });
   const pOn = !pcfg || pcfg.bankPost !== false;
@@ -912,7 +998,7 @@ export function openPrinter() {
 setInterval(() => { try { if (prnOpen()) $('dialogBody').innerHTML = prnHTML(); } catch {} }, 60000);
 document.addEventListener('click', e => { if (e.target.closest?.('[data-prn-open],#prnStatusBtn')) openPrinter(); });
 document.addEventListener('click', e => {   // v2.299.0: patli entry par tap = us ke chips (Reminder · ↩ · Note · Dobara print)
-  const r = e.target.closest?.('.bkp [data-bk-row]'); if (!r || e.target.closest('button,a,input,textarea,select,.bkp-x')) return;
+  const r = e.target.closest?.('.bkp [data-bk-row]'); if (!r || e.target.closest('button,a,input,textarea,select,.bkp-x,.bkp-wpk')) return;
   const id = r.getAttribute('data-bk-row'), on = !r.classList.contains('is-in');
   for (const x of document.querySelectorAll('.bkp [data-bk-row].is-in')) x.classList.remove('is-in');
   r.classList.toggle('is-in', on); rowOpen = on ? id : '';
@@ -962,4 +1048,4 @@ document.addEventListener('change', e => { const t = e.target; if (!t.matches?.(
   if (x.r.day && x.r.day < (O.today ? O.today() : '') && !confirm(`📅 Yeh ${x.r.day} ka purana len-den hai (${m(x.r.amt)} · ${x.r.name}).\nKhate mein lagana hai?`)) { t.checked = false; return; }
   const s = x.r.kind === 'cash' ? null : sugOf(x), H = hbl();
   apply(x.d.id); });
-export const _bankTest = { prnHTML, setPcfg: c => { pcfg = c; }, fixOnce, bankCounts, autoRun, undo, openNote, saveHbl, pickAcct, renderHbl, hblDay, hblMoves, hblBalance, hblPdf, setRange: v => { range = v; }, setStab: v => { stab = v; }, rows, html, apply, gasCode, smsBody, setDocs: d => { docs = d; alias = (d.find(x => x.id === '_alias') || {}).m || {}; docs = d.filter(x => x.id !== '_alias'); }, setKey: k => { key = k; }, setTab: t => { tab = t; } };
+export const _bankTest = { wslTap, wslApply, wslOf, wslSug, prnHTML, setPcfg: c => { pcfg = c; }, fixOnce, bankCounts, autoRun, undo, openNote, saveHbl, pickAcct, renderHbl, hblDay, hblMoves, hblBalance, hblPdf, setRange: v => { range = v; }, setStab: v => { stab = v; }, rows, html, apply, gasCode, smsBody, setDocs: d => { docs = d; alias = (d.find(x => x.id === '_alias') || {}).m || {}; docs = d.filter(x => x.id !== '_alias'); }, setKey: k => { key = k; }, setTab: t => { tab = t; } };
