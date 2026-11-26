@@ -346,7 +346,7 @@ function tbPaint(i) {
           return `<div class="lv-tbr${now - o.t < 4000 ? ' nw' : ''}">${nm ? escB(nm) : '🔖 ' + escB(String(o.c).slice(-10))}${q !== 1 ? ` <small>(${q3(q)})</small>` : ''} <b>×${o.n}</b></div>`; };
         h = `<div class="lv-tbh nw">🧾 Bill ban raha · ${R.length} item</div>` + R.slice(0, 6).map(row).join('') + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
       } else if (sh && sh.url && !sh.empty && now - sh.at < 45000) { h = '<div class="lv-tbh nw">⏳ bill ban raha…</div>'; img = sh.url; }   // v2.363.0: khali screen = tasveer nahi
-      const why = tbDiag(n, O, sh, S0, now);   // v2.386.0: pehle sirf OCR ki wajah thi — purana scan doc pada ho to khana chup reh jata tha
+      const why = tbDiag(n, O, sh, S0, now) || (!h && now - (TB.t0 || now) < 20000 ? '⏳ counter PC se jawab ka intezar…' : '');   // v2.386.0: pehle sirf OCR ki wajah thi — purana scan doc pada ho to khana chup reh jata tha · v2.387.0: pehle 20 s bhi khali nahi (⏳)
       if (why) h += `<div class="lv-tbd">${escB(why)}</div>`;
     }
   } else if (k === 'g') {

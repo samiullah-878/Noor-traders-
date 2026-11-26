@@ -10037,3 +10037,12 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
   OCR ghalti · kal ka 'Live band' · v1.38 taza · tasveer haan OCR nahi · pehle 20 s = khali).
 - Sabaq (CLAUDE.md): kai qadam wali zanjeer (server -> counter PC -> POS screen -> OCR) ka natija dikhana ho to har haalat mein bataao kaun
   si kadi tooti — 'koi purana doc pada hai' ko kabhi 'sab theek' mat samjho; har doc ki taazgi us ke `at` se jaancho.
+
+=== v2.387.0 (26 Nov 2026) — ⏳ Live khana pehle 20 s bhi khali nahi ===
+- Malik (15:39, photo 'Camera ka oper'): teeno counter khane ab bhi bilkul khali. v2.386 ka tbPaint sandbox mein chalaya (asal code, vm):
+  har haalat mein line aati hai (want nahi = '🩺 server ka haal nahi mila', hukum gaya = ntpSay, POS screen nahi mili …) — is liye photo
+  wala phone abhi purane version par hai (Live poori screen hai, ✨ Update patti us ke peeche chhup jati hai) ya photo pehle 20 s ki thi.
+- live.js tbPaint: tbDiag khali + khane par kuch nahi + pehle 20 s = '⏳ counter PC se jawab ka intezar…' (CHIPS qaida: khali intezar nahi).
+  Ab koi bhi screenshot saaf batata hai: khane par koi line nahi = phone par purana version (Settings ke upar 'Settings · vX' dekho).
+- Malik ko: Settings ke upar version dekho (v2.387.0); kam ho to ↻ Sync / Update ya app band kar ke dobara; phir Live 30 s + photo.
+  Bina update: counter khane par tap = akela camera, 25 s baad '🖥 POS screen: …' patti (v2.229 se) wohi wajah batati hai.

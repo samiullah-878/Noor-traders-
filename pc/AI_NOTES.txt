@@ -5993,3 +5993,5 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
 === app v2.386.0 (26 Nov 2026) — 🩺 Live counter khana: zanjeer ki tooti kadi (PC kuch nahi badla) ===
 - App live.js tbDiag: khane par items na hon to server ka hukum (posLive/_want) · counter NT-PRINT ka jawab (is Live ke shot / ocr / scan doc,
   `at` se taza) · printPCs haal · POS screen ki wajah (shot doc why) — ek line. v2.385 mein purana scan doc pada ho to khana chup tha.
+
+=== app v2.387.0 (26 Nov 2026) — Live khana pehle 20 s '⏳ intezar' (PC kuch nahi badla) ===
