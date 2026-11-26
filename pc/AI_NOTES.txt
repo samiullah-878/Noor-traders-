@@ -5903,3 +5903,16 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
 - javac test (android stubs, logic hissa): 17 case OK (dohra nahi, PhoneLookup naam, whatsapp CallLog skip, permission fail, WA aayi / gayi / video / missed,
   chat ka 'I missed your call' = aam paigham). MCP validator VALID. pkg.py: mcl + vcl (6 string globals cd*), validator copy pkg_c.json.
 - Koi popup / toast nahi. AI nahi. Phone par azmaya nahi. Jaanch: email 'NT phone macros v79' mein macro ON; pehli call ke baad Drive > NT Awaz > Calls.
+
+=== md pkg v80 (26 Nov 2026) — 📝 Reminder (app / rules / PC nahi badle) ===
+- Malik: 'upar ki taraf ek lagao · Reminder likhein · jo reminder ho wo yellow fonts ke saath har unlock par nazar aaye · tick karein to khatam' -> plan -> OK.
+- md/tools/remind.py -> macro '📝 Reminder' (GUID h64('claude|remind')). Triggers: QuickSettingsTileTrigger tile 3 (m_tileOption 2) · ShortcutTrigger · DeviceUnlockedTrigger.
+- Likhna: sbAsk / shAsk chhoot (+100) -> SetVariable prompt rn -> Java ADD (newline = space, khali = kuch nahi, 40 se zyada = 'full') -> global rmT
+  (har reminder alag line) -> chhoot wapas -> toast '✅ Reminder save'.
+- Unlock: rmT khali nahi + pichhli dafa se 20 s (rmAt) -> 1 s ruk -> loop 15: chhoot +100 -> Java BUILD = JSON object {r01: '☐ …', …, z: '⏭ Baad mein'}
+  (braces / quote char code se — scriptText magic text) -> JsonParseAction -> local dictionary ra -> SelectionDialogAction option 1 (htmlFormat sar-khi peeli,
+  textColor #FFD600, bg #1C1C1E, divider) -> rk; rk khali (back) / z = break; warna Java DEL (rmT se wohi number hata, jawab = baqi ginti) -> '0' = break.
+  Loop ke baad sbAsk / shAsk purani qeemat.
+- javac test (ADD / BUILD / DEL): khali, quote, newline, 40 hadd, hatana — sab sahi; BUILD ka JSON python se parse hua. MCP validator VALID.
+- pkg.py: mrm + vrm (rmT, rmAt), validator copy pkg_d.json. Koi popup / toast sirf malik ke apne kaam par. AI nahi. Phone par azmaya nahi.
+- Jaanch: email 'NT phone macros v80' mein macro ON; tile 3 malik khud Quick Settings mein lagaye; pehla reminder likh kar lock / unlock.
