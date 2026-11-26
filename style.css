@@ -9069,6 +9069,12 @@ html body dialog.sr-dlg .sr-ml button{flex:none;min-height:38px!important;paddin
 .sr-ret{border-bottom:1.5px solid #e3e9f4;padding-bottom:4px}.sr-ret .sr-row{border-bottom:0}
 .sr-it{display:flex;justify-content:space-between;gap:8px;font-size:12.5px;color:#3d4d6e;padding:1px 0 1px 12px}
 .sr-it span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}.sr-it b{white-space:nowrap;font-weight:700}
+/* v2.388.0: 📦 wholesale bill ke items (sale-rep.js wsBillHTML) — naam poora (2 line tak), daayein tadad × rate = raqam */
+.sr-wl{display:grid;grid-template-columns:minmax(0,1fr) auto;gap:0 8px;align-items:baseline;font-size:13.5px;color:#2b3a5c;padding:3px 0 3px 12px;border-top:1px dashed #eef2f8}
+.sr-wl span{min-width:0;overflow-wrap:anywhere;line-height:1.3}.sr-wl b{white-space:nowrap;font-weight:600;text-align:right;color:#3d4d6e}.sr-wl b strong{font-weight:800;color:#13213f}
+.sr-wl.sub{font-size:12.5px;color:#66738f;font-style:italic}.sr-wsb{padding-bottom:6px}.sr-wsb>.sr-row{background:#f6f8fd;border-radius:10px;padding:6px 8px;margin-top:6px}
+.sr-wp{display:block;font-size:12.5px;font-weight:700;color:#7a4b00;padding:3px 0 0 12px}
+html.dk .sr-wl,html.dk .sr-wl b{color:#c5d1ec}html.dk .sr-wl b strong{color:#fff}html.dk .sr-wl{border-color:#22304f}html.dk .sr-wsb>.sr-row{background:#1a2744}html.dk .sr-wp{color:#f3c96b}
 .sr-in{margin-top:6px}.sr-in>summary{cursor:pointer;font-size:13px;font-weight:800;color:#1d3a75;padding:6px 0}
 .sr-more{display:block;font-size:12px;color:#7a86a0;padding:4px 0}
 .sr-none{margin:12px 8px;font-size:14px;color:#5b6885;text-align:center}

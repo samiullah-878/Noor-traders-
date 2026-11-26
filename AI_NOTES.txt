@@ -10046,3 +10046,20 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
   Ab koi bhi screenshot saaf batata hai: khane par koi line nahi = phone par purana version (Settings ke upar 'Settings · vX' dekho).
 - Malik ko: Settings ke upar version dekho (v2.387.0); kam ho to ↻ Sync / Update ya app band kar ke dobara; phir Live 30 s + photo.
   Bina update: counter khane par tap = akela camera, 25 s baad '🖥 POS screen: …' patti (v2.229 se) wohi wajah batati hai.
+
+=== app v2.388.0 (26 Nov 2026) — 📦 Wholesale ke bill: items (Sale ki report) + har wholesale bill malik ke WhatsApp par (PC pos-sales-dekho v2.18 + ws-wa.js v1.0) ===
+Malik (21:44, Sale ki report ki photo): "yahan wholesale wala bill ka data bhi chahiye — tadad aur rates · aur total bill" -> plan -> OK (21:59) +
+  "wholesale ke all bills mere number par WhatsApp mein bhi — jaise hi bill bane / scan ho, tadad · rate · total aa jaye".
+1) sale-rep.js v1.3: "📦 Wholesale ke bill" hissa kholte hi (toggle, capture) har bill ke items — posSaleLines/<SaleID> (wohi jo Bills screen leti hai,
+   nayi SQL / rules nahi): naam · tadad × rate = raqam, bill ka total (POS), "💵 Cash mila · 📒 Udhaar", items ka jor ≠ total = "Discount / gol" ki
+   alag line (ghalti nahi). Cache WL (SaleID|n|t — bill badla = dobara), lines na hon = "⏳ shop PC se nahi aaye" + 16 s baad khud dobara. PDF: ek table
+   (Bill / Item · Tadad · Rate · Raqam), PDF se pehle items 8 s tak load. Thermal par NAHI (kaghaz). CSS .sr-wl / .sr-wsb / .sr-wp (global, pcm nahi).
+2) PC ws-wa.js v1.0 (NAYI FILE, manifest mein pos-sales-dekho se pehle) — pos-sales-dekho v2.18 sirf `feed(day, cache ki qataren)` deta hai (bill ka
+   raasta nahi rukta; bills ka mapper ab `billOf(r, names)` function). Apni line har 1 s: naya party 'whole sale' bill (cancel nahi, n > 0) 4 s tak
+   wahi (total + line ginti) -> SELECT lines (ginti N jaisi ho tab) -> waOut `rp-ws-<SaleID>` {kind 'rem', to = waParchi.prFrom[0] = malik} ->
+   wa-out (Business number, malik = tez line; 'rp-' = reply "print" thermal). Bhejne ke baad: total / lines badle = `-e<n>` "✏️ BADLA" (kya badla
+   ➕ ➖ 🔁 + nayi list, 5 dafa tak) · cancel `-x` · party badli `-p` · din ki list se gayab 10 s `-g`. create() = dohra kabhi nahi.
+   State ws-wa-state.json (4 din); pehli dafa (file nahi) = maujood bill chhorta hai (sailaab nahi). Number na ho = 2 ghante intezar phir chhor.
+   Setting blueAccess/reportConfig.waWs (na ho = ON) — app 📊 Reports mere number par → "📦 Har wholesale bill WhatsApp par" (cloud.setReportConfig
+   ab waWs bhi). Haal blueAccess/wsWa {day, n, at, no, err, errAt, ver} → app wahi screen (cloud.listenWsWa). POS mein kuch nahi. AI NAHI.
+   Test: node vm (plan / text / nakli Firestore + nakli SQL ka poora chakkar: intezar · naya · badla · cancel · band) PASS. Asal POS par azmaya nahi.

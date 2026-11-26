@@ -1,10 +1,12 @@
-// sale-rep.js v1.2 (app v2.352.0: ➕ / ➖ ITEMS SE HISAAB — posSales/<din>-it, PC pos-sales-dekho v2.12; plus items / bill ke andar minus / wapsi alag, teen nateeje) · v1.1 (app v2.350.0: 🔎 POS report se milao — malik POS ka Total Sale likhe, app bataye kaun sa hisaab milta hai) · v1.0 (app v2.345.0) — 🧾 SALE KI POORI REPORT (Daily Sale ke "➕ Sale+Wasooli+Kal" chip par tap)
+// sale-rep.js v1.3 (app v2.388.0: 📦 WHOLESALE KE BILL — har bill ke items (posSaleLines/<SaleID>, wohi jo Bills screen leti hai; nayi SQL nahi): naam · tadad × rate = raqam ·
+//   bill ka total (POS) · cash mila / udhaar · items ka jor ≠ total = discount / gol (ghalti nahi). Hissa kholne par hi (lazy, cache SaleID|n|t). PDF mein bhi (ek table). Thermal par nahi (kaghaz).
+//   malik 26 Nov: 'yahan wholesale wala bill ka data bhi chahiye — tadad aur rates · aur total bill') · v1.2 (app v2.352.0: ➕ / ➖ ITEMS SE HISAAB — posSales/<din>-it, PC pos-sales-dekho v2.12; plus items / bill ke andar minus / wapsi alag, teen nateeje) · v1.1 (app v2.350.0: 🔎 POS report se milao — malik POS ka Total Sale likhe, app bataye kaun sa hisaab milta hai) · v1.0 (app v2.345.0) — 🧾 SALE KI POORI REPORT (Daily Sale ke "➕ Sale+Wasooli+Kal" chip par tap)
 // malik (21 Nov 2026): "is ki poori report banao — itna bill, itna cancel, itna return, minus · poori screen · sale wale chip par click ·
 //   poora bill with return aur without return — phir pata chale sahi kya hai"
 // Data WAHI: posSales/<din> {bills[], sum} (PC pos-sales-dekho — nayi SQL nahi, PC ki koi file nahi badli). SIRF DIKHANA — Daily Sale ka hisaab is se nahi badalta.
 // sum ki raqam RUPAY mein (sum.amt PAISA); Daily ki raqam PAISA. AI NAHI.
 let C = null, DAY = '', DOC = undefined, stop = null, IT = undefined, stop2 = null, itQ = '', itTab = 'pl', itAsk = 0;
-import { smartFind } from './dukan/dhoond.js?v=2.387.0';
+import { smartFind } from './dukan/dhoond.js?v=2.388.0';
 const E = s => C.esc(String(s ?? ''));
 const R = x => C.money(Math.round((Number(x) || 0) * 100));          // rupay -> 'Rs …'
 const J = x => { try { const v = typeof x === 'string' ? JSON.parse(x) : x; return Array.isArray(v) ? v : []; } catch { return []; } };
@@ -14,7 +16,19 @@ const tm = t => t ? new Date(Number(t)).toLocaleTimeString('en-PK', { hour: 'num
 const q3 = x => String(Math.round(Math.abs(Number(x) || 0) * 1000) / 1000);
 const dayTxt = d => { try { return new Date(d + 'T12:00:00').toLocaleDateString('en-GB', { weekday: 'short', day: '2-digit', month: 'short', year: 'numeric' }); } catch { return d; } };
 
-export function srSetup(ctx) { C = ctx; if (!srSetup.on) { srSetup.on = true; document.addEventListener('click', onClick); } }
+// v1.3: 📦 wholesale bills ke items — cache (SaleID → {k: SaleID|n|t, L, at}); sirf hissa khula ho to (toggle) ya PDF se pehle
+const WL = new Map(); let wlP = null, wlT = null;
+const wlKey = b => b.id + '|' + (Number(b.n) || 0) + '|' + (Number(b.t) || 0);
+const wlNeed = (b, now) => { const v = WL.get(b.id); return !v || v.k !== wlKey(b) || (!v.L.length && (Number(b.n) || 0) > 0 && now - v.at > 15000); };
+function wlLoad() { if (wlP) return wlP; wlP = wlDo().finally(() => { wlP = null; }); return wlP; }
+async function wlDo() {
+  const k = DOC ? calc() : null; if (!k || !C.cloud?.getPosSaleLines) return;
+  const now = Date.now(), need = k.wsB.filter(b => wlNeed(b, now)).slice(0, 120); if (!need.length) return;
+  for (let i = 0; i < need.length; i += 6) await Promise.all(need.slice(i, i + 6).map(async b => { let L = []; try { L = await C.cloud.getPosSaleLines(b.id); } catch {} WL.set(b.id, { k: wlKey(b), L: Array.isArray(L) ? L : [], at: Date.now() }); }));
+  if (dlg()?.open) paint();
+  if (need.some(b => !(WL.get(b.id)?.L || []).length && (Number(b.n) || 0) > 0)) { clearTimeout(wlT); wlT = setTimeout(() => { if (dlg()?.querySelector('details[data-sr-sec="ws"][open]')) wlLoad(); }, 16000); }   // PC ne abhi lines nahi likhin — 16 s baad dobara
+}
+export function srSetup(ctx) { C = ctx; if (!srSetup.on) { srSetup.on = true; document.addEventListener('click', onClick); document.addEventListener('toggle', e => { const t = e.target; if (t?.matches?.('details[data-sr-sec="ws"]') && t.open && t.closest('#srDlg')) wlLoad(); }, true); } }
 export function srOpen(day) {
   DAY = String(day || C.today());
   let d = dlg(); if (!d) { d = document.createElement('dialog'); d.id = 'srDlg'; d.className = 'sr-dlg'; document.body.appendChild(d); d.addEventListener('close', () => { try { stop?.(); } catch {} stop = null; try { stop2?.(); } catch {} stop2 = null; }); }
@@ -60,6 +74,18 @@ const IT_ON = false;   // v2.365.0 (malik: 'plus minus nazar hi nahi aana chahiy
 const sec = (key, ic, title, right, body, open) => `<details class="sr-sec" data-sr-sec="${key}"${open ? ' open' : ''}><summary><span>${ic} ${title}</span><b>${right}</b><i>▾</i></summary><div class="sr-body">${body}</div></details>`;
 const billRow = b => `<div class="sr-row${b.x ? ' x' : ''}"><span><b>#${E(b.no || b.id)}</b> ${E(b.p || '')}${b.cr ? ' <u>udhaar</u>' : ''}</span><small>${E(tm(b.tm))}${b.pc ? ' · 🖥 ' + E(b.pc) : ''}${b.by ? ' · ' + E(b.by) : ''}${b.n ? ' · ' + b.n + ' item' : ''}</small><em>${R(b.t)}</em></div>`;
 const more = (l, n) => l.length > n ? `<small class="sr-more">… aur ${l.length - n} (PDF mein sab)</small>` : '';
+// v1.3: wholesale bill + us ke items (tadad × rate = raqam) — lines na hon to ⏳
+const n2 = x => (Math.round((Number(x) || 0) * 100) / 100).toLocaleString('en-PK', { maximumFractionDigits: 2 });
+const wsLines = b => { const v = WL.get(b.id); return v ? v.L : null; };
+const wsSum = L => (L || []).reduce((n, l) => n + (Number(l.q) || 0) * (Number(l.r) || 0), 0);
+function wsBillHTML(b) {
+  const v = WL.get(b.id), L = v ? v.L : null, t = Number(b.t) || 0, df = L && L.length ? Math.round((t - wsSum(L)) * 100) / 100 : 0;
+  const rows = (L || []).map(l => { const q = Number(l.q) || 0, r = Number(l.r) || 0; return `<div class="sr-wl"><span>${E(l.n || '?')}</span><b>${q < 0 ? '− ' : ''}${q3(q)} × ${n2(r)} = <strong>${q < 0 ? '− ' : ''}${n2(Math.abs(q * r))}</strong></b></div>`; }).join('');
+  const disc = Math.abs(df) >= 1 ? `<div class="sr-wl sub"><span>${df < 0 ? 'Discount / gol (bill items se kam)' : 'Bill items se zyada (gol)'}</span><b>${df < 0 ? '− ' : '+ '}${n2(Math.abs(df))}</b></div>` : '';
+  const c = Number(b.c) || 0, pay = b.cr || c < t - 0.5 ? `<small class="sr-wp">💵 Cash mila ${R(c)} · 📒 Udhaar ${R(Math.max(0, t - c))}</small>` : '';
+  const st = !v ? '<small class="sr-more">⏳ items aa rahe hain…</small>' : !L.length && (Number(b.n) || 0) > 0 ? '<small class="sr-more">⏳ items abhi shop PC se nahi aaye — thori der mein khud</small>' : (Number(b.n) || 0) > L.length ? `<small class="sr-more">… aur ${b.n - L.length} item (POS mein)</small>` : (v.k !== wlKey(b) ? '<small class="sr-more">⏳ bill badla — naye items aa rahe hain…</small>' : '');
+  return `<div class="sr-ret sr-wsb">${billRow(b)}${rows}${disc}${st}${pay}</div>`;
+}
 // v1.1: 🔎 POS REPORT SE MILAO — malik POS ki Sale Register ka 'Total Sale' likhta hai; app bataye wo kis hisaab se bana (return kaat kar / baghair). Sirf dikhana.
 const mlKey = () => 'sam-sr-pos:' + DAY;
 const mlGet = () => { try { const v = Number(localStorage.getItem(mlKey())); return v > 0 ? v : 0; } catch { return 0; } };
@@ -161,7 +187,7 @@ function html() {
   const mnB = k.mn.length ? `<small class="sr-note">Yeh minus bill ke TOTAL mein pehle se shamil hai (bill utna kam bana) — dobara minus nahi hota.</small>` + [...byNo].map(([no, l]) => `<div class="sr-ret"><div class="sr-row"><span><b>🧾 Bill #${E(no)}</b></span><small>${l.length} minus line</small><em>− ${R(l.reduce((n, a) => n + Math.abs(a[2]) * a[3], 0))}</em></div>${l.map(a => `<div class="sr-it"><span>${E(a[1])}</span><b>− ${q3(a[2])} × ${R(a[3])}</b></div>`).join('')}</div>`).join('') : `<p class="sr-none">${s.mn == null ? 'Minus items ki list PC se nahi aayi.' : 'Kisi bill mein minus item nahi.'}</p>`;
   return head + `<div class="sr-scroll">${top}
    ${sec('kul', '🧾', 'Kul bill · ' + (s.n || 0), R(k.g), kul, true)}
-   ${(k.wsB.length || s.ws) ? sec('ws', '📦', 'Wholesale ke bill · ' + (k.has ? k.wsB.length : (s.ws || 0)), R(s.wsRs), '<small class="sr-note">Yeh bill upar ke Kul bill mein pehle se shamil hain (dobara jama nahi hote).</small>' + ln('Kul wholesale', R(s.wsRs), 'tot') + ln('is mein cash mila', R(s.wsCash), 'sub') + (k.has ? k.wsB.slice(0, 80).map(billRow).join('') + more(k.wsB, 80) : '')) : ''}
+   ${(k.wsB.length || s.ws) ? sec('ws', '📦', 'Wholesale ke bill · ' + (k.has ? k.wsB.length : (s.ws || 0)), R(s.wsRs), '<small class="sr-note">Yeh bill upar ke Kul bill mein pehle se shamil hain (dobara jama nahi hote). Har bill ke neeche items: tadad × rate = raqam (POS ke rate).</small>' + ln('Kul wholesale', R(s.wsRs), 'tot') + ln('is mein cash mila', R(s.wsCash), 'sub') + (k.has ? k.wsB.slice(0, 80).map(wsBillHTML).join('') + more(k.wsB, 80) : '')) : ''}
    ${IT_ON ? (it => sec('it', '➕➖', 'Items se hisaab', it.right, it.body))(itSafe(k)) : ''}
    ${(ml => sec('ml', '🔎', 'POS report se milao', ml.right, ml.body))(mlHTML(k))}
    ${sec('cx', '⛔', 'Cancel · ' + (s.cx || 0), R(s.cxRs), '<small class="sr-note">Cancel bill kisi hisaab mein shamil nahi.</small>' + cxB)}
@@ -188,7 +214,13 @@ function pdfHTML(k) {
     if (ic.mn.length) o += h('Minus items (' + ic.mn.length + ')') + it3(ic.mn, 1, 4);
     if (ic.rt.length) o += h('Wapsi ki items (' + ic.rt.length + ')') + it3(ic.rt, 1, 5);
     if (ic.pl.length) o += h('Plus items (' + ic.pl.length + ')') + it3(ic.pl, 0, 6); }
-  if (k.wsB.length) o += h('Wholesale ke bill (' + k.wsB.length + ') - kul ' + R(s.wsRs)) + bt(k.wsB);
+  if (k.wsB.length) o += h('Wholesale ke bill (' + k.wsB.length + ') - kul ' + R(s.wsRs)) + `<table><thead><tr><th>Bill / Item</th><th>Tadad</th><th style="text-align:right">Rate</th><th style="text-align:right">Raqam</th></tr></thead><tbody>${k.wsB.map(b => {   // v1.3: har bill + items
+    const L = wsLines(b) || [], t = Number(b.t) || 0, df = L.length ? Math.round((t - wsSum(L)) * 100) / 100 : 0, c = Number(b.c) || 0;
+    return `<tr><td><b>#${E(b.no || b.id)} ${E(b.p || '')}${b.cr ? ' (udhaar)' : ''} - ${E(tm(b.tm))}${b.pc ? ' - ' + E(b.pc) : ''}</b></td><td>${Number(b.n) || L.length} item</td><td></td><td style="text-align:right"><b>${R(t)}</b></td></tr>`
+      + (L.length ? L.map(l => `<tr><td>${E(l.n || '?')}</td><td>${Number(l.q) < 0 ? '- ' : ''}${q3(l.q)}</td><td style="text-align:right">${n2(l.r)}</td><td style="text-align:right">${Number(l.q) < 0 ? '- ' : ''}${n2(Math.abs((Number(l.q) || 0) * (Number(l.r) || 0)))}</td></tr>`).join('') : `<tr><td>(items shop PC se nahi aaye)</td><td></td><td></td><td></td></tr>`)
+      + (Math.abs(df) >= 1 ? `<tr><td>${df < 0 ? 'Discount / gol' : 'Bill items se zyada (gol)'}</td><td></td><td></td><td style="text-align:right">${df < 0 ? '- ' : '+ '}${n2(Math.abs(df))}</td></tr>` : '')
+      + (b.cr || c < t - 0.5 ? `<tr><td>Cash mila ${R(c)} - Udhaar ${R(Math.max(0, t - c))}</td><td></td><td></td><td></td></tr>` : '');
+  }).join('')}</tbody></table>`;
   if (k.cx.length) o += h('Cancel bill (' + k.cx.length + ')') + bt(k.cx);
   if (k.live.length) o += h('Sab bill (' + k.live.length + ')') + bt(k.live);
   return o;
@@ -209,7 +241,9 @@ async function onClick(e) {
   if (d.srItreq) { try { await C.cloud.requestPosItems(DAY); itAsk = Date.now(); paint(); setTimeout(() => { if (dlg()?.open && !(IT && IT.tot)) paint(); }, 46000); } catch (er) { C.notice('❌ ' + (er?.message || er)); } return; }
   if (d.srMl) { const v = Number(String(dlg()?.querySelector('[data-sr-mlv]')?.value || '').replace(/[^0-9.]/g, '')); try { if (v > 0) localStorage.setItem(mlKey(), String(v)); else localStorage.removeItem(mlKey()); } catch {} paint(); return; }
   const k = DOC ? calc() : null; if (!k) { C.notice('Report abhi tayyar nahi'); return; }
-  if (d.srPdf) { dlg()?.close(); C.pdf(pdfHTML(k), 'Sale report ' + DAY); return; }
+  if (d.srPdf) {   // v1.3: pehle wholesale ke items (8 s tak), phir PDF
+    if (k.wsB.length && k.wsB.some(b => wlNeed(b, Date.now()))) { t.disabled = true; t.textContent = '⏳ items…'; try { await Promise.race([wlLoad(), new Promise(r => setTimeout(r, 8000))]); } catch {} t.disabled = false; t.textContent = '📄 PDF'; }
+    const k2 = DOC ? calc() || k : k; dlg()?.close(); C.pdf(pdfHTML(k2), 'Sale report ' + DAY); return; }
   if (d.srPrint) {
     if (!confirm('Dukan ke thermal printer par Sale report chhapein?')) return;
     t.disabled = true; t.textContent = '⏳';

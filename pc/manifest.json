@@ -1,6 +1,6 @@
 {
- "version": "2026-11-26.3",
- "note": "pos-jaanch v3.0 + rate-change v1.4 (wholesale bill ka Previous Balance kahan se — procedures / setting table / Consus folder, SIRF PARHNA, local pos-jaanch.txt)",
+ "version": "2026-11-26.4",
+ "note": "pos-sales-dekho v2.18 + naya ws-wa.js v1.0 (har wholesale bill malik ke WhatsApp par: items tadad x rate, total, badla / cancel / hata)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -38,7 +38,8 @@
   "sales-stats-auto.bat": "d3c9c311652bbc1ecc79264c4ca6fee2b88698dd59003306717926c5cf59d111",
   "BARCODE-DOCTOR.bat": "b127ae24f3219d77288bb6a6ad17758d85376fe2ef1f50aeb6293a2ebfe7ccb4",
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
-  "pos-sales-dekho.js": "86e7bded2848ac450ec90179b8afeb924ddb91e49928a20a089946de25c04844",
+  "ws-wa.js": "03c84d44a6ac834bddad9634eedcae8a256cefae8d597c446bf24474155e4c13",
+  "pos-sales-dekho.js": "1a342e66222af4dc177992ee6b8b627a39b53bd1c260ab34605df66d95c1b9fb",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
   "nt-print.js": "b8dd57f6974f9f2859c1fb7f30bc657317c7785477c22c9f5270c2114236c6cb",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",

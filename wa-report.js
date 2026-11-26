@@ -7,13 +7,16 @@
 //   aaj ka khulasa hazriIn mein bhejta hai -> PC raat-report v1.7 WhatsApp par (waH · hzTime · hzNow). Haal blueAccess/hazriWa. AI nahi.
 // v2.279.2 (14 Nov, malik ki screenshot: '✕ Report nahi bani: Invalid column name COGS' + screen par ⏳): haal ab PC se — reportWa.run = PC ne kaam utha liya
 //   (⏳ bana raha hai, 10 min tak intezar, jhoota '90 s = PC band' nahi) · err / errAt = report nahi bani (wajah yahin bhi) · 90 s mein run na aaye = PC ne uthaya hi nahi.
+// 📦 WHOLESALE BILL FORAN (v2.388.0, malik 26 Nov: 'wholesale ke all bills mere number par WhatsApp mein — jaise hi bill bane, tadad · rate · total'): PC pos-sales-dekho v2.18 + ws-wa.js
+//   har naye wholesale bill (party 'whole sale') ke items malik ke number par; badla / cancel / hata bhi. Setting waWs (na ho = ON), haal blueAccess/wsWa. AI nahi.
 // 🧾 UDHAAR (v2.284.0, malik 15 Nov: 'un ka paigham hamein WhatsApp par rozana subah · 1 month se koi wasooli nahi aati'): PC raat-report v2.0 `udSend` — waU · udDays · udNow, haal reportWa.uAt / uN. Sirf malik ko. AI nahi.
-let C = null, cfg = null, wa = null, hz = null, hk = '', stops = [], askAt = 0, hzAsk = 0, udAsk = 0, tmr = null, tmr2 = null, tmr3 = null;
+let C = null, cfg = null, wa = null, ws = null, hz = null, hk = '', stops = [], askAt = 0, hzAsk = 0, udAsk = 0, tmr = null, tmr2 = null, tmr3 = null;
 const UD_DAYS = [15, 30, 45, 60, 90];
 const HZ_URL = 'https://samiullah-878.github.io/nt-traders-/', HZ_TIMES = ['09:30', '10:00', '10:30', '11:00'];
 const newKey = () => { const a = new Uint8Array(24); crypto.getRandomValues(a); return btoa(String.fromCharCode(...a)).replace(/\+/g, '-').replace(/\//g, '_').replace(/=+$/, ''); };
 const esc = s => String(s ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 const ago = t => { const s = Math.max(0, Math.round((Date.now() - t) / 1000)); return s < 60 ? 'abhi' : s < 3600 ? Math.round(s / 60) + ' min pehle' : s < 86400 ? Math.round(s / 3600) + ' ghante pehle' : Math.round(s / 86400) + ' din pehle'; };
+const today = () => { const d = new Date(); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
 const t12 = v => { const [h, m] = String(v || '18:00').split(':').map(Number); return `${((h + 11) % 12) + 1}:${String(m || 0).padStart(2, '0')} ${h < 12 ? 'am' : 'pm'}`; };
 const root = () => document.querySelector('#dialogBody [data-rw-root]');
 const TIMES = ['17:00', '18:00', '19:00', '20:00', '20:45'];
@@ -29,6 +32,8 @@ function html() {
   const hzSt2 = hzAsk ? (hz && Number(hz.sent) > hzAsk ? '<p class="rw-st ok">✅ Hazri ki report WhatsApp par bhej di</p>' : Date.now() - hzAsk > 90000 ? '<p class="rw-st bad">✕ Shop PC ka jawab nahi aaya — PC band hai ya internet nahi.</p>' : '<p class="rw-st wait">⏳ Shop PC hazri bhej raha hai… (1 min tak)</p>') : '';
   const udN = Number(c.udDays) || 30, uAt = Number(wa && wa.uAt) || 0;
   const udSt = udAsk ? (uAt > udAsk ? `<p class="rw-st ok">✅ Udhaar report bhej di — ${Number(wa.uN) || 0} khate</p>` : Date.now() - udAsk > 90000 ? '<p class="rw-st bad">✕ Shop PC ka jawab nahi aaya — PC band hai ya internet nahi.</p>' : '<p class="rw-st wait">⏳ Shop PC udhaar ki list bana raha hai… (1 min tak)</p>') : uAt ? `<p class="rw-st ok">✅ Aakhri dafa: ${Number(wa.uN) || 0} khate — ${esc(ago(uAt))}</p>` : '';
+  const wsOn = c.waWs !== false, w = ws || {}, wErrAt = Number(w.errAt) || 0, wsAt = Number(w.at) || 0;
+  const wsSt = ws === null || !wsOn ? '' : wErrAt > wsAt ? `<p class="rw-st bad">✕ ${esc(String(w.err || '').slice(0, 180))}</p>` : w.day === today() && Number(w.n) ? `<p class="rw-st ok">✅ Aaj ${Number(w.n)} wholesale bill bheje · aakhri #${esc(w.no || '')} — ${esc(ago(wsAt))}</p>` : '<p class="rw-st wait">Aaj abhi koi wholesale bill nahi bheja (naya bill bante hi jayega)</p>';
   let st = '';
   const wAt = Number(wa && wa.at) || 0, wRun = Number(wa && wa.run) || 0, wErr = Number(wa && wa.errAt) || 0;
   if (askAt && !(wAt > askAt)) {
@@ -45,6 +50,9 @@ function html() {
     <div class="rw-tm">${TIMES.map(t => `<button type="button" data-rw-tm="${t}" class="${t === tm ? 'is-in' : ''}">${t12(t)}</button>`).join('')}<input type="time" id="rwTime" value="${esc(tm)}" aria-label="Apna waqt"></div>
     <small class="rw-note">Report us waqt TAK ka hisaab hoti hai. Poore din ka chahiye to raat ko "Abhi bhejo" dabayein ya waqt 8:45 pm rakhein (PC 9 baje band hota hai).</small>
     <button type="button" class="rw-go" data-rw-go="1">📤 Abhi bhejo</button>${st}
+    <p class="rw-h">📦 Wholesale bill — foran</p>
+    ${tg('waWs', '📦', 'Har wholesale bill WhatsApp par', 'bill bante hi: items · tadad × rate · total · badla / cancel / hata bhi')}${wsSt}
+    <small class="rw-note">Sirf aap ke number par (dukan ke Business number se), roz ka koi waqt nahi — bill bante hi 5-10 sec mein. Us paigham par reply mein "print" = thermal parchi.</small>
     <p class="rw-h">👥 Hazri — subah ki report</p>
     <div class="rw-tm">${HZ_TIMES.map(t => `<button type="button" data-rw-hzt="${t}" class="${t === hzT ? 'is-in' : ''}">${t12(t)}</button>`).join('')}<input type="time" id="rwHz" value="${esc(hzT)}" aria-label="Hazri ka waqt"></div>
     <small class="rw-note">Subah: kaun aaya / late / nahi aaya. Shaam ki poori hazri upar wale waqt par baqi reports ke saath. WhatsApp par "hazri" likhein to usi waqt.</small>
@@ -82,11 +90,12 @@ export function rwSetup(c) {
 }
 export function rwOpen() {
   if (!C?.owner()) { C?.notice('Sirf malik'); return; }
-  unlisten(); cfg = null; wa = null; hz = null; hk = ''; askAt = 0; hzAsk = 0; udAsk = 0;
+  unlisten(); cfg = null; wa = null; ws = null; hz = null; hk = ''; askAt = 0; hzAsk = 0; udAsk = 0;
   C.modal('📊 Reports mere number par', `<div class="rw" data-rw-root="1">${html()}</div>`, true);
   const cl = C.cloud;
   try { stops.push(cl.listenReportConfig(d => { if (!root()) return; cfg = d || {}; paint(); })); } catch {}
   try { stops.push(cl.listenReportWa(d => { if (!root()) return; wa = d || {}; paint(); })); } catch {}
+  try { if (cl.listenWsWa) stops.push(cl.listenWsWa(d => { if (!root()) return; ws = d || {}; paint(); })); } catch {}
   try { stops.push(cl.listenHazriWa(d => { if (!root()) return; hz = d || {}; paint(); })); } catch {}
   try { cl.getHazriKey().then(k => { hk = k || ''; }).catch(() => {}); } catch {}
   try { document.getElementById('dialog')?.addEventListener('close', unlisten, { once: true }); } catch {}

@@ -1,4 +1,6 @@
 // =========================================================
+//  v2.18 (2026-11-26, malik: 'wholesale ke all bills mujhe mere number par WhatsApp mein — jaise hi bill bane, tadad · rate · total'): 📦 ws-wa.js
+//    (apni line, har 1 s) — yahan sirf feed(day, cache ki qataren) + billOf (bills ka mapper ab function). Bill ka raasta kabhi nahi rukta. AI nahi.
 //  v2.17 (2026-11-24, malik: 'live items ke names aayein — pehle bill bane items ke names'): 🧾 LIVE SCAN NAAM — counter NT-PRINT v1.36 Live dekhte waqt har
 //    scan ka barcode posLive/<naam>__scan mein bhejta hai; yahan (sirf jab wohi counter dekha ja raha ho) har naye barcode ka item naam POS se (Items.ItemCode ·
 //    ItemSubCode.SBBarCode + tadad · baqi barcode khane) → posLive/<naam>.sn = JSON {barcode: [naam, tadad]}. Har barcode ek dafa (yaad), na mile 5 min baad dobara.
@@ -49,6 +51,7 @@ const linesCol = db.collection('businesses').doc(BUSINESS_ID).collection('posSal
 // v1.2: PC ka naam (SystemNotes "at PC:DESKTOP-xxx") -> dukaan ka naam. local-config.json "pcNames": {"DESKTOP-xxx": "Naam"} se badlein.
 const PC_DEFAULT = {};   // 2026-11-17 (pc-names v1.1): naam = PC ka apna (NT-PRINT se) — insaanon wale naam hata (malik: 'Abdurehman ki bajaye PC ka naam')
 const PN = require('./pc-names.js'); PN.start(db.collection('businesses').doc(BUSINESS_ID)); const pcNames = () => PN.names(DIR);   // v2.13: naam NT-PRINT se (pc-names.js)
+let WSWA = null; try { WSWA = require('./ws-wa.js'); } catch (e) { console.log('ws-wa.js nahi mila: ' + e.message); }   // v2.18: 📦 wholesale bill → malik ka WhatsApp
 const lineHash = new Map();
 let pool = null;
 async function getPool() { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool(SQL_CONFIG).connect(); return pool; }
@@ -439,6 +442,16 @@ async function readFull(p, d0, d1) {
   firstId = rows.length ? Math.min(...rows.map(r => Number(r.SaleID) || 0)) : 0;
   return rows;
 }
+// v2.18: bill ka mapper (pehle once() ke andar) — ws-wa.js bhi isi se (pc / by / ct)
+function billOf(r, names) {
+  const desc = String(r.Description || ''), m = desc.match(/BK-APP[ :]([A-Za-z0-9_-]+)/);
+  const sn = String(r.SystemNotes || ''), host = (sn.match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || '', by = (sn.match(/By:\s*([^\r\n]+?)\s+On:/i) || [])[1] || '';
+  const ct = onTime(sn, r.SaleDate);   // v2.4: banane / print ka waqt
+  return { id: r.SaleID, ct, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
+    x: Number(r.DocStatusID) === 3 ? 1 : 0, p: String(r.PartyName || '').slice(0, 60), n: Number(r.N) || 0,
+    tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
+    ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, ft: Number(firstSeen.m[String(r.SaleID)]) || 0, lt: Number(firstSeen.l[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
+}
 async function once() {
   const t0 = Date.now();
   const p = await getPool();
@@ -469,15 +482,8 @@ async function once() {
     if (full) for (const id of Object.keys(postSeen.m)) if (!cache.has(Number(id))) { delete postSeen.m[id]; ch = true; }
     seenBoot = false; if (ch) { try { fs.writeFileSync(SEEN_FILE, JSON.stringify(postSeen)); } catch {} } }
   const all = [...cache.values()].sort((a, b) => (Number(b.SaleID) || 0) - (Number(a.SaleID) || 0));
-  const bills = all.slice(0, 600).map(r => {
-    const desc = String(r.Description || ''), m = desc.match(/BK-APP[ :]([A-Za-z0-9_-]+)/);
-    const sn = String(r.SystemNotes || ''), host = (sn.match(/at PC:\s*([A-Za-z0-9_.-]+)/i) || [])[1] || '', by = (sn.match(/By:\s*([^\r\n]+?)\s+On:/i) || [])[1] || '';
-    const ct = onTime(sn, r.SaleDate);   // v2.4: banane / print ka waqt
-    return { id: r.SaleID, ct, no: String(r.SaleNo || '').trim(), t: r2(r.TotalSale), c: r2(r.CashReceived), cr: r.IsCreditSale ? 1 : 0,
-      x: Number(r.DocStatusID) === 3 ? 1 : 0, p: String(r.PartyName || '').slice(0, 60), n: Number(r.N) || 0,
-      tm: r.SaleDate ? new Date(r.SaleDate).getTime() : 0, app: m ? m[1] : '',
-      ps: Number(r.DocStatusID) || 0, pt: Number(postSeen.m[String(r.SaleID)]) || 0, ft: Number(firstSeen.m[String(r.SaleID)]) || 0, lt: Number(firstSeen.l[String(r.SaleID)]) || 0, pc: String(names[host] || host.replace(/^DESKTOP-/i, '') || '').slice(0, 30), by: /blue khata/i.test(by) ? '' : String(by).trim().slice(0, 20) };
-  });
+  const bills = all.slice(0, 600).map(r => billOf(r, names));
+  if (WSWA) { try { WSWA.feed(day, all); } catch (e) { log('ws-wa feed: ' + e.message); } }   // v2.18: sirf hawala
   const hash = day + JSON.stringify(bills);
   slowDirty = true;
   // v1.9: bills ka haal SAB SE PEHLE app ko · v2.1: sum / Daily Sale / items peeche ki lane mein (slow) — yahan intezar nahi
@@ -541,7 +547,8 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v2.16 chal raha hai — har 0.15 second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
+  log('pos-sales-dekho v2.18 chal raha hai — har 0.15 second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
+  if (WSWA) { try { WSWA.start({ db, BUSINESS_ID, getPool, sql, log, DIR, billOf: r => billOf(r, pcNames()), guard: (fn, ms, nm) => ZINDA.guard(fn, ms, nm) }); } catch (e) { log('ws-wa start: ' + e.message); } }   // v2.18
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }
