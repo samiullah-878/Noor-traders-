@@ -10016,3 +10016,24 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
 - .rpt 'Contents' stream = Crystal ki encoded shakal (header fc00ffff07…, zlib nahi) — yahan Linux par objects nahi parhe ja sakte. Agla qadam (malik ke OK par): PC par POS ke apne
   Crystal engine se rptdsSale / rptSaleEng temp copy khol kar SIRF parhna (Previous Balance wala object + pINVType); badlaav = alag OK, .bak + wapsi, ya Consus wale designer mein.
 - Local patch /tmp/pj-v4-local.patch (pos-jaanch v4) push NAHI hua (classifier ne roka tha) — OK mile to sirf in do files tak tang kar ke.
+=== v2.386.0 (26 Nov 2026) — 🩺 Live 'Sab cameras' ka counter khana kabhi khali nahi ===
+- Malik (14:45, 14:30 ki photo): 'camera ke upar jab bill likhte hain to items camera ki screen par nahi aa rahi — is ko dekho, kaise aa sakti hai'.
+  Photo: OLD-SERVER · Q1SLV77 · RN6QU6D teeno khane bilkul khali (na items, na 🔤 wajah, na tasveer). 'NT print bhi kaam nahi kar raha' (14:38).
+- Jaanch: v1.39 (nt-print) mein sirf Live wala hissa badla (parchi / scan / watcher ka code nahi) — sandbox mein nt-print chala (load theek),
+  shot ki PowerShell poori parhi (variable naam takrao nahi, braces theek). Server PC folder (C:\khata-sync) is chat mein jura nahi —
+  folder ki darkhwast classifier ne roki; computer-use server par nahi (dukan ka waqt, server = counter bhi).
+- GHALTI (meri, v2.385.0): khana tab CHUP rehta tha jab counter ka purana scan doc (24 Nov ka) ya bill doc pada ho magar is Live ke dauran
+  koi shot / OCR doc na aaye — v2.366 wali warning bhi `!S0` se ruk jati, ocWhy ko version nahi milta = kuch nahi. Pichhle Live ka OCR doc
+  {on:0, why:'Live band'} bhi taza lag sakta tha.
+- live.js `tbDiag` (sirf app, PC kuch nahi): khane par items na hon to HAMESHA ek line — zanjeer ki tooti kadi:
+  ① taza OCR wajah (🔤) ② taza POS screen wajah (🖥 'POS ki Sale screen khuli nahi' waghera — shot doc ka apna why, pehle khane par nahi aata tha)
+  ③ NT-PRINT purana (taza doc ka ver < 1.39) ④ 20 s baad: counter jura magar screen / OCR nahi · ya server ka hukum (posLive/_want — TB.want)
+  nahi / is counter ka host nahi · ya 'hukum <HOST> ko gaya — ' + ntpSay(host, TB.pcs) (printPCs: juda nahi / N min chup / purana / chal raha
+  magar suna nahi). 'Taza' = doc ka `at` is Live ke shuru se 2 min pehle tak (`lvFr` — PC ki ghari ka farq). Shot doc ab `why` + `dat`,
+  scan doc `dat` rakhta hai. ocWhy (akele camera ki bill patti) bhi `lvFr` se — purani 'Live band' wajah nahi.
+- Akele camera ki 🖥 patti (shotPaint note) mein yeh jaanch pehle se thi (v2.229+): counter khane par tap = wohi camera akela -> 25 s baad
+  '🖥 POS screen: …' line. Malik ko yehi bataya (abhi bhi, bina update).
+- Test: tbDiag ke 11 haalat vm mein (want nahi · naam nahi · printPCs khali · NT-PRINT chup · zinda magar suna nahi · POS screen nahi mili ·
+  OCR ghalti · kal ka 'Live band' · v1.38 taza · tasveer haan OCR nahi · pehle 20 s = khali).
+- Sabaq (CLAUDE.md): kai qadam wali zanjeer (server -> counter PC -> POS screen -> OCR) ka natija dikhana ho to har haalat mein bataao kaun
+  si kadi tooti — 'koi purana doc pada hai' ko kabhi 'sab theek' mat samjho; har doc ki taazgi us ke `at` se jaancho.

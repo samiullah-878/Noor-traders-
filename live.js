@@ -178,10 +178,10 @@ function tlMove(b, dir) {
 }
 
 // ---------- 🎛 v2.360.0: har khane ka apna data — counter = bill + POS screen · godam = gate pass ----------
-let TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), ocr: new Map(), gp: null, mo: null, cv: null };
+let TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), ocr: new Map(), gp: null, mo: null, cv: null, want: null, pcs: null };
 const tbMs = v => typeof v === 'number' ? v : v?.toMillis ? v.toMillis() : v?.seconds ? v.seconds * 1000 : 0;
 const tbDay = n => { const d = new Date(); d.setDate(d.getDate() - n); return d.getFullYear() + '-' + String(d.getMonth() + 1).padStart(2, '0') + '-' + String(d.getDate()).padStart(2, '0'); };
-function tbStop() { for (const f of TB.un) { try { f && f(); } catch {} } for (const o of TB.shot.values()) { try { o.url && URL.revokeObjectURL(o.url); } catch {} } clearInterval(TB.t); TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), ocr: new Map(), gp: null, mo: null, cv: null }; }
+function tbStop() { for (const f of TB.un) { try { f && f(); } catch {} } for (const o of TB.shot.values()) { try { o.url && URL.revokeObjectURL(o.url); } catch {} } clearInterval(TB.t); TB = { un: [], t: null, bill: new Map(), shot: new Map(), scan: new Map(), ocr: new Map(), gp: null, mo: null, cv: null, want: null, pcs: null }; }
 function tbSync(mo) {
   tbStop(); if (!mo || !Array.isArray(mo.k) || !cloud) return; TB.mo = mo; TB.t0 = Date.now();
   mo.n.forEach((n, i) => {
@@ -189,12 +189,17 @@ function tbSync(mo) {
     if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive(n, (d, err) => { if (err || !d || TB.mo !== mo) return; let L = [], sn = {}; try { L = JSON.parse(d.j || '[]'); } catch {} try { sn = JSON.parse(d.sn || '{}') || {}; } catch {} TB.bill.set(n, { d, L, sn, at: Date.now() }); tbPaint(i); }));
     if (cloud.listenPosScan) TB.un.push(cloud.listenPosScan(n, (d, err, cache) => { if (err || TB.mo !== mo) return; const o = TB.scan.get(n);
       // v2.371.0: 🩺 PC ki ghari ka farq — sirf taza (doosri ya baad wali, cache nahi) snapshot par: likhai ke ~1 s mein pohanchti hai
-      if (d) TB.scan.set(n, { a: d.a || [], ver: d.ver || '', ok: d.ok, sc: d.sc, rw: d.rw, w: d.w, sp: d.sp, rd: d.rd, al: d.al, er: String(d.er || '').slice(0, 60), fg: String(d.fg || '').slice(0, 24), at: Date.now(), ns: (o ? o.ns : 0) + 1, sk: o && !cache && Number(d.at) ? Number(d.at) - Date.now() : (o ? o.sk : null) }); else TB.scan.delete(n); tbPaint(i); }));   // v2.370.0
+      if (d) TB.scan.set(n, { dat: Number(d.at) || 0, a: d.a || [], ver: d.ver || '', ok: d.ok, sc: d.sc, rw: d.rw, w: d.w, sp: d.sp, rd: d.rd, al: d.al, er: String(d.er || '').slice(0, 60), fg: String(d.fg || '').slice(0, 24), at: Date.now(), ns: (o ? o.ns : 0) + 1, sk: o && !cache && Number(d.at) ? Number(d.at) - Date.now() : (o ? o.sk : null) }); else TB.scan.delete(n); tbPaint(i); }));   // v2.370.0
     if (cloud.listenPosShot) TB.un.push(cloud.listenPosShot(n, (d, err, cache) => { if (err || cache || TB.mo !== mo) return; const o = TB.shot.get(n); try { o && o.url && URL.revokeObjectURL(o.url); } catch {}
-      const on = d && Number(d.on) === 1 && d.im; TB.shot.set(n, { url: on ? URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })) : '', at: Date.now(), ex: !!d, ver: d ? String(d.ver || '') : '' }); tbPaint(i); }));
+      const on = d && Number(d.on) === 1 && d.im; TB.shot.set(n, { url: on ? URL.createObjectURL(new Blob([d.im], { type: 'image/jpeg' })) : '', at: Date.now(), ex: !!d, ver: d ? String(d.ver || '') : '', dat: d ? Number(d.at) || 0 : 0, why: d && !on ? String(d.why || '').slice(0, 140) : '' }); tbPaint(i); }));
     // v2.385.0: 🔤 POS screen ka OCR (counter NT-PRINT v1.39) — bante bill ki items ke naam + tadad
     if (cloud.listenPosOcr) TB.un.push(cloud.listenPosOcr(n, (d, err, cache) => { if (err || cache || TB.mo !== mo) return; TB.ocr.set(n, { d, rt: Date.now() }); tbPaint(i); }));
   });
+  // v2.386.0: 🩺 khana kabhi khali nahi — server ka hukum (posLive/_want) + counter NT-PRINT ka haal (printPCs), wahi jo akele camera ki 🖥 patti dekhti hai
+  if (mo.k.includes('c')) {
+    if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive('_want', (d, err) => { if (err || TB.mo !== mo) return; TB.want = d || {}; }));
+    if (cloud.listenPrintPCs) TB.un.push(cloud.listenPrintPCs(L => { if (TB.mo === mo) TB.pcs = L || []; }));
+  }
   if (mo.k.includes('g') && cloud.listenGatePass) TB.un.push(cloud.listenGatePass(tbDay(1), tbDay(0), list => { if (!list || TB.mo !== mo) return; TB.gp = list; tbAll(); }));
   TB.t = setInterval(tbAll, 5000);
 }
@@ -287,14 +292,35 @@ function ocSeen(key, items, now) {
   return x => { const t = o.m.get(sig(x)); return !!t && now - t < 4000; };
 }
 const ocFresh = (O, now) => { const d = O && O.d; if (!d || Number(d.on) !== 1 || now - O.rt > 60000) return false; const t = Number(d.hb) || Number(d.at) || 0; return !(t && Date.now() - t > 30 * 60000); };
+// v2.386.0: doc IS Live ke dauran likha (PC ki ghari, ±2 min) — pichhle Live ka 'Live band' / purani wajah taza na lage
+const lvFr = (at, t0) => Number(at) > 0 && Number(at) >= (t0 || Date.now()) - 120000;
 function ocWhy(O, sh, now, t0) {   // OCR kyun nahi — saaf wajah (khamosh nahi)
   const d = O && O.d;
-  if (d && Number(d.on) === 0 && d.why) return '🔤 ' + String(d.why).slice(0, 120);
+  if (d && Number(d.on) === 0 && d.why && lvFr(d.at, t0)) return '🔤 ' + String(d.why).slice(0, 120);
   if (d && Number(d.on) === 1) return '🔤 OCR ruka hua — counter PC / NT-PRINT dekhein';
   const v = sh && sh.ver ? parseFloat(sh.ver) : 0;
   if (v && v < 1.39) return `🔤 NT-PRINT v${sh.ver} purana — naya (v1.39) 3-5 min mein khud aayega`;
   if (v && now - (t0 || now) > 20000) return '🔤 OCR ka jawab nahi (is PC par band — posOcr?)';
   return '';
+}
+// v2.386.0 (malik 26 Nov ki photo: teeno counter khane bilkul khali): khane par items na hon to HAMESHA ek line — zanjeer ki kaun si kadi tooti:
+//   ① server ne hukum bheja? (posLive/_want) ② counter ke NT-PRINT ne suna? (is Live ke dauran shot / ocr / scan doc + printPCs haal) ③ POS screen mili? ④ OCR
+function tbDiag(n, O, sh, S0, now) {
+  const t0 = TB.t0 || now, d = O && O.d, fd = d && lvFr(d.at, t0), fs = sh && sh.ex && lvFr(sh.dat, t0), fc = S0 && lvFr(S0.dat, t0);
+  if (fd && Number(d.on) === 0 && d.why) return '🔤 ' + String(d.why).slice(0, 110);
+  if (fs && !sh.url && sh.why) return '🖥 ' + sh.why.slice(0, 110);
+  const vs = [fs && sh.ver, fd && d.ver, fc && S0.ver].map(v => parseFloat(v) || 0).filter(Boolean), v = vs.length ? Math.max(...vs) : 0;
+  if (v && v < 1.39) return `🔤 NT-PRINT v${v} purana — v1.39 3-5 min mein khud aayega`;
+  if (now - t0 < 20000) return '';
+  if (fd || fs || fc) {
+    if (fd && Number(d.on) === 1) return '🔤 OCR ruka hua — counter PC / NT-PRINT dekhein';
+    if (fs && sh.url) return '🔤 POS screen aa rahi hai, OCR ka jawab nahi (NT-PRINT v' + (sh.ver || '?') + ')';
+    return '🔤 counter PC jura hai magar POS screen / OCR nahi bheji (NT-PRINT v' + (v || '?') + ')';
+  }
+  const W = TB.want, hs = W && W.hosts, host = hs ? Object.keys(hs).find(h => hs[h] === n) : '';
+  if (!W) return '🩺 server ka haal nahi mila (posLive/_want)';
+  if (!host) return '🩺 server ne is counter ko hukum nahi bheja' + (Number(W.at) && now - Number(W.at) > 120000 ? ' — server PC ki script chup?' : '');
+  return ('🩺 hukum ' + host + ' ko gaya — ' + ntpSay(host, TB.pcs)).slice(0, 170);
 }
 function ocTileHTML(n, d, now) {
   const it = ocParse(d.r).items;
@@ -320,9 +346,8 @@ function tbPaint(i) {
           return `<div class="lv-tbr${now - o.t < 4000 ? ' nw' : ''}">${nm ? escB(nm) : '🔖 ' + escB(String(o.c).slice(-10))}${q !== 1 ? ` <small>(${q3(q)})</small>` : ''} <b>×${o.n}</b></div>`; };
         h = `<div class="lv-tbh nw">🧾 Bill ban raha · ${R.length} item</div>` + R.slice(0, 6).map(row).join('') + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
       } else if (sh && sh.url && !sh.empty && now - sh.at < 45000) { h = '<div class="lv-tbh nw">⏳ bill ban raha…</div>'; img = sh.url; }   // v2.363.0: khali screen = tasveer nahi
-      const why = ocWhy(O, sh, now, TB.t0);
+      const why = tbDiag(n, O, sh, S0, now);   // v2.386.0: pehle sirf OCR ki wajah thi — purana scan doc pada ho to khana chup reh jata tha
       if (why) h += `<div class="lv-tbd">${escB(why)}</div>`;
-      else if (!h && !(O && O.d) && !(sh && sh.ex) && !TB.bill.get(n) && !S0 && now - (TB.t0 || now) > 12000) h = '<div class="lv-tbh un">⚠ is naam ka bill / screen nahi mil rahi</div><div class="lv-tbr m">⚙️ Camera setup mein ⚪ ' + escB(n) + ' ko 🔗 se asal PC se jorein</div>';   // v2.366.0: khamosh nahi
     }
   } else if (k === 'g') {
     const G = tbGate(i);
@@ -537,8 +562,8 @@ function shotFollow(img) {
   } catch {}
 }
 // counter ke NT-PRINT ka haal (printPCs) — malik ko saaf wajah
-function ntpSay(host) {
-  const bare = x => String(x || '').toUpperCase().replace(/^[A-Z]+-/, ''), L = SH.pcs;
+function ntpSay(host, L0) {   // v2.386.0: L0 = Sab cameras ki list (TB.pcs)
+  const bare = x => String(x || '').toUpperCase().replace(/^[A-Z]+-/, ''), L = L0 || SH.pcs;
   if (!L) return 'NT-PRINT ka haal load nahi hua';
   const d = L.find(x => bare(x.host) === bare(host));
   if (!d) return 'is counter ka NT-PRINT app se juda hi nahi (PC par NT-PRINT nahi laga / firebase chaabi nahi). Jude PC: ' + (L.map(x => String(x.host || x.name || x.id) + ' v' + (x.ver || '?')).join(', ') || 'koi nahi');
