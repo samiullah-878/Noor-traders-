@@ -9984,3 +9984,15 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
 - Test: fake PowerShell lines se shot() parse (ocr true / false) · ocrRows + ocParse namoone (header ✓, bina header, CTN + PCS, khali POS, Total
   qatar bahar). Asal Windows / POS par AZMAYA NAHI (PowerShell yahan nahi chal saka) — malik ek counter ka Live khol kar photo bheje; 🔤 line
   ki wajah se agla qadam. Na chale = 2 min peeche wala plan (malik ka). AI nahi.
+
+=== PC pos-jaanch v2.0 + rate-change v1.3 (26 Nov 2026) — wholesale bill ka 'Previous Balance' kahan se (SIRF PARHNA) ===
+- Malik: 'POS mein customer ka sabqa baqaya bhi aa raha hai, print ke upar na aaye' -> sawal: POS ka apna sale bill -> 'only wholesale se hatani hai' ->
+  'tum khud jaanch kar lo, PC connect hai' (Claude Desktop server PC desktop-oegi39u, jura folder C:\khata-sync; device_bash nahi).
+- v1 (10 Nov) ka nateeja log mein: 'database 6 jagah · template files 0' — POS ki bill template file PC par nahi (Consus ke andar ya DB mein).
+- v2 (pos-jaanch.js): (1) <= 60 qatar wale table ke khane jin ke naam mein prev / balance / bal / sabqa / outstand / opening -> qeemat (4 tak);
+  (2) <= 3000 qatar ke likhai wale khanon mein 'previous bal / prev bal / old bal / sabqa / opening bal' -> table / khana + 230 harf;
+  (3) <= 500 qatar ke varbinary / image khane (report layout?) mein 'previous' (ASCII + UTF-16) -> 700 harf ka ilaqa;
+  (4) Consus / POS process ka folder (naam + report jaisi files). SECRET khane (pass / key / pin…) kabhi nahi. Sab SELECT, har sawal 8–20 s hadd.
+  Nateeja LOCAL C:\khata-sync\pos-jaanch.txt (+ Firestore posBillJaanch pb). rate-change v1.3 = sirf version (doctor dobara chalaye -> jaanch v2 ek dafa).
+- Mock pool test: setting khana / likhai / blob teeno pakre, password khana aur bara table nahi chhua.
+- Agla qadam: file parh kar malik ko batana kahan se aata hai; badalna (POS mein likhna) sirf malik ke alag OK par, backup + wapsi, sirf wholesale. AI nahi.
