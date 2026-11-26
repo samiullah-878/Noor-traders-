@@ -9996,3 +9996,13 @@ Malik (WhatsApp list ki screenshot, +92 319 8682104 unsaved): "aisa koi tareeqa 
   Nateeja LOCAL C:\khata-sync\pos-jaanch.txt (+ Firestore posBillJaanch pb). rate-change v1.3 = sirf version (doctor dobara chalaye -> jaanch v2 ek dafa).
 - Mock pool test: setting khana / likhai / blob teeno pakre, password khana aur bara table nahi chhua.
 - Agla qadam: file parh kar malik ko batana kahan se aata hai; badalna (POS mein likhna) sirf malik ke alag OK par, backup + wapsi, sirf wholesale. AI nahi.
+
+=== PC pos-jaanch v3.0 + rate-change v1.4 (26 Nov 2026) — v2 ka nateeja + agla qadam (SIRF PARHNA) ===
+- v2 nateeja (2:28 pm, DESKTOP-Q1SLV77): setting khane (prev / balance, <= 60 qatar) 0 · likhai mein sirf party naam 'Haroon Ali … sabqa khata' + AdjustmentDetail 'Opening Balance' ·
+  blob 2 (EmployeeImage JPEG, sysdiagrams) — report layout DB mein nahi · template file 0 · Consus process Get-Process se nahi mila (Path khali — POS admin).
+- v2 ki kami: needle sirf space wale ('previous bal') — 'PreviousBalance' / 'PrevBal' nahi pakre; setting table ki hadd 60 qatar.
+- v3: (5) sys.sql_modules (procedures / views / functions) jin ki likhai mein prev%bal / previous%b / prebal / oldbal / showbal -> naam + har milan ki line (password / connection wali line chhupi) + wholesale ka zikr;
+  (5b) print / invoice / receipt / report / bill naam ke objects; (6) har table ke prev / balance / wholesale khanon ke naam (qeemat nahi);
+  (7) naam setting / config / company / print / default … wale table (<= 2000 qatar): show / print / bal / prev / whole khanon ki qeemat + 'prev' / 'balance' wali qatar;
+  (8) Consus: Get-Process naam + CIM ExecutablePath + Desktop / Start Menu shortcut ka target + C / D / Program Files mein consus / cognit folder -> files + config (.config / .ini / .xml / .json / .txt)
+  ki sirf prev / balance / wholesale lines (connection / password / data source wali KABHI nahi). Mock test: password khana nahi chhua, chhupi line chhupi.

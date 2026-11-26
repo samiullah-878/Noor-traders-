@@ -1,6 +1,6 @@
 {
- "version": "2026-11-26.2",
- "note": "nt-print v1.39 + nt-posui v1.16 (🔤 Live: POS screen ki tasveer par Windows ka apna OCR — bante bill ki items ke naam + tadad posLive/<naam>__ocr, sirf jab Live dekha ja raha ho; internet / AI nahi)",
+ "version": "2026-11-26.3",
+ "note": "pos-jaanch v3.0 + rate-change v1.4 (wholesale bill ka Previous Balance kahan se — procedures / setting table / Consus folder, SIRF PARHNA, local pos-jaanch.txt)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -94,8 +94,8 @@
   "wa-parchi-auto.bat": "0d07e04e51af91a216b5f48e5b22d7e6bcdb0657e493a89ca4a6408dc8439c93",
   "wa-a4.ps1": "9fe9f8407ceaf70eb9c53cfd864aea6397ba2fb810680311757dd07b39b8093e",
   "dhoond.mjs": "967ba20504d1f0cfd9fb7c126800cd7767213989693d3516741983375fd4a4b3",
-  "pos-jaanch.js": "08aace2da5e0b80399def1cef62b3464a1992cb531227d295da762d89bb4196d",
-  "rate-change.js": "68aaa726ff8726e8ad7b18b70a85ce01eb3b563f61e18822e082f9b3bd1c864d",
+  "pos-jaanch.js": "fb67fcb4b1650b83ccdb2ab04a0ddb2d6e66842aa14618264647f5d3804f27e4",
+  "rate-change.js": "d52a54abae46ab3d88e8e30765dfcb9146ff1d1c593357a01c1896174d51f4b6",
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
   "wa-out.js": "22c0a7f83b1f6484f91ffaf48b128595d0c4229eecbf2c55f93c68317c2da4cb",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",

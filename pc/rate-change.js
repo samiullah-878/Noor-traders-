@@ -4,7 +4,7 @@
 //        SaleRate* purane reh jate hain jab POS screen se rate badlo (akhroot gree: Items W 1751 / R 2100, asal W 1850 / R 2250).
 //    (2) Foran: har 10 s sasta sawal = khareed (60 din) ka CHECKSUM (naya bill, bill ka rate badla, cancel) + dukan ke rates ka CHECKSUM
 //        -> kuch bhi badla = list dobara (pehle sirf MAX id dekhta tha — bill ka rate badalna 5 min baad aata).
-//  rate-change.js  v1.3 (2026-11-26: pos-jaanch v2 — wholesale bill ka 'Previous Balance' kahan se, sirf parhna) · v1.1 (2026-11-10: shuru mein ek dafa 🔎 POS bill jaanch — pos-jaanch.js, sirf parhna) · v1.0 (2026-11-07) — 📈 RATE CHANGE: jin items ka KHAREED rate pichhli khareed se badla
+//  rate-change.js  v1.4 (2026-11-26: pos-jaanch v3) · v1.3 (2026-11-26: pos-jaanch v2 — wholesale bill ka 'Previous Balance' kahan se, sirf parhna) · v1.1 (2026-11-10: shuru mein ek dafa 🔎 POS bill jaanch — pos-jaanch.js, sirf parhna) · v1.0 (2026-11-07) — 📈 RATE CHANGE: jin items ka KHAREED rate pichhli khareed se badla
 //  (malik: "jo rates change hue hain pichli dafa se wo aayein · rates wahan se badal sakein · check box · stock jaisa jaldi update").
 //
 //  SIRF PARHTI hai (POS mein kuch nahi likhti). Har 30 s chhota sawal (MAX PurchaseDetailID + ginti) — nayi khareed aate hi
@@ -27,7 +27,7 @@ SQL_CONFIG.options = { ...(SQL_CONFIG.options || {}), useUTC: false };
 if (!getApps().length) initializeApp({ credential: cert(require(path.join(__dirname, 'firebase-key.json'))) });
 const db = getFirestore(), col = db.collection('businesses').doc('noor-traders').collection('posStats');
 const log = (...a) => console.log(`[${new Date().toLocaleTimeString()}]`, ...a);
-const VER = '1.3', DAYS = 60, HIST = 400, EVERY = 5 * 60000, POLL = 10000, EPS = 0.005, MAX = 800, DV = 2;
+const VER = '1.4', DAYS = 60, HIST = 400, EVERY = 5 * 60000, POLL = 10000, EPS = 0.005, MAX = 800, DV = 2;
 const p2 = n => String(n).padStart(2, '0'), dk = d => d ? `${d.getFullYear()}-${p2(d.getMonth() + 1)}-${p2(d.getDate())}` : '';
 const r2 = n => Math.round((Number(n) || 0) * 100) / 100;
 
