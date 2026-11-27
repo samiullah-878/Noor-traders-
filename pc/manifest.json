@@ -1,6 +1,6 @@
 {
- "version": "2026-11-27.2",
- "note": "live-cam v2.10 (sab cameras recording: counter khane par bill ki items naam + tadad, rate nahi, 4-9 min peeche)",
+ "version": "2026-11-27.3",
+ "note": "pos-sales-dekho v2.20 + naya post-pc.js v1.0 (doosre PC se bill post = malik ko WhatsApp)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
   "KHATA-DOCTOR.bat": "e4f8b3041770b35b19b6a140a00c2b36bfa4b3c175f4d9eb20f7cd30ddc49f2c",
@@ -40,7 +40,8 @@
   "LABEL-GEHRA.bat": "2fd4a77c5241b38433ba280babd4659011672fcb08b928a968e9e7e3931d4d88",
   "ws-wa.js": "03c84d44a6ac834bddad9634eedcae8a256cefae8d597c446bf24474155e4c13",
   "oc-naam.js": "77093ab381d6475daabd4f99c19e923ca3c39efff760a041082d6555f9f7e90e",
-  "pos-sales-dekho.js": "36f2f5f0a97ca9173ea794a3692d824cb9ebcb38e41757cb4419ba9a2bc271ef",
+  "post-pc.js": "e87c69dae5e0a04ef16fa28143bb5c4794a8b6ffe39c2a1a8a452d6f6e93c3b1",
+  "pos-sales-dekho.js": "a5cab9db3c3fb54457eeb3137b385e484098a6ce3e7417417f05c6b92f9acffa",
   "pos-sales-auto.bat": "aef4a274bb9cdcde344028e9ad2de8fe7a3572580a0b20f3e3f7b1e806d33e11",
   "nt-print.js": "b8dd57f6974f9f2859c1fb7f30bc657317c7785477c22c9f5270c2114236c6cb",
   "nt-print-auto.bat": "6d2d36d3e6db49986502bdf20df2dd3fe8d2bcce6aca4b807d7b8ed9294dccce",

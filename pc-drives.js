@@ -38,11 +38,16 @@ export function setup(deps) {
     else if (k === 'cx') { rlEdit = false; rlErr = ''; rlPaint(true); }
   });
   document.addEventListener('keydown', e => { if (e.key === 'Enter' && e.target?.id === 'prlTok' && rlBox()?.contains(e.target)) { e.preventDefault(); rlSave(); } });
+  document.addEventListener('click', e => {   // v1.3: 🧾 posting nigrani
+    const t = e.target.closest?.('[data-ppn]'); if (!t || !ppBox()?.contains(t)) return;
+    const k = t.dataset.ppn;
+    if (k === 'sw') ppToggle(); else if (k === 'ok') ppMine(t.dataset.h); else if (k === 'more') { ppMore = !ppMore; ppPaint(); } else if (k === 'auto') ppAuto();
+  });
 }
 
 export async function open(force) {
   if (!box()) return;
-  aiOpen(); rlOpen();
+  aiOpen(); rlOpen(); ppOpen();
   paint();
   try { cfg = await A.cloud.getBillClipCfg(); } catch { cfg = cfg || {}; }
   paint();
@@ -228,3 +233,72 @@ async function rlRemove() {
   catch (e) { rlErr = 'Nahi hua: ' + String(e?.message || e); }
   rlBusy = false; rlPaint(true);
 }
+
+// ---------- 🧾 v1.3 (app v2.393.0, 27 Nov, malik: 'es system ka ilawa koi aur system voucher posting mein involved ho to mujhe WhatsApp par text — time, naam' ·
+//   'chip PC script mein hi'): POSTING NIGRANI — PC pos-sales-dekho v2.20 + post-pc.js: posted bill ki POS likhai ('… Post… By: On: at PC:') se PC + login +
+//   waqt; 'apna' PC na ho = malik ko WhatsApp. Setting blueAccess/postPc {on, ok:[host]} (sirf malik) · haal blueAccess/postPcSt (PC). ok khali = PC khud
+//   chunta hai (3 din mein sab se zyada posting). Patli line + PC ki list (✅ Apna). AI nahi. ----------
+let pp = null, ppSt = null, ppStop = null, ppBusy = false, ppMore = false;
+const ppBox = () => document.getElementById('pcPst');
+const ppTm = t => { if (!t) return ''; const d = new Date(Number(t)); let h = d.getHours(); const ap = h < 12 ? 'am' : 'pm'; h = h % 12 || 12; return h + ':' + String(d.getMinutes()).padStart(2, '0') + ' ' + ap; };
+const ppSame = (k, h) => { k = String(k || '').toUpperCase(); h = String(h || '').toUpperCase(); return k === h || 'DESKTOP-' + k === h || k === 'DESKTOP-' + h; };
+function ppOpen() {
+  if (!ppBox()) { const b = box(); if (!b) return; const d = document.createElement('div'); d.id = 'pcPst'; b.before(d); }
+  ppPaint();
+  if (ppStop || !A.cloud?.listenPostPc) return;
+  const u1 = A.cloud.listenPostPc(d => { if (!ppBox()) return ppOff(); if (!ppBusy) pp = d || {}; ppPaint(); });
+  const u2 = A.cloud.listenPostPcSt ? A.cloud.listenPostPcSt(d => { if (!ppBox()) return ppOff(); ppSt = d; ppPaint(); }) : () => {};
+  ppStop = () => { try { u1(); } catch {} try { u2(); } catch {} };
+}
+function ppOff() { try { ppStop && ppStop(); } catch {} ppStop = null; }
+const ppOn = () => !pp || pp.on !== false;
+const ppMineList = () => Array.isArray(pp?.ok) ? pp.ok.map(x => String(x || '').toUpperCase()).filter(Boolean) : [];
+const ppOk = () => { const m = ppMineList(); return m.length ? m : (Array.isArray(ppSt?.ok) ? ppSt.ok.map(x => String(x || '').toUpperCase()) : []); };
+const ppHs = () => { try { const a = JSON.parse(ppSt?.hs || '[]'); return Array.isArray(a) ? a.filter(x => Array.isArray(x) && x[0]) : []; } catch { return []; } };
+function ppChip() {
+  const c = (k, s) => `<span class="pai-st${k ? ' ' + k : ''}">${s}</span>`;
+  if (!pp) return c('w', '⏳');
+  if (ppBusy) return c('w', '⏳ save…');
+  const s = ppSt;
+  if (!s || !s.at) return c('w', ppOn() ? '⏳ PC update (3-5 min)' : '⚫ Band');
+  if (Date.now() - Number(s.at) > 25 * 60000) return c('r', `🔴 PC chup (${esc(ago(Number(s.at)))})`);
+  if (!ppOn()) return c('', '⚫ Band');
+  if (s.err) return c('r', '⚠️ ' + esc(String(s.err).slice(0, 40)));
+  if (!ppHs().length && Number(s.nh) > 0) return c('r', '⚠️ POS likhai mein PC nahi mila');
+  return c('g', '✅ Chalu');
+}
+function ppPaint() {
+  const b = ppBox(); if (!b) return;
+  const on = ppOn(), s = ppSt || {}, hs = ppHs(), mine = ppMineList().length > 0, ok = ppOk();
+  const nm = h => { const r = hs.find(x => ppSame(x[0], h)); return r ? r[1] : String(h || '').replace(/^DESKTOP-/i, ''); };
+  const list = (ppMore ? hs : hs.slice(0, 6)).map(([h, n1, n, at, by, n3]) => {
+    const isOk = ok.some(k => ppSame(k, h)), host = String(h).toUpperCase().endsWith(String(n1).toUpperCase()) ? '' : h;
+    const sub = [host, 'aaj ' + (Number(n) || 0), Number(n3) ? '3 din ' + Number(n3) : '', at ? 'aakhri ' + ppTm(at) : '', by ? '👤 ' + by : ''].filter(Boolean).map(esc).join(' · ');
+    return `<div class="pps-r${isOk ? ' ok' : ''}"><span class="pps-nm"><b>🖥 ${esc(n1)}</b><small>${sub}</small></span>
+      <button type="button" class="pps-ok${isOk ? ' is-in' : ''}" data-ppn="ok" data-h="${esc(h)}"${ppBusy || !pp ? ' disabled' : ''}>${isOk ? '✅ Apna' : '☐ Apna'}</button></div>`;
+  }).join('');
+  const more = hs.length > 6 ? `<button type="button" class="pps-more" data-ppn="more">${ppMore ? '▲ Kam' : '＋ ' + (hs.length - 6) + ' aur PC'}</button>` : '';
+  const la = s.la && s.la.at ? `<p class="pai-note">📲 Aakhri paigham: ${esc(ppTm(s.la.at))} · ${esc(nm(s.la.host))} · ${Number(s.la.n) || 0} bill${Number(s.al) ? ' · aaj ' + Number(s.al) + ' paigham' : ''}</p>` : '';
+  const smp = !hs.length && Number(s.nh) > 0 && s.smp ? `<p class="pai-note pps-warn">POS ki likhai (namoona): ${esc(String(s.smp).slice(0, 160))}</p>` : '';
+  const note = !on ? 'Band hai — posting gini jati hai, paigham nahi jata. Switch dabayein to chalu.'
+    : mine ? 'Sirf ✅ Apna wale PC — baqi kisi PC se bill post ho to aap ke WhatsApp par (waqt · PC · login · bill · raqam).'
+    : `Apna PC khud chuna: ${esc(ok.map(nm).join(', ') || '…')} (sab se zyada posting). ☐ / ✅ se badlein — baqi PC se posting = aap ke WhatsApp par.`;
+  b.innerHTML = `<div class="pai-box"><div class="pai-r"><span class="pai-ic">🧾</span><span class="pai-nm"><b>Posting nigrani</b><small>doosre PC se bill post ho = WhatsApp</small></span>${ppChip()}
+    <button type="button" class="pai-sw${on ? ' is-in' : ''}" data-ppn="sw" aria-label="Posting nigrani ${on ? 'band karo' : 'chalu karo'}"${ppBusy || !pp ? ' disabled' : ''}><i></i></button></div>
+    <p class="pai-note">${note}${mine ? ' <button type="button" class="pps-more" data-ppn="auto">↺ Khud chuno</button>' : ''}</p>
+    ${hs.length ? `<div class="pps-l">${list}${more}</div>` : (ppSt && ppSt.at ? '<p class="pai-note">Abhi kisi PC ki posting nazar nahi aayi.</p>' : '')}${la}${smp}</div>`;
+}
+async function ppSave(o, msg) {
+  const was = pp; ppBusy = true; pp = { ...(pp || {}), ...o }; ppPaint();
+  try { await A.cloud.savePostPc(o); A.notice?.(msg); }
+  catch (e) { pp = was; A.notice?.('✕ ' + (e?.message || e)); }
+  ppBusy = false; ppPaint();
+}
+function ppToggle() { if (ppBusy || !pp) return; const nx = !ppOn(); ppSave({ on: nx }, nx ? '🧾 Posting nigrani chalu' : '⚫ Posting nigrani band'); }
+function ppMine(h) {
+  if (ppBusy || !pp || !h) return;
+  const cur = ppOk(), has = cur.some(k => ppSame(k, h)), nx = has ? cur.filter(k => !ppSame(k, h)) : [...cur, String(h).toUpperCase()];
+  if (!nx.length) { A.notice?.('Kam az kam ek PC apna rahe'); return; }
+  ppSave({ ok: nx.slice(0, 10) }, has ? '☐ Ab is PC ki posting par paigham aayega' : '✅ Yeh PC apna — is ki posting par paigham nahi');
+}
+function ppAuto() { if (ppBusy || !pp) return; ppSave({ ok: [] }, '↺ Apna PC ab PC khud chunega'); }

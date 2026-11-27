@@ -1,4 +1,6 @@
 // =========================================================
+//  v2.20 (2026-11-27, malik: 'es system ka ilawa koi aur system voucher posting mein involved ho to mujhe WhatsApp par text — time, naam' · 'chip PC script mein'):
+//    🧾 post-pc.js (apni line, har 1 s) — yahan sirf feed(day, cache ki qataren) + pcName / onTime. Doosre PC se posted bill = malik ko WhatsApp. POS mein kuch nahi likhta. AI nahi.
 //  v2.19 (2026-11-27, malik: 'Sab cameras ke layout mein jab bill ban raha ho tab naam sahi nahi aa raha' + 'PC se poori list'): 🔤 OCR NAAM = POS ka
 //    ASAL naam — dekhe ja rahe counter ka posLive/<naam>__ocr suno, har qatar oc-naam.js se dbo.Items (POORI list, stock 0 bhi; 30 min yaad, sirf SELECT) se milao
 //    -> posLive/<naam>.oc {qatar ki chaabi: [asal naam, %] | 0}. App live.js ocKey wahi chaabi. Na mile = 0 (app '?' / 'POS ke upar koi aur khirki'). AI nahi.
@@ -55,7 +57,8 @@ const linesCol = db.collection('businesses').doc(BUSINESS_ID).collection('posSal
 const PC_DEFAULT = {};   // 2026-11-17 (pc-names v1.1): naam = PC ka apna (NT-PRINT se) — insaanon wale naam hata (malik: 'Abdurehman ki bajaye PC ka naam')
 const PN = require('./pc-names.js'); PN.start(db.collection('businesses').doc(BUSINESS_ID)); const pcNames = () => PN.names(DIR);   // v2.13: naam NT-PRINT se (pc-names.js)
 let OCN = null; try { OCN = require('./oc-naam.js'); } catch (e) { console.log('oc-naam.js nahi mila: ' + e.message); }   // v2.19: 🔤 OCR naam = POS ka asal naam
-let WSWA = null; try { WSWA = require('./ws-wa.js'); } catch (e) { console.log('ws-wa.js nahi mila: ' + e.message); }   // v2.18: 📦 wholesale bill → malik ka WhatsApp
+let WSWA = null; try { WSWA = require('./ws-wa.js'); } catch (e) { console.log('ws-wa.js nahi mila: ' + e.message); }
+let POSTPC = null; try { POSTPC = require('./post-pc.js'); } catch (e) { console.log('post-pc.js nahi mila: ' + e.message); }   // v2.20: 🧾 doosre PC ki posting → malik ka WhatsApp   // v2.18: 📦 wholesale bill → malik ka WhatsApp
 const lineHash = new Map();
 let pool = null;
 async function getPool() { if (pool && pool.connected) return pool; pool = await new sql.ConnectionPool(SQL_CONFIG).connect(); return pool; }
@@ -517,6 +520,7 @@ async function once() {
   const all = [...cache.values()].sort((a, b) => (Number(b.SaleID) || 0) - (Number(a.SaleID) || 0));
   const bills = all.slice(0, 600).map(r => billOf(r, names));
   if (WSWA) { try { WSWA.feed(day, all); } catch (e) { log('ws-wa feed: ' + e.message); } }   // v2.18: sirf hawala
+  if (POSTPC) { try { POSTPC.feed(day, all); } catch (e) { log('post-pc feed: ' + e.message); } }   // v2.20: sirf hawala
   const hash = day + JSON.stringify(bills);
   slowDirty = true;
   // v1.9: bills ka haal SAB SE PEHLE app ko · v2.1: sum / Daily Sale / items peeche ki lane mein (slow) — yahan intezar nahi
@@ -580,8 +584,9 @@ lock.on('listening', async () => {
   for (let i = 0; i < 50 && !cfgReady; i++) await new Promise(r => setTimeout(r, 200));   // v1.8: setting (10 sec tak)
   try { const p = await getPool(), y1 = new Date(); y1.setHours(0, 0, 0, 0); const y0 = new Date(y1); y0.setDate(y0.getDate() - 1);   // v1.5: kal ki aakhri sale bhi (PC raat ko band ho gaya ho)
     await writeSale(dayOf(y0), await saleFor(p, y0, y1), true); } catch (e) { log('Kal ki POS sale: ' + e.message); }
-  log('pos-sales-dekho v2.18 chal raha hai — har 0.15 second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
+  log('pos-sales-dekho v2.20 chal raha hai — har 0.15 second (sirf naye / badle bill parhta hai, bill pehle — Daily Sale / items peeche)…');
   if (WSWA) { try { WSWA.start({ db, BUSINESS_ID, getPool, sql, log, DIR, billOf: r => billOf(r, pcNames()), guard: (fn, ms, nm) => ZINDA.guard(fn, ms, nm) }); } catch (e) { log('ws-wa start: ' + e.message); } }   // v2.18
+  if (POSTPC) { try { POSTPC.start({ db, BUSINESS_ID, getPool, sql, log, DIR, onTime, pcName: h => { const n = pcNames(); return n[h] || n[String(h).toUpperCase()] || String(h).replace(/^DESKTOP-/i, ''); }, guard: (fn, ms, nm) => ZINDA.guard(fn, ms, nm) }); } catch (e) { log('post-pc start: ' + e.message); } }   // v2.20
   let running = false, again = false;
   const tick = async () => { if (running) { again = true; return; } running = true;
     try { await once(); } catch (e) { log('Masla: ' + e.message); if (e.code === 16 || /UNAUTHENTICATED/.test(String(e.message))) process.exit(1); }

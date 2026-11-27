@@ -10165,3 +10165,26 @@ clear hone chahie mean fonts pr background nzar ana chahie" -> plan (4 nuqte) ->
   tadad daayein. Asal PC / NVR / POS par azmaya nahi. AI nahi. Rules nahi badle.
 - Sabaq: ADD waqt ki khirki bill ke AAKHIR (lt) par band karo (+8 s ki chhoot agle gahak ki pehli items is bill mein daal deti thi — test ne pakra).
   Video par likhai lambi ho to tadad / zaroori hissa alag drawtext mein kinare se — naam kate, tadad nahi.
+
+=== app v2.393.0 + PC pos-sales-dekho v2.20 + naya post-pc.js v1.0 (27 Nov 2026) — 🧾 Posting nigrani: doosre PC se bill post = malik ko WhatsApp ===
+Malik (photo: server par POS ki Sale list, 'waqar Logged In', Connected Server DESKTOP-Q1SLV77): "es system ka ilawa agar koi aur system voucher posting
+mein involved ho to mujhe WhatsApp par text chahiye — time, naam" · "POS har system ka naam likhta hai, kab kahan kis time bill post hota hai" ·
+"OK · chip PC script mein hi".
+- PC post-pc.js (pos-sales-dekho ka feed(day, rows) — ws-wa.js jaisa, bill ka raasta kabhi nahi rukta; apni line har 1 s): posted bill (DocStatusID 2) ki
+  SystemNotes mein POS ki action lines `ACT_RE` ('<kaam> By:<login> On:<waqt> at PC:<host>' — By na ho tab bhi, ek line mein kai bhi) → aakhri 'post' wali
+  (un-post nahi) = posting. State m[id].s = us line ki likhai (dobara post = nayi line = naya waqia). Pehli dafa (post-pc-state.json nahi) = maujood
+  posted bill chhore. PC 'apna' na ho + login mein 'Blue Khata' na ho + on = qataar S.q → 15 s (ya 12 bill) baad EK paigham (PC + login ke group) → waOut
+  rp-pp-<waqt> {kind 'rem', to waParchi.prFrom[0] = malik} (dukan ka Business number; 'rp-' = reply 'print' thermal). Number na ho = haal mein err, 3
+  ghante baad qataar khali. Waqt = posting line ka On (pos-sales-dekho onTime) warna pakarne ka waqt.
+- 'Apna' = blueAccess/postPc.ok [host] (malik) · khali = 3 din (TOP 4000 posted bill, SELECT sirf parhna, har 6 ghante) mein SAB SE ZYADA posting wala
+  PC (5+) · woh bhi na ho = server ka apna host (os.hostname, aaj DESKTOP-Q1SLV77). postPc.on false = sirf ginti.
+- Haal blueAccess/postPcSt {ver, at, day, ok, auto, own, mine, on, hs JSON [[host, naam, aaj, aakhri, login, 3din]], al, la {at, host, n}, nh, smp, q, err}
+  (badle par / 15 s / har 10 min). Posting line na mile = nh + namoona smp (app mein laal) — andaze se paigham KABHI nahi.
+- App: Settings → 🖥️ PC scripts → '🧾 Posting nigrani' (pc-drives.js v1.3 #pcPst, Camera AI ke neeche): switch + chip (✅ Chalu / ⚫ Band / ⏳ PC update /
+  🔴 PC chup / ⚠️) + har PC ki patli qatar (aaj · 3 din · aakhri · login) + ☐ / ✅ Apna (optimistic, savePostPc) + ↺ Khud chuno + aakhri paigham.
+  cloud.js listenPostPc / listenPostPcSt / savePostPc. Rules nahi badle (blueAccess malik ka). AI nahi. POS mein kuch nahi likhta.
+- Test: node — POS jaisi likhai (Created & Printed + Posted), ek line mein do kaam, Un-Posted, bina By, dobara post, paigham. Asal POS ki posting likhai
+  dekhi NAHI (PC tak rasta beech mein toot gaya) — malik ke kehne par 'PC ka naam likhta hai'; pehle din app ka '⚠️ POS likhai mein PC nahi mila' /
+  namoona dekh kar ACT_RE theek karo.
+- Sabaq: 'X ke ilawa koi aur' wala nigrani kaam = pehle din 'apna' khud data se chuno (sab se zyada wala) + malik ke haath mein ✅ — hardcode / andaze se
+  har posting par paigham (sailaab) nahi.
