@@ -10197,3 +10197,19 @@ mein involved ho to mujhe WhatsApp par text chahiye — time, naam" · "POS har 
   lagte = paigham ka sailaab. Scan halka (TOP 3000, SystemNotes 1500 harf) + log mein bina-posting-line bill ki ginti + namoona.
 - Sabaq: POS ki likhai ka qaida (regex) asal data ke namoone se banao — v1.0 ka namoona-log hi ilaaj bana. 'Parse badla' = purane nishan ko naya waqia mat
   samjho (PARSE_V jaisa ek dafa reset).
+
+=== v2.394.0 + PC pos-khata-sync (z) — 🩹 VOUCHER NUMBER WAPAS (2026-11-27) ===
+Malik (screenshot: Waleed khata, 'Party ko payment' 26 Nov 4:00 PM Rs 6,00,000 '⏳ POS mein ban raha'): "Ya kal ka voucher ha, PC ko subah aate hi dekhna
+chahie konsa voucher raat ko add hua tha, to un ko auto voucher banana chahie tha" -> plan OK.
+- Jaanch (server log khata-sync-log.txt): voucher BAN GAYA tha — 26 Nov 4:00:20 PM '⚡ POS mein bana (tez): CPV · waleed · 600000 · CPV-00000002829' + parchi.
+  27 Nov 1:15:55 malik ka 📤 -> PC 'pehle se POS mein (CPV-00000002829) — kuch nahi kiya'. Yani app entry par posCode MIT gaya tha (app pmEntryState = 'miss'
+  sirf jab posCode khali). Kis save ne mitaya — log se pakka nahi (andaza: kisi device ki purani copy se cloud.edit ne poora doc likha; PC ka markApp merge
+  rev nahi barhata, is liye rev jaanch ne nahi roka). Raat wali entries ka subah catch-up PEHLE SE chalta hai (27 Nov 9:14 AM Saim CRV 1,80,000 = 26 Nov raat).
+- PC (z): fixCode(docIds, link, why) — link mein code + voucherId (deleted nahi) aur app entry par posCode khali = markApp posCode wapas + log '🩹'.
+  syncEntries mein 'link.appHash === h' (kuch nahi badla) par har chakkar; milanSendOne / milanTransfer ke 'pehle se POS mein' par bhi (📤 ka jawab mein
+  '· app par voucher number wapas likh diya'). Chakkar mein minute mein 60 tak (pehli dafa purani kai hon to sync na ruke), 📤 par hadd nahi. Voucher
+  banana / badalna BILKUL nahi chheda — sirf app ka nishan.
+- App cloud.js edit (transaction): server doc par posCode / posPrintedAt ho aur nayi likhai mein khali = server wala rakho (r = {...r, ...k}). Koi app code
+  posCode jaan bujh kar khali nahi karta (grep kiya) — ↩ wapas (trashRestoreOne) bhi {...r} se posCode rakhta tha.
+- Sabaq: PC jo field app ke doc mein merge se likhta hai (posCode, posPrintedAt…) wo app ki poori-doc likhai (tx.set) mein mit sakta hai — naya PC-likha field
+  banao to cloud.edit ki is keep-list mein bhi jodo. Malik 'voucher nahi bana' kahe to pehle server log mein raqam / naam dhoondo (bana tha ya nahi), phir ilaaj.

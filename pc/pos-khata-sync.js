@@ -1,5 +1,7 @@
 // ============================================================
 //  pos-khata-sync.js — Blue Khata app  <->  POS  (dono taraf)
+//  2026-11-27 (z): 🩹 VOUCHER NUMBER WAPAS — voucher POS mein bana (link) magar app entry par posCode mit gaya = har chakkar + 📤 par fixCode number wapas
+//    likhta hai (sirf khali par, minute mein 60 tak). Waleed 6,00,000 CPV-2829 (26 Nov) app par 'POS mein nahi' dikh raha tha. Voucher banana BILKUL nahi chheda.
 //  2026-11-23 (y): 🖨 KHATON KI LIST — khataPrints j.k 'list' (app v2.359.0: khata list ⋮ 🖨 Customers / Suppliers print) -> listSlip: naam + baqaya (mota),
 //    neeche aakhri entry ki tareekh + raqam, aakhir mein Kul lene / dene. Malik: 'thermal print · supplier aur customer ka alehda · last entry ki date · neeche total'.
 //  2026-11-17 (x): 🖨 Daily print — app v2.317.0 ne closing cash HATA di (malik: 'closing cash ki ab zaroorat nahi'): J.nc = 1 ho to
@@ -376,6 +378,19 @@ async function markApp(ids, fields) {
     await khata.doc(id).set(fields, { merge: true });
     app.set(id, { ...app.get(id), ...fields });
   }
+}
+// 2026-11-27 (z): 🩹 VOUCHER NUMBER WAPAS — POS mein voucher bana (link mein code) magar app entry par posCode mit gaya (baad ki kisi app save ne
+//   poora doc likha) = app 'POS mein nahi' dikhati thi (Waleed 6,00,000 CPV-2829, 26 Nov — malik ne 📤 dabaya, PC ne 'pehle se' kaha).
+//   Ab har chakkar + 📤 par link ka number wapas — sirf jab app par khali ho. Voucher KABHI dobara nahi banta, sirf nishan.
+let fixWin = 0, fixCnt = 0;   // pehli dafa purani kai entries hon to ek minute mein 60 tak (sync na ruke); 📤 par hadd nahi
+async function fixCode(docIds, link, why) {
+  const code = String(link?.code || '').trim(); if (DRY || !code || !link.voucherId || link.deleted) return false;
+  const miss = docIds.filter(id => app.has(id) && !app.get(id).deleted && !String(app.get(id).posCode || '').trim());
+  if (!miss.length) return false;
+  if (why !== '📤') { if (Date.now() - fixWin > 60000) { fixWin = Date.now(); fixCnt = 0; } if (fixCnt >= 60) return false; fixCnt += miss.length; }
+  await markApp(miss, { posCode: code, posError: null });
+  log(`🩹 ${code}: app entry par voucher number wapas likha (${why}) · ${miss.length} entry`);
+  return true;
 }
 
 // ---------- rasid (v8: seedha TM-T88IV par, sale rasid jaisi — notepad ke baghair) ----------
@@ -1194,7 +1209,7 @@ async function milanSendOne(pool, acct, id, say, purAc) {
   if (!acct.has(e.partyId)) { say(`${id}: party POS se judi nahi`); return 'fail'; }
   if (String(id).startsWith('pos-') || e.purchase) { say(`${id}: purchase bill — voucher nahi banta (sync.js)`); return 'fail'; }
   const key = 'entry:' + id, link = links.get(key);
-  if ((link && link.voucherId && !link.deleted) || e.posCode) { say(`${id}: pehle se POS mein (${link?.code || e.posCode}) — kuch nahi kiya`); return 'skip'; }
+  if ((link && link.voucherId && !link.deleted) || e.posCode) { const fx = await fixCode([id], link, '📤').catch(() => false); say(`${id}: pehle se POS mein (${link?.code || e.posCode}) — dohra nahi banaya${fx ? ' · app par voucher number wapas likh diya' : ''}`); return 'skip'; }
   const mk = DRY ? null : (await pool.request().input('m', sql.VarChar(120), '%[[]app:' + id + ']%').query('SELECT TOP 1 VoucherID, VoucherCode FROM dbo.Voucher WHERE SystemNote LIKE @m AND VoucherStatusID <> 3')).recordset[0];
   if (mk) { await setLink(key, { appHash: appHashEntry(e), voucherId: mk.VoucherID, code: mk.VoucherCode, posHash: null }); await markApp([id], { posCode: mk.VoucherCode, posError: null }); say(`${id}: POS mein pehle se ${mk.VoucherCode} — sirf jor diya`); return 'skip'; }
   const twin = DRY ? null : await posTwin(pool, acct.get(e.partyId).accountId, e);   // 2026-10-27 (e): purana POS data = dohra voucher na bane
@@ -1372,7 +1387,7 @@ async function milanTransfer(pool, acct, e, say) {
   const miss = [base.fromPartyId, base.toPartyId].filter(x => !acct.has(x));
   if (miss.length) { say(`${e.id}: transfer ka ${miss.map(x => app.get(x)?.name || x).join(' + ')} khata POS se juda nahi — pehle khata POS mein jorein`); return 'fail'; }
   const nm = `${acct.get(base.fromPartyId).name} -> ${acct.get(base.toPartyId).name}`;
-  if ((link && link.voucherId && !link.deleted) || base.posCode) { say(`${e.id}: pehle se POS mein (${link?.code || base.posCode}) — ${nm}`); return 'skip'; }
+  if ((link && link.voucherId && !link.deleted) || base.posCode) { const fx = await fixCode(docIds, link, '📤').catch(() => false); say(`${e.id}: pehle se POS mein (${link?.code || base.posCode}) — ${nm}${fx ? ' · app par voucher number wapas likh diya' : ''}`); return 'skip'; }
   const amt = rupees(base.amount), from = acct.get(base.fromPartyId).accountId, to = acct.get(base.toPartyId).accountId;
   if (!(amt > 0)) { say(`${e.id}: raqam 0 — ${nm}`); return 'fail'; }
   let ex = (await pool.request().input('m', sql.VarChar(120), '%[[]app:t-' + tid + ']%').query('SELECT TOP 1 VoucherID, VoucherCode FROM dbo.Voucher WHERE SystemNote LIKE @m AND VoucherStatusID <> 3')).recordset[0];
@@ -1458,7 +1473,10 @@ async function syncEntries(pool, acct) {
     }
     const link = links.get(key);
     const h = appHashEntry(base);
-    if (link && link.appHash === h) continue;
+    if (link && link.appHash === h) {   // (z) 🩹 badla kuch nahi — app par mita number wapas
+      await fixCode(isTransfer ? [`transfer-${e.transferId}-out`, `transfer-${e.transferId}-in`] : [e.id], link, 'chakkar').catch(er => log('🩹 number wapas: ' + er.message));
+      continue;
+    }
     if (!link && inFlight.has(key)) continue;                             // ⚡ tez raasta isay abhi bana raha hai
     if (!link) { inFlight.add(key); syncMine.add(key); }
     if (base.updatedBy === WRITER && link) { await setLink(key, { appHash: h }); continue; }
