@@ -10139,3 +10139,29 @@ notifications', 'Noor Traders', 'Recent' · RN6QU6D: 'imko', 'eel 175/gm soap'. 
 - Rules nahi badle (posLive parhna pehle se malik / Full / Nigrani). AI nahi. Asal POS / counter par azmaya nahi — malik ki agli photo se jaancho
   (bahut '?' aayein = threshold / fold theek karo; ghalat naam = Dice ka faisla dekho).
 - Sabaq: OCR / screen ki likhai ko hamesha asal list se milao — kachi likhai seedha malik ko mat dikhao; list nazar na aaye to saaf wajah.
+
+=== app v2.392.0 + PC live-cam v2.10 (27 Nov 2026) — 🧾 Live khane par sirf bill ki qatar (search list / rate nahi) + 📼 recording par bill ke naam + saaf likhai ===
+Malik: "kiya ham search hote time wala band kar jo screen pr ho only or rates nhi chahie or ya live ki jo video ban rhi ha us pr bi lago ho or fonts
+clear hone chahie mean fonts pr background nzar ana chahie" -> plan (4 nuqte) -> "ok".
+- live.js `ocClean(key, items, M, now)` (🎛 khana 't:<naam>' + akele camera ki patti 'b:<pc>'): qatar SIRF tab jab ① PC (oc-naam) ne POS ke asal item se
+  milayi (k 1; PC ka naqsha khali = purana server = pehle jaisa sab) ② `ocRowOk`: header ka Qty khana ho to us mein tadad > 0, S# khane mein harf (naam
+  ghus aaya = search list) nahi; header na ho = kam az kam ek hindsa ③ ek dam 3+ nayi qataren (seen = 10 min mein dikhi naam|tadad) = POS ki search
+  list -> pichhli saaf list 25 s tak (header par 🔍; akele camera mein 'larka item dhoond raha — search list chhupi'), itni der rahe to asal maan lo
+  ④ PC ka naam abhi nahi aaya (k -1, pichhla naam bhi yaad nahi) aur list chhoti ho rahi = 6 s pichhli. Pichhla milaya naam OCR ke naam se yaad (st.c).
+  60 s koi frame nahi = naya hisaab. ocLost ki line par OCR ki kachi likhai ab NAHI.
+- Rate nahi: `ocQ` mein header na ho to hindse (rate / raqam / tadad pata nahi) kabhi nahi — sirf naam; header ho to sirf Qty khana.
+- style.css .lv-tb: 52% chaurai, font clamp(10px, 5.3cqw, 19px), qatar 800 moti, text-shadow 8 taraf 1.5-1.7px kala + 5px — dabba / rang NAHI (video
+  nazar aaye; malik ka 'background nazar aaye' = video peeche dikhe, 19 Nov wala matlab).
+- PC live-cam v2.10 📼: `srBills` (posSales/<din> 1 read + posAdds collection + zaroori posSaleLines, 40 tak, 15 s hadd) -> `srBillPlan` (counter
+  khana = chOf(b.pc) == x.ch; cancel bahar; bill ka aakhir srEnd = max(ct/anchor, lt); ADD waqt = pichhle bill ke aakhir + 0.5 s se is ke aakhir + 2.5 s
+  tak (4 min waqfa = ruk) + ghari ka farq posAdds updateTime − now; ADD ginti 0.6n..2n+4 = item k ka waqt, warna poora bill print se 30 s pehle; do bill
+  ek waqt mein nahi) -> `srBillTxt` (khane ke daayein: x = 0.42 w, upar daayein 'Bill #no' peela, har item 2 drawtext — naam safed (cut 0.7 em) + tadad
+  peeli daayein kinare se (xr = w-8-tw — tadad kabhi na kate), POS jaisi tarteeb, R qatar (3-10) bhar jaye = agla safha jab us ki pehli item aaye;
+  borderw 3 black@0.92, dabba nahi; SR_DT_MAX 320). Camera ka naam bhi borderw 3. Filter ab `-filter_complex_script` file (tmp/<naam>.f.txt — 32k
+  command line ki hadd). SR_LAG 100 s -> 240 s (tukra 4-9 min peeche; bill chhapne ka intezar). srMake async — srJob pehle hi (tayyari 2 min atke =
+  chhoro). Bill likhai se video na bane = srNoBill 1 ghanta (camera ke naam rehte), phir srNoTxt purana raasta. Haal sr.bn / sr.bw / sr.lg ->
+  tally.js 📼 line '🧾 N bill ke naam' / wajah.
+- Sandbox: ffmpeg testsrc 3 khane (2 counter + godam), 5 bill (purana / cancel / bina ADD / agla gahak 4 s baad) — sahi bill sahi waqt par, safha,
+  tadad daayein. Asal PC / NVR / POS par azmaya nahi. AI nahi. Rules nahi badle.
+- Sabaq: ADD waqt ki khirki bill ke AAKHIR (lt) par band karo (+8 s ki chhoot agle gahak ki pehli items is bill mein daal deti thi — test ne pakra).
+  Video par likhai lambi ho to tadad / zaroori hissa alag drawtext mein kinare se — naam kate, tadad nahi.

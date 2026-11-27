@@ -263,7 +263,7 @@ function ocParse(r) {
   }
   const items = [];
   if (cols) {
-    const b = cols.slice(0, -1).map((c, j) => Math.max(c.x2, cols[j + 1].x1 - mh * 0.3)), hq = cols.filter(c => c.k === 'qty');
+    const b = cols.slice(0, -1).map((c, j) => Math.max(c.x2, cols[j + 1].x1 - mh * 0.3)), hq = cols.filter(c => c.k === 'qty'), ni = cols.findIndex(c => c.k === 'no');
     const ys = R.slice(hi).map(x => Number(x[0]) || 0), ds = ys.slice(1).map((y, j) => y - ys[j]).filter(d => d > 0).sort((a, c) => a - c), md = ds[Math.floor(ds.length / 2)] || mh * 1.8;
     for (let i = hi + 1; i < R.length; i++) {
       if (i > hi + 1 && (Number(R[i][0]) || 0) - (Number(R[i - 1][0]) || 0) > md * 3.5) break;   // bara khali faasla = list khatam (neeche total waghera)
@@ -271,7 +271,8 @@ function ocParse(r) {
       for (const [x, w, t] of R[i][2]) { const cx = x + w / 2; let j = b.findIndex(v => cx < v); if (j < 0) j = cols.length - 1; by[j].push(t); }
       const nm = clean(cols.map((c, j) => c.k === 'name' ? by[j].join(' ') : '').filter(Boolean).join(' '));
       if (bad(nm)) continue;
-      items.push({ nm, rk: ocKey(R[i]), q: hq.map(c => ({ l: c.t, v: by[cols.indexOf(c)].join(' ') })).filter(o => o.v), un: cols.map((c, j) => c.k === 'unit' ? by[j].join(' ') : '').filter(Boolean).join(' ') });
+      items.push({ nm, rk: ocKey(R[i]), q: hq.map(c => ({ l: c.t, v: by[cols.indexOf(c)].join(' ') })).filter(o => o.v), un: cols.map((c, j) => c.k === 'unit' ? by[j].join(' ') : '').filter(Boolean).join(' '),
+        hq: hq.length > 0, no: ni >= 0 ? by[ni].join(' ') : '' });   // v2.392.0: S# khana + Qty khana hai ya nahi (ocRowOk)
     }
   } else {
     for (const x of R) {
@@ -287,8 +288,35 @@ function ocParse(r) {
 function ocQ(it) {   // tadad ki likhai: ×2 · 1 CTN · 6 PCS · (header na ho) sab hindse chhote
   if (it.q && it.q.length === 1) { const v = ocNum(it.q[0].v); return `<b>×${escB(isNaN(v) ? it.q[0].v : q3(v))}${it.un ? ' ' + escB(it.un) : ''}</b>`; }
   if (it.q && it.q.length) { const L = it.q.filter(o => ocNum(o.v) !== 0); return L.length ? `<b>${L.map(o => escB(o.v) + ' ' + escB(o.l)).join(' · ')}</b>` : ''; }
-  if (it.n && it.n.length) return `<small>${it.n.map(escB).join(' · ')}</small>`;
-  return '';
+  return '';   // v2.392.0 (malik: 'rates nahi chahie'): header na mile to hindse (rate / raqam / tadad pata nahi kaun sa) kabhi nahi — sirf naam
+}
+// ---------- v2.392.0 (malik 27 Nov: 'search hote time wala band — jo screen par ho only · rates nahi'): khane par SIRF bill ki asal qatar ----------
+//   ① PC ne POS ke asal item se milayi (Windows search / doosri khirki / total ki likhai nahi) ② tadad ho (header ka Qty khana; S# khane mein naam ghus aaya = search list)
+//   ③ ek dam 3+ nayi qataren = POS ki search list (larka item dhoond raha) -> pichhli saaf list (25 s tak; itni der rahe to asal maan lo). PC ka naam abhi nahi aaya = 6 s purani.
+const ocRowOk = x => !/[a-z]{2,}/i.test(String(x.no || '')) && (x.hq === undefined ? (x.n || []).length > 0 : !x.hq || (x.q || []).some(o => ocNum(o.v) > 0));
+const ocQt = x => (x.q || []).map(o => o.v).join(',');
+const OC_ST = new Map();
+function ocClean(key, it, M, now) {
+  let st = OC_ST.get(key); if (!st || now - st.at > 60000) st = { L: null, seen: new Map(), c: new Map(), sus: 0, pt: 0 };   // naya Live = naya hisaab
+  st.at = now; OC_ST.set(key, st);
+  const on = !!M && Object.keys(M).length > 0, all = [];
+  for (const x of it) {
+    let o = ocName(x, M); const ck = x.nm.toLowerCase();
+    if (on && o.k === -1) { const c = st.c.get(ck); if (c) o = { n: c, k: 1 }; else if (c === 0) o = { n: x.nm, k: 0 }; }   // OCR ka naya frame: PC ka jawab der se — pichhla milaya naam
+    else if (on) st.c.set(ck, o.k === 1 ? o.n : 0);
+    all.push({ x, o });
+  }
+  if (st.c.size > 600) st.c = new Map([...st.c].slice(-300));
+  const lost = ocLost(it, all.map(r => r.o)), keep = all.filter(r => (!on || r.o.k === 1) && ocRowOk(r.x)), pend = on && all.some(r => r.o.k === -1 && ocRowOk(r.x));
+  const sg = r => r.o.n.toLowerCase() + '|' + ocQt(r.x), prev = st.L, nNew = keep.filter(r => !st.seen.has(sg(r))).length;
+  let hold = false;
+  if (prev && nNew >= 3) { if (!st.sus) st.sus = now; hold = now - st.sus < 25000; } else st.sus = 0;
+  if (!hold && pend && prev && keep.length < prev.length) { if (!st.pt) st.pt = now; hold = now - st.pt < 6000; } else if (!pend) st.pt = 0;
+  if (hold) return { L: prev, hold: true, lost: false };
+  st.sus = 0; st.pt = 0; st.L = keep;
+  for (const r of keep) st.seen.set(sg(r), now);
+  if (st.seen.size > 400) for (const [k, t] of st.seen) if (now - t > 600000) st.seen.delete(k);
+  return { L: keep, hold: false, lost: lost && !keep.length };
 }
 const OC_SEEN = new Map();   // naya item 4 s hara: key -> {m: Map(sig -> pehli dafa), k: kitni dafa dekha}
 function ocSeen(key, items, now) {
@@ -330,12 +358,11 @@ function tbDiag(n, O, sh, S0, now) {
   return ('🩺 hukum ' + host + ' ko gaya — ' + ntpSay(host, TB.pcs)).slice(0, 170);
 }
 function ocTileHTML(n, d, now) {
-  const it = ocParse(d.r).items;
-  if (!it.length) return '<div class="lv-tbr m">🧾 POS khali — naya bill shuru hote hi yahan</div>';
-  const M = (TB.bill.get(n) || {}).oc || {}, N = new Map(it.map(x => [x, ocName(x, M)]));   // v2.391.0: PC ka asal POS naam
-  if (ocLost(it, [...N.values()])) return `<div class="lv-tbr m">🔤 POS ki bill list nazar nahi aa rahi — counter par POS ke upar koi aur khirki khuli hai?</div><div class="lv-tbr m"><small>OCR: ${escB(it.slice(0, 2).map(x => x.nm).join(' · ').slice(0, 60))}</small></div>`;
-  const nw = ocSeen('t:' + n, it, now), R = [...it].reverse();   // POS mein nayi item NEECHE judti hai — yahan UPAR
-  return `<div class="lv-tbh nw">🧾 Bill ban raha · ${it.length} item</div>` + R.slice(0, 6).map(x => { const q = ocQ(x), o = N.get(x); return `<div class="lv-tbr${nw(x) ? ' nw' : ''}${o.k === 0 ? ' qm' : ''}">${escB(o.n)}${o.k === 0 ? '<span class="qq">?</span>' : ''}${q ? ' ' + q : ''}</div>`; }).join('')
+  const it = ocParse(d.r).items, C = ocClean('t:' + n, it, (TB.bill.get(n) || {}).oc || {}, now);   // v2.391.0: PC ka asal POS naam · v2.392.0: sirf bill ki saaf qatar
+  if (C.lost) return '<div class="lv-tbr m">🔤 POS ki bill list nazar nahi aa rahi — counter par POS ke upar koi aur khirki khuli hai?</div>';   // v2.392.0: OCR ki kachi likhai nahi
+  if (!C.L.length) return '<div class="lv-tbr m">🧾 POS khali — naya bill shuru hote hi yahan</div>';
+  const nw = ocSeen('t:' + n, C.L.map(r => r.x), now), R = [...C.L].reverse();   // POS mein nayi item NEECHE judti hai — yahan UPAR
+  return `<div class="lv-tbh nw">🧾 Bill ban raha · ${C.L.length} item${C.hold ? ' · 🔍' : ''}</div>` + R.slice(0, 6).map(({ x, o }) => { const q = ocQ(x); return `<div class="lv-tbr${nw(x) ? ' nw' : ''}${o.k === 0 ? ' qm' : ''}">${escB(o.n)}${o.k === 0 ? '<span class="qq">?</span>' : ''}${q ? ' ' + q : ''}</div>`; }).join('')
     + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
 }
 function tbPaint(i) {
@@ -613,14 +640,13 @@ function billPaint(scroll) {
   const e = $('lvBill'); if (!e) return;
   const d = B.doc, now = Date.now();
   if (ocFresh(B.ocr, now)) {   // v2.385.0: 🔤 POS screen par bill ban raha ho to WOHI (OCR) — khali ho to neeche pehle jaisa (pichhla bill)
-    const od = B.ocr.d, P = ocParse(od.r);
-    if (P.items.length) {
-      const M = ocMapOf(d), N = new Map(P.items.map(x => [x, ocName(x, M)])), NV = [...N.values()], nOk = NV.filter(o => o.k === 1).length;   // v2.391.0: PC ka asal POS naam
-      const nw = ocSeen('b:' + B.pc, P.items, now);
-      const rows = ocLost(P.items, NV) ? '<div class="lvb-e">🔤 POS ki bill list nazar nahi aa rahi — counter par POS ke upar koi aur khirki khuli hai?</div>'
-        : [...P.items].reverse().map(x => { const o = N.get(x); return `<div class="lvb-r${nw(x) ? ' is-new' : ''}${o.k === 0 ? ' qm' : ''}"><span class="n">${escB(o.n)}${o.k === 0 ? '<span class="qq">?</span>' : ''}</span><span class="q">${ocQ(x)}</span><span class="a"></span></div>`; }).join('');
-      e.innerHTML = `<div class="lvb-h"><b>🧾 Bill ban raha</b><small class="lvb-old">POS screen se</small><span class="lvb-st w">⏳ ${P.items.length} items</span></div><div class="lvb-l">${rows}</div>`
-        + `<div class="lvb-dg">🔤 ${P.hdr ? 'khane: ' + escB(P.cols.join(' · ').slice(0, 90)) : 'header nahi mila — naam + hindse andaze se'}${Number(od.ms) ? ' · ' + Math.round(Number(od.ms)) + ' ms' : ''}${NV.some(o => o.k >= 0) ? ` · ✓ ${nOk}/${P.items.length} naam POS se` : ' · ⏳ naam PC se'}</div>`;
+    const od = B.ocr.d, P = ocParse(od.r), C = ocClean('b:' + B.pc, P.items, ocMapOf(d), now);   // v2.391.0: PC ka asal POS naam · v2.392.0: sirf bill ki saaf qatar, rate nahi
+    if (C.L.length || C.lost) {
+      const nw = ocSeen('b:' + B.pc, C.L.map(r => r.x), now);
+      const rows = C.lost ? '<div class="lvb-e">🔤 POS ki bill list nazar nahi aa rahi — counter par POS ke upar koi aur khirki khuli hai?</div>'
+        : [...C.L].reverse().map(({ x, o }) => `<div class="lvb-r${nw(x) ? ' is-new' : ''}${o.k === 0 ? ' qm' : ''}"><span class="n">${escB(o.n)}${o.k === 0 ? '<span class="qq">?</span>' : ''}</span><span class="q">${ocQ(x)}</span><span class="a"></span></div>`).join('');
+      e.innerHTML = `<div class="lvb-h"><b>🧾 Bill ban raha</b><small class="lvb-old">POS screen se</small><span class="lvb-st w">⏳ ${C.L.length} items</span></div><div class="lvb-l">${rows}</div>`
+        + `<div class="lvb-dg">🔤 ${P.hdr ? 'khane: ' + escB(P.cols.join(' · ').slice(0, 90)) : 'header nahi mila — sirf naam'}${Number(od.ms) ? ' · ' + Math.round(Number(od.ms)) + ' ms' : ''}${C.hold ? ' · 🔍 larka item dhoond raha — search list chhupi' : ''}</div>`;
       if (scroll) { const l = e.querySelector('.lvb-l'); if (l) l.scrollTop = 0; }
       return;
     }

@@ -1,5 +1,9 @@
 // =========================================================
-//  live-cam.js  v2.9 (2026-11-25, malik: 'WiFi pr shi chlta ha' — 4G par '✕ Rabta nahi bana' · relay plan OK): 🔁 RELAY (TURN) — malik ki
+//  live-cam.js  v2.10 (2026-11-27, malik: 'live ki jo video ban rahi hai us par bhi lagao · rates nahi · fonts clear — background nazar aaye'):
+//    📼 sab cameras ki recording mein COUNTER khane par bill ki items (naam + tadad, rate KABHI nahi) — chhape bill (posSaleLines) se, har item apne
+//    ADD waqt (posAdds) par; likhai safed + 3px kala kinara, dabba nahi. Tukra ab 4-9 min peeche (bill chhapne ka intezar). Filter ab file se
+//    (-filter_complex_script — lambi likhai command line ki hadd se bahar). Bill ki likhai se video na bane = 1 ghanta bina naam (video kabhi na ruke).
+//  v2.9 (2026-11-25, malik: 'WiFi pr shi chlta ha' — 4G par '✕ Rabta nahi bana' · relay plan OK): 🔁 RELAY (TURN) — malik ki
 //    Cloudflare chaabi blueAccess/turnKey {id, tok} (SIRF malik + PC; log / app / phone ko kabhi nahi) se PC 24 ghante ka chhota pass banata hai
 //    (rtc.live.cloudflare.com generate-ice-servers, 18 ghante se kam baqi = naya) → liveIce/cur {j: sirf TURN JSON (:53 bahar), exp, at}
 //    (malik / Full / Nigrani sirf get). Phone wahi pass le kar relay candidate offer mein daalta hai = 4G par bhi video. PC (werift) apni taraf
@@ -77,7 +81,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter, srBuild, srGrid, srTs, dlDiff, iceOf }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.9';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.10';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -568,7 +572,7 @@ function startDelayed(codec, kind, ch, nm) {   // kind: a = 🎛 sab · g = 🏬
 // v2.7 (24 Nov, malik: 'PC khud se banaye jo kuch minute peeche chale'): ab LIVE line se NAHI — PC ki apni recording files (bill-clip ke band 1-min tukre)
 // se har 5 min ka tukra BAAD mein (2-7 min peeche), PC ka 'kam zaroori' darja (below normal) — har waqt 9 camera chalane ka bojh khatam, video saaf.
 // Setting wahi blueAccess/sabRec (sirf malik). Jis camera ki recording na ho us ka khana khali (jagah pakki).
-const SR_SEG = 300, SR_LAG = 100000, SR_BACK = 50 * 60000, SR_FILE = path.join(DIR, 'sab-rec-sent.json'), SR_WAM = path.join(DIR, 'wa-media'), SR_RE = /^sab-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.mp4$/;
+const SR_SEG = 300, SR_LAG = 240000, SR_BACK = 50 * 60000, SR_FILE = path.join(DIR, 'sab-rec-sent.json'), SR_WAM = path.join(DIR, 'wa-media'), SR_RE = /^sab-(\d{4})(\d{2})(\d{2})-(\d{2})(\d{2})(\d{2})\.mp4$/;
 let SR = { on: false, g: '', gn: '', kd: 2, st: 480, end: 1320 }, srJob = null, srCleanAt = 0, srNoTxt = false, srBoot = false, srFence = 0;
 const srFail = {};
 // v2.4: phone khara = ek column (7 tak), 8-9 = 2 column; khana camera ginti ke hisaab se
@@ -592,7 +596,91 @@ function srTexts(L) {   // har khane ka naam alag likhai file mein (textfile = n
     return { font, f };
   } catch { return null; }
 }
-const srSt = { rec: 0, n: 0, err: '', last: '', at: 0, sent: 0, day: '', job: '', mk: 0, made: '' };
+// ---------- 🧾 v2.10 (2026-11-27, malik: 'live ki jo video ban rahi hai us par bhi lagao · rates nahi · fonts clear, background nazar aaye'):
+//   📼 recording mein COUNTER ke khane par bill ki items — naam + tadad (rate / raqam KABHI nahi). Naam CHHAPE hue bill se (posSaleLines — POS ka asal naam,
+//   OCR nahi, counter PC par koi bojh nahi), har item usi second jab larke ne POS par add ki (counter NT-PRINT ka posAdds — ghari ka farq updateTime se).
+//   ADD na milein / ginti ajeeb = poora bill print se 30 s pehle. POS jaisi tarteeb (nayi NEECHE), R qatar ka safha bhar jaye = agla safha (bill video jaisa).
+//   Likhai: dabba / rang nahi — safed + 3px kala kinara (borderw). Bill sirf chhapne ke baad pata — is liye tukra ab 4-9 min peeche banta hai (SR_LAG 240 s).
+//   Kuch bhi na mile / ghalti = bina naam (video kabhi na ruke); drawtext ki ghalti = 1 ghanta bina bill ke naam (srNoBill). Haal sr.bn / sr.bw.
+const SR_DT_MAX = 320;   // ek tukre mein zyada se zyada itni likhai (har drawtext apna font kholta hai — PC ki memory)
+let srNoBill = 0;
+const srWithin = (p, ms) => Promise.race([p, new Promise((_, j) => setTimeout(() => j(new Error('waqt khatam')), ms))]);
+const srDay = t => { const d = new Date(t), q = n => String(n).padStart(2, '0'); return `${d.getFullYear()}-${q(d.getMonth() + 1)}-${q(d.getDate())}`; };
+const srAnchor = b => { const ct = Number(b.ct) || 0, tm = Number(b.tm) || 0, pt = Number(b.pt) || 0; if (ct > 0) return ct; if (tm > 0 && (tm % 86400000) !== (19 * 3600000) && Math.abs(pt - tm) < 12 * 3600000 && tm < pt + 60000) return tm; return pt; };   // bill-clip anchorOf HUBAHU
+const srEnd = o => { const an = o.an, lt = Number(o.b.lt) || 0; return Math.max(an, lt > an && lt - an < 20 * 60000 ? lt : 0); };   // bill kab khatam (POS ka ct aakhri item se pehle ka ho sakta hai)
+const srFq = q => Number.isInteger(q) ? String(q) : String(+Number(q).toFixed(3));
+// bills (posSales ka list) + ADD waqt (ch -> [server ghari ms]) + lines (sid -> [{n, q}]) -> har counter khane ke bill [{no, s, e, it:[{t, n, q}]}] (sandbox test bhi isi se)
+function srBillPlan(L, bills, AD, LN, t0, t1) {
+  const out = L.map(() => null);
+  L.forEach((x, i) => {
+    if (x.k !== 'c') return;
+    const bs = (bills || []).filter(b => b && !b.x && Number(chOf(b.pc)) === Number(x.ch)).map(b => ({ b, an: srAnchor(b) })).filter(o => o.an > 0).sort((p, q) => p.an - q.an);
+    const A = AD.get(Number(x.ch)) || [], segs = [];
+    bs.forEach((o, j) => {
+      const pe = j ? srEnd(bs[j - 1]) : 0, an = o.an, lo = Math.max(pe + 500, an - 20 * 60000), hi = srEnd(o) + 2500, ad = []; let last = 0;   // pichhle bill ke aakhir ke baad · is bill ke aakhir (lt) tak — agle gahak ki ADD is mein nahi
+      for (let k = A.length - 1; k >= 0; k--) { const t = A[k]; if (t > hi) continue; if (t < lo) break; if (last && last - t > 4 * 60000) break; ad.push(t); last = t; }
+      ad.reverse();
+      const e = srEnd(o) + 4000, s = ad.length ? ad[0] : an - 30000;
+      if (e < t0 - 500 || s > t1) return;
+      const it0 = LN.get(String(o.b.id)); if (!it0 || !it0.length) return;
+      const n = it0.length, okA = ad.length && ad.length >= n * 0.6 && ad.length <= n * 2 + 4;
+      const at = k => !okA ? s : ad[Math.max(0, Math.min(ad.length - 1, ad.length === n ? k : Math.round(k * (ad.length - 1) / Math.max(1, n - 1))))];
+      let tp = s; const it = it0.map((x2, k) => { tp = Math.max(tp, at(k)); return { t: Math.min(tp, e - 500), n: x2.n, q: x2.q }; });
+      segs.push({ no: String(o.b.no || o.b.id), s: Math.min(s, it[0].t), e, it });
+    });
+    for (let j = 0; j + 1 < segs.length; j++) if (segs[j].e > segs[j + 1].s - 200) segs[j].e = Math.max(segs[j].s + 1000, segs[j + 1].s - 200);   // do bill ek waqt mein nahi
+    if (segs.length) out[i] = segs;
+  });
+  return out;
+}
+// khane (w x h) ke daayein hisse ki likhai — har item EK drawtext (apne add hone se safha badalne / bill khatam tak). tx.font = srFont, likhai files SR_TXD mein.
+function srBillTxt(P, t0, T, tx) {
+  if (!P || !tx) return { bt: null, nb: 0 };
+  const { w, h } = T, fz = Math.max(12, Math.min(20, Math.round(h / 16))), lh = fz + 5, x = Math.round(w * 0.42), y0 = 6 + lh + 2, R = Math.max(3, Math.min(10, Math.floor((h - y0 - 4) / lh)));
+  const rel = t => Math.max(0, Math.min(SR_SEG, (t - t0) / 1000)), f2 = v => v.toFixed(2), xr = `${w - 8}-tw`;   // tadad DAAYEIN kinare se (naam lamba ho tab bhi tadad kabhi na kate)
+  let nf = 0, nb = 0; const bt = [];
+  try { for (const f of fs.readdirSync(path.join(DIR, SR_TXD))) if (/^b\d+_\d+\.txt$/.test(f)) { try { fs.unlinkSync(path.join(DIR, SR_TXD, f)); } catch {} } } catch {}
+  const file = s => { const n = `${SR_TXD}/b${bt.length}_${nf++}.txt`; fs.writeFileSync(path.join(DIR, n), String(s).replace(/[\r\n]+/g, ' '), 'utf8'); return n; };
+  const dt = (s, a, b, y, col, xx) => `drawtext=fontfile='${tx.font}':textfile='${file(s)}':expansion=none:fontsize=${fz}:fontcolor=${col}:borderw=3:bordercolor=black@0.92:x=${xx || x}:y=${y}:enable='between(t,${f2(a)},${f2(b)})'`;
+  let cnt = 0;
+  P.forEach((segs, i) => {
+    const L = [];
+    for (const g of segs || []) {
+      const a = rel(g.s), b = rel(g.e); if (b <= a + 0.2 || cnt >= SR_DT_MAX) continue;
+      L.push(dt(`Bill #${g.no}`, a, b, 6, '0xFFE278', xr)); cnt++; nb++;   // upar DAAYEIN (baayein camera ka naam)
+      g.it.forEach((it, k) => {
+        if (cnt >= SR_DT_MAX) return;
+        const p = Math.floor(k / R), nx = g.it[(p + 1) * R], ia = rel(it.t), ib = Math.min(b, nx ? rel(nx.t) : b);
+        if (ib <= ia + 0.1) return;
+        const qs = 'x' + srFq(Number(it.q) || 0), nm = String(it.n || '').replace(/\s+/g, ' ').trim(), y = y0 + (k % R) * lh;
+        const cut = Math.max(6, Math.floor((w - x - 8 - (qs.length + 1) * fz * 0.62) / (fz * 0.7)));   // bade harf moti likhai ~0.7 em (test: 0.66 par naam tadad se chhoo gaya)
+        L.push(dt(nm.length > cut ? nm.slice(0, cut - 1) + '…' : nm, ia, ib, y, 'white'), dt(qs, ia, ib, y, '0xFFE278', xr)); cnt += 2;
+      });
+    }
+    bt[i] = L.length ? L.join(',') : '';
+  });
+  return { bt: bt.some(Boolean) ? bt : null, nb };
+}
+async function srBills(L, t0, t1) {   // Firestore se: aaj ke bill (1 read) + posAdds (counter ginti) + jin bill ki zaroorat un ki lines
+  if (!L.some(x => x.k === 'c')) return { P: null, why: '' };
+  const sn = await srWithin(biz.collection('posSales').doc(srDay(t0)).get(), 15000);
+  const bills = sn.exists && Array.isArray((sn.data() || {}).bills) ? sn.data().bills : [];
+  if (!bills.length) return { P: null, why: 'aaj ka koi bill nahi mila' };
+  const AD = new Map();
+  try {
+    const as = await srWithin(biz.collection('posAdds').get(), 15000), nm = PN.names();
+    as.forEach(d => { const x = d.data() || {}, host = String(x.host || d.id).toUpperCase(), ch = Number(chOf(String(nm[host] || host.replace(/^DESKTOP-/i, ''))) || chOf(host)); if (!ch) return;
+      let off = 0; const ut = d.updateTime && d.updateTime.toMillis ? d.updateTime.toMillis() : 0; if (ut && Number(x.now) > 0) { const v = ut - Number(x.now); if (Math.abs(v) < 6 * 3600000) off = v; }
+      AD.set(ch, (Array.isArray(x.a) ? x.a : []).map(Number).filter(t => t > 0).map(t => t + off).sort((p, q) => p - q)); });
+  } catch {}
+  const need = new Set(); srBillPlan(L, bills, AD, { get: id => { need.add(id); return [{ n: '?', q: 1 }]; } }, t0, t1);   // pehle sirf dekho kin bill ki lines chahiye
+  const LN = new Map();
+  await Promise.all([...need].slice(0, 40).map(async id => { try { const d = await srWithin(biz.collection('posSaleLines').doc(String(id)).get(), 15000); const ls = d.exists && Array.isArray((d.data() || {}).lines) ? d.data().lines : [];
+    LN.set(String(id), ls.map(x => ({ n: String((x && (x.n || x.i)) || '').replace(/\s+/g, ' ').trim(), q: Number(x && x.q) || 0 })).filter(x => x.n)); } catch {} }));
+  const P = srBillPlan(L, bills, AD, LN, t0, t1);
+  return { P, why: P.some(Boolean) ? '' : need.size ? 'bill ki items abhi nahi aayin' : 'is waqt counter par koi chhapa bill nahi' };
+}
+const srSt = { rec: 0, n: 0, err: '', last: '', at: 0, sent: 0, day: '', job: '', mk: 0, made: '', bn: 0, bw: '' };
 let srSent = {}; try { srSent = JSON.parse(fs.readFileSync(SR_FILE, 'utf8')) || {}; } catch {}
 function srSave() { try { const k = Object.keys(srSent).sort(); for (const x of k.slice(0, Math.max(0, k.length - 1500))) delete srSent[x]; fs.writeFileSync(SR_FILE, JSON.stringify(srSent)); } catch {} }
 function srDir() { let root = path.join(DIR, 'clip-rec'); try { root = require('./rec-dir.js').active(DIR, CF.rdrv).root; } catch {} return path.join(path.dirname(root), 'sab-rec'); }
@@ -610,18 +698,19 @@ biz.collection('blueAccess').doc('sabRec').onSnapshot(s => {
   log(`📼 sab cameras ki recording: ${SR.on ? 'CHALU' : 'band'}${SR.g ? ' · group ' + (SR.gn || SR.g) : ' · group nahi chuna'} · ${SR.kd} din · recording files se`);
   try { srTick(); pushSt(true); } catch {}
 }, e => log('⚠️ sabRec: ' + e.message));
-function srFilter(L, ok, w, h, fps, tx, lead) {   // khane ki jagah PAKKI (camera ki recording na ho = khali khana) — taake group ki har video mein har camera wahi jagah
+function srFilter(L, ok, w, h, fps, tx, lead, bt) {   // v2.10: bt[i] = counter khane ki bill likhai (srBillTxt)   // khane ki jagah PAKKI (camera ki recording na ho = khali khana) — taake group ki har video mein har camera wahi jagah
   const [c, r] = srGrid(L.length), parts = [], lab = [], lay = [], fz = Math.max(14, Math.round(h / 13)); let k = 0;
   for (let i = 0; i < c * r; i++) {
     const ld = lead && Number(lead[i]) > 0.5 ? Number(lead[i]) : 0;   // v2.7: is camera ki recording tukre ke beech se shuru hui = itni der khali
     let v = i < L.length && ok[i] ? `[${k++}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x0b0f16,setsar=1${ld ? `,tpad=start_duration=${ld.toFixed(2)}:color=0x0b0f16` : ''}` : `color=c=0x0b0f16:s=${w}x${h}:r=${fps}`;
-    if (tx && tx.f[i]) v += `,drawtext=fontfile='${tx.font}':textfile='${tx.f[i]}':expansion=none:fontsize=${fz}:fontcolor=white:borderw=2:bordercolor=black@0.85:x=8:y=6`;
+    if (tx && tx.f[i]) v += `,drawtext=fontfile='${tx.font}':textfile='${tx.f[i]}':expansion=none:fontsize=${fz}:fontcolor=white:borderw=3:bordercolor=black@0.9:x=8:y=6`;
+    if (bt && bt[i]) v += ',' + bt[i];
     parts.push(v + `[v${i}]`); lab.push(`[v${i}]`); lay.push(`${(i % c) * w}_${Math.floor(i / c) * h}`);
   }
   parts.push(c * r === 1 ? `[v0]null[out]` : `${lab.join('')}xstack=inputs=${c * r}:layout=${lay.join('|')}[out]`);
   return parts.join(';');
 }
-function srBuild(L, cov, t0, t1, tmp, T, fps, tx) {   // v2.7: recording ke tukron se ffmpeg ke inputs + filter (sandbox test bhi isi se)
+function srBuild(L, cov, t0, t1, tmp, T, fps, tx, bt) {   // v2.7: recording ke tukron se ffmpeg ke inputs + filter (sandbox test bhi isi se)
   const inArgs = [], lead = [], ok = cov.map(c => !!(c && c.length));
   cov.forEach((c, i) => {
     if (!ok[i]) return;
@@ -632,7 +721,7 @@ function srBuild(L, cov, t0, t1, tmp, T, fps, tx) {   // v2.7: recording ke tukr
     lead[i] = Math.max(0, (c[0].t0 - t0) / 1000);
     inArgs.push('-threads', '2', ...(ss > 0.05 ? ['-ss', ss.toFixed(2)] : []), '-t', ((t1 - from) / 1000 + 1).toFixed(2), '-f', 'concat', '-safe', '0', '-i', lst);
   });
-  return { inArgs, ok, f: srFilter(L, ok, T.w, T.h, fps, tx, lead) };
+  return { inArgs, ok, f: srFilter(L, ok, T.w, T.h, fps, tx, lead, bt) };
 }
 function srCovered(t0) {   // is 5 min ka hissa pehle se bheja ja chuka (purani live wali file ka naam 5 min par nahi hota)
   for (const [n, v] of Object.entries(srSent)) { if (v === 'bad' || v === 'none' || v === 'old') continue; const t = srT0(n); if (t && t >= t0 - 60000 && t < t0 + SR_SEG * 1000 - 60000) return true; }
@@ -650,32 +739,43 @@ function srNext(now) {   // agla 5 min ka hissa jo banana hai (purana pehle — 
   }
   return 0;
 }
-function srMake(t0) {
+async function srMake(t0) {
   const ff = ffPath(); if (!ff) { srSt.err = 'ffmpeg abhi nahi (bill-clip install kar raha)'; return; }
   const L = allList(); if (!L.length) { srSt.err = 'Koi camera ⚙️ Camera setup mein nahi'; return; }
   const n = srName(t0), t1 = t0 + SR_SEG * 1000, dir = srDir(), tmp = path.join(dir, 'tmp'), rts = recRoots();
   const cov = L.map(x => recSegs(x.ch, rts).filter(s => s.t1 > t0 + 500 && s.t0 < t1 - 500));
   if (!cov.some(c => c.length)) { srSent[n] = 'none'; srSave(); srSt.err = srHm(t0) + ': kisi camera ki recording nahi mili (⚙️ Camera setup — ⏺ Rec ON?)'; log(`📼 ${n}: recording nahi mili — chhoda`); return; }
   try { fs.mkdirSync(tmp, { recursive: true }); } catch (e) { srSt.err = 'recording ka folder nahi bana (' + String(e.code || e.message).slice(0, 40) + ')'; return; }
-  const T = srTs(L.length), tx = srTexts(L), b = srBuild(L, cov, t0, t1, tmp, T, ALL_FPS, tx), out = path.join(tmp, n);
+  const job = srJob = { n, t0, at: Date.now(), tx: false, bt: false, nc: 0, nl: L.length }; srSt.job = srHm(t0);   // v2.10: pehle hi — bill dekhte waqt doosra tukra shuru na ho
+  const T = srTs(L.length), tx = srTexts(L), out = path.join(tmp, n), fsc = path.join(tmp, n + '.f.txt');
+  let bt = null;
+  if (tx && Date.now() - srNoBill > 3600000) {   // v2.10: 🧾 counter khane par bill ki items (rate nahi)
+    try { const r = await srBills(L, t0, t1), x = srBillTxt(r.P, t0, T, tx); bt = x.bt; srSt.bn = x.nb; srSt.bw = x.nb ? '' : r.why; }
+    catch (e) { srSt.bn = 0; srSt.bw = 'bill nahi parhe (' + String(e && e.message).slice(0, 40) + ')'; }
+  } else { srSt.bn = 0; srSt.bw = tx ? 'bill ke naam 1 ghante ke liye band (pichhli video nahi bani thi)' : ''; }
+  if (srJob !== job) return;
+  const b = srBuild(L, cov, t0, t1, tmp, T, ALL_FPS, tx, bt);
+  job.tx = !!tx; job.bt = !!bt; job.nc = b.ok.filter(Boolean).length;
   try { fs.unlinkSync(out); } catch {}
+  try { fs.writeFileSync(fsc, b.f, 'utf8'); } catch (e) { srJob = null; srSt.job = ''; srSt.err = 'filter file nahi bani (' + String(e.code || e.message).slice(0, 40) + ')'; return; }   // v2.10: lambi likhai — command line ki hadd (32k) se bahar
   // 380k x 300 s = ~14 MB (WhatsApp ki 16 MB hadd ke andar); crf = khara manzar chhoti file (internet kam)
-  const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', ...b.inArgs, '-filter_complex', b.f, '-map', '[out]', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-threads', '2', '-pix_fmt', 'yuv420p', '-crf', '30', '-maxrate', '380k', '-bufsize', '760k', '-g', String(ALL_FPS * 10),
+  const args = ['-hide_banner', '-loglevel', 'error', '-nostdin', ...b.inArgs, '-filter_complex_script', fsc, '-map', '[out]', '-an', '-c:v', 'libx264', '-preset', 'veryfast', '-threads', '2', '-pix_fmt', 'yuv420p', '-crf', '30', '-maxrate', '380k', '-bufsize', '760k', '-g', String(ALL_FPS * 10),
     '-t', String(SR_SEG), '-movflags', '+faststart', '-f', 'mp4', '-y', out];
-  const job = srJob = { n, t0, at: Date.now(), tx: !!tx, nc: b.ok.filter(Boolean).length, nl: L.length }; srSt.job = srHm(t0); let err = '';
+  let err = '';
   const proc = spawn(ff, args, { cwd: DIR, windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'] }); job.ff = proc;
   try { os.setPriority(proc.pid, os.constants.priority.PRIORITY_BELOW_NORMAL); } catch {}   // dukan ke asal kaam (POS / live / bill video) pehle
   proc.stderr.on('data', d => { err += String(d); if (err.length > 2000) err = err.slice(-2000); });
   proc.on('error', e => { err += ' ' + e.message; });
   proc.on('close', code => {
-    if (srJob === job) srJob = null; srSt.job = '';
+    if (srJob === job) srJob = null; srSt.job = ''; try { fs.unlinkSync(fsc); } catch {}
     let ok = false, sz = 0; try { sz = fs.statSync(out).size; ok = code === 0 && sz > 20000 && srOkMp4(out); } catch {}
     if (ok) { try { fs.renameSync(out, path.join(dir, n)); } catch (e) { ok = false; err = 'rename: ' + e.message; } }
     if (ok) { srSt.mk = Math.round((Date.now() - job.at) / 1000); srSt.n = job.nc; srSt.made = srHm(t0); srSt.err = ''; log(`📼 ${n}: ${job.nc}/${job.nl} camera · ${Math.round(sz / 1024)} KB · ${srSt.mk} s mein bani`); }
     else {
       try { fs.unlinkSync(out); } catch {}
       const why = (err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).slice(0, 120);
-      if (job.tx && !srNoTxt) { srNoTxt = true; log('📼 sab recording: camera ke naam (drawtext) se nahi bani — ab bina naam'); }
+      if (job.bt) { srNoBill = Date.now(); log('📼 sab recording: bill ki likhai ke saath nahi bani — 1 ghanta bina bill ke naam (' + (err.trim().split(/\r?\n/).filter(Boolean).pop() || '').slice(0, 100) + ')'); }   // v2.10: pehle bill ki likhai hatao, camera ke naam rehne do
+      else if (job.tx && !srNoTxt) { srNoTxt = true; log('📼 sab recording: camera ke naam (drawtext) se nahi bani — ab bina naam'); }
       else srFail[n] = (srFail[n] || 0) + 1;
       srSt.err = srHm(t0) + ' wali nahi bani: ' + why; log(`📼 ${n} nahi bani (${why})`);
     }
@@ -715,8 +815,9 @@ function srClean(now) {
 function srTick() {
   const now = Date.now();
   srSt.rec = SR.on && CF.on ? 1 : 0; if (!SR.on) srSt.err = '';
+  if (srJob && !srJob.ff && now - srJob.at > 2 * 60000) { log(`📼 ${srJob.n}: bill dekhte 2 min — chhoda, dobara`); srJob = null; srSt.job = ''; }   // v2.10: tayyari (bill parhna) atak jaye
   if (srJob && now - srJob.at > 9 * 60000) { log(`📼 ${srJob.n}: 9 min se ban rahi thi — band`); try { srJob.ff.kill(); } catch {} }
-  else if (SR.on && CF.on && !srJob) { const t0 = srNext(now); if (t0) srMake(t0); }
+  else if (SR.on && CF.on && !srJob) { const t0 = srNext(now); if (t0) srMake(t0).catch(e => { srJob = null; srSt.job = ''; srSt.err = 'video shuru nahi hui: ' + String(e && e.message).slice(0, 80); log('⚠️ 📼 ' + (e && e.message)); }); }
   try { srSend(now); } catch (e) { log('⚠️ sab bhejna: ' + e.message); }
   try { srClean(now); } catch {}
 }
@@ -795,7 +896,7 @@ let ST = { err: '' }, stAt = 0;
 async function pushSt(force) {
   if (!force && Date.now() - stAt < 20000) return; stAt = Date.now();
   const cams = [...pipes.values()].map(p => ({ ch: p.ch, n: p.tracks.size, on: p.ff ? 1 : 0, err: p.err || '' }));
-  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams, mo: moList().map(x => x.n), all: allList().map(x => x.n), sr: { on: SR.on ? 1 : 0, g: SR.g ? 1 : 0, kd: SR.kd, rec: srSt.rec, n: srSt.n, err: String(srSt.err || '').slice(0, 140), last: srSt.last, at: srSt.at, sent: srSt.sent, f: 1, job: srSt.job || '', mk: srSt.mk || 0, made: srSt.made || '' }, tu: { ok: TU.ok ? 1 : 0, err: TU.err, at: TU.at, exp: TU.exp, k: TK ? 1 : 0, k4: TK ? TK.id.slice(-4) : '' } }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }   // v1.9: mo = godam cameras · v2.9: tu = 🔁 relay ka haal (chaabi kabhi nahi)
+  try { await biz.collection('blueAccess').doc('liveCamPc').set({ at: Date.now(), ver: VER, host: os.hostname(), ok: W ? 1 : 0, ff: ffPath() ? 1 : 0, err: AUTHBAD ? 'NVR 401 — ruka' : ST.err.slice(0, 160), v: viewers.size, cams, mo: moList().map(x => x.n), all: allList().map(x => x.n), sr: { on: SR.on ? 1 : 0, g: SR.g ? 1 : 0, kd: SR.kd, rec: srSt.rec, n: srSt.n, err: String(srSt.err || '').slice(0, 140), last: srSt.last, at: srSt.at, sent: srSt.sent, f: 1, job: srSt.job || '', mk: srSt.mk || 0, made: srSt.made || '', bn: srSt.bn || 0, bw: String(srSt.bw || '').slice(0, 80), lg: '4-9' }, tu: { ok: TU.ok ? 1 : 0, err: TU.err, at: TU.at, exp: TU.exp, k: TK ? 1 : 0, k4: TK ? TK.id.slice(-4) : '' } }, { merge: true }); } catch (e) { log('⚠️ haal: ' + e.message); }   // v1.9: mo = godam cameras · v2.9: tu = 🔁 relay ka haal (chaabi kabhi nahi)
 }
 
 function main() {
