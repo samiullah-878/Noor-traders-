@@ -6185,3 +6185,11 @@ bhi OK) · "lock screen wala popup (paani / nuts) har dafa nahi aata — ek dafa
 - Sabaq: phone par 'har dafa nahi aata' ki shikayat = pehle socho event aata bhi hai ya nahi (lock ki der = unlock event nahi) aur koi tala
   (20 s) to nahi rok raha. SelectionDialog ki lambi list ka aakhri button kat sakta hai — zaroori button (OK / band) hamesha upar ya
   zaroori button ke saath, lamba matn aakhir mein.
+
+
+=== md pkg v86 (27 Nov 2026) — ⏸ Claude sirf raat 12–11 ===
+- Malik: "us ki bhi zaroorat nahi — Claude sirf raat 12 se subah 11 tak hi rahe, baqi us mein kuch nahi chahiye".
+- md/tools/cb.py: ab sirf ek band check (screen on + Claude saamne + zaroori waqt na ho + 0:00–10:59) -> Home + 3 s patti,
+  ya din ki pehli dafa '🚨 5 min zaroori' sawal (clEm / clAsk / clEmDay wahi). HATA: 20 min istemal / 5 min break (clMin / clBrk /
+  clAway), '1 minute baqi' patti, 🦒 gardan har 10 min (clNk). Purane globals phone par rehte hain (Remote BUILD qeemat rakhta hai), bekar.
+- MCP validator VALID (23 action). Phone par azmaya nahi. AI nahi.
