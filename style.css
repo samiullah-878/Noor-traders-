@@ -9172,6 +9172,10 @@ html body #lvDlg button.lv-mot{container-type:size;overflow:hidden}
 #lvDlg .lv-tbr b{color:#fde047}
 #lvDlg .lv-tbr.ok{color:#86efac}
 #lvDlg .lv-tbr.m{opacity:.85;font-weight:600}
+/* v2.391.0: OCR naam POS ki list mein nahi mila = halka + peela '?' (mila = POS ka asal naam, saada) */
+#lvDlg .lv-tbr.qm{opacity:.62}
+#lvDlg .lv-tbr .qq,#lvDlg .lvb-r .qq{color:#fbbf24;font-weight:900;margin-left:3px}
+#lvDlg .lvb-r.qm .n{opacity:.62}
 #lvDlg .lv-tsh{flex:1 1 auto;min-height:0;overflow:hidden;border:1px solid #ffffff8c;border-radius:5px;background:#fff}
 #lvDlg .lv-tsh img{display:block;width:100%;height:auto}
 

@@ -186,7 +186,7 @@ function tbSync(mo) {
   tbStop(); if (!mo || !Array.isArray(mo.k) || !cloud) return; TB.mo = mo; TB.t0 = Date.now();
   mo.n.forEach((n, i) => {
     if (mo.k[i] !== 'c') return;
-    if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive(n, (d, err) => { if (err || !d || TB.mo !== mo) return; let L = [], sn = {}; try { L = JSON.parse(d.j || '[]'); } catch {} try { sn = JSON.parse(d.sn || '{}') || {}; } catch {} TB.bill.set(n, { d, L, sn, at: Date.now() }); tbPaint(i); }));
+    if (cloud.listenPosLive) TB.un.push(cloud.listenPosLive(n, (d, err) => { if (err || !d || TB.mo !== mo) return; let L = [], sn = {}; try { L = JSON.parse(d.j || '[]'); } catch {} try { sn = JSON.parse(d.sn || '{}') || {}; } catch {} TB.bill.set(n, { d, L, sn, oc: ocMapOf(d), at: Date.now() }); tbPaint(i); }));
     if (cloud.listenPosScan) TB.un.push(cloud.listenPosScan(n, (d, err, cache) => { if (err || TB.mo !== mo) return; const o = TB.scan.get(n);
       // v2.371.0: 🩺 PC ki ghari ka farq — sirf taza (doosri ya baad wali, cache nahi) snapshot par: likhai ke ~1 s mein pohanchti hai
       if (d) TB.scan.set(n, { dat: Number(d.at) || 0, a: d.a || [], ver: d.ver || '', ok: d.ok, sc: d.sc, rw: d.rw, w: d.w, sp: d.sp, rd: d.rd, al: d.al, er: String(d.er || '').slice(0, 60), fg: String(d.fg || '').slice(0, 24), at: Date.now(), ns: (o ? o.ns : 0) + 1, sk: o && !cache && Number(d.at) ? Number(d.at) - Date.now() : (o ? o.sk : null) }); else TB.scan.delete(n); tbPaint(i); }));   // v2.370.0
@@ -240,6 +240,13 @@ const OC_K = [['no', /^(s\s*no|s\s*#|sr(\s*no)?|no|#|sno|sl(\s*no)?)$/i], ['code
   ['qty', /^(qty|quantity|pcs|pieces?|peices?|ctn|cartons?|crtn|pack\s*qty|packs?)$/i], ['rate', /(rate|price)/i], ['amt', /(amount|amt|total|net)/i],
   ['name', /(item|description|desc|name|product|particulars?|detail)/i]];
 const ocKind = t => { const s = String(t || '').replace(/[.:]/g, '').replace(/\s+/g, ' ').trim(); for (const [k, re] of OC_K) if (re.test(s)) return k; return ''; };
+// v2.391.0 (malik 27 Nov: 'jab bill ban raha ho tab naam sahi nahi aa raha' + 'PC se poori list'): server PC (pos-sales-dekho v2.19 + oc-naam.js) har OCR qatar ko
+//   POS ki POORI item list se milata hai -> posLive/<naam>.oc {qatar ki chaabi: [asal naam, %] | 0}. Chaabi = ocKey — PC oc-naam.js rowKey HUBAHU (ek badlo to doosra bhi).
+const ocKey = row => (Array.isArray(row) && Array.isArray(row[2]) ? row[2] : []).map(w => String((w && w[2]) ?? '')).join(' ').toLowerCase().replace(/\s+/g, ' ').trim().slice(0, 140);
+const ocMapOf = d => { try { const m = JSON.parse((d && d.oc) || '{}'); return m && typeof m === 'object' ? m : {}; } catch { return {}; } };
+// 1 = POS ka asal naam · 0 = PC ne dekha, POS mein nahi mila (?) · -1 = PC ne abhi nahi dekha (OCR wala naam)
+const ocName = (x, M) => { const v = M && M[x.rk]; return Array.isArray(v) && v[0] ? { n: String(v[0]), k: 1 } : v === 0 ? { n: x.nm, k: 0 } : { n: x.nm, k: -1 }; };
+const ocLost = (it, N) => it.length >= 2 && N.every(o => o.k === 0);   // ek bhi qatar POS ke item se na mili = POS ki list nazar hi nahi (upar koi aur khirki)
 const ocNum = t => { const s = String(t || '').replace(/,/g, ''); return /^-?\d+(\.\d+)?$/.test(s) ? Number(s) : NaN; };
 function ocCells(ws, gap) {   // paas paas wale lafz = ek khana
   const C = []; for (const [x, w, t] of ws) { const c = C[C.length - 1]; if (c && x - c.x2 <= gap) { c.t += ' ' + t; c.x2 = Math.max(c.x2, x + w); } else C.push({ x1: x, x2: x + w, t: String(t) }); } return C;
@@ -264,7 +271,7 @@ function ocParse(r) {
       for (const [x, w, t] of R[i][2]) { const cx = x + w / 2; let j = b.findIndex(v => cx < v); if (j < 0) j = cols.length - 1; by[j].push(t); }
       const nm = clean(cols.map((c, j) => c.k === 'name' ? by[j].join(' ') : '').filter(Boolean).join(' '));
       if (bad(nm)) continue;
-      items.push({ nm, q: hq.map(c => ({ l: c.t, v: by[cols.indexOf(c)].join(' ') })).filter(o => o.v), un: cols.map((c, j) => c.k === 'unit' ? by[j].join(' ') : '').filter(Boolean).join(' ') });
+      items.push({ nm, rk: ocKey(R[i]), q: hq.map(c => ({ l: c.t, v: by[cols.indexOf(c)].join(' ') })).filter(o => o.v), un: cols.map((c, j) => c.k === 'unit' ? by[j].join(' ') : '').filter(Boolean).join(' ') });
     }
   } else {
     for (const x of R) {
@@ -272,7 +279,7 @@ function ocParse(r) {
       if (C.length && /^\d{1,3}[.)]?$/.test(C[0])) C.shift();   // qatar ka number
       const L = C.filter(t => !/^\d{7,}$/.test(t)), ni = L.findIndex(t => /[a-z]{2,}/i.test(t)); if (ni < 0) continue;
       const nm = clean(L[ni]); if (bad(nm)) continue;
-      items.push({ nm, n: L.slice(ni + 1).filter(t => !isNaN(ocNum(t))).slice(0, 4) });
+      items.push({ nm, rk: ocKey(x), n: L.slice(ni + 1).filter(t => !isNaN(ocNum(t))).slice(0, 4) });
     }
   }
   return { hdr: !!cols, cols: cols ? cols.map(c => c.t) : [], items: items.slice(-40) };
@@ -325,8 +332,10 @@ function tbDiag(n, O, sh, S0, now) {
 function ocTileHTML(n, d, now) {
   const it = ocParse(d.r).items;
   if (!it.length) return '<div class="lv-tbr m">🧾 POS khali — naya bill shuru hote hi yahan</div>';
+  const M = (TB.bill.get(n) || {}).oc || {}, N = new Map(it.map(x => [x, ocName(x, M)]));   // v2.391.0: PC ka asal POS naam
+  if (ocLost(it, [...N.values()])) return `<div class="lv-tbr m">🔤 POS ki bill list nazar nahi aa rahi — counter par POS ke upar koi aur khirki khuli hai?</div><div class="lv-tbr m"><small>OCR: ${escB(it.slice(0, 2).map(x => x.nm).join(' · ').slice(0, 60))}</small></div>`;
   const nw = ocSeen('t:' + n, it, now), R = [...it].reverse();   // POS mein nayi item NEECHE judti hai — yahan UPAR
-  return `<div class="lv-tbh nw">🧾 Bill ban raha · ${it.length} item</div>` + R.slice(0, 6).map(x => { const q = ocQ(x); return `<div class="lv-tbr${nw(x) ? ' nw' : ''}">${escB(x.nm)}${q ? ' ' + q : ''}</div>`; }).join('')
+  return `<div class="lv-tbh nw">🧾 Bill ban raha · ${it.length} item</div>` + R.slice(0, 6).map(x => { const q = ocQ(x), o = N.get(x); return `<div class="lv-tbr${nw(x) ? ' nw' : ''}${o.k === 0 ? ' qm' : ''}">${escB(o.n)}${o.k === 0 ? '<span class="qq">?</span>' : ''}${q ? ' ' + q : ''}</div>`; }).join('')
     + (R.length > 6 ? `<div class="lv-tbr m">+${R.length - 6} items</div>` : '');
 }
 function tbPaint(i) {
@@ -606,10 +615,12 @@ function billPaint(scroll) {
   if (ocFresh(B.ocr, now)) {   // v2.385.0: 🔤 POS screen par bill ban raha ho to WOHI (OCR) — khali ho to neeche pehle jaisa (pichhla bill)
     const od = B.ocr.d, P = ocParse(od.r);
     if (P.items.length) {
+      const M = ocMapOf(d), N = new Map(P.items.map(x => [x, ocName(x, M)])), NV = [...N.values()], nOk = NV.filter(o => o.k === 1).length;   // v2.391.0: PC ka asal POS naam
       const nw = ocSeen('b:' + B.pc, P.items, now);
-      const rows = [...P.items].reverse().map(x => `<div class="lvb-r${nw(x) ? ' is-new' : ''}"><span class="n">${escB(x.nm)}</span><span class="q">${ocQ(x)}</span><span class="a"></span></div>`).join('');
+      const rows = ocLost(P.items, NV) ? '<div class="lvb-e">🔤 POS ki bill list nazar nahi aa rahi — counter par POS ke upar koi aur khirki khuli hai?</div>'
+        : [...P.items].reverse().map(x => { const o = N.get(x); return `<div class="lvb-r${nw(x) ? ' is-new' : ''}${o.k === 0 ? ' qm' : ''}"><span class="n">${escB(o.n)}${o.k === 0 ? '<span class="qq">?</span>' : ''}</span><span class="q">${ocQ(x)}</span><span class="a"></span></div>`; }).join('');
       e.innerHTML = `<div class="lvb-h"><b>🧾 Bill ban raha</b><small class="lvb-old">POS screen se</small><span class="lvb-st w">⏳ ${P.items.length} items</span></div><div class="lvb-l">${rows}</div>`
-        + `<div class="lvb-dg">🔤 ${P.hdr ? 'khane: ' + escB(P.cols.join(' · ').slice(0, 90)) : 'header nahi mila — naam + hindse andaze se'}${Number(od.ms) ? ' · ' + Math.round(Number(od.ms)) + ' ms' : ''}</div>`;
+        + `<div class="lvb-dg">🔤 ${P.hdr ? 'khane: ' + escB(P.cols.join(' · ').slice(0, 90)) : 'header nahi mila — naam + hindse andaze se'}${Number(od.ms) ? ' · ' + Math.round(Number(od.ms)) + ' ms' : ''}${NV.some(o => o.k >= 0) ? ` · ✓ ${nOk}/${P.items.length} naam POS se` : ' · ⏳ naam PC se'}</div>`;
       if (scroll) { const l = e.querySelector('.lvb-l'); if (l) l.scrollTop = 0; }
       return;
     }

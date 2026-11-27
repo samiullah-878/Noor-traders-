@@ -6070,3 +6070,21 @@ apps mein · har dafa wo majood ho · nuts kha lo, fruit, coffee bhi time par aa
   khulte hi phone ko ntU / ntK din mein ek dafa (`nt_notes`, sam-sh-ntk) — taake phone ke macro ke paas link ho (pehle sirf 🎙 Meri baatein bhejti thi).
 - Sabaq: SelectionDialog mein rang sirf MESSAGE (htmlFormat) mein lag sakta hai — button ka rang alag alag nahi. Phone ka 'har tick ka paigham'
   bhejna ho to din ka poora haal (snapshot) bhejo, ek ek tick nahi — net na ho to agla tick / unlock sab khud theek kar deta hai.
+
+=== app v2.391.0 + PC pos-sales-dekho v2.19 + naya oc-naam.js v1.0 (27 Nov 2026) — 🔤 Live ke counter khane par OCR ke naam = POS ka ASAL naam ===
+Malik (screenshot, 🎛 Sab cameras): "jab bill ban raha ho tab naam sahi nahi aa raha" — OLD-SERVER: 'mujahid ahee teen', 'muihid ahee lka' · Q1SLV77: '7 new
+notifications', 'Noor Traders', 'Recent' · RN6QU6D: 'imko', 'eel 175/gm soap'. Plan: (1) website wali list se ya (2) PC se POS ki POORI list — malik ne (2) chuna.
+- Wajah: Windows OCR grid ki qatar mein neeche ki dum kati hui parhta hai (g -> a 'ghee = ahee', j -> i 'mujahid = muihid', 1 -> l '1kg = lka'), pehla harf kabhi
+  kat jata hai, aur POS ke upar koi aur khirki ho to us ki likhai (Q1SLV77).
+- pc/oc-naam.js v1.0 (naya): har OCR qatar -> khali hindse / pcs / ctn bahar, '900 gm' = '900gm' -> fold (g q -> a · j -> i · y -> v · p -> o · 1 l i -> i ·
+  0 -> o · rn -> m — DONO taraf) -> bigram Dice POS ki item list se (index, ~0.5 ms fi qatar, qatar ki likhai se yaad). Pakka = s >= 0.55 (chhoti likhai < 8
+  harf = 0.75) aur doosre se 0.05 aage (ya 0.82+ / wohi naam) -> [asal naam, %]; warna 0. Test: 29 OCR jaisi qataren sahi, 'Total' / 'Recent' / '7 new
+  notifications' / header = 0.
+- pos-sales-dekho v2.19: dekhe ja rahe counter ka posLive/<naam>__ocr suno (ocrSync, scanSync jaisa) -> ocrNames: dbo.Items (ISNULL(IsActive,1) <> 0;
+  khana na ho = sab) 30 min yaad, SIRF SELECT -> posLive/<naam>.oc = JSON {qatar ki chaabi: [naam, %] | 0} (dono livePut mein, sn ke saath).
+- live.js: ocKey (= oc-naam rowKey HUBAHU — ek badlo to doosra bhi) · ocParse har item par rk · ocName: 1 = asal naam · 0 = POS mein nahi mila (halka +
+  peela '?') · -1 = PC ne abhi nahi dekha (OCR wala). ocLost: 2+ item aur ek bhi na mile = list ki jagah '🔤 POS ki bill list nazar nahi aa rahi — counter
+  par POS ke upar koi aur khirki khuli hai?' (+ OCR ki pehli 2 likhai). Akele camera ki patti mein bhi + neeche '✓ N/M naam POS se'.
+- Rules nahi badle (posLive parhna pehle se malik / Full / Nigrani). AI nahi. Asal POS / counter par azmaya nahi — malik ki agli photo se jaancho
+  (bahut '?' aayein = threshold / fold theek karo; ghalat naam = Dice ka faisla dekho).
+- Sabaq: OCR / screen ki likhai ko hamesha asal list se milao — kachi likhai seedha malik ko mat dikhao; list nazar na aaye to saaf wajah.

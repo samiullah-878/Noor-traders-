@@ -1,4 +1,7 @@
 // =========================================================
+//  v2.19 (2026-11-27, malik: 'Sab cameras ke layout mein jab bill ban raha ho tab naam sahi nahi aa raha' + 'PC se poori list'): 🔤 OCR NAAM = POS ka
+//    ASAL naam — dekhe ja rahe counter ka posLive/<naam>__ocr suno, har qatar oc-naam.js se dbo.Items (POORI list, stock 0 bhi; 30 min yaad, sirf SELECT) se milao
+//    -> posLive/<naam>.oc {qatar ki chaabi: [asal naam, %] | 0}. App live.js ocKey wahi chaabi. Na mile = 0 (app '?' / 'POS ke upar koi aur khirki'). AI nahi.
 //  v2.18 (2026-11-26, malik: 'wholesale ke all bills mujhe mere number par WhatsApp mein — jaise hi bill bane, tadad · rate · total'): 📦 ws-wa.js
 //    (apni line, har 1 s) — yahan sirf feed(day, cache ki qataren) + billOf (bills ka mapper ab function). Bill ka raasta kabhi nahi rukta. AI nahi.
 //  v2.17 (2026-11-24, malik: 'live items ke names aayein — pehle bill bane items ke names'): 🧾 LIVE SCAN NAAM — counter NT-PRINT v1.36 Live dekhte waqt har
@@ -51,6 +54,7 @@ const linesCol = db.collection('businesses').doc(BUSINESS_ID).collection('posSal
 // v1.2: PC ka naam (SystemNotes "at PC:DESKTOP-xxx") -> dukaan ka naam. local-config.json "pcNames": {"DESKTOP-xxx": "Naam"} se badlein.
 const PC_DEFAULT = {};   // 2026-11-17 (pc-names v1.1): naam = PC ka apna (NT-PRINT se) — insaanon wale naam hata (malik: 'Abdurehman ki bajaye PC ka naam')
 const PN = require('./pc-names.js'); PN.start(db.collection('businesses').doc(BUSINESS_ID)); const pcNames = () => PN.names(DIR);   // v2.13: naam NT-PRINT se (pc-names.js)
+let OCN = null; try { OCN = require('./oc-naam.js'); } catch (e) { console.log('oc-naam.js nahi mila: ' + e.message); }   // v2.19: 🔤 OCR naam = POS ka asal naam
 let WSWA = null; try { WSWA = require('./ws-wa.js'); } catch (e) { console.log('ws-wa.js nahi mila: ' + e.message); }   // v2.18: 📦 wholesale bill → malik ka WhatsApp
 const lineHash = new Map();
 let pool = null;
@@ -162,14 +166,43 @@ async function scanNames(p, nm) {
   const m = {}; for (const c of o.codes) { const h = scanNm.get(c); if (h && h.n) m[c] = [h.n, h.q]; }
   return JSON.stringify(m);
 }
+// v2.19: 🔤 OCR NAAM — dekhe ja rahe counter ka posLive/<naam>__ocr (NT-PRINT v1.39) suno; qataren oc-naam.js se POS ki poori item list se milao (sirf SELECT)
+const ocrL = new Map(); let ocIx = null, ocIxAt = 0;   // ocrL: naam -> {rows, v, cv, out, un}
+function ocrSync(W) {
+  if (!OCN) return;
+  const want = new Set(W.map(x => x[0]));
+  for (const [nm, o] of ocrL) if (!want.has(nm)) { try { o.un && o.un(); } catch {} ocrL.delete(nm); }
+  for (const nm of want) if (!ocrL.has(nm)) {
+    const o = { rows: null, v: 0, cv: -1, out: '', un: null }; ocrL.set(nm, o);
+    try { o.un = liveCol.doc(String(nm).replace(/\//g, '_').slice(0, 100) + '__ocr').onSnapshot(d => { const x = (d.exists && d.data()) || {}; let r = null;
+      if (Number(x.on) === 1) { try { r = JSON.parse(x.r || '[]'); } catch {} }
+      o.rows = Array.isArray(r) ? r : null; o.v++; }, e => log('live ocr suno: ' + e.message)); } catch (e) { log('live ocr suno: ' + e.message); }
+  }
+}
+async function ocrNames(p, nm) {
+  const o = ocrL.get(nm); if (!OCN || !o || !o.rows || !o.rows.length) return '';
+  if (!ocIx || Date.now() - ocIxAt > 30 * 60000) {
+    ocIxAt = Date.now();
+    try {
+      let rs; try { rs = (await p.request().query('SELECT ItemID AS I, ItemName AS N FROM dbo.Items WHERE ISNULL(IsActive, 1) <> 0')).recordset; }
+      catch { rs = (await p.request().query('SELECT ItemID AS I, ItemName AS N FROM dbo.Items')).recordset; }   // IsActive ka khana na ho
+      ocIx = OCN.index((rs || []).map(x => ({ id: x.I, n: String(x.N || '') })));
+      for (const z of ocrL.values()) z.cv = -1;
+      log(`🔤 OCR naam: POS ki ${ocIx.L.length} items yaad`);
+    } catch (e) { log('🔤 OCR naam: items nahi parhe — ' + e.message); if (!ocIx) { ocIxAt = Date.now() - 28 * 60000; return ''; } }   // 2 min baad dobara
+  }
+  if (o.cv === o.v) return o.out;
+  o.out = JSON.stringify(OCN.mapRows(ocIx, o.rows)); o.cv = o.v; return o.out;
+}
 async function liveTick() {
   if (liveRun) return;
-  const W = liveHosts(); try { scanSync(W); } catch {} if (!W.length) return;
+  const W = liveHosts(); try { scanSync(W); } catch {} try { ocrSync(W); } catch {} if (!W.length) return;
   liveRun = true;
   try {
     const p = await getPool(), d0 = new Date(); d0.setHours(0, 0, 0, 0);
     for (const [nm, host] of W) {
       let sn = ''; try { sn = await scanNames(p, nm); } catch (e) { log('live scan naam: ' + e.message); }   // v2.17
+      let oc = ''; try { oc = await ocrNames(p, nm); } catch (e) { log('live ocr naam: ' + e.message); }   // v2.19
       let h = (await p.request().input('d', sql.DateTime, d0).input('h', sql.NVarChar(120), '%at PC:%' + host + '%').query(`SELECT TOP 1 s.SaleID, s.SaleNo, s.TotalSale, s.DocStatusID,
         CAST(s.SystemNotes AS NVARCHAR(600)) AS SN FROM dbo.Sale s WHERE s.SaleDate >= @d AND CAST(s.SystemNotes AS NVARCHAR(600)) LIKE @h ORDER BY s.SaleID DESC`)).recordset[0];
       // v2.7: 🔴 BANTA HUA BILL (malik: "bill banana start ho to bill screen par aa jaye") — POS counter ka naam ("at PC:") print par likhta hai,
@@ -199,12 +232,12 @@ async function liveTick() {
         if (ok.length) { h = ok[0].c; src = ok[0].r === 3 ? 'chalu' : 'andaza'; }
         dg = `naye ${cs.length} · khule ${open.length}${open.length ? ' (' + open.slice(0, 3).map(c => `#${c.SaleID} login ${String(c.U ?? '?')}→${[...(UM.get(String(c.U ?? '').trim()) || ['?'])].map(x => x.replace(/^DESKTOP-/, '')).join('/')} ${c.LN} line`).join(', ') + ')' : ''}`;
       } catch (e) { dg = 'ghalti: ' + String(e.message || e).slice(0, 120); if (!liveErrLog) { liveErrLog = 1; log('live banta bill: ' + e.message); } }
-      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0, src: '', dg, sn }); continue; }
+      if (!h) { await livePut(nm, { pc: nm, sid: 0, no: '', st: 0, pr: 0, t: 0, j: '[]', n: 0, ft: 0, src: '', dg, sn, oc }); continue; }
       const L = (await p.request().input('s', sql.Int, h.SaleID).query(`SELECT TOP 150 d.SaleDetailID AS D, i.ItemName AS N, d.Qty AS Q, d.Rate AS R
         FROM dbo.SaleDetail d LEFT JOIN dbo.Items i ON i.ItemID = d.ItemID WHERE d.SaleID = @s ORDER BY d.SaleDetailID`)).recordset;
       const j = JSON.stringify(L.map(x => [Number(x.D) || 0, String(x.N || '').trim().slice(0, 50), Math.round((Number(x.Q) || 0) * 1000) / 1000, r2(x.R)]));
       await livePut(nm, { pc: nm, sid: Number(h.SaleID) || 0, no: String(h.SaleNo || '').trim(), st: Number(h.DocStatusID) || 0, pr: /Printed\s*By/i.test(String(h.SN || '')) ? 1 : 0,
-        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0, la: Number(firstSeen.l[String(h.SaleID)]) || 0, src, dg, sn });
+        t: r2(h.TotalSale), j, n: L.length, ft: Number(firstSeen.m[String(h.SaleID)]) || 0, la: Number(firstSeen.l[String(h.SaleID)]) || 0, src, dg, sn, oc });
     }
   } catch (e) { log('live bill: ' + e.message); }
   finally { liveRun = false; }
