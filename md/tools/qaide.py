@@ -95,6 +95,9 @@ def BR(k, v): return [iff([streq(k, v, True)]), RM.BREAK, END]
 SK_FROM, SK_TO = 9 * 60, 21 * 60      # 9:00 – 20:59 (malik 20 Nov: 'raat 9 ke baad paani ki zaroorat nahi')
 SK_GOAL = 6                           # bottle / din (malik ka hadaf, sehat.py GOAL)
 CN_AGE = 3 * 86400000                 # v87: 📇 naya number 3 din tak popup mein (phir khud hat)
+# v89 (27 Nov raat, malik ne chuna: 'Isi 💬 tile ke popup mein'): naye number ab unlock popup mein NAHI — 💬 WhatsApp tile (wasite.py) mein.
+#   CN_POP True = wapas unlock popup mein bhi (malik ke kehne par hi).
+CN_POP = False
 SK_ITEMS = (("s2", "c", 14 * 60, "☕ Coffee pee lo", "🔵 ☐ Coffee pee li"),
             ("s3", "f", 14 * 60 + 30, "🍎 Fruit kha lo", "🔵 ☐ Fruit kha liya"),
             ("s4", "n", 16 * 60, "🥜 Nuts kha lo", "🔵 ☐ Nuts kha liye"))   # waqt sehat.py ITEMS jaisa
@@ -107,14 +110,7 @@ _SKH = ['  java.util.Calendar c = java.util.Calendar.getInstance();',
         '  int p = 0; try { p = Integer.parseInt(magicText.evaluateString("{" + "v=skP}").trim()); } catch (Throwable e1) { p = 0; }',
         '  if (!od.trim().equals(dy)) { p = 0; x = ""; }',
         '  String Q = String.valueOf((char) 34);']
-# SKL: aaj ke sehat button (JSON ka tukda, har ek ke baad ',') -> lv sj · popup ka message -> global skM
-SKL = '\n'.join(['try {'] + _SKH + [
-    '  String t = magicText.evaluateString("{" + "v=rmT}"); if (t == null) t = "";',
-    '  String[] a = t.split("\\n"); int n = 0;',
-    '  for (int i = 0; i < a.length; i++) if (a[i].trim().length() > 0) n++;',
-    '  StringBuilder sj = new StringBuilder(), msg = new StringBuilder(), nj = new StringBuilder();',
-    # v87: 📇 naye number (cnsave.py ka cnList "+92…|0319 …|w|ms") — save ho gaye (PhoneLookup) / 3 din purane hatao, baqi reminder ke neeche (keys rz<hindse>)
-    '  int cn = 0;',
+CN_NUMS = [
     '  try {',
     '    String L = magicText.evaluateString("{" + "v=cnList}"); if (L == null) L = "";',
     '    String[] la = L.split("\\n"); long now = System.currentTimeMillis();',
@@ -144,6 +140,15 @@ SKL = '\n'.join(['try {'] + _SKH + [
     '      cn++;',
     '    }',
     '  } catch (Throwable e4) { }',
+]
+# SKL: aaj ke sehat button (JSON ka tukda, har ek ke baad ',') -> lv sj · popup ka message -> global skM
+SKL = '\n'.join(['try {'] + _SKH + [
+    '  String t = magicText.evaluateString("{" + "v=rmT}"); if (t == null) t = "";',
+    '  String[] a = t.split("\\n"); int n = 0;',
+    '  for (int i = 0; i < a.length; i++) if (a[i].trim().length() > 0) n++;',
+    '  StringBuilder sj = new StringBuilder(), msg = new StringBuilder(), nj = new StringBuilder();',
+    # v87: 📇 naye number (cnsave.py ka cnList "+92…|0319 …|w|ms") — save ho gaye (PhoneLookup) / 3 din purane hatao, baqi reminder ke neeche (keys rz<hindse>)
+    '  int cn = 0;'] + (CN_NUMS if CN_POP else []) + [
     '  if (mi >= %d && mi < %d) {' % (SK_FROM, SK_TO),
     '    msg.append("<font color=\'%s\'><b>💧 Paani pee lo — aaj " + p + "/%d" + (p >= %d ? " ✅" : "") + "</b></font><br>");' % (BLUE, SK_GOAL, SK_GOAL),
     '    sj.append(Q + "s1" + Q + ":" + Q + "🔵 ☐ Paani pee li  (+1 bottle)" + Q + ",");'] +
@@ -245,8 +250,8 @@ COMBO = [
           END,
           RM.BREAK,
         END,
-        RM.java(CNO, "cq"),                            # v87: 📇 naya number = 'Naya contact' screen + list se hata, popup band
-        iff([cstrne("cq", "", True)]), RM.BREAK, END,
+        *([RM.java(CNO, "cq"),                          # v87: 📇 naya number = 'Naya contact' screen + list se hata, popup band
+           iff([cstrne("cq", "", True)]), RM.BREAK, END] if CN_POP else []),
         RM.java(SKT, "sk"),                           # v84: s1…s4 = gin lo (sk p / x), baqi = ""
         *BR("sk", "p"),                                # 💧 paani = +1 aur popup band (agle unlock par phir)
         iff([cstrne("sk", "x", True)]),                # ☕ / 🍎 / 🥜 = popup dobara (baqi ke saath) — reminder ka DEL nahi
@@ -274,7 +279,7 @@ acts = [lexpr("go", "1"),
         END]
 out = {"macroExportVersion": 1, "macro": {
     "m_name": "🧠 Falsafa",
-    "m_description": "Unlock par 🎓 Video samjhao se bana ek qoul (Urdu, baari baari — 🧠 Qoul laao macro laata hai; purane 92 band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), 📇 naya unsaved number (tap = Naya contact screen, naam likh kar Save), Sona hai / Jaag gaya, ✅ OK, qoul. Har unlock (aur lock na hua ho to screen ON) par. Koi app band nahi. AI nahi.",
+    "m_description": "Unlock par 🎓 Video samjhao se bana ek qoul (Urdu, baari baari — 🧠 Qoul laao macro laata hai; purane 92 band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), Sona hai / Jaag gaya, ✅ OK, qoul. Har unlock (aur lock na hua ho to screen ON) par. Koi app band nahi. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lint("pLeft"), lint("pShow"), lint("kShow"), lint("qi"), {"m_name": "qs", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},

@@ -10275,3 +10275,15 @@ Validator: cnsave VALID; qaide If / Loop balance python se. Phone par azmaya nah
 Saath mein GHALTI theek (doosri chat ka v87): qaide.py dlg() mein '# v86' comment line ke BEECH tha -> positiveText / negativeText comment ban gaye (raat wale chhote 🧠 popup ke 'Sona hai / Nahi' button ke lafz gayab) — ab alag line.
 (v87 number doosri chat ne Urdu qoul ke liye le liya — yeh v88.)
 Sabaq: phone par MacroDroid ka notification / patti nazar na aaye to naya raasta mat ghadho — malik ka chalta popup (🧠 Falsafa + reminder) hi istemal karo.
+
+=== md pkg v89 (27 Nov 2026 raat) — 📇 Naye number ab 💬 WhatsApp tile mein ===
+Malik ne v88 ke baad screenshot (💬 WhatsApp tile ka popup) bhej kar likha "Yaha pr aiya ga" -> sawal par chuna: "Isi 💬 tile ke popup mein".
+ - wasite.py (💬 WhatsApp bina save, tile 1): tile dabao -> Java CNL cnList parhta hai (save ho gaye = PhoneLookup / 3 din purane = khud hata,
+   cnList dobara likhta) -> SelectionDialog: har number (naya pehle, 9 tak) ki do lines '📇 Save karo · 0319 …  (WhatsApp/Call)' aur '💬 WhatsApp · 0319 …',
+   aakhir mein '✍️ Koi aur number likhein'. Keys n<i><a|b><hindse> (alfabet = tarteeb, number key mein hi — beech mein naya number aaye to bhi ghalat nahi).
+   Java CNP: a = 'Naya contact' screen number bhar kar + list se hata (s) · b = usi number ki WhatsApp chat (hindse -> purana wa_open) · z = purana khana
+   · back = kuch nahi (c). List khali = seedha purana khana (pehle jaisa). sbAsk / shAsk chhoot +100 (do popup).
+ - qaide.py: CN_POP False — unlock popup mein naye number NAHI (v88 wala hissa CN_NUMS / CNO flag ke peeche, malik kahe to True).
+ - cnsave.py wahi (cnList bharta hai), sirf description / comment.
+Test: javac + android stubs (khali = khana, naya pehle, save = contact screen + hata, WhatsApp = hindse + list mein rehta, z / back, purana khana, save / 3 din = hata),
+JSON python se parse; 💬 macro VALID; qaide If / Loop balance. Phone par azmaya nahi.

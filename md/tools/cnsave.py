@@ -12,6 +12,8 @@
 #   "📇 0319 8682104 · WhatsApp — Save karein" dikhata hai; tap = 'Naya contact' screen number bhar kar (qaide.py CNO) + list se hata.
 #   Save ho gaya (PhoneLookup) ya 3 din purana = khud hat. cnSeen ek dafa phir khali (cnV 3) — pehle wale 20 dikhe hi nahi the.
 #   Report ka naya hindsa: cnWo (WhatsApp se kitne naye number pakre). Phone par azmaya nahi.
+# v89 (27 Nov raat, malik ne chuna: 'Isi 💬 tile ke popup mein'): list ab unlock popup mein NAHI — 💬 WhatsApp tile (wasite.py CNL / CNP) mein:
+#   har number ki '📇 Save karo' + '💬 WhatsApp' line, aakhir mein '✍️ Koi aur number likhein'.
 import json, os
 from cb import iff, END, ELSE, lvar, var, trig
 D = os.path.dirname(os.path.abspath(__file__))
@@ -95,7 +97,7 @@ acts = [
 ]
 CN = {"macroExportVersion": 1, "macro": {
     "m_name": "📇 Naya number save",
-    "m_description": "WhatsApp ya call par unsaved number aaye to agle unlock par 🧠 Falsafa ke popup mein (reminder ke neeche) '📇 0319 … — Save karein'; tap = 'Naya contact' screen number ke saath, naam likh kar Save. Har number ki sirf ek dafa, aakhri 5, 3 din. Saved number par kuch nahi. AI nahi.",
+    "m_description": "WhatsApp ya call par unsaved number aaye to list mein (aakhri 5, 3 din) — 💬 WhatsApp tile dabao: '📇 Save karo · 0319 …' = 'Naya contact' screen number ke saath, naam likh kar Save · '💬 WhatsApp · 0319 …' = chat. Har number ki sirf ek dafa. Saved number par kuch nahi. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lvar("cn", 2), lvar("cs", 2), lvar("res", 2)],
     "m_triggerList": [
