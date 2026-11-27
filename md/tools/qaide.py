@@ -56,7 +56,9 @@ GATE = [
 import rec as REC
 from cb import lt as glt, sint
 def dlg(state, pos, neg): return {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "🧠 Soch",
-     "text": "{lv=qs}" + state,   # v86: qs khud <br><br> ke saath khatam hota hai (khali qoul = sirf sawal) "positiveText": pos, "negativeText": neg,
+     # v86: qs khud <br><br> ke saath khatam hota hai (khali qoul = sirf sawal)
+     # v88 GHALTI theek: v87 mein yeh comment line ke BEECH mein tha — positiveText / negativeText comment ban gaye (button ke lafz gayab)
+     "text": "{lv=qs}" + state, "positiveText": pos, "negativeText": neg,
      "cancelAfterTimeout": True, "timeoutSeconds": 15, "htmlFormat": True, "useCustomColors": True, "textColor": -15658735, "bgColor": -1}
 GATE += [
     iff([glt("recOff", 1)]),
@@ -92,6 +94,7 @@ def BR(k, v): return [iff([streq(k, v, True)]), RM.BREAK, END]
 #   Purane 💧 Paani / ☕ Coffee macro + 📸 Sehat lock band hi hain (malik). AI nahi. Phone par azmaya nahi.
 SK_FROM, SK_TO = 9 * 60, 21 * 60      # 9:00 – 20:59 (malik 20 Nov: 'raat 9 ke baad paani ki zaroorat nahi')
 SK_GOAL = 6                           # bottle / din (malik ka hadaf, sehat.py GOAL)
+CN_AGE = 3 * 86400000                 # v87: 📇 naya number 3 din tak popup mein (phir khud hat)
 SK_ITEMS = (("s2", "c", 14 * 60, "☕ Coffee pee lo", "🔵 ☐ Coffee pee li"),
             ("s3", "f", 14 * 60 + 30, "🍎 Fruit kha lo", "🔵 ☐ Fruit kha liya"),
             ("s4", "n", 16 * 60, "🥜 Nuts kha lo", "🔵 ☐ Nuts kha liye"))   # waqt sehat.py ITEMS jaisa
@@ -109,7 +112,38 @@ SKL = '\n'.join(['try {'] + _SKH + [
     '  String t = magicText.evaluateString("{" + "v=rmT}"); if (t == null) t = "";',
     '  String[] a = t.split("\\n"); int n = 0;',
     '  for (int i = 0; i < a.length; i++) if (a[i].trim().length() > 0) n++;',
-    '  StringBuilder sj = new StringBuilder(), msg = new StringBuilder();',
+    '  StringBuilder sj = new StringBuilder(), msg = new StringBuilder(), nj = new StringBuilder();',
+    # v87: 📇 naye number (cnsave.py ka cnList "+92…|0319 …|w|ms") — save ho gaye (PhoneLookup) / 3 din purane hatao, baqi reminder ke neeche (keys rz<hindse>)
+    '  int cn = 0;',
+    '  try {',
+    '    String L = magicText.evaluateString("{" + "v=cnList}"); if (L == null) L = "";',
+    '    String[] la = L.split("\\n"); long now = System.currentTimeMillis();',
+    '    java.util.ArrayList kp = new java.util.ArrayList();',
+    '    for (int i = 0; i < la.length; i++) {',
+    '      String z = la[i].trim(); if (z.length() == 0) continue;',
+    '      String[] f = z.split("[|]"); if (f.length < 4) continue;',
+    '      long ms = 0; try { ms = Long.parseLong(f[3].trim()); } catch (Throwable e2) { ms = 0; }',
+    '      if (now - ms > %dL) continue;' % CN_AGE,
+    '      boolean sv = false;',
+    '      try {',
+    '        String[] cols = new String[1]; cols[0] = "_id";',
+    '        android.net.Uri u = android.net.Uri.withAppendedPath(android.provider.ContactsContract.PhoneLookup.CONTENT_FILTER_URI, android.net.Uri.encode(f[0]));',
+    '        android.database.Cursor cu = appContext.getContentResolver().query(u, cols, null, null, null);',
+    '        if (cu != null) { sv = cu.getCount() > 0; cu.close(); }',
+    '      } catch (Throwable e3) { }',
+    '      if (sv) continue;',
+    '      kp.add(z);',
+    '    }',
+    '    StringBuilder lk = new StringBuilder();',
+    '    for (int i = 0; i < kp.size(); i++) { if (i > 0) lk.append("\\n"); lk.append((String) kp.get(i)); }',
+    '    if (!lk.toString().equals(L.trim())) variableSetter.setString("cnList", lk.toString(), 2);',
+    '    for (int i = kp.size() - 1; i >= 0; i--) {',     # naya pehle
+    '      String[] f = ((String) kp.get(i)).split("[|]");',
+    '      String dg = f[0].replaceAll("[^0-9]", ""); if (dg.length() < 8) continue;',
+    '      nj.append(Q + "rz" + dg + Q + ":" + Q + "📇 " + f[1].replace(Q, "") + " · " + (f[2].trim().equals("w") ? "WhatsApp" : "Call") + " — Save karein" + Q + ",");',
+    '      cn++;',
+    '    }',
+    '  } catch (Throwable e4) { }',
     '  if (mi >= %d && mi < %d) {' % (SK_FROM, SK_TO),
     '    msg.append("<font color=\'%s\'><b>💧 Paani pee lo — aaj " + p + "/%d" + (p >= %d ? " ✅" : "") + "</b></font><br>");' % (BLUE, SK_GOAL, SK_GOAL),
     '    sj.append(Q + "s1" + Q + ":" + Q + "🔵 ☐ Paani pee li  (+1 bottle)" + Q + ",");'] +
@@ -119,9 +153,10 @@ SKL = '\n'.join(['try {'] + _SKH + [
           '    }'] for k, ch, at, ln, bt in SK_ITEMS], []) + [
     '  }',
     '  if (n > 0) msg.append("<b>📝 Aap ke reminder</b> <small><font color=\'#555555\'>· jo ho gaya us par tap ✓</font></small>");',
-    '  else if (sj.length() > 0) msg.append("<small><font color=\'#555555\'>☐ par tap = gin liya (Blue Khata mein)</font></small>");',
+    '  if (cn > 0) msg.append((n > 0 ? "<br>" : "") + "<b>📇 Naya number</b> <small><font color=\'#555555\'>· tap = naam likh kar Save</font></small>");',
+    '  if (n == 0 && cn == 0 && sj.length() > 0) msg.append("<small><font color=\'#555555\'>☐ par tap = gin liya (Blue Khata mein)</font></small>");',
     '  variableSetter.setString("skM", msg.toString());',
-    '  return sj.toString();',
+    '  return nj.toString() + sj.toString();',   # v87: naye number pehle (reminder r01… ke baad, sehat s1… se pehle)
     '} catch (Throwable e) { return ""; }'])
 # NEEDJ: mila hua popup chahiye? (reminder ya sehat line) — "1" / ""
 NEEDJ = '\n'.join(['try {',
@@ -155,8 +190,28 @@ SKT = '\n'.join(['try {',
     '  }',
     '  return k.equals("s1") ? "p" : "x";',
     '} catch (Throwable e) { return ""; }'])
+# v87 (27 Nov raat, malik: "save wala nahi chal raha" -> "notification aata hi nahi" -> "Nahi, wo tile (popup) mein aa jaye jaise reminder wala aa raha hai,
+#   same waise"): CNO = chuna 📇 number (rk = rz<hindse>) -> phone ki 'Naya contact' screen number bhar kar (ACTION_INSERT) + cnList se hata.
+#   Jawab "ok" = popup band (contact screen saamne) · "" = number ka button nahi · "x" = screen nahi khuli (number list mein rehta hai).
+CNO = '\n'.join(['try {',
+    '  String k = magicText.evaluateString("{" + "lv=rk}"); if (k == null) k = "";',
+    '  if (!k.matches("rz[0-9]+")) return "";',
+    '  String plus = "+" + k.substring(2);',
+    '  android.content.Intent it = new android.content.Intent("android.intent.action.INSERT");',
+    '  it.setType("vnd.android.cursor.dir/raw_contact");',
+    '  it.putExtra("phone", plus);',
+    '  it.putExtra("finishActivityOnSaveCompleted", true);',
+    '  it.addFlags(268435456);',
+    '  appContext.startActivity(it);',
+    '  String L = magicText.evaluateString("{" + "v=cnList}"); if (L == null) L = "";',
+    '  String[] la = L.split("\\n"); StringBuilder lk = new StringBuilder();',
+    '  for (int i = 0; i < la.length; i++) { String z = la[i].trim(); if (z.length() == 0 || z.startsWith(plus + "|")) continue; if (lk.length() > 0) lk.append("\\n"); lk.append(z); }',
+    '  variableSetter.setString("cnList", lk.toString(), 2);',
+    '  try { int t = 0; try { t = Integer.parseInt(magicText.evaluateString("{" + "v=cnTp}").trim()); } catch (Throwable e1) { t = 0; } variableSetter.setInt("cnTp", t + 1); } catch (Throwable e2) { }',
+    '  return "ok";',
+    '} catch (Throwable e) { return "x"; }'])
 import re as _re
-for _j in (SKL, NEEDJ, SKT, QOJ):
+for _j in (SKL, NEEDJ, SKT, QOJ, CNO):
     assert not _re.search(r'\{(?![\s"])', _j), ('magic text jaisa {', _j)
 def gieq(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 1), "m_intValue": v}
 SEND = [iff([gieq("skQ", 1), cstrne("skU", ""), cstrne("skB", "")]),
@@ -190,7 +245,9 @@ COMBO = [
           END,
           RM.BREAK,
         END,
-        RM.java(SKT, "sk"),                            # v84: s1…s4 = gin lo (sk p / x), baqi = ""
+        RM.java(CNO, "cq"),                            # v87: 📇 naya number = 'Naya contact' screen + list se hata, popup band
+        iff([cstrne("cq", "", True)]), RM.BREAK, END,
+        RM.java(SKT, "sk"),                           # v84: s1…s4 = gin lo (sk p / x), baqi = ""
         *BR("sk", "p"),                                # 💧 paani = +1 aur popup band (agle unlock par phir)
         iff([cstrne("sk", "x", True)]),                # ☕ / 🍎 / 🥜 = popup dobara (baqi ke saath) — reminder ka DEL nahi
           RM.java(RM.DEL, "rc"),
@@ -217,7 +274,7 @@ acts = [lexpr("go", "1"),
         END]
 out = {"macroExportVersion": 1, "macro": {
     "m_name": "🧠 Falsafa",
-    "m_description": "Unlock par 🎓 Video samjhao se bana ek qoul (Urdu, baari baari — 🧠 Qoul laao macro laata hai; purane 92 band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), Sona hai / Jaag gaya, ✅ OK, qoul. Har unlock (aur lock na hua ho to screen ON) par. Koi app band nahi. AI nahi.",
+    "m_description": "Unlock par 🎓 Video samjhao se bana ek qoul (Urdu, baari baari — 🧠 Qoul laao macro laata hai; purane 92 band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), 📇 naya unsaved number (tap = Naya contact screen, naam likh kar Save), Sona hai / Jaag gaya, ✅ OK, qoul. Har unlock (aur lock na hua ho to screen ON) par. Koi app band nahi. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lint("pLeft"), lint("pShow"), lint("kShow"), lint("qi"), {"m_name": "qs", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
@@ -225,11 +282,12 @@ out = {"macroExportVersion": 1, "macro": {
                        {"m_name": "rk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, {"m_name": "rc", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "ra", "m_type": 4, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "sj", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, {"m_name": "nd", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
-                       {"m_name": "sk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, lint("hc"), lint("go")],
+                       {"m_name": "sk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, lint("hc"), lint("go"),
+                       {"m_name": "cq", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}],
     "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}, {"m_classType": "ScreenOnOffTrigger", "m_SIGUID": T_SCR, "m_screenOn": True}],
     "m_actionList": acts, "m_constraintList": []},
     "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1), var("rmT", 2), var("rmAt", 1), var("sbAsk", 1), var("shAsk", 1),
-                        var("skP", 1), var("skD", 2), var("skX", 2), var("skQ", 1), var("skB", 2), var("skU", 2), var("skM", 2), var("ntU", 2), var("ntK", 2), var("qoV", 2), var("qoI", 1)] + REC.GV,
+                        var("skP", 1), var("skD", 2), var("skX", 2), var("skQ", 1), var("skB", 2), var("skU", 2), var("skM", 2), var("ntU", 2), var("ntK", 2), var("qoV", 2), var("qoI", 1), var("cnList", 2), var("cnTp", 1)] + REC.GV,
     "userIcons": None, "aiFeedback": "Display over other apps ijazat."}
 json.dump(out, open(os.path.join(D, "qaide.json"), "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(acts))

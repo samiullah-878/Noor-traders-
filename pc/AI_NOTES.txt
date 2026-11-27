@@ -6207,3 +6207,20 @@ bhi OK) · "lock screen wala popup (paani / nuts) har dafa nahi aata — ek dafa
 - md/tools/qaide.py: OLD_ON False — JAVA = QOJ (qoV baari baari, '<big>urdu</big><br><br><small>— 🎓 video</small><br><br>'), khali = ''. GATE dlg text '{lv=qs}' + state.
   remind BUILD wahi (tags hata kar ek button). Javac stub se QOJ ki baari jaanchi. Phone par azmaya nahi.
 - AI: haan — sirf qoul banane mein (video ki likhai se). Phone par AI nahi.
+
+=== md pkg v88 (27 Nov 2026 raat) — 📇 Naya number save = unlock wale popup mein (reminder ki tarah) ===
+Malik: "save wala abhi bhi nahi chal raha" -> (sawal) "Notification aata hi nahi" -> "Nahi, wo tile (popup) mein aa jaye jaise reminder wala aa raha hai, same waise".
+Report v86: cnOk 20 = Java ne 20 dafa nm.notify chalaya (koi ghalti nahi) magar malik ko kuch nazar nahi aaya — phone MacroDroid ka notification chhupa deta hai.
+Ab (md/tools/cnsave.py + qaide.py):
+ - cnsave: notification / tairti patti BILKUL nahi. Naya unsaved number global cnList mein ("+92…|0319 8682104|w|ms", aakhri 5, dohra nahi). cnSeen ek dafa khali (cnV 3).
+   Naya hindsa cnWo = WhatsApp se pakre naye number (cnW / cnC / cnOk / cnR wahi).
+ - qaide.py (🧠 Falsafa ka unlock wala MILA popup): SKL cnList parhta hai — save ho gaye (PhoneLookup) / 3 din (CN_AGE) purane khud hata (cnList dobara likhta hai),
+   baqi har number ek button "📇 0319 8682104 · WhatsApp — Save karein" (key rz<hindse>; reminder r01… ke baad, sehat s1… se pehle; naya pehle) + message
+   mein "📇 Naya number · tap = naam likh kar Save". Number ho to raat ko bhi mila popup (NEEDJ sj se). Tap = CNO: phone ki 'Naya contact' screen
+   number bhar kar (ACTION_INSERT) + cnList se hata + cnTp +1 -> popup band. Screen na khule = "x" (number list mein rehta hai).
+ - Number SIRF phone mein (cnList / cnSeen) — md/ PUBLIC.
+Test: javac + android stubs se CNJ / SKL / CNO chala kar (WA chhupe harf, dekha, naam, saved, list 2, naya pehle, tap = contact screen + hata, save = khud hata, 3 din, aakhri 5) — SAB THEEK.
+Validator: cnsave VALID; qaide If / Loop balance python se. Phone par azmaya nahi — malik se: unsaved number se call / WhatsApp, phir phone lock kar ke kholein.
+Saath mein GHALTI theek (doosri chat ka v87): qaide.py dlg() mein '# v86' comment line ke BEECH tha -> positiveText / negativeText comment ban gaye (raat wale chhote 🧠 popup ke 'Sona hai / Nahi' button ke lafz gayab) — ab alag line.
+(v87 number doosri chat ne Urdu qoul ke liye le liya — yeh v88.)
+Sabaq: phone par MacroDroid ka notification / patti nazar na aaye to naya raasta mat ghadho — malik ka chalta popup (🧠 Falsafa + reminder) hi istemal karo.
