@@ -24,7 +24,24 @@ JV = "\n".join(['try {', '  String[] q = new String[] {'] +
       '  long d2 = ((System.currentTimeMillis() + 18000000L) / 86400000L) / 2L;', '  int b = (int) (d2 % nb);', '  int from = b * per;',
       '  int i = (from + (int) (Math.random() * per)) % n;', '  return q[i];',
       '} catch (Throwable t) {', '  return "Aaj ka sab se zaroori kaam kaun sa hai?";', '}'])
-JAVA = {"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": JV, "blockNextAction": True, "responseVariableName": "qs", "runInBackgroundThread": True}
+# v86 (27 Nov, malik: "qoul ko Urdu mein kar do · qoul ki list mein jo video samjhao — wahan se qoul banao" + chuna "Urdu harf" + "sirf video wale"):
+#   purane 92 (RULES / JV) BAND — OLD_ON False. Ab qoul = global qoV (🧠 Qoul laao macro Blue Khata ki 🎓 Video samjhao se laata hai: 'urdu‖video§…', naye pehle),
+#   baari baari (qoI; naya list aaye to 0 = naye pehle). List khali = qoul nahi (popup mein sirf reminder / sehat / Sona hai). Jawab ke aakhir mein <br><br>.
+OLD_ON = False
+QOJ = '\n'.join(['try {',
+    '  String t = magicText.evaluateString("{" + "v=qoV}"); if (t == null) t = "";',
+    '  String[] a = t.split("§"); java.util.ArrayList L = new java.util.ArrayList();',
+    '  for (int i = 0; i < a.length; i++) if (a[i].trim().length() > 0) L.add(a[i].trim());',
+    '  int n = L.size(); if (n == 0) return "";',
+    '  int i = 0; try { i = Integer.parseInt(magicText.evaluateString("{" + "v=qoI}").trim()); } catch (Throwable e1) { i = 0; }',
+    '  if (i < 0) i = 0; i = i % n;',
+    '  variableSetter.setInt("qoI", i + 1);',
+    '  String[] p = ((String) L.get(i)).split("‖");',
+    '  String u = p[0].trim(), tt = p.length > 1 ? p[1].trim() : "";',
+    '  if (u.length() == 0) return "";',
+    '  return "<big>" + u + "</big><br><br><small>— 🎓 " + tt + "</small><br><br>";',
+    '} catch (Throwable e) { return ""; }'])
+JAVA = {"m_classType": "JavaAction", "m_SIGUID": 0, "scriptText": JV if OLD_ON else QOJ, "blockNextAction": True, "responseVariableName": "qs", "runInBackgroundThread": True}
 HEAD = [
     lexpr("pLeft", "{v=pnDue}-{system_time}"),       # Paani aane mein kitne sec (manfi = abhi aayega)
     lexpr("pShow", "{v=pnShowEnd}-{system_time}"),   # > 0 = Paani popup screen par
@@ -39,7 +56,7 @@ GATE = [
 import rec as REC
 from cb import lt as glt, sint
 def dlg(state, pos, neg): return {"m_classType": "ElseIfConfirmedThenAction", "m_SIGUID": 0, "title": "🧠 Soch",
-     "text": "{lv=qs}<br><br>" + state, "positiveText": pos, "negativeText": neg,
+     "text": "{lv=qs}" + state,   # v86: qs khud <br><br> ke saath khatam hota hai (khali qoul = sirf sawal) "positiveText": pos, "negativeText": neg,
      "cancelAfterTimeout": True, "timeoutSeconds": 15, "htmlFormat": True, "useCustomColors": True, "textColor": -15658735, "bgColor": -1}
 GATE += [
     iff([glt("recOff", 1)]),
@@ -139,7 +156,7 @@ SKT = '\n'.join(['try {',
     '  return k.equals("s1") ? "p" : "x";',
     '} catch (Throwable e) { return ""; }'])
 import re as _re
-for _j in (SKL, NEEDJ, SKT):
+for _j in (SKL, NEEDJ, SKT, QOJ):
     assert not _re.search(r'\{(?![\s"])', _j), ('magic text jaisa {', _j)
 def gieq(n, v): return {"m_classType": "MacroDroidVariableConstraint", "m_SIGUID": 0, "m_variable": gv(n, 1), "m_intValue": v}
 SEND = [iff([gieq("skQ", 1), cstrne("skU", ""), cstrne("skB", "")]),
@@ -200,7 +217,7 @@ acts = [lexpr("go", "1"),
         END]
 out = {"macroExportVersion": 1, "macro": {
     "m_name": "🧠 Falsafa",
-    "m_description": "Unlock par falasifa ka ek qoul (random, 15 s baad khud band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), Sona hai / Jaag gaya, ✅ OK, qoul. Har unlock (aur lock na hua ho to screen ON) par. Koi app band nahi. AI nahi.",
+    "m_description": "Unlock par 🎓 Video samjhao se bana ek qoul (Urdu, baari baari — 🧠 Qoul laao macro laata hai; purane 92 band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), Sona hai / Jaag gaya, ✅ OK, qoul. Har unlock (aur lock na hua ho to screen ON) par. Koi app band nahi. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lint("pLeft"), lint("pShow"), lint("kShow"), lint("qi"), {"m_name": "qs", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
@@ -212,7 +229,7 @@ out = {"macroExportVersion": 1, "macro": {
     "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}, {"m_classType": "ScreenOnOffTrigger", "m_SIGUID": T_SCR, "m_screenOn": True}],
     "m_actionList": acts, "m_constraintList": []},
     "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1), var("rmT", 2), var("rmAt", 1), var("sbAsk", 1), var("shAsk", 1),
-                        var("skP", 1), var("skD", 2), var("skX", 2), var("skQ", 1), var("skB", 2), var("skU", 2), var("skM", 2), var("ntU", 2), var("ntK", 2)] + REC.GV,
+                        var("skP", 1), var("skD", 2), var("skX", 2), var("skQ", 1), var("skB", 2), var("skU", 2), var("skM", 2), var("ntU", 2), var("ntK", 2), var("qoV", 2), var("qoI", 1)] + REC.GV,
     "userIcons": None, "aiFeedback": "Display over other apps ijazat."}
 json.dump(out, open(os.path.join(D, "qaide.json"), "w"), ensure_ascii=False, separators=(",", ":"))
 print("ok", len(acts))

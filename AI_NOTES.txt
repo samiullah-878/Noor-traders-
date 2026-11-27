@@ -10244,3 +10244,17 @@ bhi OK) · "lock screen wala popup (paani / nuts) har dafa nahi aata — ek dafa
   ya din ki pehli dafa '🚨 5 min zaroori' sawal (clEm / clAsk / clEmDay wahi). HATA: 20 min istemal / 5 min break (clMin / clBrk /
   clAway), '1 minute baqi' patti, 🦒 gardan har 10 min (clNk). Purane globals phone par rehte hain (Remote BUILD qeemat rakhta hai), bekar.
 - MCP validator VALID (23 action). Phone par azmaya nahi. AI nahi.
+
+
+=== v2.395.0 + rules 2.113 + md pkg v87 (27 Nov 2026) — 🧠 Qoul = Video samjhao se, Urdu harf ===
+- Malik: "qoul ko Urdu mein kar do · qoul ki list update karo · qoul ki list mein jo video samjhao — wahan se qoul banao"; plan par chuna: "Urdu harf" + "sirf video wale" (purane 92 band).
+- video-sam.js v1.8: qoMake (khulasa ke baad khud; purani videos qoFill 3 fi khulna / ⋮ 🧠 Qoul se baqi) — Gemini likhai se {"q":[[urdu, roman]]}, qoOf jaanch;
+  ⭐ line (Urdu wali) bhi qoul, hatao = qoul se bhi. qoAdd / qoDel ek qatar (qoRun) mein read-modify-write: cloud getQoulPh / setQoulPh -> qoulPh/<awazKey>
+  {t, v, j, at}. Har likhai ke baad qoPing: Falcon wala MacroDroid webhook nt_qoul?ntU=…&ntK=… (no-cors). ⋮ 🧠 Qoul screen: Urdu (rtl) + Roman + ✕ + 📲 Phone ko abhi bhejo.
+  store(v, bg): purani video ka qoul banate waqt 'sam-vs-last' / tarteeb nahi badalti. app.js: Video samjhao ko cloud + projectId + apiKey.
+- firestore.rules 2.113: qoulPh/{k} — get if k.size() >= 24 (phone, bina login), list / write = malik.
+- md/tools/qoul.py (naya macro 🧠 Qoul laao): har 30 min + webhook nt_qoul (ntU / ntK whitelist) -> Java URL (ntU '/awazNotes?' -> '/qoulPh/<ntK>?') -> HttpRequest GET
+  (response qr, code hc) -> JsonParse -> qt / qw -> qw naya ho to qoV / qoW / qoI 0. MCP validator VALID (15 action).
+- md/tools/qaide.py: OLD_ON False — JAVA = QOJ (qoV baari baari, '<big>urdu</big><br><br><small>— 🎓 video</small><br><br>'), khali = ''. GATE dlg text '{lv=qs}' + state.
+  remind BUILD wahi (tags hata kar ek button). Javac stub se QOJ ki baari jaanchi. Phone par azmaya nahi.
+- AI: haan — sirf qoul banane mein (video ki likhai se). Phone par AI nahi.

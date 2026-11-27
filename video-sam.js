@@ -1,4 +1,9 @@
-// video-sam.js v1.7 (app v2.369.0, 24 Nov 2026) — 🎓 VIDEO SAMJHAO
+// video-sam.js v1.8 (app v2.395.0, 27 Nov 2026) — 🎓 VIDEO SAMJHAO
+// v1.8 (malik 27 Nov: "qoul ko Urdu mein kar do · qoul ki list mein jo video samjhao — wahan se qoul banao" + chuna "Urdu harf" + "sirf video wale"):
+//   🧠 QOUL — har video ka 📌 Khulasa bante hi (aur purani videos se, khulte waqt 3 tak / ⋮ 🧠 Qoul se baqi) 🤖 usi likhai se 2-3 gehre qoul [Urdu harf, Roman]
+//   (apni taraf se nahi) + ⭐ pasand ki line (jis ki Urdu likhai ho). List Firestore qoulPh/<awazKey> (rules 2.113, phone sirf GET): t = phone ke liye
+//   'urdu‖video§…' (naye pehle, 60 tak), v = badlaav ka nishan, j = poori list. Likhte hi phone ko webhook nt_qoul (+ ntU / ntK) — md pkg v86 ka
+//   🧠 Qoul laao foran le aata hai (warna har 30 min); 🧠 Falsafa popup baari baari ek dikhata hai (purane 92 band). ✕ = list se hata. AI: haan (sirf qoul banane mein).
 // v1.7 (malik 24 Nov: 'baar baar ruk jati hai — aankhein band hoti hain, khol kar dabana parta hai · auto kar do'): wajahein + ilaaj —
 //   ① awaz ka intezar (agla page / Google ki minute wali hadd / AI ka agla hissa) mein <audio> RUK jata tha -> screen band par Android page so jata, phir play() mana.
 //      Ab intezar mein wahi <audio> ek na sunai dene wali dhun (22 Hz, 12 s loop — `keep`) chalata rehta hai: page jaagta, notification par '⏳ …', awaz aate hi seedha.
@@ -103,10 +108,10 @@ const ttsText = p => linesOf(p).map(l => SPK[l[0]] + ': ' + (l[2] || l[1])).join
 export const _t = { tOf: (...a) => tOf(...a), mergeIn: (...a) => mergeIn(...a), posIdx: (...a) => posIdx(...a), sumOf: (...a) => sumOf(...a), actOf: (...a) => actOf(...a), romOnly: (...a) => romOnly(...a), pdfHTML: (...a) => pdfHTML(...a), txOf: (...a) => txOf(...a), groupsOf: (...a) => groupsOf(...a), wOf: (...a) => wOf(...a), bOf: (...a) => bOf(...a), vidOf, secOf, fmt, parseOut, wavBytes, ttsText, linesOf, badOut, lineAt, pcmOf: (...a) => pcmOf(...a), ttsBody: (...a) => ttsBody(...a), voGet };
 
 const load = () => { try { const o = JSON.parse(localStorage.getItem(LS) || '{}'); return o && typeof o === 'object' ? o : {}; } catch { return {}; } };
-function store(v) {
+function store(v, bg) {
   try {
-    const o = load(); o[v.id] = { id: v.id, t: v.t || '', sp: v.sp || [], parts: v.parts, next: v.next, end: v.end ? 1 : 0, sum: v.sum || null, act: v.act || null, qa: v.qa || null, at: Date.now() };
-    try { localStorage.setItem('sam-vs-last', v.id); } catch {}
+    const o = load(); o[v.id] = { id: v.id, t: v.t || '', sp: v.sp || [], parts: v.parts, next: v.next, end: v.end ? 1 : 0, sum: v.sum || null, act: v.act || null, qa: v.qa || null, qo: Array.isArray(v.qo) ? v.qo : null, qoS: v.qoS ? 1 : 0, at: bg ? (o[v.id]?.at || Date.now()) : Date.now() };
+    if (!bg) { try { localStorage.setItem('sam-vs-last', v.id); } catch {} }
     const ids = Object.keys(o).sort((x, y) => (o[y].at || 0) - (o[x].at || 0));
     for (const k of ids.slice(KEEP)) { delete o[k]; idbDropVid(k); }
     for (let left = ids.slice(0, KEEP).filter(k => k !== v.id); ;) {
@@ -116,7 +121,7 @@ function store(v) {
   } catch {}
 }
 const drop = id => { try { const o = load(); delete o[id]; localStorage.setItem(LS, JSON.stringify(o)); } catch {} idbDropVid(id); posDrop(id); };
-const savedV = o => ({ id: o.id, t: o.t, sp: o.sp || [], parts: o.parts || [], next: o.next || 0, end: o.end, sum: o.sum || null, act: o.act || null, qa: o.qa || null });
+const savedV = o => ({ id: o.id, t: o.t, sp: o.sp || [], parts: o.parts || [], next: o.next || 0, end: o.end, sum: o.sum || null, act: o.act || null, qa: o.qa || null, qo: Array.isArray(o.qo) ? o.qo : null, qoS: o.qoS ? 1 : 0 });
 
 // ---------- v1.5: chhoti yaad (sirf is phone par) ----------
 const jget = (k, d) => { try { const o = JSON.parse(localStorage.getItem(k) || 'null'); return o && typeof o === 'object' ? o : d; } catch { return d; } };
@@ -132,7 +137,10 @@ const starKey = (id, sec, r) => id + ':' + Math.round(sec) + ':' + hsh(String(r)
 function starToggle(v, p, l) {
   const k = starKey(v.id, p.s, l[1]); let a = starAll(); const had = a.some(x => x.k === k);
   if (had) a = a.filter(x => x.k !== k); else { a.push({ k, id: v.id, t: String(v.t || '').slice(0, 80), s: Math.round(p.s), n: nameOf(v, l[0]), r: l[1], at: Date.now() }); if (a.length > 300) a = a.slice(a.length - 300); }
-  jset('sam-vs-star', a); return !had;
+  jset('sam-vs-star', a);
+  // v1.8: ⭐ line (Urdu likhai wali) = 🧠 qoul bhi · hatao = qoul se bhi
+  if (had) qoDel('s' + k).catch(() => {}); else if (l[2] && QUR.test(l[2])) qoAdd([{ i: 's' + k, u: String(l[2]).slice(0, 220), r: String(l[1] || '').slice(0, 220), t: String(v.t || '').slice(0, 80), v: v.id, at: Date.now() }]).catch(() => {});
+  return !had;
 }
 // 📖 lafz: {chhote harf: [lafz, matlab, kab]} (1500 tak) — video hatane par bhi rehte hain
 function wordsAdd(parts) {
@@ -540,6 +548,8 @@ html body dialog.vs-dlg .vs-menu .vs-chip.is-in{background:linear-gradient(135de
 .vs-p{background:#fff;border:1.5px solid #dfe6f2;border-radius:14px;padding:9px 11px;display:grid;gap:6px}
 .vs-p.is-in{border-color:#2f55a0;box-shadow:0 0 0 3px #2f55a022;background:#f6f9ff}
 .vs-ph{display:flex;align-items:center;gap:8px}
+.vs-qu{font-size:20px;line-height:1.75;font-weight:600;text-align:right;font-family:'Noto Nastaliq Urdu','Jameel Noori Nastaleeq','Noto Naskh Arabic',serif}
+.vs-qr{font-size:13px;color:#4a5a7a;line-height:1.35}
 .vs-tm{font-size:13.5px;font-weight:800;color:#1d3160;background:#e8eefb;border-radius:999px;padding:3px 10px;text-decoration:none;white-space:nowrap}
 .vs-ab{margin-left:auto;font-size:14px}
 html body dialog.vs-dlg .vs-say{width:40px;min-height:36px!important;padding:0!important;border-radius:999px!important;border:1px solid #2b4a8a!important;background:linear-gradient(135deg,#2f55a0,#1d3160)!important;color:#fff!important;font-size:15px}
@@ -597,9 +607,9 @@ function paint() {
 function menuHTML() {
   const vo = voGet(), sp = S.v?.sp || [], row = (k, nm) => `<div class="vs-mr"><b>${esc(nm)}</b><div class="vs-mv">${VOICES.map(v => `<button type="button" class="vs-chip${vo[k] === v[0] ? ' is-in' : ''}" data-vs-vo="${k}:${v[0]}">${S.smpW === k + v[0] ? '⏳ ' : (vo[k] === v[0] ? '✓ ' : '')}${v[1]}</button>`).join('')}</div></div>`;
   const v = S.v, has = !!(v && v.parts.length), left = S.sleepAt ? Math.max(1, Math.ceil((S.sleepAt - Date.now()) / 60000)) : 0, tb = (k, t, dis) => `<button type="button" class="vs-chip" data-vs="${k}"${dis ? ' disabled' : ''}>${t}</button>`;
-  const tools = `<div class="vs-menu"><div class="vs-mt">🧰 Kaam</div><div class="vs-mv w">${tb('list', '📚 Purani videos (' + Object.keys(load()).length + ')') + tb('star', '⭐ Pasand ki lines (' + starAll().length + ')')}${tb('words', '📖 Lafz (' + wordsN() + ')')}${has ? tb('sum', S.sumBusy ? '⏳ Khulasa…' : '📌 Khulasa', S.sumBusy) + tb('act', S.actBusy ? '⏳ Kaam ki baatein…' : '✅ Mere kaam ki baatein', S.actBusy) + tb('qgo', '❓ Sawal poochho') + tb('pdf', '📄 PDF') : ''}</div>
+  const tools = `<div class="vs-menu"><div class="vs-mt">🧰 Kaam</div><div class="vs-mv w">${tb('list', '📚 Purani videos (' + Object.keys(load()).length + ')') + tb('star', '⭐ Pasand ki lines (' + starAll().length + ')') + tb('qoul', '🧠 Qoul' + (S.qo ? ' (' + S.qo.length + ')' : ''))}${tb('words', '📖 Lafz (' + wordsN() + ')')}${has ? tb('sum', S.sumBusy ? '⏳ Khulasa…' : '📌 Khulasa', S.sumBusy) + tb('act', S.actBusy ? '⏳ Kaam ki baatein…' : '✅ Mere kaam ki baatein', S.actBusy) + tb('qgo', '❓ Sawal poochho') + tb('pdf', '📄 PDF') : ''}</div>
     <div class="vs-mr"><b>😴 So jaun to awaz band${left ? ' — ' + left + ' min baqi' : ''}</b><div class="vs-mv">${[15, 30, 60].map(m => `<button type="button" class="vs-chip" data-vs-sl="${m}">${m} min</button>`).join('')}<button type="button" class="vs-chip${left ? '' : ' is-in'}" data-vs-sl="0">Band</button></div></div>
-    <div class="vs-note">🤖 AI sirf Khulasa, Kaam ki baatein aur Sawal mein. Pasand, lafz aur "kahan chhora" sirf is phone par rehte hain.</div></div>`;
+    <div class="vs-note">🤖 AI sirf Khulasa, Kaam ki baatein, Sawal aur 🧠 Qoul mein. Pasand, lafz aur "kahan chhora" sirf is phone par rehte hain.</div></div>`;
   return tools + `<div class="vs-menu"><div class="vs-mt">🔊 Awaz chuno <small>dabao = chun li + namoona</small></div>${row('A', sp[0] || 'Sawal wala')}${row('B', sp[1] || 'Jawab wala')}<div class="vs-note">Gemini ki bani banai awazein (kisi asal insaan ki nahi). Awaz badalne par is video ki awaz dobara banti hai.${S.ttsOff ? '<br>⚠️ Gemini ki awaz abhi nahi ban rahi: ' + esc(S.ttsOff.slice(0, 110)) : ''}</div></div>`;
 }
 function paintBar() {
@@ -675,6 +685,7 @@ async function sumMake(v, auto) {
     const L = sumOf(jparse(await askText([WHO, 'Neeche ek video ki guftagu (Roman Urdu) hai. Is ka KHULASA dein: 5 se 10 sab se zaroori baatein, har baat 1-2 aasaan jumle. Sirf wohi jo video mein kaha gaya — apni taraf se kuch na jorein.', 'Sirf yeh JSON dein: {"k": [["baat Roman Urdu mein", "wohi baat Urdu harfon mein"]]}', 'Roman line mein Urdu / Devanagari harf KABHI nahi (sirf a-z).', '', txOf(v)].join('\n'), true)));
     if (!L.length) throw Error('khulasa khali aaya');
     v.sum = L; store(v); if (!auto) A.notice?.('📌 Khulasa ban gaya — neeche dekhein');
+    if (!Array.isArray(v.qo)) setTimeout(() => qoMake(v, auto), 300);   // v1.8: khulasa ke saath 🧠 qoul (phone ka popup)
   } catch (e) { A.notice?.('✕ Khulasa nahi bana (' + String(e?.message || e).slice(0, 90) + ')' + (auto ? ' — ⋮ → 📌 Khulasa se dobara' : '')); }
   finally { if (S) { S.sumBusy = false; if (S.v === v) paint(); } }
 }
@@ -686,6 +697,91 @@ async function actMake(v) {
     v.act = L; store(v); A.notice?.('✅ Kaam ki baatein ban gayin — neeche dekhein');
   } catch (e) { A.notice?.('✕ Kaam ki baatein nahi banin (' + String(e?.message || e).slice(0, 90) + ')'); }
   finally { if (S) { S.actBusy = false; if (S.v === v) paint(); } }
+}
+// ---------- v1.8: 🧠 QOUL (phone ke 🧠 Falsafa popup ke liye — Urdu harf, sirf video ki baat) ----------
+const QMAX = 60, QUR = /[؀-ۿ]/, QDEV = /[ऀ-ॿ]/;
+const qClean = t => String(t || '').replace(/[§‖{}<>\\"\n\r\t]/g, ' ').replace(/\s+/g, ' ').trim();
+const qoOf = o => (Array.isArray(o && o.q) ? o.q : []).filter(x => Array.isArray(x) && QUR.test(String(x[0] || '')) && !QDEV.test(String(x[0])))
+  .map(x => [qClean(x[0]).slice(0, 220), romOnly(x[1] || '').slice(0, 220)]).filter(x => x[0].length >= 8).slice(0, 3);
+let QQ = Promise.resolve();
+const qoRun = fn => { const p = QQ.then(fn, fn); QQ = p.catch(() => {}); return p; };
+async function qoKey() {
+  const C = A.cloud; if (!C || !C.getAwazKey || !C.setQoulPh) throw Error('app abhi tayyar nahi — thori der baad');
+  let k = await C.getAwazKey();
+  if (!k && C.setAwazKey) { const a = new Uint8Array(18); crypto.getRandomValues(a); k = Array.from(a, b => b.toString(36).padStart(2, '0')).join('').slice(0, 32); await C.setAwazKey(k); }
+  if (!k || k.length < 24) throw Error('chaabi nahi bani');
+  return k;
+}
+async function qoLoad(k) { const o = await A.cloud.getQoulPh(k); let L = []; try { L = JSON.parse((o && o.j) || '[]'); } catch {} return Array.isArray(L) ? L.filter(x => x && x.i && x.u) : []; }
+async function qoPing(k) {
+  try {
+    const C = (await A.cloud.getFxCfg?.()) || {}, m = String(C.wh || '').trim().match(/^(https:\/\/trigger\.macrodroid\.com\/[A-Za-z0-9_-]{6,})\//);
+    if (!m || !A.projectId || !A.apiKey) return false;
+    const u = `https://firestore.googleapis.com/v1/projects/${A.projectId}/databases/(default)/documents/businesses/noor-traders/awazNotes?key=${A.apiKey}`;
+    await fetch(m[1] + '/nt_qoul?ntU=' + encodeURIComponent(u) + '&ntK=' + encodeURIComponent(k) + '&t=' + Date.now(), { method: 'GET', mode: 'no-cors', cache: 'no-store' });
+    return true;
+  } catch { return false; }
+}
+async function qoSave(k, L) {
+  L = L.slice().sort((a, b) => (b.at || 0) - (a.at || 0)).slice(0, QMAX);
+  const t = L.map(x => qClean(x.u) + '‖' + (qClean(x.t) || 'Video samjhao').slice(0, 60)).join('§');
+  await A.cloud.setQoulPh(k, { t, v: String(Date.now()), j: JSON.stringify(L) });
+  if (S) S.qo = L;
+  qoPing(k);
+  return L;
+}
+const qoAdd = items => qoRun(async () => {
+  const k = await qoKey(), L = await qoLoad(k), have = new Set(L.map(x => x.i)), txt = new Set(L.map(x => qClean(x.u)));
+  const add = items.filter(x => x.u && !have.has(x.i) && !txt.has(qClean(x.u)));
+  return add.length ? qoSave(k, [...add, ...L]) : L;
+});
+const qoDel = id => qoRun(async () => { const k = await qoKey(), L = await qoLoad(k), N = L.filter(x => x.i !== id); return N.length === L.length ? L : qoSave(k, N); });
+const qoItems = v => (v.qo || []).map((x, i) => ({ i: 'v' + v.id + ':' + hsh(x[0]), u: x[0], r: x[1], t: String(v.t || '').slice(0, 80), v: v.id, at: Date.now() - i }));
+async function qoMake(v, quiet, bg) {
+  if (!S || !v || !v.parts.length || S.qoBusy) return false;
+  S.qoBusy = v.id; if (S.view === 'qoul') paint();
+  try {
+    const L = qoOf(jparse(await askText([WHO, 'Neeche ek video ki guftagu (Roman Urdu) hai. Is mein se 2 se 3 GEHRE QOUL nikaalein — chhote (ek ya do jumle), aise jo parhne wale ko ruk kar sochne par majboor karein (zindagi, waqt, sehat, ghar / bache, karobar, log).',
+      'Sirf wohi baat jo isi video mein kahi ya samjhai gayi — apni taraf se ya kisi aur ka qoul KABHI na jorein. Video mein aisi gehri baat na ho to khali list dein.',
+      'Har qoul do shakal mein: (1) saaf Urdu harfon mein (Urdu nastaleeq ke harf — Hindi / Devanagari NAHI, English lafz nahi), (2) wohi baat Roman Urdu (a-z) mein.',
+      'Sirf yeh JSON dein: {"q": [["Urdu harfon mein qoul", "wohi Roman Urdu mein"]]}', '', txOf(v)].join('\n'), true)));
+    v.qo = L; v.qoS = 0; store(v, bg);
+    if (L.length) await qoAdd(qoItems(v));
+    v.qoS = 1; store(v, bg);
+    if (!quiet) A.notice?.(L.length ? '🧠 ' + L.length + ' qoul ban gaye — phone ke popup mein aayenge' : '🧠 Is video mein qoul jaisi baat nahi mili');
+    return true;
+  } catch (e) { if (S) S.qoErr = String(e?.message || e).slice(0, 120); if (!quiet) A.notice?.('✕ Qoul nahi bane (' + String(e?.message || e).slice(0, 90) + ')'); return false; }
+  finally { if (S) { S.qoBusy = ''; if (S.view === 'qoul') paint(); } }
+}
+// purani videos: jin ka qoul abhi nahi bana (ya bana magar Firestore tak nahi gaya) — ek ek kar ke, ghalti par ruk jao (baqi agli dafa)
+const qoPend = () => { const o = load(); return Object.values(o).filter(x => x && Array.isArray(x.parts) && x.parts.length && !Array.isArray(x.qo) && txOf(savedV(x)).length >= 1200).length; };
+async function qoFill(max) {
+  if (!S || S.qoFill || !A.cloud) return; S.qoFill = true; S.qoErr = ''; if (S.view === 'qoul') paint();
+  try {
+    const o = load(), ids = Object.keys(o).sort((x, y) => (o[y].at || 0) - (o[x].at || 0)); let n = 0;
+    for (const id of ids) {
+      if (!S) break;
+      const cur = S.v && S.v.id === id, v = cur ? S.v : savedV(o[id]);
+      if (Array.isArray(v.qo) && v.qo.length && !v.qoS) { await qoAdd(qoItems(v)); v.qoS = 1; store(v, !cur); continue; }
+      if (Array.isArray(v.qo) || !v.parts.length || txOf(v).length < 1200) continue;
+      if (n >= max) break; n++;
+      if (!(await qoMake(v, true, !cur))) break;
+    }
+  } catch (e) { if (S) S.qoErr = String(e?.message || e).slice(0, 120); }
+  finally { if (S) { S.qoFill = false; if (S.view === 'qoul') paint(); } }
+}
+async function qoOpen() {
+  S.qo = null; S.qoErr = ''; paint();
+  try { const k = await qoKey(); const L = await qoLoad(k); if (S) { S.qo = L; if (S.view === 'qoul') paint(); } }
+  catch (e) { if (S) { S.qo = []; S.qoErr = String(e?.message || e).slice(0, 120); if (S.view === 'qoul') paint(); } }
+}
+function qoulHTML() {
+  const L = S.qo, m = qoPend();
+  const top = `<div class="vs-ttl">🧠 Qoul — phone ke popup ke liye (${L ? L.length : '…'}/${QMAX})</div><div class="vs-note">Naye pehle. Har video ka 📌 Khulasa bante hi 🤖 AI usi video ki baat se 2-3 qoul banata hai (Urdu harf) + ⭐ pasand ki line. Phone har 30 min khud le aata hai (naya bante hi bhi). Jo pasand na ho ✕.</div>`;
+  const fill = m ? `<div class="vs-row"><button type="button" class="vs-chip" data-vs="qofill"${S.qoFill || S.qoBusy ? ' disabled' : ''}>${S.qoFill ? '⏳ Ban rahe hain…' : '➕ Baqi ' + m + ' videos se qoul banao'}</button></div>` : '';
+  const err = S.qoErr ? `<div class="vs-st bad">✕ ${esc(S.qoErr)}</div>` : '';
+  const list = !L ? '<div class="vs-st">⏳ …</div>' : L.length ? L.map(x => `<div class="vs-p"><div class="vs-qu" dir="rtl" lang="ur">${esc(x.u)}</div>${x.r ? `<div class="vs-qr">${esc(x.r)}</div>` : ''}<div class="vs-ph"><small class="vs-sm">${String(x.i)[0] === 's' ? '⭐' : '🎓'} ${esc(x.t || '')}</small><button type="button" class="vs-chip" data-vs-qdel="${esc(x.i)}" aria-label="Hatao">✕</button></div></div>`).join('') : '<div class="vs-note">Abhi koi qoul nahi — video samjhayein, khulasa bante hi khud ban jayenge.</div>';
+  return top + fill + err + list + '<div class="vs-row"><button type="button" class="vs-chip" data-vs="qoping">📲 Phone ko abhi bhejo</button></div>';
 }
 async function qaAsk(v, q) {
   if (!S || S.qBusy || !v || !v.parts.length) return; q = String(q || '').trim().slice(0, 300); if (!q) { A.notice?.('Pehle sawal likhein'); return; }
@@ -728,6 +824,7 @@ function wordsHTML() {
 }
 function viewHTML() {
   const back = '<div class="vs-row"><button type="button" class="vs-chip" data-vs="vback">‹ Wapas</button></div>';
+  if (S.view === 'qoul') return back + qoulHTML();
   if (S.view === 'words') return back + `<div class="vs-ttl">📖 Lafzon ki copy (${wordsN()})</div><div class="vs-row"><input class="vs-in" id="vsWq" data-vs-wq="1" type="search" placeholder="🔍 Lafz dhoondein" value="${esc(S.wq || '')}"></div><div id="vsWl">${wordsHTML()}</div>`;
   const L = starAll().slice().reverse();
   return back + `<div class="vs-ttl">⭐ Pasand ki lines (${L.length})</div>` + (L.length ? L.map(x => `<div class="vs-p"><div class="vs-ph"><a class="vs-tm" href="https://youtu.be/${esc(x.id)}?t=${Number(x.s) || 0}" target="_blank" rel="noopener">${fmt(x.s)}</a><small class="vs-sm">${esc(x.t || '')}</small><button type="button" class="vs-chip" data-vs-unstar="${esc(x.k)}" aria-label="Hatao">✕</button></div><div class="vs-l"><b>${esc(x.n || '')}:</b>${esc(x.r)}</div></div>`).join('') : '<div class="vs-note">Abhi koi line pasand nahi ki. Video ki kisi bhi line par tap karein = ⭐.</div>');
@@ -807,13 +904,17 @@ async function share() {
 }
 async function onClick(e) {
   const d = dlg(); if (!d || !S) return;
-  const t = e.target.closest?.('[data-vs],[data-vs-say],[data-vs-old],[data-vs-del],[data-vs-vo],[data-vs-sl],[data-vs-unstar],[data-vs-ln]'); if (!t || !d.contains(t)) return;
+  const t = e.target.closest?.('[data-vs],[data-vs-say],[data-vs-old],[data-vs-del],[data-vs-vo],[data-vs-sl],[data-vs-unstar],[data-vs-ln],[data-vs-qdel]'); if (!t || !d.contains(t)) return;
   const k = t.dataset;
   const keep = () => { S.url = $('vsUrl')?.value || ''; S.from = $('vsFrom')?.value || ''; };
   if (k.vsSay != null) { const i = Number(k.vsSay); if (S.cur === i) toggle(); else { S.all = true; playPart(i); } return; }
   if (k.vsOld) { openSaved(k.vsOld); return; }
   if (k.vsSl != null) { keep(); sleepSet(Number(k.vsSl) || 0); paint(); return; }
-  if (k.vsUnstar) { jset('sam-vs-star', starAll().filter(x => x.k !== k.vsUnstar)); paint(); return; }
+  if (k.vsUnstar) { jset('sam-vs-star', starAll().filter(x => x.k !== k.vsUnstar)); qoDel('s' + k.vsUnstar).catch(() => {}); paint(); return; }
+  if (k.vsQdel) { const id = k.vsQdel; if (S.qo) S.qo = S.qo.filter(x => x.i !== id); paint(); qoDel(id).then(L => { if (S) { S.qo = L; if (S.view === 'qoul') paint(); } }).catch(e => A.notice?.('✕ Nahi hata (' + String(e?.message || e).slice(0, 80) + ')')); return; }
+  if (k.vs === 'qoul') { keep(); S.view = 'qoul'; S.menu = false; qoOpen(); d.querySelector('.vs-scroll')?.scrollTo?.({ top: 0 }); return; }
+  if (k.vs === 'qofill') { qoFill(50); return; }
+  if (k.vs === 'qoping') { qoRun(async () => { const kk = await qoKey(); return qoPing(kk); }).then(ok => A.notice?.(ok ? '📲 Phone ko bata diya — 1 minute mein naye qoul' : '✕ Phone ka webhook link nahi mila — Gaari → ⚙️ Falcon setup mein MacroDroid ka link lagayein')).catch(e => A.notice?.('✕ ' + String(e?.message || e).slice(0, 90))); return; }
   if (k.vsLn != null && !k.vs) { const [i, j] = k.vsLn.split(':').map(Number), q = S.v?.parts[i], l = q && linesOf(q)[j]; if (!l) return; const on = starToggle(S.v, q, l); t.classList.toggle('st', on); A.notice?.(on ? '⭐ Pasand mein rakh li' : 'Pasand se hata di'); return; }
   if (k.vs === 'star' || k.vs === 'words') { keep(); S.view = k.vs; S.menu = false; S.wq = ''; paint(); d.querySelector('.vs-scroll')?.scrollTo?.({ top: 0 }); return; }
   if (k.vs === 'vback') { S.view = ''; paint(); return; }
@@ -867,4 +968,6 @@ export function open(ctx) {
   const sh = vidOf(A.share || '');
   if (sh) { if (!openSaved(sh)) { const t0 = tOf(A.share) || 0; S.url = 'https://youtu.be/' + sh; S.from = t0 ? fmt(t0) : ''; paint(); run(sh, t0); } }
   else { let last = ''; try { last = localStorage.getItem('sam-vs-last') || ''; } catch {} if (last) openSaved(last); }
+  // v1.8: purani videos ke 🧠 qoul peeche (har dafa khulne par 3 tak — AI ki hadd na bhare)
+  setTimeout(() => { if (S && !S.busy) qoFill(3); }, 6000);
 }
