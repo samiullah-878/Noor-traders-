@@ -1,4 +1,8 @@
 // =========================================================
+//  v1.1 (2026-11-27 1:06 pm — asal server ka log): is POS mein bill ki posting ki line 'Cash Received By:waqar On:… at PC:…' hai ('Posted' lafz NAHI) —
+//    v1.0 ne 3 din ke 1227 posted bill mein ek bhi posting nahi pehchani. Ab posting = aakhri line jis ke kaam mein post / receiv / cash / approv ho (un-post /
+//    cancel nahi). Parhne ka qaida badla (PARSE_V) = ek dafa phir 'pehli dafa' — warna aaj ke saare purane bill naye lagte (paigham ka sailaab).
+//    Scan halka (SystemNotes 1500 harf) + log mein bina-posting-line bill ki ginti + namoona.
 //  post-pc.js v1.0 (2026-11-27, app v2.393.0) — 🧾 POSTING NIGRANI: DOOSRE PC SE BILL POST HUA = MALIK KO WHATSAPP
 //  malik (photo: server par POS ki Sale list, 'waqar Logged In'): "es system ka ilawa agar koi aur system voucher posting mein involved ho to mujhe
 //    WhatsApp par text chahiye — time, naam" · "POS har system ka naam likhta hai, kab kahan kis time bill post hota hai" · "chip PC script mein hi".
@@ -14,7 +18,8 @@
 const fs = require('fs');
 const path = require('path');
 
-const VER = '1.0';
+const VER = '1.1';
+const PARSE_V = 2;              // v1.1: posting pehchanne ka qaida — badle to ek dafa 'pehli dafa' (purane bill naye na lagein)
 const BATCH_MS = 15000;          // pehli posting ke baad itna intezar (ek saath kai bill = ek paigham)
 const BATCH_MAX = 12;            // itne bill jama = foran bhejo
 const MSG_LINES = 25;            // paigham mein bill (baqi "… aur N")
@@ -36,7 +41,7 @@ function acts(sn) {
   }
   return out;
 }
-const isPost = x => /post/i.test(x.a) && !/un\s*-?\s*post/i.test(x.a);
+const isPost = x => /post|receiv|cash|approv/i.test(x.a) && !/un\s*-?\s*post|cancel|reject/i.test(x.a);   // v1.1: 'Cash Received By:' = is POS ki posting
 function postLine(sn) { const A = acts(sn).filter(isPost); return A.length ? A[A.length - 1] : null; }
 function allowed(host, ok) { const h = String(host || '').toUpperCase(); return (ok || []).some(x => { const k = String(x || '').toUpperCase(); return k === h || 'DESKTOP-' + k === h || k === 'DESKTOP-' + h; }); }
 
@@ -82,7 +87,7 @@ let O = null, S = null, F = null, cfg = { on: true, ok: [] }, to = '', cfgSeen =
 let auto = '', hs3 = {}, scanAt = 0, scanErr = '', lastSt = '', stAt = 0, errLog = 0;
 const OWN = (() => { try { return require('os').hostname().toUpperCase(); } catch { return ''; } })();
 const SF = () => path.join(O.DIR, 'post-pc-state.json');
-function load() { try { S = JSON.parse(fs.readFileSync(SF(), 'utf8')); } catch { S = null; } if (!S || typeof S !== 'object' || !S.m || typeof S.m !== 'object') S = { since: Date.now(), m: {}, q: [], fresh: 1 }; if (!Array.isArray(S.q)) S.q = []; if (!S.t || typeof S.t !== 'object') S.t = { day: '', h: {}, al: 0, nh: 0 }; }
+function load() { try { S = JSON.parse(fs.readFileSync(SF(), 'utf8')); } catch { S = null; } if (!S || typeof S !== 'object' || !S.m || typeof S.m !== 'object') S = { since: Date.now(), m: {}, q: [], fresh: 1, pv: PARSE_V }; if (!Array.isArray(S.q)) S.q = []; if (!S.t || typeof S.t !== 'object') S.t = { day: '', h: {}, al: 0, nh: 0 }; }
 function save() { try { fs.writeFileSync(SF() + '.tmp', JSON.stringify(S)); fs.renameSync(SF() + '.tmp', SF()); } catch (e) { O.log('post-pc state: ' + e.message); } }
 const BA = () => O.db.collection('businesses').doc(O.BUSINESS_ID).collection('blueAccess');
 const nameOf = h => { let n = ''; try { n = O.pcName ? O.pcName(h) : ''; } catch {} return String(n || String(h || '').replace(/^DESKTOP-/i, '') || '?').slice(0, 30); };
@@ -92,7 +97,7 @@ async function scan() {   // pichhle 3 din: kis PC se kitni posting (sirf parhna
   scanAt = Date.now();
   try {
     const p = await O.getPool(), d = new Date(); d.setHours(0, 0, 0, 0); d.setDate(d.getDate() - 3);
-    const rs = (await p.request().input('d', O.sql.DateTime, d).query(`SELECT TOP 4000 CAST(s.SystemNotes AS NVARCHAR(4000)) AS SN FROM dbo.Sale s
+    const rs = (await p.request().input('d', O.sql.DateTime, d).query(`SELECT TOP 3000 CAST(s.SystemNotes AS NVARCHAR(1500)) AS SN FROM dbo.Sale s
       WHERE s.SaleDate >= @d AND s.DocStatusID = 2 ORDER BY s.SaleID DESC`)).recordset;
     const c = {}; let none = 0, smp = '';
     for (const r of rs) { const P = postLine(r.SN); if (!P) { none++; if (!smp) smp = acts(r.SN).slice(-2).map(x => x.raw).join(' ⏎ ') || String(r.SN || '').replace(/\s+/g, ' ').slice(-160); continue; } if (isApp(P.by)) continue; c[P.host] = (c[P.host] || 0) + 1; }
@@ -100,7 +105,7 @@ async function scan() {   // pichhle 3 din: kis PC se kitni posting (sirf parhna
     auto = top && top[1] >= 5 ? top[0] : '';
     scanErr = '';
     if (!Object.keys(c).length && rs.length) { S.t.smp = smp; O.log(`🧾 post-pc: 3 din ke ${rs.length} posted bill mein POS ki posting wali line (at PC) nahi mili — namoona: ${smp.slice(0, 120)}`); }
-    else O.log(`🧾 post-pc: 3 din ki posting — ${Object.entries(c).map(([h, n]) => nameOf(h) + ' ' + n).join(' · ') || 'kuch nahi'}${auto ? ' · apna (auto) = ' + nameOf(auto) : ''}`);
+    else O.log(`🧾 post-pc: 3 din ki posting (${rs.length} bill) — ${Object.entries(c).map(([h, n]) => nameOf(h) + ' ' + n).join(' · ') || 'kuch nahi'}${auto ? ' · apna (auto) = ' + nameOf(auto) : ''}${none ? ` · posting line nahi: ${none} (namoona: ${smp.slice(0, 150)})` : ''}`);
   } catch (e) { scanErr = 'purani posting nahi parhi: ' + String(e.message || e).slice(0, 80); O.log('🧾 post-pc scan: ' + e.message); }
 }
 async function status(force) {
@@ -123,9 +128,9 @@ async function step() {
   const now = Date.now(), { day, rows } = F;
   if (S.t.day !== day) S.t = { day, h: {}, al: 0, nh: 0, smp: S.t.smp || '' };
   if (now - scanAt > SCAN_MS) await scan();
-  const fresh = !!S.fresh, ok = okList(), on = cfg.on !== false;
+  const fresh = !!S.fresh || S.pv !== PARSE_V, ok = okList(), on = cfg.on !== false;
   const nw = plan(S.m, day, rows, fresh);
-  if (fresh) { delete S.fresh; save(); O.log(`🧾 post-pc v${VER}: pehli dafa — aaj ke maujood posted bill chhore; ab se doosre PC ki posting malik ke WhatsApp par`); await status(true); return; }
+  if (fresh) { delete S.fresh; S.pv = PARSE_V; S.q = []; S.t.nh = 0; S.t.smp = ''; save(); O.log(`🧾 post-pc v${VER}: pehli dafa — aaj ke maujood posted bill chhore; ab se doosre PC ki posting malik ke WhatsApp par`); await status(true); return; }
   for (const { id, r, P } of nw) {
     if (!P) { S.t.nh = (S.t.nh || 0) + 1; if (!S.t.smp) S.t.smp = acts(r.SystemNotes).slice(-2).map(x => x.raw).join(' ⏎ ') || String(r.SystemNotes || '').replace(/\s+/g, ' ').slice(-160); continue; }
     const at = (O.onTime ? O.onTime(P.raw, r.SaleDate) : 0) || now;

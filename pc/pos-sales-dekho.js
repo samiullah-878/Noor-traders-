@@ -1,4 +1,5 @@
 // =========================================================
+//  v2.20.1 (2026-11-27 1:10 pm): sirf chhua — post-pc.js v1.1 (POS posting = 'Cash Received By:' line) naya chale (doctor main file par hi dobara shuru karta hai).
 //  v2.20 (2026-11-27, malik: 'es system ka ilawa koi aur system voucher posting mein involved ho to mujhe WhatsApp par text — time, naam' · 'chip PC script mein'):
 //    🧾 post-pc.js (apni line, har 1 s) — yahan sirf feed(day, cache ki qataren) + pcName / onTime. Doosre PC se posted bill = malik ko WhatsApp. POS mein kuch nahi likhta. AI nahi.
 //  v2.19 (2026-11-27, malik: 'Sab cameras ke layout mein jab bill ban raha ho tab naam sahi nahi aa raha' + 'PC se poori list'): 🔤 OCR NAAM = POS ka

@@ -6137,3 +6137,12 @@ mein involved ho to mujhe WhatsApp par text chahiye — time, naam" · "POS har 
   namoona dekh kar ACT_RE theek karo.
 - Sabaq: 'X ke ilawa koi aur' wala nigrani kaam = pehle din 'apna' khud data se chuno (sab se zyada wala) + malik ke haath mein ✅ — hardcode / andaze se
   har posting par paigham (sailaab) nahi.
+
+=== PC post-pc.js v1.1 (27 Nov 2026, 1:10 pm) — asal POS mein posting ki line 'Cash Received By:' hai ===
+- v1.0 ke pehle scan ka asal log (server 1:06 pm): '3 din ke 1227 posted bill mein POS ki posting wali line (at PC) nahi mili — namoona: Created & Printed
+  By:abdurrehman On:11/27/2026 1:04:24 PM at PC:DESKTOP-RN6QU6D ⏎ Cash Received By:waqar On:…' = is POS mein bill post karna 'Cash Received By:<login>
+  On:<waqt> at PC:<host>' likhta hai ('Posted' lafz nahi). Ab isPost = kaam mein post / receiv / cash / approv (un-post / cancel / reject nahi).
+- PARSE_V 2: parhne ka qaida badle to state ek dafa 'pehli dafa' (aaj ke purane bill = chup, qataar khali) — warna v1.0 ke '?' nishan wale saare bill naye
+  lagte = paigham ka sailaab. Scan halka (TOP 3000, SystemNotes 1500 harf) + log mein bina-posting-line bill ki ginti + namoona.
+- Sabaq: POS ki likhai ka qaida (regex) asal data ke namoone se banao — v1.0 ka namoona-log hi ilaaj bana. 'Parse badla' = purane nishan ko naya waqia mat
+  samjho (PARSE_V jaisa ek dafa reset).
