@@ -10299,3 +10299,27 @@ Malik ki screenshot (Video samjhao khuli, upar sirf ⋮ / ✕): 'yahan se back w
    (web-dukan v2.267.1 namoona). ntVsClose bhi ab ek qadam (koi bulata nahi). Bina-dikhawe focus ring band (.vs-x:focus:not(:focus-visible)).
 Test: node --check + node import · headless Chrome: ⋮ -> ‹ = band · Esc = ⋮ band (khirki khuli) · Qoul -> Esc = video · video -> ‹ = list (sam-vs-last null) · list -> Esc = band.
 Phone par azmaya nahi. AI nahi.
+
+
+=== app v2.397.0 + rules 2.114 + md pkg v90 (27 Nov 2026) — 📸 SCREENSHOT DIARY ===
+Malik ne TikTok (Champa Kali Spa, Lahore) ka screenshot bheja: 'is tarah ka screenshot auto upload ho jaye · in ki detail bhi likh dijiye meri apps mein'
+-> plan -> chuna '2' (har screenshot jaye, AI khud chhaante) + 'Blue Khata wala nahi · bank wala nahi · Chrome wala nahi · video links / video kis ki ·
+recipe ho to recipe likh de · bachon ka cardboard ho to wo likh de'.
+PHONE (md/tools/shot.py, macro '📸 Screenshot diary', pkg v90):
+ - Triggers: FileChangedTrigger /storage/emulated/0/DCIM/Screenshots + /Pictures/Screenshots (created + modified), har 900 s, webhook nt_shot (ntU, ntK).
+ - Loop (15): Java PREP -> nayi files (40 min ke andar, .jpg/.png/.webp, scD / scQ mein nahi) -> package = naam ka '_com.x.y' (ColorOS) warna UsageStats
+   (6 ghante ke events, aakhri MOVE_TO_FOREGROUND, systemui / screenshot / MacroDroid chhor kar) -> NO list (org.chromium.webapk = Blue Khata, Chrome, bank /
+   wallet) = scD + scX, baqi scQ {p,k,m,n}. Phir pehli: BitmapFactory (inSampleSize) -> 720 px, 2800 tak, JPEG 68 (bara = 50 / 3/4) -> base64 -> body JSON
+   file /storage/emulated/0/MacroDroid/nt-shot.json -> URL = ntU ka '/awazNotes?' -> '/shotIn?documentId=<file naam saaf>&'.
+ - HttpRequestAction POST body FILE (contentBodySource 1, useAllFilesAccess) -> rc. Java DONE: rc 0 = Java HttpURLConnection se wahi body; 2xx / 409 = scD + scS;
+   warna n++ (4 dafa / 4xx 2 dafa = chhor). Ginti: scN · scS · scX · scC. Chaabi / link repo mein nahi (ntU / ntK).
+ - Test: javac + stubs (org.json, Bitmap, UsageEvents): line, Chrome / webapk chhor, URL, body JSON (k im at pk fn st), 200, 403 do dafa, rc 0 -> Java post. MCP validator VALID.
+APP (shot-diary.js v1.0, ☰ #sdNav sirf malik; app.js sdCtx + bg 25 s baad shReady se):
+ - cloud: listShotNew (st 'new', 4) · getShotImg · setShotSt · delShotIn · listShotNotes(fromCache) · saveShotNote (th Bytes) · setShotHid · delShotNote.
+ - one(): privPk = mita · Gemini PROMPT -> parseAi (t, nm, kaam, sum, pata, shehar, ph, web, app, by, tags, daam, rec {ing, st, az}, kr {mat, st, az}) ->
+   'private' = mita · thumb 140 px -> shotNote {at, t, j, hid (skip = 1), pk, th} -> shotIn st 'ok'.
+ - Screen: search (smartFind), card 2 line, tap = detail + chips (tel / wa.me / Maps / web / byLink profile / vidSearch / Copy), 🖼 poori tasveer, 🙈 / ↩, 🗑 (dono doc).
+   ⋮: filter (Sab · qism · ♻️ Chhupi) · 🔄 Nayi abhi dekho · 📲 Phone ko link bhejo (nt_shot) · 📄 PDF. ‹ / back / Esc = ek qadam.
+ - Test: node parseAi / waOf / byLink · headless Chrome nakli cloud: 2 ban gayin + 1 bank mit, recipe lists, search, menu, Esc, poori tasveer, chhupao, band.
+RULES 2.114: shotIn create bina login (id regex, keys hasOnly, im bytes < 900 KB, st new, k == awazKey) · read / delete / st update sirf malik · shotNote sirf malik.
+Phone par azmaya nahi. AI: haan (sirf detail nikalne mein, malik ki Gemini key).

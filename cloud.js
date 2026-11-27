@@ -1,14 +1,14 @@
-import {cashLinkChanges} from './cash-links.js?v=2.396.0';
-import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.396.0';
-import {snapshotRows} from './live-data.js?v=2.396.0';
+import {cashLinkChanges} from './cash-links.js?v=2.397.0';
+import {transactTransfer,transferRestoreGroups,buildTransfer} from './account-transfer.js?v=2.397.0';
+import {snapshotRows} from './live-data.js?v=2.397.0';
 let transferFail=null;   // v2.86: tez transfer ka server-se-inkaar hook
-import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.396.0';
-import {planImport} from './import-plan.js?v=2.396.0';
+import {validateExtraRecord,addCustodyMove,appendCashMove,cashLedger,stableRecord} from './finance-tools.js?v=2.397.0';
+import {planImport} from './import-plan.js?v=2.397.0';
 import {initializeApp} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-app.js';
 import * as authSDK from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-auth.js';
 import {initializeFirestore,persistentLocalCache,persistentSingleTabManager,memoryLocalCache,disableNetwork,enableNetwork,collection,query,where,doc,getDoc,getDocFromServer,getDocs,getDocsFromServer,getDocsFromCache,getDocFromCache,setDoc,deleteDoc,updateDoc,deleteField,onSnapshot,runTransaction,writeBatch,waitForPendingWrites,orderBy,limit,serverTimestamp,Bytes,FieldPath} from 'https://www.gstatic.com/firebasejs/12.18.0/firebase-firestore.js';
-import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.396.0';
-import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.396.0';
+import {createAuthController,loginErrorMessage} from './auth-controller.js?v=2.397.0';
+import {firebaseConfig,BUSINESS_ID} from './config.js?v=2.397.0';
 export {loginErrorMessage};
 export async function connect(callbacks){const MT=(()=>{try{return sessionStorage.getItem('sam-malik-tab')==='1'}catch{return false}})();   /* v2.105.8: 👑 MULAZIM KI TAB MEIN MALIK — alag Firebase app (naam 'blue-khata-malik'), login sirf is tab (sessionStorage), data memory mein (phone par save nahi). Mulazim ka login ('blue-khata', localStorage) bilkul nahi hilta. */
 const app=initializeApp(firebaseConfig,MT?'blue-khata-malik':'blue-khata');let auth;try{auth=authSDK.initializeAuth(app,{persistence:MT?authSDK.browserSessionPersistence:[authSDK.browserLocalPersistence,authSDK.indexedDBLocalPersistence]})}catch(e){console.warn('initializeAuth nahi chala — purana tareeqa',e);auth=authSDK.getAuth(app);try{await authSDK.setPersistence(auth,MT?authSDK.browserSessionPersistence:authSDK.browserLocalPersistence)}catch(e2){console.warn('Auth persistence nahi mili',e2)}}   /* v2.112.0: ⚡ TEZ KHULNA — getAuth() mobile par HAR dafa Google ka chhupa sign-in iframe (apis.google.com + firebaseapp.com) internet se laata tha, login ki jaanch us ke BAAD (sust net = 10+ sec, phir index.html ka 10 sec parda login page dikha deta — malik ke phone par 5-7 sec jhalak). Hum popup / redirect login nahi karte → initializeAuth bina popupRedirectResolver. Login phone ki yaad (localStorage; IndexedDB wala bhi utha leta hai). setPersistence ka await bhi nahi (wo auth ki poori tayyari ka intezar karta tha) */let db;try{db=MT?initializeFirestore(app,{localCache:memoryLocalCache()}):initializeFirestore(app,{localCache:persistentLocalCache({tabManager:persistentSingleTabManager({forceOwnership:false})})})   /* v2.103.79: har tab apna live data — pehle multi-tab: ek tab hi server se leta tha, Chrome ne woh tab sula diya to PC ke SAB tab ruk jate (mobile theek). Doosra tab khud memory mode mein */}catch(e){console.warn('Offline storage nahi mili — memory mode',e);db=initializeFirestore(app,{localCache:memoryLocalCache()})}const col=collection(db,'businesses',BUSINESS_ID,'blueKhata'),ref=id=>doc(col,id),other=(name,id)=>doc(db,'businesses',BUSINESS_ID,name,id);
@@ -139,6 +139,14 @@ const api={authReady,malikTab:MT,currentUid:()=>auth.currentUser?.uid||'',
  async getSehatTick(day){const d=await getDoc(doc(db,'businesses',BUSINESS_ID,'sehatTick',String(day)));return d.exists()?(d.data()||{}):null},   /* v2.390.0: 💧 phone ke 🧠 Falsafa popup ki din ki ginti (MacroDroid likhe, rules 2.112) — sirf malik parhe */
  async getQoulPh(k){const d=await getDocFromServer(doc(db,'businesses',BUSINESS_ID,'qoulPh',String(k)));return d.exists()?(d.data()||{}):null},   /* v2.395.0: 🧠 phone ke Falsafa popup ke qoul (Video samjhao se) — doc id = awazKey, phone sirf GET (rules 2.113) */
  async setQoulPh(k,o){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await setDoc(doc(db,'businesses',BUSINESS_ID,'qoulPh',String(k)),{t:String(o.t||''),v:String(o.v||''),j:String(o.j||'[]'),at:Date.now()})},
+ async listShotNew(n){const s=await getDocsFromServer(query(collection(db,'businesses',BUSINESS_ID,'shotIn'),where('st','==','new'),limit(Math.max(1,Math.min(20,Number(n)||4)))));return s.docs.map(d=>{const x=d.data()||{};let b='';try{b=x.im?.toBase64?x.im.toBase64():''}catch{}return{id:d.id,at:Number(x.at)||0,pk:String(x.pk||''),fn:String(x.fn||''),b64:b}})},   /* v2.397.0: 📸 Screenshot diary — phone (MacroDroid) ki nayi screenshots shotIn {k,im,at,pk,fn,st 'new'} (rules 2.114) — sirf malik parhe */
+ async getShotImg(id){const d=await getDoc(doc(db,'businesses',BUSINESS_ID,'shotIn',String(id)));if(!d.exists())return '';const x=d.data()||{};try{return x.im?.toBase64?x.im.toBase64():''}catch{return ''}},
+ async setShotSt(id,st){await updateDoc(doc(db,'businesses',BUSINESS_ID,'shotIn',String(id)),{st:String(st).slice(0,10)})},
+ async delShotIn(id){await deleteDoc(doc(db,'businesses',BUSINESS_ID,'shotIn',String(id)))},
+ async listShotNotes(fromCache){const q=query(collection(db,'businesses',BUSINESS_ID,'shotNote'),orderBy('at','desc'),limit(400));const s=fromCache?await getDocsFromCache(q):await getDocs(q);return s.docs.map(d=>{const x=d.data()||{};let th='';try{th=x.th?.toBase64?x.th.toBase64():''}catch{}return{id:d.id,at:Number(x.at)||0,t:String(x.t||''),j:String(x.j||'{}'),hid:x.hid?1:0,pk:String(x.pk||''),th}})},   /* v2.397.0: 📸 AI ki detail + chhoti tasveer (malik likhe) */
+ async saveShotNote(id,o){await setDoc(doc(db,'businesses',BUSINESS_ID,'shotNote',String(id)),{at:Number(o.at)||Date.now(),t:String(o.t||'').slice(0,20),j:String(o.j||'{}').slice(0,20000),hid:o.hid?1:0,pk:String(o.pk||'').slice(0,120),th:o.th?Bytes.fromBase64String(String(o.th)):null,dn:Date.now()})},
+ async setShotHid(id,h){await updateDoc(doc(db,'businesses',BUSINESS_ID,'shotNote',String(id)),{hid:h?1:0})},
+ async delShotNote(id){await deleteDoc(doc(db,'businesses',BUSINESS_ID,'shotNote',String(id)))},
  async getAwazKey(){const d=await getDoc(other('blueAccess','awazKey'));return d.exists()?String(d.data()?.k||''):''},
  /* v2.319.0: 🚨 Dukan ki nabz — chaabi (pcBeat/<k> ka doc id) sirf malik; PC nabz.js parhta hai */async getPcBeatKey(){const d=await getDoc(other('blueAccess','pcBeatKey'));return d.exists()?String(d.data()?.k||''):''},
  async setPcBeatKey(k){if(!auth.currentUser||auth.currentUser.isAnonymous)throw Error('Sirf malik');await setDoc(other('blueAccess','pcBeatKey'),{k:String(k),at:Date.now()})},

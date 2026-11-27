@@ -6,8 +6,8 @@
 // Yahan: list (aaj / kal) · 🚨 bina note ki 4 tasveerein + AI ka andaza → malik item chune (gintiLabel — PC agli dafa Gemini ko misaal deta hai) ·
 //   ⚙️ Setup (sirf malik): camera · godam · lakeer (tasveer par 2 tap + bahar ki taraf) · alarm · waqt — blueAccess/gintiCam.
 // Dekhna: malik + CAP nz.ginti (OPT_IN). AI app mein NAHI (PC: naam ke liye sirf 🚨 tasveer par Gemini).
-import { saleStock } from './pos-stock.js?v=2.396.0';
-import { smartFind } from './dukan/dhoond.js?v=2.396.0';
+import { saleStock } from './pos-stock.js?v=2.397.0';
+import { smartFind } from './dukan/dhoond.js?v=2.397.0';
 
 const $ = id => document.getElementById(id);
 const esc = x => String(x ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
