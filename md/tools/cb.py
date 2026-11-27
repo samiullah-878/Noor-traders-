@@ -1,4 +1,4 @@
-# ⏸ Claude ki hadein (malik 10 Nov 2026: "Claude zyada use hota hai, nazar kamzor — raat 12 se dopahar 12 band · shaam 6–7 band ·
+# ⏸ Claude ki hadein (malik 10 Nov 2026: "Claude zyada use hota hai, nazar kamzor — raat 12 se dopahar 12 band · shaam 6–7 band (v85: HATA, malik 27 Nov) ·
 #   har 20 minute ke baad 5 minute break · 5 minute zaroori wala rakh do")
 #   Sirf phone ki Claude APP (com.anthropic.claude). Band = Home + 3 s ki chhoti patti (toast / baar baar paigham nahi).
 #   🚨 Zaroori: band haalat mein app kholne par ek sawal — din mein 1 dafa 5 minute (clEmDay). AI nahi.
@@ -51,7 +51,7 @@ a = [
     iff([SCR, fg(), lt("emL", 1, True)]),
       sstr("why", "", True),
       iff([tod(0, 0, 10, 59)]), sstr("why", "⏸ Claude subah 11 baje khulegi", True), END,
-      iff([tod(18, 0, 18, 59)]), sstr("why", "⏸ Shaam ka break — 7 baje khulegi", True), END,
+      # v85 (27 Nov, malik: "7 baje wala Claude ka droid band kar do"): shaam 6–7 ka band HATA — wapas mat lao jab tak malik na kahe
       iff([gt("brL", 0, True)]), expr("bm", "({lv=brL}+59)/60", True), sstr("why", "⏸ 5 minute break — {lv=bm} min baqi", True), END,
       iff([strne("why", "", True)]),
         expr("askAge", NOW + "-{v=clAsk}", True),
@@ -72,14 +72,14 @@ a = [
     END,
     # 🦒 v34 (13 Nov, malik: 'Claude use karte hue gardan oonchi rakhein ka popup — 2 s, khud gayab, har 10 min'): sirf jab Claude khuli chal rahi ho
     iff([trig(T1, "Har 1 minute"), SCR, fg(), gt("clNk", 9)]), sint("clNk", 0),
-      iff([lt("brL", 1, True), anyof(tod(11, 0, 17, 59), tod(19, 0, 23, 59), gt("emL", 0, True))]), NECK, pause(2), NECKHIDE, END,
+      iff([lt("brL", 1, True)]), NECK, pause(2), NECKHIDE, END,   # v85: purana anyof (LogicConstraint ghalat field = hamesha sach) hata — asar wahi
     END,
 ]
 def var(n, t=1): return {"m_name": n, "m_type": t, "isLocalVar": False, "m_intValue": 0, "m_stringValue": "", "m_booleanValue": False}
 def lvar(n, t=1): return {"m_name": n, "m_type": t, "isLocalVar": True, "m_intValue": 0, "m_stringValue": "", "m_booleanValue": False}
 CB = {"macroExportVersion": 1, "macro": {
     "m_name": "⏸ Claude break",
-    "m_description": "Claude app: raat 12 se subah 11 band · shaam 6–7 band · 🦒 har 10 min gardan ki yaad (2 s) · har 20 min istemal ke baad 5 min break (5 min door = naya 20). "
+    "m_description": "Claude app: raat 12 se subah 11 band · 🦒 har 10 min gardan ki yaad (2 s) · har 20 min istemal ke baad 5 min break (5 min door = naya 20). "
                      "Band = Home + 3 s patti. 🚨 Zaroori: din mein 1 dafa 5 minute. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1,
     "localVariables": [lvar("emL"), lvar("brL"), lvar("bm"), lvar("askAge"), lvar("why", 2), lvar("never", 0)],

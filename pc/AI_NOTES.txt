@@ -6162,3 +6162,26 @@ chahie konsa voucher raat ko add hua tha, to un ko auto voucher banana chahie th
   posCode jaan bujh kar khali nahi karta (grep kiya) — ↩ wapas (trashRestoreOne) bhi {...r} se posCode rakhta tha.
 - Sabaq: PC jo field app ke doc mein merge se likhta hai (posCode, posPrintedAt…) wo app ki poori-doc likhai (tx.set) mein mit sakta hai — naya PC-likha field
   banao to cloud.edit ki is keep-list mein bhi jodo. Malik 'voucher nahi bana' kahe to pehle server log mein raqam / naam dhoondo (bana tha ya nahi), phir ilaaj.
+
+=== md pkg v85 — ⏸ Claude 6–7 band HATA · 🧠 Falsafa har unlock + ✅ OK · 📞 WhatsApp khaas contacts (2026-11-27) ===
+Malik: "7 baje wala Claude ka droid band kar do" · "jo contacts chose kiya hai, WhatsApp par call aaye to bhi bell aaye" (plan OK, teesra
+bhi OK) · "lock screen wala popup (paani / nuts) har dafa nahi aata — ek dafa aata hai, agli dafa nahi, phir lock kar ke kholein to aata hai"
+· "Jaag gaya ke saath OK / khatam karne ka option nahi aa raha".
+- cb.py (⏸ Claude break): shaam 6–7 ka band hata (raat 12–11, 20 min / 5 min break, gardan wahi). Gardan wali shart ka purana anyof
+  (LogicConstraint ke ghalat field = hamesha sach) hata — asar wahi.
+- qaide.py (🧠 Falsafa): (1) naya trigger Screen ON + DeviceLockedConstraint: phone LOCK na hua ho (screen band hone ke baad lock ki der)
+  to kholne par 'unlock' event aata hi nahi tha — ab screen ON par bhi popup; lock ho to asal unlock ka intezar. (2) 20 s ka tala ab sirf
+  jab popup KHULA ho (rmAt shuru mein abhi, popup ke baad 0) — pehle band hone ke 20 s baad tak rokta tha. (3) remind.py BUILD keys:
+  r… reminder < s1–s4 sehat < u Sona / Jaag < v '✅ OK — band karo' < x 🧠 qoul (lamba qoul aakhir mein); defaultKey v (15 s). Pehle
+  '✕ Nahi' sab se neeche tha — lambi list mein screen se bahar kat jata tha.
+- khaaswa.py (naya, 2 macro, ONCE NAHI — in mein malik ka data nahi): naam md/ mein KABHI nahi — KW din mein ek dafa (+ chalu / boot)
+  ExportMacros DIR/kw/nt-kw.mdr (ALAG folder: Remote ka BUILD DIR ki sab se nayi .mdr ko backup samajhta hai) -> Java -> KV ('📞 Khaas:
+  ghanti full') ke chune contacts -> global khWa '|naam|…|' (chhote harf; na mile = nt-now.mdr). KW: WhatsApp 'Incoming … call' + title list
+  mein = KV jaisa (DND band, ghanti 100%, ringer normal); pehle silent / vibrate / DND tha = Java phone ki ringtone (khRg 1 tak, 60 s);
+  ongoing / missed / hata = band + sab wapas. KW2: 'Ongoing … call' + title list mein = VoiceCall 20%, khatam = wapas. KB ka WhatsApp
+  trigger NAAM1|NAAM2 hi reh gaya (malik ne kabhi nahi bhara) — chhoona nahi (KB / KV ONCE).
+- Asal phone par nahi azmaya: WhatsApp call notification ki likhai, ringtone ka bajna, VoiceCall stream, screen-on wala popup.
+  Javac stubs se BUILD (keys ki tarteeb) + HIT (chhupe harf, '(2 calls)', list) jaanche. AI nahi.
+- Sabaq: phone par 'har dafa nahi aata' ki shikayat = pehle socho event aata bhi hai ya nahi (lock ki der = unlock event nahi) aur koi tala
+  (20 s) to nahi rok raha. SelectionDialog ki lambi list ka aakhri button kat sakta hai — zaroori button (OK / band) hamesha upar ya
+  zaroori button ke saath, lamba matn aakhir mein.

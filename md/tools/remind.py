@@ -38,7 +38,7 @@ ADD = '\n'.join([
  '} catch (Throwable e) { return "err " + e; }'])
 
 # Java (v81): unlock ka MILA HUA popup — upar reminder (☐, tap = ✓), neeche 🧠 falsafa (lv qs), phir 😴 Sona hai / ☀️ Jaag gaya, ✕ Nahi.
-#   Keys: r01… < t (falsafa) < u (sona / jaag) < w (nahi) — alfabet aur jorne ki tarteeb ek. "" = koi reminder nahi.
+#   Keys (v85): r01… < s1…s4 (sehat) < u (sona / jaag) < v (✅ OK) < x (falsafa) — alfabet aur jorne ki tarteeb ek. "" = kuch nahi.
 BUILD = '\n'.join([
  'try {',
  '  String t = magicText.evaluateString("{" + "v=rmT}"); if (t == null) t = "";',
@@ -60,13 +60,14 @@ BUILD = '\n'.join([
  '  sb.append(sj);',
  '  if (n == 0 && sj.length() == 0) return "";',
  '  qs = qs.replace("<br><br>", NL).replaceAll("<[^>]+>", "").trim();',
- '  if (qs.length() > 0) {',
- '    qs = qs.replace(BS, BS + BS).replace(Q, BS + Q).replace(NL, BS + "n");',
- '    sb.append(Q).append("t").append(Q).append(":").append(Q).append("🧠 ").append(qs).append(Q).append(",");',
- '  }',
  '  String sn = ro.trim().equals("1") ? "☀️ Jaag gaya" : "😴 Sona hai";',
  '  sb.append(Q).append("u").append(Q).append(":").append(Q).append(sn).append(Q).append(",");',
- '  sb.append(Q).append("w").append(Q).append(":").append(Q).append("✕ Nahi").append(Q).append(RB);',
+ '  sb.append(Q).append("v").append(Q).append(":").append(Q).append("✅ OK — band karo").append(Q);',   # v85: OK foran Jaag gaya / Sona hai ke neeche (pehle ✕ Nahi sab se neeche — lambi list mein kat jata tha)
+ '  if (qs.length() > 0) {',
+ '    qs = qs.replace(BS, BS + BS).replace(Q, BS + Q).replace(NL, BS + "n");',
+ '    sb.append(",").append(Q).append("x").append(Q).append(":").append(Q).append("🧠 ").append(qs).append(Q);',   # v85: lamba qoul sab se AAKHIR mein (kate bhi to sirf us ki dum)
+ '  }',
+ '  sb.append(RB);',
  '  return sb.toString();',
  '} catch (Throwable e) { return ""; }'])
 
@@ -108,7 +109,7 @@ DIALOG = {"m_classType": "SelectionDialogAction", "m_SIGUID": 0, "option": 1, "d
           "message": "{v=skM}",   # v84: qaide.py SKL banata hai — upar NEELI sehat lines (💧 paani aaj N/6 · ☕ · 🍎 · 🥜), phir '📝 Aap ke reminder' (sirf jab hon)
           "htmlFormat": True, "textColor": INK, "bgColor": WHITE,   # v82 (malik: 'background white aur fonts colour black' — falsafa popup jaisa) "buttonStyle": 3, "titleAlignment": 0,
           "saveKeyVariable": {"variableName": "rk"}, "preventBackButtonClose": False, "continueMacroOnBackPress": True,
-          "showDictionaryKeys": False, "hasDefault": True, "defaultKey": "w", "defaultTimeOutSecs": 15}   # 15 s = Nahi (falsafa jaisa); timeout ka jawab kabhi kaam nahi karta (dd guard, qaide.py)
+          "showDictionaryKeys": False, "hasDefault": True, "defaultKey": "v", "defaultTimeOutSecs": 15}   # 15 s = Nahi (falsafa jaisa); timeout ka jawab kabhi kaam nahi karta (dd guard, qaide.py)
 
 acts = [
       *SAVE, *OPEN,

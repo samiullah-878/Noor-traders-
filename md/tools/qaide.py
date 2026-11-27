@@ -4,6 +4,7 @@ D = os.path.dirname(os.path.abspath(__file__))
 from v3 import gv, setv, expr, sstr, iff, END, ELSE, strne, var, UNLOCK
 RULES = [["🪞", "Apne aap se", "Aaj jo kaam tum ne khud kiya, kal wo kaun karega?"], ["🏛", "Seneca", "Hum haqeeqat se kam, apne khayalon se zyada dukh uthate hain."], ["🪞", "Apne aap se", "Dukan tumhare baghair ek din chale to kya tootega? Wahi tumhara agla kaam hai."], ["🪞", "Apne aap se", "Masroof hona aur aage barhna do alag cheezein hain. Aaj tum kaun se the?"], ["🏛", "Seneca", "Zindagi chhoti nahi hai, hum us ka bara hissa zaya kar dete hain."], ["🪞", "Apne aap se", "Jis par tumhe bharosa nahi, us ko tum ne sikhaya kya hai?"], ["🪞", "Apne aap se", "Jo cheez napi nahi jati, wo sudharti nahi."], ["👑", "Marcus Aurelius", "Tumhara bas apne zehan par hai, bahar ke waqiyat par nahi. Yeh samajh lo, taqat mil jayegi."], ["🪞", "Apne aap se", "Aankhein ek hi jori hain. Dukan doosri ban sakti hai."], ["🪞", "Apne aap se", "Bachon ko tumhara paisa yaad nahi rahega, tumhara waqt yaad rahega."], ["👑", "Marcus Aurelius", "Jo rukawat raaste mein hai, wohi raasta ban jati hai."], ["🪞", "Apne aap se", "Aaj ka sab se zaroori kaam kaun sa tha, aur tum ne us ki jagah kya kiya?"], ["🪞", "Apne aap se", "Tum system bana rahe ho, ya system ke mulazim ban gaye ho?"], ["⛓", "Epictetus", "Insaan ko cheezein pareshan nahi kartin, un ke bare mein us ki raaye pareshan karti hai."], ["🪞", "Apne aap se", "Agar yeh phone abhi band ho jaye, to kya waqai kuch bigrega?"], ["🪞", "Apne aap se", "Jo faisla tum taal rahe ho, wo bhi ek faisla hai."], ["🌙", "Rumi", "Kal main hoshyar tha, duniya badalna chahta tha. Aaj danishmand hoon, khud ko badal raha hoon."], ["🪞", "Apne aap se", "Das saal baad ka Samiullah aaj ke kis kaam par shukria kahega?"], ["🪞", "Apne aap se", "Ghussa us par aata hai jo humare bas mein nahi. Kya yeh tumhare bas mein hai?"], ["⚡", "Nietzsche", "Jis ke paas jeene ka 'kyun' ho, wo har 'kaise' seh leta hai."], ["🪞", "Apne aap se", "Paisa wapas aa jata hai, waqt nahi. Aaj ka waqt kis par kharch hua?"], ["🪞", "Apne aap se", "Tum jis cheez se bhaag rahe ho, wo aksar wahi hoti hai jo tumhe karni hai."], ["🕯", "Pascal", "Insaan ki saari museebatein is se hain ke wo ek kamre mein akela chup nahi baith sakta."], ["🪞", "Apne aap se", "Sasta mulazim sab se mehnga parta hai. Tum kis par bachat kar rahe ho?"], ["🪞", "Apne aap se", "Agar aaj ka din dobara mile, to kaun sa ek ghanta badlo ge?"], ["🧭", "Kierkegaard", "Zindagi peeche dekh kar samajh aati hai, magar jeeni aage dekh kar parti hai."], ["🪞", "Apne aap se", "Tum kis ki tareef ke liye itni mehnat kar rahe ho?"], ["🪞", "Apne aap se", "Agar paisa masla na hota, to kal subah kya karte?"], ["🌲", "Thoreau", "Kisi cheez ki asal qeemat zindagi ka wo hissa hai jo tum us ke badle dete ho."], ["🪞", "Apne aap se", "Jo kaam tum sirf aadat se kar rahe ho, us ka faida ab bhi hai?"], ["🪞", "Apne aap se", "Aaj kis ne tum se kuch seekha?"], ["🎋", "Confucius", "Kitna aahista chal rahe ho yeh aham nahi, jab tak rukte nahi."], ["🪞", "Apne aap se", "Tumhara sab se achha mulazim kal chhor de, to kya tayyari hai?"], ["🪞", "Apne aap se", "Gahak tumhari dukan par kyun aata hai: rate, bharosa, ya aadat?"], ["☯", "Lao Tzu", "Jo doosron ko jaanta hai aqalmand hai; jo khud ko jaanta hai roshan hai."], ["🪞", "Apne aap se", "Tum ne aakhri dafa 'mujhe nahi pata' kab kaha?"], ["🪞", "Apne aap se", "Jis baat par aaj ghussa aaya, ek saal baad yaad bhi rahegi?"], ["🏛", "Suqraat", "Jis zindagi ko parkha na jaye, wo jeene ke laiq nahi."], ["🪞", "Apne aap se", "Tum mehnat zyada kar rahe ho, ya sahi cheez par kar rahe ho?"], ["🪞", "Apne aap se", "Aaj ghar walon ne tumhara chehra dekha, ya sirf phone ki roshni?"], ["🏛", "Seneca", "Jo har jagah hai, wo kahin nahi hai."], ["🪞", "Apne aap se", "Jo cheez tum control nahi kar sakte, us par aaj kitna waqt gaya?"], ["🪞", "Apne aap se", "Ek cheez jo aaj chhor do to zindagi halki ho jaye, wo kya hai?"], ["🏛", "Seneca", "Jab tak hum taalte rehte hain, zindagi guzar jati hai."], ["🪞", "Apne aap se", "Tum mulazim ko ghalti par daant-te ho, ya tareeqa sikhate ho?"], ["🪞", "Apne aap se", "Karobar bara karna hai ya behtar? Dono ek cheez nahi."], ["🏛", "Seneca", "Qismat wahan milti hai jahan tayyari aur mauqa ikathe hon."], ["🪞", "Apne aap se", "Jism ne aaj kya maanga tha jo tum ne nahi diya?"], ["🪞", "Apne aap se", "Agar tumhara beta tumhe sara din dekhe, to kya seekhega?"], ["👑", "Marcus Aurelius", "Behtareen badla yeh hai ke tum us jaise na bano."], ["🪞", "Apne aap se", "Tum jo jaante ho wo likha hua hai, ya sirf tumhare sar mein hai?"], ["🪞", "Apne aap se", "Sab kuch khud karna taqat nahi, kamzori hai. Aaj kya saunpa?"], ["👑", "Marcus Aurelius", "Jo cheez chhatte ke liye achhi nahi, wo makkhi ke liye bhi achhi nahi."], ["🪞", "Apne aap se", "Aaj shukr kis cheez ka kiya?"], ["🪞", "Apne aap se", "Agla bara faisla dar se kar rahe ho, ya soch se?"], ["⛓", "Epictetus", "Pehle khud se kaho tum kya banna chahte ho, phir wo karo jo karna hai."], ["🪞", "Apne aap se", "Jo dost sach bolta hai, us se aakhri dafa kab mile?"], ["🪞", "Apne aap se", "Nayi cheez banani hai, ya purani ko theek chalana hai?"], ["⛓", "Epictetus", "Ameer wo nahi jis ke paas zyada hai, wo hai jis ki zarooratein kam hain."], ["🪞", "Apne aap se", "Tumhari dukan mein sab se zyada waqt kahan zaya hota hai?"], ["🪞", "Apne aap se", "Aaram bhi kaam ka hissa hai. Aaj us ka hissa diya?"], ["📜", "Arastu", "Ghussa karna aasan hai. Sahi shakhs par, sahi hadd tak, sahi waqt par ghussa karna mushkil hai."], ["🪞", "Apne aap se", "Jis cheez ko tum 'baad mein' keh rahe ho, us ka 'baad' kab hai?"], ["🪞", "Apne aap se", "Log tumhare saath kaam karna chahte hain, ya majboor hain?"], ["🌊", "Heraclitus", "Koi aadmi ek hi darya mein do dafa nahi utarta. Darya bhi badal chuka hota hai aur aadmi bhi."], ["🪞", "Apne aap se", "Nuqsan se mehnga hai nuqsan se na seekhna. Pichhla sabaq kya tha?"], ["🪞", "Apne aap se", "Aaj tum ne suna zyada, ya bola zyada?"], ["📜", "Aflatoon", "Sab se bari fatah apne aap par fatah hai."], ["🪞", "Apne aap se", "Jo aadat tumhe sab se zyada rokti hai, us ka naam lo."], ["🪞", "Apne aap se", "Aaj ki kamai mein se kitna sukoon kamaya?"], ["☯", "Lao Tzu", "Hazaar meel ka safar ek qadam se shuru hota hai."], ["🪞", "Apne aap se", "Jis kaam se dil ghabrata hai, aksar wahi sab se zaroori hota hai. Wo kaun sa hai?"], ["🪞", "Apne aap se", "Tum apne waqt ke malik ho, ya phone ke?"], ["☯", "Lao Tzu", "Jo jaanta hai ke us ke paas kaafi hai, wohi ameer hai."], ["🪞", "Apne aap se", "Ek saal pehle ka masla yaad hai? Aaj wala bhi aise hi guzar jayega."], ["🪞", "Apne aap se", "Chhoti chori maaf karna bari chori ki dawat hai. Tumhara usool kya hai?"], ["🎋", "Confucius", "Jo ghalti kar ke use theek nahi karta, wo doosri ghalti kar raha hai."], ["🪞", "Apne aap se", "Seekhna band, barhna band. Is hafte kya naya seekha?"], ["🪞", "Apne aap se", "Zindagi mehdood hai, yeh yaad ho to chhoti baatein chhoti lagti hain. Aaj kaun si baat bari lag rahi thi?"], ["⚡", "Nietzsche", "Jo cheez mujhe maar nahi deti, mujhe mazboot kar deti hai."], ["🪞", "Apne aap se", "Udhaar dena aasan hai, wapas lena hunar hai. Aaj kis ka khata sota raha?"], ["🪞", "Apne aap se", "Bharosa de kar dekho: log aksar utne hi bare ho jate hain jitna tum unhein samjho."], ["🔭", "Schopenhauer", "Har shakhs apni nazar ki hadd ko duniya ki hadd samajh leta hai."], ["🌙", "Rumi", "Zakhm wo jagah hai jahan se roshni andar aati hai."], ["🌙", "Rumi", "Jo tum dhoond rahe ho, wo bhi tumhe dhoond raha hai."], ["🪶", "Tolstoy", "Har koi duniya badalne ka sochta hai, khud ko badalne ka koi nahi."], ["📊", "Peter Drucker", "Jo kaam hona hi nahi chahiye, use bohat achhe tareeqe se karne se zyada bekaar kuch nahi."], ["💼", "Warren Buffett", "Kamyab aur bohat kamyab logon mein farq yeh hai ke bohat kamyab log taqreeban har cheez ko 'nahi' kehte hain."], ["💼", "Charlie Munger", "Ulta socho: yeh pata ho ke main kahan girunga, to wahan jaun hi na."], ["⚙", "Benjamin Franklin", "Tayyari mein nakaami, nakaami ki tayyari hai."], ["🌳", "Kahawat", "Darakht lagane ka behtareen waqt bees saal pehle tha. Doosra behtareen waqt aaj hai."], ["🌳", "Kahawat", "Sabr talkh hai, magar us ka phal meetha hai."]]   # v29: 2-2 din ki patti (6 baatein), Java se — falsafi + apne aap se sawal (Roman Urdu)
 T_UNL = 112233445566771
+T_SCR = 112233445566772   # v85: screen ON (phone abhi lock nahi hua tha = unlock ka event hi nahi aata)
 # v73 (23 Nov raat — GHALTI): 💧 Paani + ☕ Coffee macro band hue (v72) to pnDue kabhi aage nahi barhta -> 'Paani 2 min mein aane wala' wali shart hamesha jhooti -> Falsafa + recording (Sona hai?) ka popup
 #   bhi band ho gaya (malik: 'tum ne wo recording wala pop bhi band kar diya hai'). Paani / Coffee macro dobara CHALU karo to yahan True karo (popup ek doosre par na chadhein).
 PAANI_ON = False
@@ -61,7 +62,7 @@ GATE += [
 #   15 s = Nahi (defaultKey w). HIFAZAT: dialog 14+ s khula raha = timeout samjho, KUCH na karo (default ghalat button chune tab bhi reminder na mite).
 #   Reminder na hon = purana safed popup (GATE) waise hi. 📝 Reminder macro ka apna unlock trigger HATA (warna do popup).
 import remind as RM
-from cb import gt as cgt, lt as clt, expr as cexpr, pause as cpause, NOW, strne as cstrne
+from cb import gt as cgt, lt as clt, expr as cexpr, pause as cpause, NOW, strne as cstrne, trig
 from wasite import streq
 def BR(k, v): return [iff([streq(k, v, True)]), RM.BREAK, END]
 
@@ -150,10 +151,7 @@ SEND = [iff([gieq("skQ", 1), cstrne("skU", ""), cstrne("skB", "")]),
     END]
 COMBO = [
     JAVA,
-    cexpr("ag", NOW + "-{v=rmAt}", True),
-    iff([cgt("ag", 20, True)]),                      # 20 s mein dohra unlock = ek hi dafa
-      cexpr("rmAt", NOW),
-      cpause(1),
+    cpause(1),
       *RM.SAVE,
       RM.LOOP,
         *RM.OPEN,
@@ -166,7 +164,7 @@ COMBO = [
         RM.DIALOG,
         cexpr("dd", NOW + "-{lv=dt}", True),
         iff([cgt("dd", 13, True)]), RM.BREAK, END,  # timeout (15 s) = Nahi — kuch mat karo
-        *BR("rk", ""), *BR("rk", "t"), *BR("rk", "w"),
+        *BR("rk", ""), *BR("rk", "x"), *BR("rk", "v"), *BR("rk", "w"),   # v85: x = qoul, v = ✅ OK (w purana Nahi)
         iff([streq("rk", "u", True)]),
           iff([glt("recOff", 1)]),
             sint("recOff", 1), REC.STOP,
@@ -183,14 +181,26 @@ COMBO = [
         END,
       RM.ENDLOOP,
       *RM.RESTORE,
-    END,
 ]
 # v84: mila hua popup jab reminder YA sehat line ho (pehle sirf reminder) · aakhir mein Blue Khata ko baqi tick (skQ) — popup ke baad, intezar nahi
-acts = HEAD + [RM.sstr("sj", ""), RM.java(SKL, "sj"), RM.java(NEEDJ, "nd"),
-               iff([streq("nd", "1", True)]), *COMBO, ELSE, *GATE, END] + SEND
+# v85 (27 Nov, malik: 'har lock screen ke upar nahi aa raha — ek dafa aata hai, agli dafa nahi, phir lock kar ke kholein to aata hai'):
+#   (1) phone screen band hone ke foran baad lock nahi hota (lock ki der) — tab kholne par 'unlock' ka event hi nahi aata. Ab screen ON par bhi
+#       chalta hai, magar sirf jab phone LOCK NAHI (lock ho to asal unlock ka intezar — wohi trigger aayega). (2) Purana 20 s ka tala popup
+#       BAND hone ke 20 s baad tak rokta tha — ab sirf tab rokta hai jab popup abhi khula ho (rmAt popup ke baad 0).
+LOCKED = {"m_classType": "DeviceLockedConstraint", "m_SIGUID": 0, "m_locked": True}
+acts = [lexpr("go", "1"),
+        iff([trig(T_SCR, "Screen on"), LOCKED]), lexpr("go", "0"), END,
+        cexpr("ag", NOW + "-{v=rmAt}", True),
+        iff([lgt("go", 0), cgt("ag", 20, True)]),
+          cexpr("rmAt", NOW),
+          *HEAD, RM.sstr("sj", ""), RM.java(SKL, "sj"), RM.java(NEEDJ, "nd"),
+          iff([streq("nd", "1", True)]), *COMBO, ELSE, *GATE, END,
+          cexpr("rmAt", "0"),
+          *SEND,
+        END]
 out = {"macroExportVersion": 1, "macro": {
     "m_name": "🧠 Falsafa",
-    "m_description": "Unlock par falasifa ka ek qoul (random, 15 s baad khud band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), qoul, Sona hai / Nahi. Koi app band nahi. AI nahi.",
+    "m_description": "Unlock par falasifa ka ek qoul (random, 15 s baad khud band) + 😴 Sona hai. Subah 9 – raat 9 (ya 📝 reminder baqi hon) EK popup: upar neeli likhai 💧 Paani aaj N/6 (+ ☕ 2 baje · 🍎 2:30 · 🥜 4 baje), ☐ tap = gin liya -> Blue Khata 📊 Sehat hisaab; phir reminder (tap = ✓), Sona hai / Jaag gaya, ✅ OK, qoul. Har unlock (aur lock na hua ho to screen ON) par. Koi app band nahi. AI nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
     "localVariables": [lint("pLeft"), lint("pShow"), lint("kShow"), lint("qi"), {"m_name": "qs", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "never", "m_type": 0, "isLocalVar": True, "m_booleanValue": False}, {"m_name": "mk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
@@ -198,8 +208,8 @@ out = {"macroExportVersion": 1, "macro": {
                        {"m_name": "rk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, {"m_name": "rc", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "ra", "m_type": 4, "isLocalVar": True, "m_stringValue": ""},
                        {"m_name": "sj", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, {"m_name": "nd", "m_type": 2, "isLocalVar": True, "m_stringValue": ""},
-                       {"m_name": "sk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, lint("hc")],
-    "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}],
+                       {"m_name": "sk", "m_type": 2, "isLocalVar": True, "m_stringValue": ""}, lint("hc"), lint("go")],
+    "m_triggerList": [{"m_classType": "DeviceUnlockedTrigger", "m_SIGUID": T_UNL}, {"m_classType": "ScreenOnOffTrigger", "m_SIGUID": T_SCR, "m_screenOn": True}],
     "m_actionList": acts, "m_constraintList": []},
     "globalVariables": [var("pnDue", 1), var("pnShowEnd", 1), var("kpShowEnd", 1), var("kpPend", 0), var("qdOff", 2), var("qdT", 2), var("qdM", 2), var("qdA", 2), var("recOff", 1), var("rmT", 2), var("rmAt", 1), var("sbAsk", 1), var("shAsk", 1),
                         var("skP", 1), var("skD", 2), var("skX", 2), var("skQ", 1), var("skB", 2), var("skU", 2), var("skM", 2), var("ntU", 2), var("ntK", 2)] + REC.GV,
