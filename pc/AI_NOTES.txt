@@ -6236,3 +6236,15 @@ Malik ne v88 ke baad screenshot (💬 WhatsApp tile ka popup) bhej kar likha "Ya
  - cnsave.py wahi (cnList bharta hai), sirf description / comment.
 Test: javac + android stubs (khali = khana, naya pehle, save = contact screen + hata, WhatsApp = hindse + list mein rehta, z / back, purana khana, save / 3 din = hata),
 JSON python se parse; 💬 macro VALID; qaide If / Loop balance. Phone par azmaya nahi.
+
+
+=== app v2.396.0 (27 Nov 2026) — ‹ VIDEO SAMJHAO MEIN BACK BUTTON (video-sam.js v1.9) ===
+Malik ki screenshot (Video samjhao khuli, upar sirf ⋮ / ✕): 'yahan se back wala button de do' -> plan -> OK.
+ - Header: 🎓 Video samjhao ke baayein gol ‹ (.vs-x.vs-bk, data-vs="back").
+ - stepBack(): ⋮ khula -> band · S.view (qoul / words / star) -> video · video khuli -> goList() · list par -> false (khirki band).
+ - goList(): pehle wala 'list' chip ka kaam + busy ho to bhi (S.halt, S.busy false, retry / queue saaf) — chalta AI hissa chhoot jata hai
+   (run() mein S.v !== v = chup wapas), pehle aaye hisse localStorage mein hain. sam-vs-last hat-ta hai (agli dafa list se khulti hai).
+ - Phone back / Esc: dialog 'cancel' (cancelable ho to preventDefault + stepBack) · cancel na ruke = 'close' par S zinda + stepBack = showModal dobara
+   (web-dukan v2.267.1 namoona). ntVsClose bhi ab ek qadam (koi bulata nahi). Bina-dikhawe focus ring band (.vs-x:focus:not(:focus-visible)).
+Test: node --check + node import · headless Chrome: ⋮ -> ‹ = band · Esc = ⋮ band (khirki khuli) · Qoul -> Esc = video · video -> ‹ = list (sam-vs-last null) · list -> Esc = band.
+Phone par azmaya nahi. AI nahi.

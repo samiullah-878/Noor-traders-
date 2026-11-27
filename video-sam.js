@@ -1,4 +1,5 @@
-// video-sam.js v1.8 (app v2.395.0, 27 Nov 2026) — 🎓 VIDEO SAMJHAO
+// video-sam.js v1.9 (app v2.396.0, 27 Nov 2026) — 🎓 VIDEO SAMJHAO
+// v1.9 (malik 27 Nov: "yahan se back wala button de do"): header ka ‹ + phone ka back = EK qadam (⋮ → screen → video → purani videos ki list → band) — `stepBack`
 // v1.8 (malik 27 Nov: "qoul ko Urdu mein kar do · qoul ki list mein jo video samjhao — wahan se qoul banao" + chuna "Urdu harf" + "sirf video wale"):
 //   🧠 QOUL — har video ka 📌 Khulasa bante hi (aur purani videos se, khulte waqt 3 tak / ⋮ 🧠 Qoul se baqi) 🤖 usi likhai se 2-3 gehre qoul [Urdu harf, Roman]
 //   (apni taraf se nahi) + ⭐ pasand ki line (jis ki Urdu likhai ho). List Firestore qoulPh/<awazKey> (rules 2.113, phone sirf GET): t = phone ke liye
@@ -524,9 +525,10 @@ dialog.vs-dlg[open]{display:flex;flex-direction:column}
 @media (min-width:900px){dialog.vs-dlg{inset:3% 24%;border-radius:20px;box-shadow:0 24px 60px rgba(10,20,50,.35)}}
 dialog.vs-dlg::backdrop{background:rgba(8,16,40,.5)}
 .vs-hd{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:10px 12px;background:linear-gradient(135deg,#243f77,#1d3160);color:#fff;flex:none}
-.vs-hd b{font-size:17px}.vs-hd small{display:block;font-size:12.5px;opacity:.85;font-weight:600}
+.vs-hd>div{flex:1 1 auto;min-width:0}.vs-hd b{font-size:17px}.vs-hd small{display:block;font-size:12.5px;opacity:.85;font-weight:600}
 html body dialog.vs-dlg button{font-family:inherit}
 html body dialog.vs-dlg .vs-x{width:36px;min-height:36px!important;padding:0!important;border-radius:999px!important;border:1px solid #ffffff55!important;background:#ffffff1f!important;color:#fff!important;font-size:16px}
+html body dialog.vs-dlg .vs-x.vs-bk{flex:none;font-size:24px;line-height:1;padding-bottom:3px!important}html body dialog.vs-dlg .vs-x:focus:not(:focus-visible){outline:none}
 .vs-scroll{flex:1 1 auto;overflow-y:auto;padding:10px;display:grid;grid-template-columns:minmax(0,1fr);gap:8px;align-content:start}
 .vs-form{display:grid;grid-template-columns:minmax(0,1fr);gap:6px;background:#fff;border:1px solid #dfe6f2;border-radius:14px;padding:9px}
 .vs-row{display:flex;gap:6px;min-width:0}
@@ -596,7 +598,7 @@ function paint() {
     ${v ? '' : '<div class="vs-note">"Kahan se" = waqt, jaise <b>53:44</b>. Khali = shuru se. Pehle 15 minute aate hi sunna shuru karein — poori video ke agle hisse peeche khud aate rehte hain, chalti line peeli hoti hai. 🤖 AI (Gemini: likhai + awaz) — kabhi ghalat bhi samajh sakta hai.</div>'}</div>`;
   const st = S.busy ? `<div class="vs-st" id="vsSt">⏳ ${esc(S.msg || 'AI video sun raha hai…')}${v && v.parts.length ? '' : '<div class="vs-note">1-3 minute lag sakte hain.</div>'}</div>` : (S.err ? `<div class="vs-st bad">✕ ${esc(S.err)}</div>` : '');
   const body = v ? `<div class="vs-ttl">${esc(v.t || 'Video')}</div>${partsHTML(v)}${!v.parts.length && !S.busy ? '<div class="vs-note">Is hisse mein kuch nahi mila.</div>' : ''}${st}${v.end ? '<div class="vs-note">✅ Video yahan khatam.</div>' + (!S.busy && v.parts.length ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="force">▶ Video aage bhi hai — aage samjhao</button></div>' : '') : ''}${extraHTML(v)}${!S.busy ? '<div class="vs-row"><button type="button" class="vs-chip" data-vs="list">‹ Doosri video</button></div>' : ''}` : st + oldHTML();
-  d.innerHTML = `<div class="vs-hd"><div><b>🎓 Video samjhao</b><small>YouTube ki video — aasaan Roman Urdu mein + 🔊 awaz</small></div><span class="vs-hb"><button type="button" class="vs-x" data-vs="menu" aria-label="Mazeed">⋮</button><button type="button" class="vs-x" data-vs="x" aria-label="Band">✕</button></span></div>
+  d.innerHTML = `<div class="vs-hd"><button type="button" class="vs-x vs-bk" data-vs="back" aria-label="Wapas">‹</button><div><b>🎓 Video samjhao</b><small>YouTube ki video — aasaan Roman Urdu mein + 🔊 awaz</small></div><span class="vs-hb"><button type="button" class="vs-x" data-vs="menu" aria-label="Mazeed">⋮</button><button type="button" class="vs-x" data-vs="x" aria-label="Band">✕</button></span></div>
     <div class="vs-scroll">${S.menu ? menuHTML() : ''}${S.view ? viewHTML() : form + body}</div><div class="vs-bar" id="vsBar"></div>`;
   const sc = d.querySelector('.vs-scroll'); if (sc) sc.scrollTop = y;
   if (qf) { const q2 = $('vsQ'); if (q2) { try { q2.focus({ preventScroll: true }); q2.setSelectionRange(q2.value.length, q2.value.length); } catch {} } }
@@ -935,8 +937,9 @@ async function onClick(e) {
     return;
   }
   if (k.vs === 'x') { close(); return; }
+  if (k.vs === 'back') { if (!stepBack()) close(); return; }
   if (k.vs === 'paste') { try { const x = await navigator.clipboard.readText(); if (x) { keep(); S.url = x.trim(); paint(); urlAuto(S.url); } } catch { A.notice?.('Paste ki ijazat nahi mili — link khane mein khud paste karein'); } return; }
-  if (k.vs === 'list') { keep(); if (S.busy) { A.notice?.('⏳ Abhi hissa aa raha hai — thori der baad'); return; } S.menu = false; stopPlay(); freeAud(); S.v = null; S.url = ''; S.from = ''; S.view = ''; S.err = ''; try { localStorage.removeItem('sam-vs-last'); } catch {} paint(); return; }
+  if (k.vs === 'list') { goList(); return; }
   if (k.vs === 'rate') { S.rate = (S.rate + 1) % RATES.length; try { localStorage.setItem('sam-vs-rate', String(S.rate)); } catch {} if (AU) AU.playbackRate = RATES[S.rate][0]; paintBar(); return; }
   if (k.vs === 'all') { if (S.waitNew) { S.waitNew = false; quiet(); setMs('paused'); paintBar(); } else if (S.cur >= 0) toggle(); else { S.all = true; playPart(posIdx(S.v)); } return; }
   if (k.vs === 'halt') { S.halt = true; clearTimeout(S.retry); S.retry = 0; t.disabled = true; t.textContent = '⏹ Ruk raha…'; return; }
@@ -949,6 +952,22 @@ async function onClick(e) {
   }
 }
 function shut() { if (!S) return; try { document.removeEventListener('visibilitychange', onVis); } catch {} wlOff(); clearTimeout(S.retry); clearTimeout(S.holdT); clearTimeout(S.sleepT); if (S.smpUrl) { try { URL.revokeObjectURL(S.smpUrl); } catch {} } stopPlay(); freeAud(); try { S.smp?.pause(); } catch {} try { if (AU) { AU.removeAttribute('src'); AU.load(); } } catch {} S = null; }
+// v1.9: ‹ / phone ka back = EK qadam · false = peeche kuch nahi (khirki band karo)
+function goList() {
+  if (!S) return;
+  if (S.busy) { S.halt = true; S.busy = false; S.queue = null; }   // chalta AI hissa chhoro — pehle aaye hisse save hain, 'Wahin se' baad mein wahin se
+  clearTimeout(S.retry); S.retry = 0; S.waitNew = false;
+  S.menu = false; stopPlay(); freeAud(); S.v = null; S.url = ''; S.from = ''; S.view = ''; S.err = ''; S.msg = '';
+  try { localStorage.removeItem('sam-vs-last'); } catch {}
+  paint(); dlg()?.querySelector('.vs-scroll')?.scrollTo?.({ top: 0 });
+}
+function stepBack() {
+  if (!S) return false;
+  if (S.menu) { S.menu = false; paint(); return true; }
+  if (S.view) { S.view = ''; paint(); return true; }
+  if (S.v) { goList(); return true; }
+  return false;
+}
 function close() { const d = dlg(); shut(); if (d) { try { d.close(); } catch {} d.remove(); } if (window.ntVsClose) window.ntVsClose = null; }
 export function open(ctx) {
   A = ctx || {};
@@ -959,11 +978,12 @@ export function open(ctx) {
   S = { url: '', from: '', v: null, busy: false, halt: false, err: '', msg: '', cur: -1, wait: -1, waitNew: false, all: false, paused: false, rate, tok: 0, aud: {}, pumps: 0, ln: '', retry: 0, ttsOff: '', ttsFail: 0, ttsM: null, ttsNoMulti: '', menu: false, smpW: '', smp: null, cap: {}, ttsHold: 0, tts429: 0, holdT: 0, seek: null, srcUrl: '', view: '', q: '', wq: '', qBusy: false, sumBusy: false, actBusy: false, sleepAt: 0, sleepT: 0, smpUrl: '', smpSum: 0 };
   audioSetup(); document.addEventListener('visibilitychange', onVis);
   d.addEventListener('click', onClick); d.addEventListener('input', onInput); d.addEventListener('change', onChange); d.addEventListener('keydown', onKey);
-  d.addEventListener('close', () => { shut(); d.remove(); });
+  d.addEventListener('cancel', ev => { if (!ev.cancelable || !S) return; ev.preventDefault(); if (!stepBack()) close(); });   // v1.9: phone back / Esc = ek qadam
+  d.addEventListener('close', () => { if (S && stepBack()) { try { d.showModal(); } catch { d.setAttribute('open', ''); } return; } shut(); d.remove(); });   // cancel na ruka (browser ne khud band ki) = wapas khol kar sirf ek qadam
   try { TTSP()?.getVoices(); } catch {}
   paint();
   try { d.showModal(); } catch { d.setAttribute('open', ''); }
-  window.ntVsClose = () => { close(); return true; };
+  window.ntVsClose = () => { if (!stepBack()) close(); return true; };
   // v1.5: YouTube se Share aaya = wohi video (pehle samjhi ho to wahin se, warna shuru se khud) · warna pichhli khuli video wahin se
   const sh = vidOf(A.share || '');
   if (sh) { if (!openSaved(sh)) { const t0 = tOf(A.share) || 0; S.url = 'https://youtu.be/' + sh; S.from = t0 ? fmt(t0) : ''; paint(); run(sh, t0); } }
