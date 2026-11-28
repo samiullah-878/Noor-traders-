@@ -1,5 +1,6 @@
 // ============================================================
-//  dh-p2p.js  v1.1 (2026-11-28 raat, malik ki screenshot '403 [channel]' sahi password par): camera ka namak (randsalt) 3 dafa maango; na mile = saaf 'namak nahi mila' (password ka ilzam nahi) + line mein login ka haal {namak · server ka jawab}.
+//  dh-p2p.js  v1.2 (2026-11-28 raat, malik ki screenshot 'Camera ne jawab nahi diya [channel]'): chup wali line mein bhi poora haal {login · namak · Dahua ka pehla jawab}; camera chup = agli dafa doosra tareeqa (login ke saath / baghair) + lamba intezar (20 s); ghalat login ke baad 30 min ruko (camera block na kare).
+//  v1.1 (2026-11-28 raat, malik ki screenshot '403 [channel]' sahi password par): camera ka namak (randsalt) 3 dafa maango; na mile = saaf 'namak nahi mila' (password ka ilzam nahi) + line mein login ka haal {namak · server ka jawab}.
 //  v1.0 (2026-11-28) — 🛰 Dahua camera SERIAL NUMBER se (P2P surang) — AZMAISH
 //  Malik: 'doosri factory ka camera — IP ke baghair, DMSS jaisa · serial number se'.
 //  Kaam: camera ka serial number + username / password -> Dahua ke P2P raaste (Easy4ip cloud + PTCP, UDP) se
@@ -122,10 +123,12 @@ async function handshake(t) {
     dhReq(st, B, `/device/${t.sn}/p2p-channel`, `<body>${auth}<Identify>${ident}</Identify>${ipx}<version>5.0.0</version></body>`);
     await A.to(relay); const ag = await ask(st, A, '/relay/agent'); const token = tag(ag.xml, 'Token'), agent = tag(ag.xml, 'Agent'); if (!token || !agent) throw fail('Dahua relay ka jawab adhoora');
     await A.to(agent); await ask(st, A, '/relay/start/' + token, '<body><Client>:0</Client></body>');
-    let res = await dhRead(B, 12000, true).catch(e => { throw fail('Camera ne jawab nahi diya (camera offline / net kamzor)', e); });
-    if (res.code < 200) res = await dhRead(B, 12000, true).catch(e => { throw fail('Camera ne jawab nahi diya (camera offline / net kamzor)', e); });
+    // v1.2: camera chup rahe to line mein poora haal + agli dafa doosra tareeqa (login ke saath <-> baghair)
+    const chup = (got, e) => { const dg = ' {login ' + (t.auth ? 'ke saath' : 'ke baghair') + ' · ' + (sdg || 'namak ?') + ' · Dahua: ' + (got ? got : 'kuch nahi') + '}'; if (!t.authNeed) t.auth = !t.auth; return fail('Camera ne jawab nahi diya' + dg, e); };
+    let res = await dhRead(B, 12000, true).catch(e => { throw chup('', e); });
+    if (res.code < 200) { const c1 = res.code + ' ' + String(res.status || '').replace(/[^\w .-]/g, '').slice(0, 16); res = await dhRead(B, 20000, true).catch(e => { throw chup(c1, e); }); }
     if (res.code >= 400) {
-      if (res.code === 403 && !t.auth) { t.auth = true; const e = fail('camera password maangta hai — dobara'); e.again = 1; throw e; }
+      if (res.code === 403 && !t.auth) { t.auth = true; t.authNeed = true; const e = fail('camera password maangta hai — dobara'); e.again = 1; throw e; }
       if (res.code === 403 || res.code === 401) {
         const dg = ' {' + sdg + ' · ' + res.code + ' ' + String(res.status || '').replace(/[^\w .-]/g, '').slice(0, 24) + '}';
         if (!salt) throw fail('Camera ka namak Dahua server se nahi mila — login nahi bana (password ka masla nahi)' + dg);
@@ -175,7 +178,7 @@ class Tunnel {
     this.srv = net.createServer(sock => this.onConn(sock)); this.srv.on('error', e => { this.set('err', 'PC ka port ' + this.port + ' nahi khula: ' + e.code); });
     try { this.srv.listen(this.port, '127.0.0.1'); } catch {}
     this.loop().catch(() => {}); }
-  set(st, why) { if (this.st !== st || this.why !== why) { this.st = st; this.why = why; this.at = Date.now(); this.log(`🛰 ch ${this.ch} (${mask(this.sn)}): ${st === 'ok' ? '✅' : st === 'err' ? '✕' : '⏳'} ${why}`); } }
+  set(st, why) { this.at = Date.now(); if (this.st !== st || this.why !== why) { this.st = st; this.why = why; this.log(`🛰 ch ${this.ch} (${mask(this.sn)}): ${st === 'ok' ? '✅' : st === 'err' ? '✕' : '⏳'} ${why}`); } }
   async loop() {
     while (!this.stop) {
       let quick = false;
@@ -187,12 +190,12 @@ class Tunnel {
         if (!this.stop) this.set('try', 'line toot gayi — dobara jor raha hai');
       } catch (e) {
         if (e && e.again && !this._again) { this._again = 1; quick = true; }
-        else { this._again = 0; this.set('err', String((e && e.why) || (e && e.message) || e).slice(0, 150) + (this.step ? ' [' + this.step + ']' : '')); if (e && e.bad) this.back = 600000; }
+        else { this._again = 0; this.set('err', String((e && e.why) || (e && e.message) || e).slice(0, 150) + (this.step ? ' [' + this.step + ']' : '')); if (e && e.bad) this.back = 1800000; }
       }
       if (this.stop) break;
       if (quick) { await sleep(1500); continue; }
       this._again = 0;
-      await sleep(this.back); this.back = Math.min(600000, this.back * 2);
+      await sleep(this.back); this.back = Math.min(600000, this.back * 2);   // (ghalat login = 30 min, ek dafa)
     }
   }
   run(L) {
