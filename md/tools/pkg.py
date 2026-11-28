@@ -59,7 +59,7 @@ mr, vr = fix(rem, h64('claude|remote5'), '🤖 Claude Remote 5')
 mt, vt = fix(tk, h64('claude|tiktok'), '📵 TikTok reels')
 mw, vw = fix(wl, h64('claude|waleed'), '🔊 Waleed Bhai')   # ek din ka tha (6 Nov) — ab pkg mein nahi, off mein
 mq, vq = fix(qd, h64('claude|qaide'), '🧠 Falsafa')
-mf, vf = fix(fy, h64('claude|fbyt'), '📘▶️ Facebook · YouTube')
+mf, vf = fix(fy, h64('claude|fbyt'), '📘▶️ Facebook · YouTube'); mf['m_name'] = '📘▶️📷 Facebook · YouTube · Instagram'   # v94: Instagram 30 min jura (fix ko purana naam = SIGUID wahi)
 ms, vs = fix(sv, h64('claude|saved'), '🔖 TikTok Saved')
 mb, vbk = fix(bk, h64('claude|bank3'), '🏦 Bank mode 3')
 mh, vh = fix(hp, h64('claude|haptic'), '⌨️ Haptics ON')
@@ -127,7 +127,7 @@ for v in vp + vk + vt + vq + vf + vb + vcb + vsb + vbr + vrt + vrc + vjg + vnb +
     if v['m_name'] not in seen: seen.add(v['m_name']); vars_.append(v)
 ver = sys.argv[1]
 pkg = {"v": ver,
-       "note": "📋 Clipboard: naya tile 4 — jo copy karein wo khud list mein, tap = copy, phir paste. ➕ likh kar save · 📌 pakka · 🗑 hatao. Pehli dafa tile dabane par Shizuku se ijazat.",
+       "note": "📷 Instagram par 30 minute ki rok (Facebook / YouTube wale macro mein): 30 min poore = Instagram band, 24 ghante baad khud khulta hai.",
        "macros": [ma, mr, mt, mq, mf, ms, mb, mh, mbg, mcb, mhs, mrt, mrb, mgh, mhb, man, mrc, mjg, mnb, mal, mwa, mws, mcn, mak, mcl, mrm, mkw, mkw2, mql, msh, mcp, mcc] + ONCE.get(ver, []),   # v93: mcp / mcc 📋 Clipboard   # v90: msh 📸 Screenshot diary   # v87: mql 🧠 Qoul laao   # v85: mkw / mkw2 WhatsApp khaas contacts   # v80: mrm 📝 Reminder   # v79: mcl 📞 Call diary   # v77: mcn 📇 Naya number save   # v76 (25 Nov): mwa 💬 WhatsApp bina save + mws 🌐 Koi bhi site (naye)   # v75 (25 Nov): mst (📱 Screen time) RUKA — malik ka OK (Paani band, har 1 min faltu)   # v71 (23 Nov raat): msl RUKA — malik: 'wo paani wala droid band kar do abhi'   # v69 (22 Nov raat): msl wapas CHALU (8 baje hisaab) — malik: 'us ko on kar do'   # v68 (22 Nov): msl RUKA — malik: 'wo off kar do paani coffee wala'   # v63 (21 Nov raat): msl wapas CHALU — malik: 'paani wala on kar do'   # v62 (21 Nov): msl (📸 Sehat lock) RUKA — malik: 'abhi pause kar do, shop par nahi hoon' (dobara chalu = msl wapas yahan + off se hatao)   # v56: msl = 📸 Sehat lock   # v36: mq (🧠 Falsafa) wapas — v35 mein ghalti se band hua tha
        "patch": [{"nm": "Falcon km", "cls": "TimeOfDayConstraint", "set": {"m_startHour": 21, "m_startMinute": 0}},
                  # v65 (21 Nov): Remote 5 ka patch HATA — patch phone ki PURANI copy ko dobara package mein daal deta tha (wahi ID) = Remote ka naya code kabhi na lagta; 60 s ab remote.py mein

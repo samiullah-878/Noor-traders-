@@ -6,6 +6,8 @@ D = os.path.dirname(os.path.abspath(__file__))
 TK = ["com.zhiliaoapp.musically", "com.ss.android.ugc.trill"]; TKN = ["TikTok", "TikTok Lite"]
 FB = ["com.facebook.katana", "com.facebook.lite"]; FBN = ["Facebook", "Facebook Lite"]
 YT = ["com.google.android.youtube"]; YTN = ["YouTube"]
+IG = ["com.instagram.android", "com.instagram.lite"]; IGN = ["Instagram", "Instagram Lite"]   # v94 (28 Nov, malik: 'Instagram — 30 minute wali rok laga do' + OK)
+IG_LIM = 30
 DAY = 86400
 def gv(n, t, local=False): return {"m_name": n, "m_type": t, "isLocalVar": local}
 def setv(n, t, local=False, **kw):
@@ -69,27 +71,28 @@ def hrs(p): return expr(p + "Hrs", "({v=%sLock}-{system_time}+1800)/3600" % p)
 # ================= 📘▶️ Facebook · YouTube =================
 T1, T2 = 112233445566771, 112233445566772
 fy = []
-fy += unlock("fb") + unlock("yt")
-fy += count("fb", FB, FBN, T1) + count("yt", YT, YTN, T1)
-fy += lock("fb", 25) + lock("yt", 120)
-fy += [expr("fbLeft", "25-{v=fbMin}"), expr("ytLeft", "120-{v=ytMin}")]
+fy += unlock("fb") + unlock("yt") + unlock("ig")
+fy += count("fb", FB, FBN, T1) + count("yt", YT, YTN, T1) + count("ig", IG, IGN, T1)
+fy += lock("fb", 25) + lock("yt", 120) + lock("ig", IG_LIM)
+fy += [expr("fbLeft", "25-{v=fbMin}"), expr("ytLeft", "120-{v=ytMin}"), expr("igLeft", "%d-{v=igMin}" % IG_LIM)]
 fy += [iff([fg(FB, FBN), lt("fbLock", 1)]), ft("ntfb", "📘 Facebook · {v=fbLeft} min baqi"), ELSE, fthide("ntfb"), END]
 fy += [fthide("ntyt")]   # v45 (malik 14 Nov: "YouTube par yeh patti na aaye"): YouTube par baqi-waqt ki patti NAHI (ginti / lock wahi)
 fy += [iff([gt("fbLock", 0), fg(FB, FBN)]), hrs("fb"), HOME, toast("📘 Facebook ke 25 min ho gaye — {v=fbHrs} ghante baad (kal isi waqt)"), END]
 fy += [iff([gt("ytLock", 0), fg(YT, YTN)]), hrs("yt"), HOME, toast("▶️ YouTube ke 2 ghante ho gaye — {v=ytHrs} ghante baad (kal isi waqt)"), END]
+fy += [iff([gt("igLock", 0), fg(IG, IGN)]), hrs("ig"), HOME, END]   # v94: 📷 Instagram 30 min — poori app, koi paigham / patti nahi (malik ko plan mein yehi bataya); lock 24 ghante
 FYT = [anytrig((T1, "Har 1 minute"), (T2, "App khuli"))]
 fy += clock("ntfb", FB, FBN, "fbLock", [("f", "fbLeft")], "📘 Facebook · {lv=fM}:{lv=fS} baqi", FYT)
 fbyt = {"macroExportVersion": 1, "macro": {
     "m_name": "📘▶️ Facebook · YouTube",
-    "m_description": "Facebook 25 min / YouTube 2 ghante (screen on + app saamne, har 1 min). Poore hone par Home + paigham; agle din USI waqt dobara (24 ghante ka lock). Raat 12 reset nahi.",
+    "m_description": "Facebook 25 min / YouTube 2 ghante / Instagram 30 min (screen on + app saamne, har 1 min). Poore hone par Home + paigham; agle din USI waqt dobara (24 ghante ka lock). Raat 12 reset nahi.",
     "m_enabled": True, "m_completed": True, "m_GUID": 0, "aiGenerated": 1, "m_category": "Claude",
-    "localVariables": [lvar("fbRem"), lvar("ytRem")] + cvars(["f", "y"]),
+    "localVariables": [lvar("fbRem"), lvar("ytRem"), lvar("igRem")] + cvars(["f", "y"]),
     "m_triggerList": [
         {"m_classType": "RegularIntervalTrigger", "m_SIGUID": T1, "m_seconds": 60, "m_useAlarm": False},
-        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "m_packageNameList": FB + YT, "m_applicationNameList": FBN + YTN, "usePackageNameOption": 0},
-        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": 112233445566773, "m_launched": False, "m_packageNameList": FB + YT, "m_applicationNameList": FBN + YTN, "usePackageNameOption": 0}],
+        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": T2, "m_launched": True, "m_packageNameList": FB + YT + IG, "m_applicationNameList": FBN + YTN + IGN, "usePackageNameOption": 0},
+        {"m_classType": "ApplicationLaunchedTrigger", "m_SIGUID": 112233445566773, "m_launched": False, "m_packageNameList": FB + YT + IG, "m_applicationNameList": FBN + YTN + IGN, "usePackageNameOption": 0}],
     "m_actionList": fy, "m_constraintList": []},
-    "globalVariables": [var("fbMin"), var("fbLock"), var("fbHrs"), var("fbLeft"), var("ytMin"), var("ytLock"), var("ytHrs"), var("ytLeft")],
+    "globalVariables": [var("fbMin"), var("fbLock"), var("fbHrs"), var("fbLeft"), var("ytMin"), var("ytLock"), var("ytHrs"), var("ytLeft"), var("igMin"), var("igLock"), var("igHrs"), var("igLeft")],
     "userIcons": None, "aiFeedback": "Usage access zaroori."}
 
 # ================= 📵 TikTok reels (v2) =================
