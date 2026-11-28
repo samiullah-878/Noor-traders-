@@ -1,12 +1,12 @@
 # 📞 Khaas contacts — WhatsApp call (malik 27 Nov 2026: "jo contacts chose kiya hai, agar WhatsApp par call aaye to bhi bell aaye" + OK;
 #   teesra bhi OK: "baat 20%" ka WhatsApp hissa kabhi chala hi nahi — us mein NAAM1|NAAM2 likha reh gaya tha).
-#   LIST: naam / number md/ (PUBLIC) mein KABHI nahi. Naam phone par '📞 Khaas: ghanti full' (KV) ke 'Incoming call' trigger mein malik ke
+#   LIST: naam / number md/ (PUBLIC) mein KABHI nahi. Naam phone par '📞 Khaas log · SIM call · ghanti poori' (KV) ke 'Incoming call' trigger mein malik ke
 #     chune contacts se aate hain: yeh macro din mein ek dafa (+ chalu hote hi + boot) ExportMacros 'nt-kw' -> Java -> global khWa = "|naam|naam|"
 #     (chhote harf), export ALAG folder DIR/kw mein (Remote ki backup na samjhi jaye). Export na mile = Remote ka 'nt-now.mdr'. Malik KV mein contact jore / hataye = agle din (ya agle pkg update par) khud.
-#   KW '📞 Khaas: WhatsApp ghanti': WhatsApp 'Incoming … call' notification + title (contact ka naam) list mein = KV jaisa: DND band, ghanti 100%,
+#   KW '📞 Khaas log · WhatsApp call · ghanti poori': WhatsApp 'Incoming … call' notification + title (contact ka naam) list mein = KV jaisa: DND band, ghanti 100%,
 #     ringer normal; phone pehle silent / vibrate / DND ho to WhatsApp khud nahi bajata — is liye Java phone ki apni ringtone bajata hai
 #     (khRg 1 tak, 60 s hadd). Call utha li ('ongoing') / kat gayi ('missed') / notification hata = ghanti band + pehla volume / mode / DND wapas.
-#   KW2 '📞 Khaas: WhatsApp 20%': WhatsApp 'Ongoing … call' + title list mein = call ki awaaz 20%, khatam = pehli. (KB ka apna WhatsApp trigger
+#   KW2 '📞 Khaas log · WhatsApp call · baat dheemi': WhatsApp 'Ongoing … call' + title list mein = call ki awaaz 20%, khatam = pehli. (KB ka apna WhatsApp trigger
 #     NAAM1|NAAM2 par hi rehta hai — kabhi nahi chalta, koi takrao nahi. KB / KV ONCE macros hain — inhein chhoona nahi.)
 #   Dono macro har pkg update ke saath dobara ja sakte hain (in mein malik ka chuna data NAHI — list phone par banti hai). AI nahi.
 #   Asal phone par nahi azmaya: WhatsApp ke call notification ki likhai ('Incoming voice call'), ringtone ka bajna, VoiceCall stream.
@@ -49,7 +49,7 @@ NAMES = '\n'.join([
  '    for (int i = 0; i < a.length(); i++) {',
  '      org.json.JSONObject m = a.optJSONObject(i);',
  '      if (m == null || !m.has("m_triggerList")) continue;',
- '      if (m.optString("m_name", "").indexOf("Khaas: ghanti") < 0) continue;',
+ '      String mn0 = m.optString("m_name", ""); if (mn0.indexOf("Khaas: ghanti") < 0 && !(mn0.indexOf("SIM call") >= 0 && mn0.indexOf("ghanti") >= 0)) continue;',
  '      org.json.JSONArray ts = m.optJSONArray("m_triggerList");',
  '      for (int j = 0; ts != null && j < ts.length(); j++) {',
  '        org.json.JSONObject t = ts.optJSONObject(j);',
@@ -153,8 +153,8 @@ kw = [
     *REFRESH,
   END]
 KW = {"macroExportVersion": 1, "macro": {
-    "m_name": "📞 Khaas: WhatsApp ghanti",
-    "m_description": "'📞 Khaas: ghanti full' mein chune contacts ki WhatsApp call aaye to phone silent / vibrate / DND par ho tab bhi ghanti 100% (phone ki ringtone); call uthate / kat-te hi pehle wali haalat. Naam khud KV se aate hain (roz subah taza). AI nahi.",
+    "m_name": "📞 Khaas log · WhatsApp call · ghanti poori",
+    "m_description": "'📞 Khaas log · SIM call · ghanti poori' mein chune contacts ki WhatsApp call aaye to phone silent / vibrate / DND par ho tab bhi ghanti 100% (phone ki ringtone); call uthate / kat-te hi pehle wali haalat. Naam khud KV se aate hain (roz subah taza). AI nahi.",
     "m_GUID": 0, "m_enabled": True, "m_completed": True, "aiGenerated": 0, "m_category": "Claude",
     "m_triggerList": [notif(K1, 0, "incoming"), {"m_classType": "MacroEnabledTrigger", "m_SIGUID": K2},
                       {"m_classType": "BootTrigger", "m_SIGUID": K3},
@@ -178,8 +178,8 @@ kw2 = [
     END,
   END]
 KW2 = {"macroExportVersion": 1, "macro": {
-    "m_name": "📞 Khaas: WhatsApp 20%",
-    "m_description": "'📞 Khaas: ghanti full' wale contacts se WhatsApp par baat shuru (Ongoing call) = call ki awaaz 20%; khatam = pehli awaaz. Naam list '📞 Khaas: WhatsApp ghanti' banata hai. AI nahi.",
+    "m_name": "📞 Khaas log · WhatsApp call · baat dheemi",
+    "m_description": "'📞 Khaas log · SIM call · ghanti poori' wale contacts se WhatsApp par baat shuru (Ongoing call) = call ki awaaz 20%; khatam = pehli awaaz. Naam list '📞 Khaas log · WhatsApp call · ghanti poori' banata hai. AI nahi.",
     "m_GUID": 0, "m_enabled": True, "m_completed": True, "aiGenerated": 0, "m_category": "Claude",
     "m_triggerList": [notif(B1, 0, "ongoing"), {"m_classType": "BootTrigger", "m_SIGUID": B2}],
     "m_actionList": kw2, "m_constraintList": [],

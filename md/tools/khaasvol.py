@@ -1,8 +1,8 @@
 # 📞 Khaas contacts (malik 20 Nov 2026: "kuch contacts ki call par volume itna ho jaye · contacts main khud chunoon ga · 20 percent"
 #   → phir: "main call karun to bhi kam · WhatsApp par bhi · aur in numbers ki silent mein bhi call aaye volume full" — wahi 20% wale contacts).
-#   KV '📞 Khaas: ghanti full' (purane v59 macro ka WAHI GUID): chune contact ki call AAYE = phone silent / vibrate / DND ho tab bhi ghanti 100%;
+#   KV '📞 Khaas log · SIM call · ghanti poori' (purane v59 macro ka WAHI GUID): chune contact ki call AAYE = phone silent / vibrate / DND ho tab bhi ghanti 100%;
 #      call khatam / miss = pehle wala volume + pehle wala mode (silent / vibrate / DND) wapas.
-#   KB '📞 Khaas: baat 20%' (naya): chune contact se baat shuru (aane wali YA apni, CallActive) = call ki awaaz (VoiceCall) 20%; khatam = pehle wali.
+#   KB '📞 Khaas log · SIM call · baat dheemi' (naya): chune contact se baat shuru (aane wali YA apni, CallActive) = call ki awaaz (VoiceCall) 20%; khatam = pehle wali.
 #      WhatsApp: 'Ongoing … call' notification ka title (contact ka naam) malik phone par trigger mein likhta hai (NAAM1|NAAM2 ki jagah, | se alag).
 #   CONTACTS / NAAM KHALI: naam / number md/ (PUBLIC) mein KABHI nahi — malik phone par khud chunta / likhta hai.
 #   ⚠️ pkg.py ONCE: har pkg update Overwrite by ID karta hai — yeh macros sirf apne version (v60) mein, warna malik ke chune contacts mit jayenge.
@@ -46,7 +46,7 @@ kv = [si("md", 0), si("dn", 0),
       iff(eq("dn", 2)), setdnd(2), END,
       iff([gt("dn", 2, True)]), setdnd(3), END]
 KV = {"macroExportVersion": 1, "macro": {
-    "m_name": "📞 Khaas: ghanti full",
+    "m_name": "📞 Khaas log · SIM call · ghanti poori",
     "m_description": "Chune hue contacts ki call aaye to phone silent / vibrate / DND par ho tab bhi ghanti 100%; call khatam ya miss hote hi pehle wala volume aur mode wapas. Contacts: 'Incoming call' trigger par tap kar ke khud chunein (abhi khali — koi call nahi chhedi jati).",
     "m_GUID": 0, "m_enabled": True, "m_completed": True, "aiGenerated": 0, "m_category": "Claude",
     "m_triggerList": [{"m_classType": "IncomingCallTrigger", "m_SIGUID": T1, "m_option": 0, "m_incomingCallFromList": []}],
@@ -72,7 +72,7 @@ kb = [iff([trig(B3, "Boot")]), si("on", 0),
       END,
       END]
 KB = {"macroExportVersion": 1, "macro": {
-    "m_name": "📞 Khaas: baat 20%",
+    "m_name": "📞 Khaas log · SIM call · baat dheemi",
     "m_description": "Chune hue contacts se baat shuru hote hi (call aap ki ho ya un ki) call ki awaaz 20%; call khatam = pehle wali awaaz. Contacts: 'Call active' trigger par tap kar ke chunein. WhatsApp: 'Notification' trigger ke Title mein NAAM1|NAAM2 ki jagah contacts ke naam likhein (WhatsApp mein jaise save hain, | se alag).",
     "m_GUID": 0, "m_enabled": True, "m_completed": True, "aiGenerated": 0, "m_category": "Claude",
     "m_triggerList": [{"m_classType": "CallActiveTrigger", "m_SIGUID": B1, "m_option": 0, "m_contactList": []}, waOn,
