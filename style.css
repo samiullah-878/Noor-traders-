@@ -8765,6 +8765,13 @@ html body #lvDlg .lv-tools button.lv-q.bad{background:linear-gradient(180deg,#7f
 #btDlg .bt-xc .bt-tg{height:34px;white-space:nowrap}
 #btDlg .bt-xc .bt-alx{height:34px!important;min-height:0!important;padding:0 10px!important}
 html.dk #btDlg .bt-xc input{background:#1b2436;border-color:#2a3650;color:#e6edf8}
+/* v2.398.0: 🌐 seedha camera (NVR ke baghair) — naam | IP | Rec | HD | ✕ · neeche password + haal */
+#btDlg .bt-xc.dc{grid-template-columns:minmax(0,1fr) minmax(0,1.15fr) auto auto auto;padding:6px;border:1px dashed #7aa7e8;border-radius:13px;background:linear-gradient(180deg,#f3f8ff,#eaf2ff)}
+#btDlg .bt-xc.dc [data-xpw],#btDlg .bt-xc.dc .bt-xst{grid-column:1/-1}
+#btDlg .bt-xc.dc .bt-xst{font-size:12.5px;line-height:1.35;color:#3b4a66}
+#btDlg .bt-xc.dc .bt-xst.ok{color:#137a3a}#btDlg .bt-xc.dc .bt-xst.bad{color:#b42318}
+html.dk #btDlg .bt-xc.dc{background:linear-gradient(180deg,#16233a,#132034);border-color:#35558a}
+html.dk #btDlg .bt-xc.dc .bt-xst{color:#b9c6dc}html.dk #btDlg .bt-xc.dc .bt-xst.ok{color:#5fd38d}html.dk #btDlg .bt-xc.dc .bt-xst.bad{color:#ff8a80}
 html.dk #btDlg select[data-wg-gd],html.dk #btDlg .bt-wgrow select,html.dk #btDlg .bt-wgrow input{background:#1b2436;border-color:#2a3650;color:#e6edf8}
 /* ===== 🎬 v2.327.0 FACTORY VIDEO (fac-video.js) — tasveer + 🤖 AI crop · Urdu awaaz wali video · kholo + bhejo ===== */
 .fv-root{display:flex;flex-direction:column;gap:8px;min-width:0}

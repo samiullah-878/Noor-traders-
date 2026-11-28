@@ -1,5 +1,7 @@
 // =========================================================
-//  live-cam.js  v2.10 (2026-11-27, malik: 'live ki jo video ban rahi hai us par bhi lagao · rates nahi · fonts clear — background nazar aaye'):
+//  live-cam.js  v2.11 (2026-11-28, malik: 'galla camera direct system mein'): 🌐 SEEDHA camera — billClip.xc[] par ip + pw (bill-clip v2.24) = live
+//    camera ke apne IP se (recording ki copy ho to wahi); NVR ka IP / 401 is par asar nahi, is ka 401 = sirf usi camera ka live ruka.
+//  v2.10 (2026-11-27, malik: 'live ki jo video ban rahi hai us par bhi lagao · rates nahi · fonts clear — background nazar aaye'):
 //    📼 sab cameras ki recording mein COUNTER khane par bill ki items (naam + tadad, rate KABHI nahi) — chhape bill (posSaleLines) se, har item apne
 //    ADD waqt (posAdds) par; likhai safed + 3px kala kinara, dabba nahi. Tukra ab 4-9 min peeche (bill chhapne ka intezar). Filter ab file se
 //    (-filter_complex_script — lambi likhai command line ki hadd se bahar). Bill ki likhai se video na bane = 1 ghanta bina naam (video kabhi na ruke).
@@ -81,7 +83,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter, srBuild, srGrid, srTs, dlDiff, iceOf }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.10';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.11';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -183,18 +185,20 @@ biz.collection('blueAccess').doc('turnKey').onSnapshot(s => {
 let CF = { on: false, kind: 'dahua', ip: '', port: 554, user: 'admin', pw: '', ch: {} }, cfSig = '', AUTHBAD = 0;
 biz.collection('blueAccess').doc('billClip').onSnapshot(s => {
   const d = s.exists ? s.data() || {} : {};
-  CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
+  CF = { on: d.on !== false && !!d.ip, onSw: d.on !== false, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), ch: (d.ch && typeof d.ch === 'object') ? d.ch : {},
-    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => ({ n: String((x && x.n) || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x && x.ch) || 0), r: x && x.r ? 1 : 0 })).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v1.8
+    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => { x = x || {}; const o = { n: String(x.n || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x.ch) || 0), r: x.r ? 1 : 0 }; const ip = String(x.ip || '').trim(); if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) { o.ip = ip; o.port = Math.max(1, Math.min(65535, Number(x.port) || 554)); o.u = String(x.u || 'admin').trim() || 'admin'; o.pw = String(x.pw || ''); } return o; }).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v1.8 · v2.11: 🌐 seedha camera (ip) — bill-clip v2.24 jaisa
     gc: (Array.isArray(d.gc) ? d.gc : []).map(x => ({ g: Math.floor(Number(x && x.g) || 0), c: String((x && x.c) || '').trim().slice(0, 30), i: Number(x && x.i) === 2 ? 2 : 1 })).filter(x => x.g > 0 && x.c && x.c !== '-') };   // v1.9: 🏬 gate pass godam camera
   try { CF.rdrv = require('./rec-dir.js').letter(d.rdrv); } catch { CF.rdrv = ''; }   // v2.3: 📼 sab cameras ki recording usi drive par
-  const sig = [CF.kind, CF.ip, CF.port, CF.user, CF.pw, Number(d.at) || 0].join('|');
+  const sig = [CF.kind, CF.ip, CF.port, CF.user, CF.pw, Number(d.at) || 0].join('|') + JSON.stringify(CF.xc.filter(x => x.ip));   // v2.11: 🌐 seedha camera badla = pipes dobara
   if (sig !== cfSig) { cfSig = sig; AUTHBAD = 0; for (const p of pipes.values()) stopPipe(p, 'setting badli'); }
   srcSync(); try { pushSt(true); } catch {}   // v1.9: godam cameras ki list (mo) app tak
   log(`⚙️ setting: ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length}`);
 }, e => log('⚠️ setting: ' + e.message));
 const credOf = x => String(x || '').replace(/[\s/?#]/g, c => encodeURIComponent(c));   // bill-clip v1.4 jaisa: ffmpeg %-decode nahi karta
-function liveUrl(ch, main) { const u = credOf(CF.user), p = credOf(CF.pw); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${main ? 1 : 2}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${main ? 0 : 1}`; }
+const dcOf = ch => (CF.xc || []).find(x => x.ip && x.ch === Number(ch)) || null;   // v2.11: 🌐 seedha camera (NVR ke baghair, apne IP par)
+function liveUrl(ch, main) { const dc = dcOf(ch); if (dc) return `rtsp://${credOf(dc.u)}:${credOf(dc.pw)}@${dc.ip}:${dc.port}/cam/realmonitor?channel=1&subtype=${main ? 0 : 1}`;
+  const u = credOf(CF.user), p = credOf(CF.pw); return CF.kind === 'hik' ? `rtsp://${u}:${p}@${CF.ip}:${CF.port}/Streaming/Channels/${ch}0${main ? 1 : 2}` : `rtsp://${u}:${p}@${CF.ip}:${CF.port}/cam/realmonitor?channel=${ch}&subtype=${main ? 0 : 1}`; }
 function warnViewers(p, why) { for (const [id, v] of viewers) if (v.pipe === p && v.warn !== why) { v.warn = why; REQ.doc(id).set({ warn: why, warnAt: Date.now() }, { merge: true }).catch(() => {}); } }   // v1.1: asal wajah app ko (khamosh nahi)
 const PN = require('./pc-names.js'); PN.start(biz);   // v1.5: counter ka naam NT-PRINT se — purane naam ka channel bhi
 const xcOf = n => { const s = String(n || '').trim().toLowerCase(), x = (CF.xc || []).find(v => v.n.toLowerCase() === s); return x ? x.ch : 0; };   // v1.8: 📹 mazeed camera
@@ -254,6 +258,7 @@ function relay(x, w, m, ki, ok) {   // v2.6: dabba bhar jaye to beech se tukre n
 }
 function srcSync() {
   const want = new Set(); if (CF.on && CF.ip) { for (const v of Object.values(CF.ch)) if (Number(v) > 0 && Number(v) < 1000) want.add(Number(v)); for (const x of CF.xc || []) if (x.r) want.add(x.ch); }   // v1.8: recording wale mazeed camera ki copy bhi
+  if (CF.onSw) for (const x of CF.xc || []) if (x.r && x.ip) want.add(x.ch);   // v2.11: 🌐 seedha camera ki recording copy (NVR ka IP na ho tab bhi)
   for (const [ch, x] of srcs) if (!want.has(ch)) { try { x.sock.close(); } catch {} srcs.delete(ch); }
   for (const ch of want) {
     if (srcs.has(ch)) continue;
@@ -302,6 +307,7 @@ function startPipe(ch, codec) {
       if (sx) sx.subs.delete(proc.stdin);
       p.ff = null; const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
       if (p.stopped) return;
+      if (/401/.test(why) && dcOf(ch)) { const w2 = '🌐 ' + dcOf(ch).n + ': camera ka password ghalat (401) — malik ⚙️ mein theek karein'; p.err = w2; log(`⛔ live ch ${ch} (🌐): 401`); failViewers(p, w2); closePipe(p); return; }   // v2.11: seedha camera ka 401 baqi live nahi rokta
       if (/401/.test(why)) { AUTHBAD = Date.now(); p.err = why; log(`⛔ live ch ${ch}: 401 — ruka (setting badlein)`); failViewers(p, why); closePipe(p); return; }
       if (p.pk > 100) { p.tries = 0; p.wait = 0; }   // v1.2: video chal rahi thi — nayi ginti
       p.tries++; p.err = why; log(`🎞 live ch ${ch} ruki (${why})`); try { p.sock && p.sock.close(); } catch {} p.sock = null;
@@ -832,10 +838,11 @@ function endViewer(id, why) {
 }
 async function answer(id, r) {
   const fail = why => REQ.doc(id).set({ st: 'err', err: why, doneAt: Date.now() }, { merge: true }).catch(() => {});
-  if (!CF.on || !CF.ip) return fail('Camera setup band / NVR ka IP nahi (malik ⚙️)');
-  if (AUTHBAD) return fail('NVR ka user / password ghalat (401) — malik ⚙️ mein theek karein');
   const dl = /~$/.test(String(r.pc || '')), pcN = dl ? String(r.pc).slice(0, -1) : String(r.pc || '');   // v2.7: ⏪ '~' = saaf (recording files se, ~2 min peeche)
   const isMo = isMoPc(pcN);   // v1.9: 🏬 sab godam cameras ek saath · v2.0: 🎛 '@sab' = sab cameras
+  const dcam = !isMo && CF.onSw ? dcOf(xcOf(pcN)) : null;   // v2.11: 🌐 seedha camera — NVR ka IP / 401 nahi dekhta
+  if (!dcam && (!CF.on || !CF.ip)) return fail('Camera setup band / NVR ka IP nahi (malik ⚙️)');
+  if (!dcam && AUTHBAD) return fail('NVR ka user / password ghalat (401) — malik ⚙️ mein theek karein');
   const ch = isMo ? (pcN === ALL ? 'ma' : 'mo') : chOf(pcN); if (!ch) return fail(`"${pcN || '?'}" counter ka camera channel ⚙️ mein nahi`);
   if (viewers.size >= MAX_V) return fail(`Abhi ${MAX_V} log dekh rahe hain — thori der baad`);
   const w = werift(); if (!w) return fail('WebRTC abhi install ho raha hai — 1-2 min baad dobara');

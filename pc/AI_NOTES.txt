@@ -6272,3 +6272,25 @@ APP (shot-diary.js v1.0, ☰ #sdNav sirf malik; app.js sdCtx + bg 25 s baad shRe
  - Test: node parseAi / waOf / byLink · headless Chrome nakli cloud: 2 ban gayin + 1 bank mit, recipe lists, search, menu, Esc, poori tasveer, chhupao, band.
 RULES 2.114: shotIn create bina login (id regex, keys hasOnly, im bytes < 900 KB, st new, k == awazKey) · read / delete / st update sirf malik · shotNote sirf malik.
 Phone par azmaya nahi. AI: haan (sirf detail nikalne mein, malik ki Gemini key).
+
+=== v2.398.0 (2026-11-28) — 🌐 SEEDHA CAMERA (NVR ke baghair) · PC bill-clip v2.24 + live-cam v2.11 ===
+Malik ne DMSS ki 2 screenshot bheji (camera 'galla', Wi-Fi TP-Link_640C, PTZ, Online): 'es camera ko add karna ha' -> 'direct system ma na sakta?' -> 'OK
+or es ki recording kaise ho gi, wo bi karni ha'. Galla camera NVR mein nahi, alag Wi-Fi par — hamara system pehle sirf NVR ke channel jaanta tha.
+APP (tally.js ⚙️ Camera setup, sirf malik):
+ - 📹 Mazeed cameras ke neeche naya chip '＋ 🌐 Seedha camera (IP)' -> dcRow: naam · IP (192.168.x.x ya ip:port) · ⏺ Rec (naye par ON) · 🎞 · ✕,
+   neeche 🔑 password (type password) + PC ka rabta test (billClipPc.dct: ✅ seedhi video mili · ⏺ recording / ✕ wajah / ⏳ Save ke baad).
+ - Save: billClip.xc[] = {n, ch, r, ip, port, u 'admin', pw} — ch = pakka number 901–916 (purana rakha jata, naya = sab se chhota khali); NVR wale
+   camera ka channel ab 1–899 (900+ seedhe camera ke). Password sirf blueAccess/billClip (malik-only doc — NVR password jaisa).
+ - Recording line par 'ch 901' ki jagah naam (chNm: 🌐 Galla / 📹 Godam 1). CSS #btDlg .bt-xc.dc (dashed neela dabba).
+PC bill-clip v2.24:
+ - xcParse: ip ho = seedha camera (dcOf). liveUrl = rtsp://admin:pw@ip:port/cam/realmonitor?channel=1&subtype=<sub> (Dahua).
+ - recording WAHI: clip-rec\ch901\ 1-1 min + live copy udp 48500+ch (49401…) -> 🎛 Sab cameras / ⏪ / WhatsApp live / waqt ki video / 🎥 bill tally ka
+   doosra camera — sab bina kisi aur code ke. recSync: NVR ke channel sirf nvrOk par, seedha camera sirf CF.onSw (system ON) + DCBAD nahi.
+ - NVR ka AUTHBAD / NETBAD seedhe camera ko nahi rokta; seedhe camera ka 401 = SIRF woh camera ruka (DCBAD) jab tak IP / password na badle
+   (har koshish par 401 = Dahua camera lock — NVR wala qaida).
+ - Save par (dcSig badla) ek dafa dcTestAll: password mein / ? # % space = saaf wajah · TCP ip:port · 2 s video -> DCT -> billClipPc.dct.
+   📸 tasveer (WhatsApp live) bhi dcOf dekh kar NVR ki shart chhorti hai, ghalti = dcHint.
+PC live-cam v2.11: xc parse mein ip · liveUrl dcOf · srcSync seedhe camera ki recording copy (NVR IP na ho tab bhi) · answer() seedhe camera par NVR ka
+   IP / 401 nahi dekhta · seedhe camera ka 401 baqi live ko nahi rokta.
+Test: node — xcParse / liveUrl / dcOf (Galla 901 + NVR ch 4 + ghalat IP), app IP parse (ip, ip:port, khali / ghalat). Asal camera par azmaya NAHI.
+Shart (malik ko bataya): server PC aur camera ek router / network par; IP DMSS -> galla -> Device info / Network; sirf Dahua. AI: nahi.
