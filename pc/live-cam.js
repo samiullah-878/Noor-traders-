@@ -1,5 +1,6 @@
 // =========================================================
-//  live-cam.js  v2.12 (2026-11-28 raat: 🛰 serial number wala camera — billClip.xc[].sn = 127.0.0.1:15000+ch (bill-clip v2.26 ki dh-p2p surang) · v2.11 (2026-11-28, malik: 'galla camera direct system mein'): 🌐 SEEDHA camera — billClip.xc[] par ip + pw (bill-clip v2.24) = live
+//  live-cam.js  v2.13 (2026-11-28 raat, malik ki screenshot: NVR tak rasta nahi = 🎛 Sab cameras poori kaali, seedha camera bhi): mosaic mein band camera / NVR = SIRF us ka khana khali (moProbe TCP 1.5 s + MO_BAD 2 min), baqi chalte hain; mo.o = band khane.
+//  v2.12 (2026-11-28 raat: 🛰 serial number wala camera — billClip.xc[].sn = 127.0.0.1:15000+ch (bill-clip v2.26 ki dh-p2p surang) · v2.11 (2026-11-28, malik: 'galla camera direct system mein'): 🌐 SEEDHA camera — billClip.xc[] par ip + pw (bill-clip v2.24) = live
 //    camera ke apne IP se (recording ki copy ho to wahi); NVR ka IP / 401 is par asar nahi, is ka 401 = sirf usi camera ka live ruka.
 //  v2.10 (2026-11-27, malik: 'live ki jo video ban rahi hai us par bhi lagao · rates nahi · fonts clear — background nazar aaye'):
 //    📼 sab cameras ki recording mein COUNTER khane par bill ki items (naam + tadad, rate KABHI nahi) — chhape bill (posSaleLines) se, har item apne
@@ -348,17 +349,26 @@ function allList() {   // v2.0: 🎛 counter (bill) → godam (gate pass) → ba
   for (const x of CF.xc || []) { if (sC.has(x.ch)) continue; sC.add(x.ch); out.push({ n: x.n, ch: x.ch, k: 'x', g: 0 }); }
   return out.slice(0, ALL_MAX);
 }
-const moObj = p => ({ c: p.grid.c, r: p.grid.r, n: p.list.map(x => x.n), k: p.list.map(x => x.k || 'g'), g: p.list.map(x => x.g || 0), tw: p.tw || MO_T.w, th: p.th || MO_T.h });
+const moObj = p => ({ c: p.grid.c, r: p.grid.r, o: p.list.map((_, i) => p.off && p.off[i] ? 1 : 0), n: p.list.map(x => x.n), k: p.list.map(x => x.k || 'g'), g: p.list.map(x => x.g || 0), tw: p.tw || MO_T.w, th: p.th || MO_T.h });
 function moGrid(n) { return n <= 1 ? [1, 1] : n === 2 ? [2, 1] : n <= 4 ? [2, 2] : n <= 6 ? [3, 2] : [3, 3]; }
-function moFilter(n, w, h, fps) {   // har camera = ek khana (barabar naap, kaali patti), khali khane = gehra rang
-  const [c, r] = moGrid(n), parts = [], lab = [], lay = [];
+function moFilter(n, w, h, fps, off) {   // v2.13: off[i] = band camera -> khali khana (input nahi)   // har camera = ek khana (barabar naap, kaali patti), khali khane = gehra rang
+  const [c, r] = moGrid(n), parts = [], lab = [], lay = []; let k = 0;
   for (let i = 0; i < c * r; i++) {
-    if (i < n) parts.push(`[${i}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x0b0f16,setsar=1[v${i}]`);
+    if (i < n && !(off && off[i])) parts.push(`[${k++}:v]fps=${fps},scale=${w}:${h}:force_original_aspect_ratio=decrease,pad=${w}:${h}:(ow-iw)/2:(oh-ih)/2:color=0x0b0f16,setsar=1[v${i}]`);
     else parts.push(`color=c=0x0b0f16:s=${w}x${h}:r=${fps}[v${i}]`);
     lab.push(`[v${i}]`); lay.push(`${(i % c) * w}_${Math.floor(i / c) * h}`);
   }
   parts.push(c * r === 1 ? `[v0]null[out]` : `${lab.join('')}xstack=inputs=${c * r}:layout=${lay.join('|')}[out]`);
   return { c, r, f: parts.join(';') };
+}
+const MO_BAD = new Map();   // v2.13: ch -> kab tak 'band' (RTSP se video nahi mili)
+function moProbe(ch) {   // camera / NVR ke RTSP port par chhota TCP sawal (1.5 s) — rasta na ho to ffmpeg ka 10 s intezar + poori mosaic ka girna nahi
+  const dc = dcOf(ch), host = dc ? dc.ip : CF.ip, port = Number(dc ? dc.port : CF.port) || 554;
+  return new Promise(res => {
+    if (!host) return res(false); let d = 0, s;
+    const fin = v => { if (d) return; d = 1; try { s && s.destroy(); } catch {} res(v); };
+    try { s = net.connect({ host: String(host), port }); s.setTimeout(1500, () => fin(false)); s.on('connect', () => fin(true)); s.on('error', () => fin(false)); } catch { fin(false); }
+  });
 }
 let MO_FASTBAD = 0;   // v2.1: TCP + yaad wala tareeqa na chale = purana UDP
 function moTcp(p, ch) {   // ek input = ek chhota TCP darwaza (sirf 127.0.0.1); ffmpeg jure = pehle yaad wala hissa, phir chalti line
@@ -381,16 +391,29 @@ function startMosaic(codec, kind) {
   const ff = ffPath(); if (!ff) { p.err = 'ffmpeg abhi nahi (bill-clip install kar raha)'; return p; }
   const L = kind === 'a' ? allList() : moList(); if (!L.length) { p.err = kind === 'a' ? 'Koi camera ⚙️ Camera setup mein nahi (counter ↔ camera jorein)' : 'Godam ka koi camera ⚙️ Camera setup mein nahi (gate pass godam camera / 📦 Loading ginti / naam mein "godam")'; pipes.delete(key); return p; }
   const T = L.length > 6 ? ALL_T : MO_T, FPS = L.length > 6 ? ALL_FPS : MO_FPS, PB = MO_PORT[codec] + (kind === 'a' ? 20 : 0);
-  const { c, r, f } = moFilter(L.length, T.w, T.h, FPS); p.list = L; p.grid = { c, r }; p.tw = T.w; p.th = T.h;
+  const { c, r } = moFilter(L.length, T.w, T.h, FPS); p.list = L; p.grid = { c, r }; p.tw = T.w; p.th = T.h;
   const sock = dgram.createSocket('udp4'); p.sock = sock; p.pk = 0; p.pkSeen = 0; p.pkAt = Date.now(); p.sq = undefined;
   sock.on('message', m => { p.pk++; for (const t of p.tracks) { try { t.writeRtp(m); } catch {} } });
   sock.bind(0, '127.0.0.1', () => {
     try { sock.setRecvBufferSize(BUF); } catch {}
     const port = sock.address().port, inArgs = [], how = []; moUnfw(p);
     const fast = !(MO_FASTBAD && Date.now() - MO_FASTBAD < 10 * 60000) && !process.env.LIVE_TEST_SRC; p.fast = fast;   // v2.8: 10 min baad tez raasta khud dobara
-    Promise.all(L.map(x => fast && shareOk(x.ch) ? moTcp(p, x.ch) : 0)).then(tp => {
+    Promise.all(L.map(x => fast && shareOk(x.ch) ? moTcp(p, x.ch) : 0)).then(async tp => {
+    // v2.13: jis camera ki recording wali line nahi aur RTSP tak rasta bhi nahi (ya abhi nakaam hua) = us ka khana khali, baqi chalein
+    const pc = new Map(), off = [];
+    for (let i = 0; i < L.length; i++) {
+      const ch = L[i].ch; if (process.env.LIVE_TEST_SRC || tp[i] || shareOk(ch)) { off.push(0); continue; }
+      if ((MO_BAD.get(ch) || 0) > Date.now()) { off.push(1); continue; }
+      const dc = dcOf(ch), hk = dc ? dc.ip + ':' + dc.port : 'nvr'; if (!pc.has(hk)) pc.set(hk, moProbe(ch)); off.push((await pc.get(hk)) ? 0 : 1);
+    }
     if (p.stopped || p.sock !== sock) { moUnfw(p); return; }
+    p.off = off; p.rt = [];
+    if (off.every(Boolean)) { const why = 'Koi camera nahi chal raha — NVR / camera tak PC ka rasta nahi (taar / IP dekhein)'; p.err = why; log('📵 ' + moLab(p) + ': sab camera band'); failViewers(p, why); closePipe(p); return; }
+    const f = moFilter(L.length, T.w, T.h, FPS, off).f;
+    if (off.some(Boolean)) { const nm = L.filter((_, i) => off[i]).map(x => x.n).join(', '); log('📵 ' + moLab(p) + ': band = ' + nm + ' (khana khali, baqi chal rahe)'); warnViewers(p, '📵 Band: ' + nm + ' — baqi cameras chal rahe'); }
+    moTell(p);
     L.forEach((x, i) => {
+      if (off[i]) { how.push('band'); return; }
       const pre = ['-thread_queue_size', '512', '-probesize', '1000000', '-analyzeduration', '1000000', '-use_wallclock_as_timestamps', '1', '-fflags', 'nobuffer+discardcorrupt'];   // v2.7: -skip_loop_filter hata (dhabbe) · probe 1 s: inputs ek ek khulte hain (default = 4 camera ~25 s intezar, ab ~7 s)
       if (process.env.LIVE_TEST_SRC) { inArgs.push('-re', '-f', 'lavfi', '-i', `testsrc=size=704x576:rate=15`); how.push('test'); return; }
       if (tp[i]) { inArgs.push(...pre, '-f', 'mpegts', '-i', `tcp://127.0.0.1:${tp[i]}`); how.push('rec⚡'); return; }   // v2.1
@@ -399,7 +422,7 @@ function startMosaic(codec, kind) {
         const obj = { writable: true, writableLength: 0, _skip: kOk(srcs.get(x.ch), Date.now()) ? 1 : 0, write: m => { try { fs2.send(m, fp, '127.0.0.1'); } catch {} } };
         srcs.get(x.ch).subs.add(obj); p.fw.push({ ch: x.ch, obj, sock: fs2 });
         inArgs.push(...pre, '-f', 'mpegts', '-i', `udp://127.0.0.1:${fp}?fifo_size=1000000&overrun_nonfatal=1&buffer_size=8388608`); how.push('rec');
-      } else { inArgs.push(...pre, '-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', liveUrl(x.ch, false)); how.push('rtsp'); }
+      } else { const u = liveUrl(x.ch, false); p.rt.push({ ch: x.ch, n: x.n, t: u.replace(/^rtsp:\/\/[^@]*@/, '') }); inArgs.push(...pre, '-rtsp_transport', 'tcp', '-timeout', '10000000', '-i', u); how.push('rtsp'); }
     });
     p.how = how; const br = Math.round(400 + 220 * L.length);
     const enc = codec === 'vp8' ? ['-c:v', 'libvpx', '-deadline', 'realtime', '-cpu-used', '8', '-b:v', br + 'k', '-g', String(FPS * 2), '-error-resilient', '1']
@@ -411,6 +434,9 @@ function startMosaic(codec, kind) {
     proc.on('close', code => {
       moUnfw(p); p.ff = null; const why = hint((err.trim().split(/\r?\n/).filter(Boolean).pop() || `ffmpeg code ${code}`).replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'));
       if (p.stopped) return;
+      // v2.13: ek RTSP camera nakaam = 2 min 'band', mosaic us ke baghair foran dobara (koshish nahi ginti)
+      const bad = !/401/.test(why) && (p.rt || []).find(x => err.includes(x.t));
+      if (bad && (p.off || []).filter(v => !v).length > 1) { MO_BAD.set(bad.ch, Date.now() + 120000); log(`📵 ${moLab(p)}: ${bad.n} se video nahi (${why}) — us ke baghair dobara`); try { p.sock && p.sock.close(); } catch {} p.sock = null; if (p.tracks.size || (p.idleAt && Date.now() - p.idleAt < 60000)) setTimeout(() => { if (!p.stopped) startMosaic(codec, kind); }, 300); else closePipe(p); return; }
       if (p.fast && !p.pk && !/401/.test(why) && (p.how || []).includes('rec⚡') && !/rtsp:\/\//.test(why)) { MO_FASTBAD = Date.now(); log(`⚡ ${moLab(p)}: tez tareeqa nahi chala (${why}) — purana tareeqa`); try { p.sock && p.sock.close(); } catch {} p.sock = null; if (p.tracks.size || (p.idleAt && Date.now() - p.idleAt < 60000)) setTimeout(() => { if (!p.stopped) { startMosaic(codec, kind); moTell(p); } }, 300); else closePipe(p); return; }
       if (/401/.test(why)) { AUTHBAD = Date.now(); p.err = why; log('⛔ live ' + moLab(p) + ': 401 — ruka (setting badlein)'); failViewers(p, why); closePipe(p); return; }
       if (p.pk > 100) p.tries = 0;

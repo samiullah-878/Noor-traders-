@@ -25,7 +25,7 @@
 //  mein likhta hai (MacroDroid, chaabi blueAccess/awazKey) → yahan 📊 Hisaab ki har line par ☑ (popup) + 📸 (AI photo) alag. Phone ko link + chaabi
 //  (ntU / ntK, `nt_notes` — wahi jo 🎙 Meri baatein bhejti hai) yeh screen bhi din mein ek dafa bhejti hai. AI nahi (tick sirf ginti).
 // =========================================================
-import { firebaseConfig as F } from './config.js?v=2.400.0';
+import { firebaseConfig as F } from './config.js?v=2.401.0';
 const K = {
   paani: { i: '💧', t: 'Paani ka glass', d: 'a glass, cup or bottle with drinking water in it' },
   coffee: { i: '☕', t: 'Coffee ka cup', d: 'a cup or mug of coffee (hot or cold, coffee liquid visible)' },

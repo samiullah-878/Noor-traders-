@@ -1,5 +1,6 @@
 // ============================================================
-//  dh-p2p.js  v1.0 (2026-11-28) — 🛰 Dahua camera SERIAL NUMBER se (P2P surang) — AZMAISH
+//  dh-p2p.js  v1.1 (2026-11-28 raat, malik ki screenshot '403 [channel]' sahi password par): camera ka namak (randsalt) 3 dafa maango; na mile = saaf 'namak nahi mila' (password ka ilzam nahi) + line mein login ka haal {namak · server ka jawab}.
+//  v1.0 (2026-11-28) — 🛰 Dahua camera SERIAL NUMBER se (P2P surang) — AZMAISH
 //  Malik: 'doosri factory ka camera — IP ke baghair, DMSS jaisa · serial number se'.
 //  Kaam: camera ka serial number + username / password -> Dahua ke P2P raaste (Easy4ip cloud + PTCP, UDP) se
 //        PC par 127.0.0.1:<port> ek TCP darwaza -> us par camera ka RTSP (554) milta hai. bill-clip / live-cam
@@ -102,9 +103,16 @@ async function handshake(t) {
     if (on.code >= 400) throw fail(on.code === 404 ? 'Yeh serial number Dahua ke server par nahi mila — number dobara dekhein / camera online hai?' : 'Dahua server: ' + on.code + ' ' + on.status);
     const p2psrv = tag(on.xml, 'US'); if (!p2psrv) throw fail('Camera Dahua ke server par online nahi (P2P band / internet nahi)');
     // camera ka namak (password ki tasdeeq ke liye)
-    let salt = '';
-    try { const P = await mk(p2psrv); await ask(st, P, '/probe/device/' + t.sn, '', 5000); dhReq(st, P, '/info/device/' + t.sn); const r = await dhRead(P, 5000, true); if (r.code < 300) salt = String(infoOf(tag(r.xml, 'Info')).randsalt || ''); P.close(); }
-    catch (e) { if (/DH 4/.test(e.message)) throw fail('Camera is waqt online nahi (Dahua server: ' + e.message.slice(3) + ')'); }
+    let salt = '', sdg = '';
+    for (let k = 0; k < 3 && !salt; k++) {   // v1.1: namak ke baghair sahi password bhi 403 deta hai — 3 dafa maango, haal yaad rakho
+      let P = null;
+      try {
+        P = await mk(p2psrv); await ask(st, P, '/probe/device/' + t.sn, '', 5000); dhReq(st, P, '/info/device/' + t.sn); const r = await dhRead(P, 5000, true);
+        if (r.code < 300) { const inf = infoOf(tag(r.xml, 'Info')); salt = String(inf.randsalt || ''); sdg = salt ? 'namak mila' : 'namak NAHI (info: ' + (Object.keys(inf).join(',').slice(0, 40) || 'khali') + ')'; }
+        else sdg = 'namak NAHI (server ' + r.code + ')';
+      } catch (e) { if (/DH 4/.test(e.message)) throw fail('Camera is waqt online nahi (Dahua server: ' + e.message.slice(3) + ')'); sdg = 'namak NAHI (' + String(e.message).slice(0, 20) + ')'; }
+      finally { try { P && P.close(); } catch {} }
+    }
     const relay = tag((await ask(st, A, '/online/relay')).xml, 'Address'); if (!relay) throw fail('Dahua ka relay server nahi mila');
     const B = await mk(MAIN);
     t.step = 'channel';
@@ -118,7 +126,11 @@ async function handshake(t) {
     if (res.code < 200) res = await dhRead(B, 12000, true).catch(e => { throw fail('Camera ne jawab nahi diya (camera offline / net kamzor)', e); });
     if (res.code >= 400) {
       if (res.code === 403 && !t.auth) { t.auth = true; const e = fail('camera password maangta hai — dobara'); e.again = 1; throw e; }
-      if (res.code === 403 || res.code === 401) { const e = fail('Camera ka username / password ghalat (ya camera ne mana kiya: ' + res.code + ')'); e.bad = 1; throw e; }
+      if (res.code === 403 || res.code === 401) {
+        const dg = ' {' + sdg + ' · ' + res.code + ' ' + String(res.status || '').replace(/[^\w .-]/g, '').slice(0, 24) + '}';
+        if (!salt) throw fail('Camera ka namak Dahua server se nahi mila — login nahi bana (password ka masla nahi)' + dg);
+        const e = fail('Camera ne login nahi mana — username / password dekhein' + dg); e.bad = 1; throw e;
+      }
       throw fail('Camera: ' + res.code + ' ' + res.status);
     }
     let dLocal = tag(res.xml, 'LocalAddr'); const dPub = tag(res.xml, 'PubAddr'), rNonce = tag(res.xml, 'Nonce');

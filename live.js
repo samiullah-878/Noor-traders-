@@ -120,11 +120,11 @@ function moGo(p) {   // v2.348.0
 function moPaint(mo) {   // v2.348.0: video ke upar har khane par naam — tap = wohi camera
   const body = $('lvDlg')?.querySelector('.lv-body'); if (!body) return; let e = $('lvMo');
   if (!mo || !Array.isArray(mo.n) || !mo.n.length) { if (e) e.remove(); tlStop(); tbStop(); const cb = $('lvCols'); if (cb) cb.hidden = true; return; }
-  const c = Math.max(1, Number(mo.c) || 1), r = Math.max(1, Number(mo.r) || 1), sig = JSON.stringify([c, r, mo.n, mo.k || 0, mo.g || 0]), K = Array.isArray(mo.k) ? mo.k : [];
+  const c = Math.max(1, Number(mo.c) || 1), r = Math.max(1, Number(mo.r) || 1), sig = JSON.stringify([c, r, mo.n, mo.k || 0, mo.g || 0, mo.o || 0]), K = Array.isArray(mo.k) ? mo.k : [];
   if (e && e.dataset.sig === sig) return;
   if (!e) { e = document.createElement('div'); e.id = 'lvMo'; e.className = 'lv-mo tl'; const v = $('lvVid'); v ? v.after(e) : body.append(e); tlWire(e); }
   e.dataset.sig = sig; TL.mo = mo; TL.c = c; TL.r = r;
-  e.innerHTML = `<div class="lv-tlg">${tlOrder(mo).map(i => `<button type="button" class="lv-mot" data-lv-mo="${esc(mo.n[i])}" data-i="${i}"><canvas></canvas><span>${K[i] === 'c' ? '🖥 ' : K[i] === 'g' ? '🏬 ' : K.length ? '📹 ' : ''}${esc(mo.n[i])}</span><div class="lv-tb" data-tb="${i}"></div><div class="lv-tbc" data-tbc="${i}"></div><div class="lv-mv"><b data-lv-mv="-1">▲</b><b data-lv-mv="1">▼</b><b data-lv-mv="0">✓</b></div></button>`).join('')}</div>`;
+  e.innerHTML = `<div class="lv-tlg">${tlOrder(mo).map(i => `<button type="button" class="lv-mot" data-lv-mo="${esc(mo.n[i])}" data-i="${i}"><canvas></canvas><span>${K[i] === 'c' ? '🖥 ' : K[i] === 'g' ? '🏬 ' : K.length ? '📹 ' : ''}${esc(mo.n[i])}${Array.isArray(mo.o) && mo.o[i] ? ' · 📵 band' : ''}</span><div class="lv-tb" data-tb="${i}"></div><div class="lv-tbc" data-tbc="${i}"></div><div class="lv-mv"><b data-lv-mv="-1">▲</b><b data-lv-mv="1">▼</b><b data-lv-mv="0">✓</b></div></button>`).join('')}</div>`;
   const cb = $('lvCols'); if (cb) cb.hidden = false;
   tlLayout(); tlDraw();
   try { if (!localStorage.getItem('sam-lv-tlh')) { localStorage.setItem('sam-lv-tlh', '1'); notice('💡 Dabba daba kar rakhein = ▲ ▼ se upar neeche · ▦ = ek qatar mein kitne dabbe'); } } catch {}
