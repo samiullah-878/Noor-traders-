@@ -67,7 +67,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const RD = require('./rec-dir.js');   // v2.16: 💽 recording kahan
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.25';   // v2.25 (28 Nov raat, malik: 'jab bhi camera ka setup na chale to WhatsApp par SMS aa jaye, har ghante baad'): 📲 camAlarm — recording 10 min ruki = malik ko waOut rp-cam-* (kaun sa camera · kab se · wajah), har 1 ghante dobara, theek = '✅ chal pare'; billClip.wa false = band; haal cam-alarm.json (restart par dohra nahi). · v2.24 (28 Nov, malik: 'galla camera direct system mein · recording bhi'): 🌐 SEEDHA camera — 📹 mazeed camera par IP + password (billClip.xc[].ip / pw, malik-only doc) = PC camera se seedha RTSP (NVR ke baghair): recording (wahi clip-rec\ch<901+>), live ki copy, 📸 tasveer, WhatsApp live / waqt ki video sab wahi; NVR ka 401 / rasta is par asar nahi, is ka 401 = sirf yeh camera ruka (DCBAD); Save par ek dafa 🔎 rabta test (billClipPc.dct). · v2.23 (24 Nov): sirf pc-names v1.2 ke liye dobara shuru (KEIME1D ka camera ab RN6QU6D ka) · v2.22 (23 Nov raat, malik: 'recording ko PC mein save karne ki zaroorat nahi — sab cameras ki screen record ho'): billClip.rkd 1 se kam = GHANTE (0.125 = 3 ghante, kam az kam 3) — har camera ki alag recording sirf bill / gate pass video ke liye; lambi recording = live-cam v2.3 ki 🎛 Sab cameras wali ek video (sab-rec).
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.26';   // v2.26 (28 Nov raat, malik: 'doosri factory ka camera — IP ke baghair, serial number se, DMSS jaisa'): 🛰 AZMAISH — billClip.xc[].sn (serial) = dh-p2p.js surang (Dahua P2P) 127.0.0.1:15000+ch par, phir wohi 🌐 seedha camera wala raasta (recording / live copy / WhatsApp); surang na bane = wajah billClipPc.dct mein, recording us camera ki nahi (baqi wahi). · v2.25 (28 Nov raat, malik: 'jab bhi camera ka setup na chale to WhatsApp par SMS aa jaye, har ghante baad'): 📲 camAlarm — recording 10 min ruki = malik ko waOut rp-cam-* (kaun sa camera · kab se · wajah), har 1 ghante dobara, theek = '✅ chal pare'; billClip.wa false = band; haal cam-alarm.json (restart par dohra nahi). · v2.24 (28 Nov, malik: 'galla camera direct system mein · recording bhi'): 🌐 SEEDHA camera — 📹 mazeed camera par IP + password (billClip.xc[].ip / pw, malik-only doc) = PC camera se seedha RTSP (NVR ke baghair): recording (wahi clip-rec\ch<901+>), live ki copy, 📸 tasveer, WhatsApp live / waqt ki video sab wahi; NVR ka 401 / rasta is par asar nahi, is ka 401 = sirf yeh camera ruka (DCBAD); Save par ek dafa 🔎 rabta test (billClipPc.dct). · v2.23 (24 Nov): sirf pc-names v1.2 ke liye dobara shuru (KEIME1D ka camera ab RN6QU6D ka) · v2.22 (23 Nov raat, malik: 'recording ko PC mein save karne ki zaroorat nahi — sab cameras ki screen record ho'): billClip.rkd 1 se kam = GHANTE (0.125 = 3 ghante, kam az kam 3) — har camera ki alag recording sirf bill / gate pass video ke liye; lambi recording = live-cam v2.3 ki 🎛 Sab cameras wali ek video (sab-rec).
 // v2.20 (22 Nov, malik: 'sab model lagao godam wale cameras mein · HD kar do'): 🎞 HD recording — godam ke camera (📦 ginti / 🚪 gate pass / naam se) khud MAIN stream (HD) par record (isHd), malik ⚙️ se har camera HD on/off (billClip.hdc [{ch, hd 0|1}] — list, merge mein poori badalti); counter camera pehle jaisa chhota · HD badla = us channel ki recording naye stream se dobara · 🏬 godam ka HAR WAQIA = video: gintiEv (ginti-cam v2.0: ⬆ / ⬇ maal, 🧍 uthaya) → us godam ke 1-2 camera (gpCam) t0 − 20 s → t1 + 20 s (6 min tak) → billClip/gv~<evId> (+ gv~<evId>b) · 📹 0 (transfer note bana magar camera ne kuch nahi gina) = note ke waqt − 30 s → + 5 min billClip/gv~d-<key> (ms 1) · apni line (gvRun), SIRF apni recording · haal billClipPc.gv.
 // v2.21 (22 Nov, malik: 'AI ko filhal band kar do'): gintiCam.ai (1 = chalu) na ho = godam camera ka AUTO HD band (halki recording) + 🏬 waqie ki nayi video nahi. Malik ka 🎞 HD chip (hdc) phir bhi chalta hai. Recording / bill / gate pass video wahi.
 // v2.19 (21 Nov, malik: 'aik hi godam par two cameras hain — dono side by side dikha diya karo'): 🚪 har godam par 2 camera (billClip.gc [{g, c, i 1|2}], auto = 📦 ginti + naam se jitne milein, 2 tak) — har camera ki apni clip (doosra = billClip/<SaleID>~g<godam>b, ci 2), dono ka WAHI waqt · WhatsApp (group + 'video <bill>') = EK video mein ek ke upar doosra (640x720), akela = 640x360 · patti camera ki ghari ke neeche (y0 48). gpm mein cam2 / how2 / r2.
@@ -92,11 +92,18 @@ let cfReady = false;
 //   PC us ke apne IP se RTSP leta hai (Dahua: /cam/realmonitor?channel=1). ch = app ka diya pakka number 901–916 (recording folder ch<N> + live copy 48500+ch).
 //   NVR ka 401 / rasta (AUTHBAD / NETBAD) is par asar nahi; is ka 401 = SIRF yeh camera ruka (DCBAD) jab tak IP / password na badle (camera lock na ho).
 const IP4 = /^\d{1,3}(\.\d{1,3}){3}$/;
+let P2P = null; try { P2P = require('./dh-p2p.js'); } catch (e) { P2P = null; }   // v2.26: 🛰 serial number wala camera (Dahua P2P surang) — module na ho to yeh hissa band
 function xcParse(a) {
-  return (Array.isArray(a) ? a : []).map(x => { x = x || {}; const o = { n: String(x.n || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x.ch) || 0), r: x.r ? 1 : 0 }; const ip = String(x.ip || '').trim(); if (IP4.test(ip)) { o.ip = ip; o.port = Math.max(1, Math.min(65535, Number(x.port) || 554)); o.u = String(x.u || 'admin').trim() || 'admin'; o.pw = String(x.pw || ''); } return o; })
+  if (!P2P) { try { P2P = require('./dh-p2p.js'); } catch (e) { P2P = null; } }   // file baad mein aaye (doctor ki download) to agli setting par khud mil jaye
+  return (Array.isArray(a) ? a : []).map(x => { x = x || {}; const o = { n: String(x.n || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x.ch) || 0), r: x.r ? 1 : 0 }; const ip = String(x.ip || '').trim(); const sn = String(x.sn || '').trim().toUpperCase(); if (P2P && P2P.SN_RE.test(sn) && o.ch >= 901 && o.ch <= 916) { o.sn = sn; o.ip = '127.0.0.1'; o.port = P2P.PORT_OF(o.ch); o.u = String(x.u || 'admin').trim() || 'admin'; o.pw = String(x.pw || ''); } else if (IP4.test(ip)) { o.ip = ip; o.port = Math.max(1, Math.min(65535, Number(x.port) || 554)); o.u = String(x.u || 'admin').trim() || 'admin'; o.pw = String(x.pw || ''); } return o; })
     .filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16);
 }
 const dcOf = ch => (CF.xc || []).find(x => x.ip && x.ch === Number(ch)) || null;
+const p2pSt = ch => { const x = dcOf(ch); if (!x || !x.sn) return null; return (P2P && P2P.state(ch)) || { st: 'try', why: 'surang shuru ho rahi hai…' }; };   // v2.26: 🛰 serial wala camera — surang ka haal
+const p2pWait = ch => { const s = p2pSt(ch); return !!s && s.st !== 'ok'; };
+let p2pSig = '';
+setInterval(() => { try { if (!P2P || !CF.xc) return; const sg = (CF.xc || []).filter(x => x.sn).map(x => { const z = p2pSt(x.ch) || {}; return x.ch + ':' + z.st + ':' + z.why; }).join(';'); if (sg === p2pSig) return; const first = !p2pSig; p2pSig = sg; if (first && !sg) return;
+  if ((CF.xc || []).some(x => x.sn && !p2pWait(x.ch) && !(DCT.get(x.ch) || {}).ok)) dcTestAll().catch(() => {}); else { pushSt(true); recSync(); } } catch {} }, 5000);
 const DCBAD = new Map(), DCT = new Map(); let dcSig = '';   // ch → {at, err} (401 / ghalat password) · ch → rabta test {at, ok, err}
 function cfApply(d) {
   d = d || {};
@@ -114,7 +121,8 @@ let AUTHBAD = 0, cfSig = '', TEST = null;   // v1.3: 401 aaya = ruko jab tak use
 biz.collection('blueAccess').doc('billClip').onSnapshot(s => { const d0 = s.exists ? s.data() : null; cfApply(d0); try { recRoot(); } catch (e) { log('⚠️ jagah: ' + e.message); }
   // v1.5: sig mein cfg.at = har Save naya Rabta test
   const sig = [CF.on, CF.kind, CF.ip, CF.port, CF.user, CF.pw, CF.sub, Number(d0 && d0.at) || 0].join('|'); if (sig !== cfSig) { const first = !cfSig; cfSig = sig; AUTHBAD = 0; NETBAD = 0; netScanAt = 0; for (const [k, v] of known) if (v.st === 'err') known.set(k, { st: 'err', tries: 0, at: 0 }); if (CF.on && CF.ip) setTimeout(() => rabta().catch(e => log('⚠️ rabta: ' + e.message)), first ? 20000 : 1500); recStopAll('setting badli'); }
-  { const ds = (CF.xc || []).filter(x => x.ip).map(x => [x.ch, x.ip, x.port, x.u, x.pw, CF.onSw ? 1 : 0].join('|')).join(';') + '#' + (Number(d0 && d0.at) || 0); if (ds !== dcSig) { const first = !dcSig; dcSig = ds; DCBAD.clear(); DCT.clear(); for (const [ch, st] of recs) if (st.p && (ch >= 900 || dcOf(ch))) { try { st.p.kill(); } catch {} } if (CF.onSw && (CF.xc || []).some(x => x.ip)) setTimeout(() => dcTestAll().catch(e => log('⚠️ 🌐 test: ' + e.message)), first ? 25000 : 2500); } }   // v2.24: 🌐 seedha camera badla = dobara test + recording naye URL se
+  if (P2P) P2P.sync(CF.onSw ? (CF.xc || []).filter(x => x.sn) : [], log);   // v2.26: 🛰 serial wale camera ki surang (badla ho to hi dobara)
+  { const ds = (CF.xc || []).filter(x => x.ip).map(x => [x.ch, x.sn || x.ip, x.port, x.u, x.pw, CF.onSw ? 1 : 0].join('|')).join(';') + '#' + (Number(d0 && d0.at) || 0); if (ds !== dcSig) { const first = !dcSig; dcSig = ds; DCBAD.clear(); DCT.clear(); for (const [ch, st] of recs) if (st.p && (ch >= 900 || dcOf(ch))) { try { st.p.kill(); } catch {} } if (CF.onSw && (CF.xc || []).some(x => x.ip)) setTimeout(() => dcTestAll().catch(e => log('⚠️ 🌐 test: ' + e.message)), first ? 25000 : 2500); } }   // v2.24: 🌐 seedha camera badla = dobara test + recording naye URL se
   recSync(); ON0 = CF.on ? (Number(d0 && (d0.onAt || d0.at)) || Date.now()) : 0; log(`⚙️ setting: ${CF.on ? 'ON' : 'band'} · ${CF.kind} ${CF.ip || '(NVR ka IP nahi)'} · counters ${Object.keys(CF.ch).length} · ${CF.pre === 0 ? 'pehli item' : CF.pre + ' s'}+${CF.post} s`); kick(); }, e => log('⚠️ setting: ' + e.message));
 
 // ---------- haal (app ke liye) ----------
@@ -271,14 +279,15 @@ async function dcTestAll() {
   for (const x of (CF.xc || []).filter(v => v.ip)) {
     let ok = 0, err = '';
     if (/[\s/?#%]/.test(x.pw) || /[:@\s/?#%]/.test(x.u)) err = 'password mein / ? # % ya space hai — RTSP par nahi chalta; camera par sirf harf + number wala password';
+    else if (p2pWait(x.ch)) err = '🛰 ' + (p2pSt(x.ch).st === 'err' ? '' : '⏳ ') + p2pSt(x.ch).why;   // v2.26: surang abhi nahi bani — wajah
     else if (!(await tcp(x.ip, x.port, 3000))) err = `PC camera (${x.ip}:${x.port}) tak nahi pohanch raha — IP ghalat / camera band / alag network (server PC ${myIps().join(', ') || '?'})`;
     else { const out = path.join(TMP, 'dc-' + x.ch + '.mp4'); const r = await ffCut(liveUrl(x.ch), 2, out); try { fs.unlinkSync(out); } catch {} if (r.ok) ok = 1; else { const e = String(r.err || '').replace(/rtsp:\/\/[^@\s]*@/g, 'rtsp://****@'); err = dcHint(e); if (/401/.test(err)) DCBAD.set(x.ch, { at: Date.now(), err: '🌐 ' + x.n + ': ' + err }); } }
     DCT.set(x.ch, { at: Date.now(), ok, err });
-    log(`🔎 🌐 ${x.n} (${x.ip}): ${ok ? '✓ camera se seedhi video mili' : '✕ ' + err}`);
+    log(`🔎 ${x.sn ? '🛰' : '🌐'} ${x.n} (${x.sn ? 'serial' : x.ip}): ${ok ? '✓ camera se seedhi video mili' : '✕ ' + err}`);
   }
   pushSt(true); recSync();
 }
-const dcOut = () => (CF.xc || []).filter(x => x.ip).map(x => { const t = DCT.get(x.ch) || {}, b = DCBAD.get(x.ch), st = recs.get(x.ch); return { n: x.n, ch: x.ch, ip: x.ip, ok: t.ok ? 1 : 0, at: t.at || 0, err: String((b && b.err) || t.err || '').slice(0, 160), rec: st && st.p ? 1 : 0 }; });
+const dcOut = () => (CF.xc || []).filter(x => x.ip).map(x => { const t = DCT.get(x.ch) || {}, b = DCBAD.get(x.ch), st = recs.get(x.ch); const pw = x.sn && p2pWait(x.ch) ? p2pSt(x.ch) : null; return { n: x.n, ch: x.ch, ip: x.sn ? '🛰' : x.ip, ok: t.ok && !pw ? 1 : 0, at: (pw && pw.at) || t.at || 0, err: String((b && b.err) || (pw ? '🛰 ' + (pw.st === 'err' ? '' : '⏳ ') + pw.why : '') || t.err || '').slice(0, 160), rec: st && st.p ? 1 : 0 }; });
 
 // ---------- 🎞 LOCAL RECORDING (v2.0): har camera ki live sub-stream 1-1 min ke tukron mein (clip-rec\ch<N>\s-YYYYMMDD-HHMMSS.mp4) ----------
 const recs = new Map();   // ch → { p, at, errs, restarts, dead, lastErr }
@@ -300,7 +309,7 @@ function segList(ch) {   // [{f, t0, t1}] waqt ke mutabiq (file ke naam se — P
   return out;
 }
 function recStart(ch) {
-  if (recs.get(ch)?.p) return; const ff = ffPath(), dc = dcOf(ch); if (!ff || (dc ? (!CF.onSw || DCBAD.has(ch)) : (!CF.on || !CF.ip || AUTHBAD || NETBAD))) return;   // v2.24: 🌐 seedha camera NVR se azad
+  if (recs.get(ch)?.p) return; const ff = ffPath(), dc = dcOf(ch); if (!ff || (dc ? (!CF.onSw || DCBAD.has(ch) || p2pWait(ch)) : (!CF.on || !CF.ip || AUTHBAD || NETBAD))) return;   // v2.24: 🌐 seedha camera NVR se azad
   const dir = recDir(ch); fs.mkdirSync(dir, { recursive: true });
   const st = recs.get(ch) || { errs: 0, restarts: 0 }; recs.set(ch, st);
   // v2.4 🔗: isi rabte ki copy PC ke andar (udp 127.0.0.1:48500+ch, mpegts) — live-cam v1.2 wahi leti hai, NVR par doosra rabta nahi (NVR doosra nahi deta: live "error -138").
@@ -329,7 +338,7 @@ function recStopAll(why) { for (const [ch, st] of recs) if (st.p) { try { st.p.k
 function recSync() {   // jo channel setting mein hain wahi chalein; baqi band
   if (!cfReady) return;
   const nvrOk = CF.on && CF.ip && !AUTHBAD && !NETBAD;
-  const want = ffPath() ? recChannels().filter(ch => dcOf(ch) ? (CF.onSw && !DCBAD.has(ch)) : nvrOk) : [];   // v2.24: 🌐 seedha camera NVR ke haal se azad
+  const want = ffPath() ? recChannels().filter(ch => dcOf(ch) ? (CF.onSw && !DCBAD.has(ch) && !p2pWait(ch)) : nvrOk) : [];   // v2.24: 🌐 seedha camera NVR ke haal se azad
   for (const [ch, st] of recs) if (!want.includes(ch) && st.p) { try { st.p.kill(); } catch {} st.p = null; }
   for (const [ch, st] of recs) if (want.includes(ch) && st.p && st.sub !== subOf(ch)) { log(`🎞 rec ch ${ch}: ${subOf(ch) === 0 ? 'HD' : 'chhota'} stream par dobara`); st.errs = 0; try { st.p.kill(); } catch {} }   // v2.20: HD badla
   for (const ch of want) recStart(ch);
@@ -1340,7 +1349,7 @@ function caBad(now) {   // [{ch, n, why}] — jin ki recording ruki hai
     const dc = dcOf(ch); if (!dc && !CF.ip) continue;
     let last = 0; try { const l = segList(ch); last = l.length ? (l[l.length - 1].t1 || l[l.length - 1].t0 || 0) : 0; } catch {}
     const st = recs.get(ch); if (st && st.p && now - last < CA_STALE) continue; if (now - last < CA_STALE) continue;
-    const why = dc ? ((DCBAD.get(ch) || {}).err || dcHint((st && st.lastErr) || '') || 'camera se video nahi aa rahi') : AUTHBAD ? 'NVR ka password ghalat (401)' : NETBAD ? 'NVR tak rasta nahi' : hint((st && st.lastErr) || '') || 'video nahi aa rahi';
+    const why = dc ? ((DCBAD.get(ch) || {}).err || (p2pWait(ch) ? '🛰 serial wali line nahi bani — ' + p2pSt(ch).why : '') || dcHint((st && st.lastErr) || '') || 'camera se video nahi aa rahi') : AUTHBAD ? 'NVR ka password ghalat (401)' : NETBAD ? 'NVR tak rasta nahi' : hint((st && st.lastErr) || '') || 'video nahi aa rahi';
     out.push({ ch, n: nm.get(ch) || 'ch ' + ch, why: String(why).replace(/rtsp:\/\/\S+/g, '').slice(0, 110) });
   }
   return out;

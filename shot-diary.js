@@ -8,7 +8,7 @@
 // Video ka asal link screenshot mein nahi hota — likha ho to 🔗; warna video kis ki (@naam) + us ka profile / 🔎 dhoondo link.
 // Recipe = cheezein + tareeqa; bachon ka craft / cardboard = saman + qadam ('🤖 andaza' jab tasveer mein poora na ho).
 // AI: haan — sirf detail nikalne mein (malik ki Gemini key, A.aiImage). Phone par AI nahi.
-import { smartFind } from './dukan/dhoond.js?v=2.399.0';
+import { smartFind } from './dukan/dhoond.js?v=2.400.0';
 
 let A = null, S = null, NOTES = null, RUN = null, ST = '', BAD = new Set();
 const $ = id => document.getElementById(id);

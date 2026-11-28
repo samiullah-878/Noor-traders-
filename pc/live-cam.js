@@ -1,5 +1,5 @@
 // =========================================================
-//  live-cam.js  v2.11 (2026-11-28, malik: 'galla camera direct system mein'): 🌐 SEEDHA camera — billClip.xc[] par ip + pw (bill-clip v2.24) = live
+//  live-cam.js  v2.12 (2026-11-28 raat: 🛰 serial number wala camera — billClip.xc[].sn = 127.0.0.1:15000+ch (bill-clip v2.26 ki dh-p2p surang) · v2.11 (2026-11-28, malik: 'galla camera direct system mein'): 🌐 SEEDHA camera — billClip.xc[] par ip + pw (bill-clip v2.24) = live
 //    camera ke apne IP se (recording ki copy ho to wahi); NVR ka IP / 401 is par asar nahi, is ka 401 = sirf usi camera ka live ruka.
 //  v2.10 (2026-11-27, malik: 'live ki jo video ban rahi hai us par bhi lagao · rates nahi · fonts clear — background nazar aaye'):
 //    📼 sab cameras ki recording mein COUNTER khane par bill ki items (naam + tadad, rate KABHI nahi) — chhape bill (posSaleLines) se, har item apne
@@ -83,7 +83,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 if (require.main !== module && process.env.LIVE_MO_TEST) { module.exports = { moGrid, moFilter, srFilter, srBuild, srGrid, srTs, dlDiff, iceOf }; return; }   // v1.9: sirf test (sandbox) — doctor kabhi require nahi karta
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore } = require('firebase-admin/firestore');
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.11';
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47844, VER = '2.12';
 const CLIP_MODS = path.join(DIR, 'clip-mods'), MODS = path.join(DIR, 'live-mods');
 const WERIFT = 'werift@0.24.4';
 const MAX_V = 4;
@@ -187,7 +187,7 @@ biz.collection('blueAccess').doc('billClip').onSnapshot(s => {
   const d = s.exists ? s.data() || {} : {};
   CF = { on: d.on !== false && !!d.ip, onSw: d.on !== false, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), ch: (d.ch && typeof d.ch === 'object') ? d.ch : {},
-    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => { x = x || {}; const o = { n: String(x.n || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x.ch) || 0), r: x.r ? 1 : 0 }; const ip = String(x.ip || '').trim(); if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) { o.ip = ip; o.port = Math.max(1, Math.min(65535, Number(x.port) || 554)); o.u = String(x.u || 'admin').trim() || 'admin'; o.pw = String(x.pw || ''); } return o; }).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v1.8 · v2.11: 🌐 seedha camera (ip) — bill-clip v2.24 jaisa
+    xc: (Array.isArray(d.xc) ? d.xc : []).map(x => { x = x || {}; const o = { n: String(x.n || '').replace(/\s+/g, ' ').trim().slice(0, 30), ch: Math.floor(Number(x.ch) || 0), r: x.r ? 1 : 0 }; const ip = String(x.ip || '').trim(), sn = String(x.sn || '').trim().toUpperCase(); if (/^[A-Z0-9]{8,24}$/.test(sn) && o.ch >= 901 && o.ch <= 916) { o.sn = sn; o.ip = '127.0.0.1'; o.port = 15000 + o.ch; o.u = String(x.u || 'admin').trim() || 'admin'; o.pw = String(x.pw || ''); } else if (/^\d{1,3}(\.\d{1,3}){3}$/.test(ip)) { o.ip = ip; o.port = Math.max(1, Math.min(65535, Number(x.port) || 554)); o.u = String(x.u || 'admin').trim() || 'admin'; o.pw = String(x.pw || ''); } return o; }).filter(x => x.n && x.ch > 0 && x.ch < 1000).slice(0, 16),   // v1.8 · v2.11: 🌐 seedha camera (ip) — bill-clip v2.24 jaisa
     gc: (Array.isArray(d.gc) ? d.gc : []).map(x => ({ g: Math.floor(Number(x && x.g) || 0), c: String((x && x.c) || '').trim().slice(0, 30), i: Number(x && x.i) === 2 ? 2 : 1 })).filter(x => x.g > 0 && x.c && x.c !== '-') };   // v1.9: 🏬 gate pass godam camera
   try { CF.rdrv = require('./rec-dir.js').letter(d.rdrv); } catch { CF.rdrv = ''; }   // v2.3: 📼 sab cameras ki recording usi drive par
   const sig = [CF.kind, CF.ip, CF.port, CF.user, CF.pw, Number(d.at) || 0].join('|') + JSON.stringify(CF.xc.filter(x => x.ip));   // v2.11: 🌐 seedha camera badla = pipes dobara

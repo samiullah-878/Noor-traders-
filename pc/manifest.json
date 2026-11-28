@@ -1,5 +1,5 @@
 {
- "version": "2026-11-28.2",
+ "version": "2026-11-28.3",
  "note": "bill-clip v2.25: camera band = malik ko WhatsApp, har ghante (camAlarm)",
  "files": {
   "thermal-name.js": "862cee96f915cdfa15fb9ee357e0a282f083c9d3463cd7a71f35e6e58371d0d4",
@@ -102,9 +102,9 @@
   "rate-change-auto.bat": "d7200a332dba717aaceb9126e0d03b70efddc262832bd4e6f1ae57070c0b40f9",
   "wa-out.js": "22c0a7f83b1f6484f91ffaf48b128595d0c4229eecbf2c55f93c68317c2da4cb",
   "wa-out-auto.bat": "0e360898f98b844136dbe917ab27295ac020c0e79d59a2ec40e39c5e5aefde66",
-  "bill-clip.js": "0c296e7f3aabeafa2f9bfc748f0a01d902af3c2496a6731822cbdb5d91eb3ac1",
+  "bill-clip.js": "d28304b26ae39602db2a83764ad0106b0917606a74f8f4693dac223e33a02eb7",
   "bill-clip-auto.bat": "c6fa1db0ce55a1617105ee4fb3bc63978dd6741cbbf79694b720d8bf6265e8ce",
-  "live-cam.js": "affa7b15c7cad5bca49a0823551863194c8daafb623717d368518796ec0b2f9e",
+  "live-cam.js": "ed62e5800db754d71676f4b31331dee65533c1dc4f8befe47babfe5ffe623dd1",
   "live-cam-auto.bat": "3a2ca07837301b56b6a6982297e75aa615895f1f66a92475d2f3d4b5b19f1620",
   "pc-vault.js": "6c27772a3b21166eecabdf7079615a394b1a9831a11e3622330809d5ecdf3abd",
   "pc-vault-auto.bat": "c0d229711363b773afae13e395629bea306ac8ae4ccac509ee0cd049d2338fd7",
@@ -113,6 +113,7 @@
   "ginti-cam.js": "4d8ee003c2a208a877e374850c855ed42cd9d7a41f40abea2ef60e523ba5d93b",
   "ginti-cam-auto.bat": "a8ae2c822c216c9baed2bdc60b84f6c01f8779f67e48568113f8768954eb0464",
   "ginti-model.onnx": "9165d7df0307f609dce6f96fdf42f6063d70eaef08dfaf5b8b9dc69d8e3d42fc",
+  "dh-p2p.js": "3fb1a84e3c8ee8ae89f725d6aaf9cc1d9aac9b976543cbcb7c9fe8f736c772a0",
   "rec-dir.js": "53bac4de5a3bc05eacbad37209a1ff2c71ae5adca765d15852b93b344f4feb04",
   "ginti-ai.js": "a1af26412f8a48add1ab2f4004ed7500204f3896d53e1336e4646e825536cfcc",
   "ginti-pose.onnx": "0ad2f31a1a2b940f9c469dcd6e56ccc0275a61fd92756cc3c1cef9936e4c7058",
