@@ -67,7 +67,7 @@ const ZINDA = (() => { try { return require('./zinda.js')(__filename, {}); } cat
 const { initializeApp, cert, getApps } = require('firebase-admin/app');
 const { getFirestore, FieldValue } = require('firebase-admin/firestore');
 const RD = require('./rec-dir.js');   // v2.16: 💽 recording kahan
-const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.24';   // v2.24 (28 Nov, malik: 'galla camera direct system mein · recording bhi'): 🌐 SEEDHA camera — 📹 mazeed camera par IP + password (billClip.xc[].ip / pw, malik-only doc) = PC camera se seedha RTSP (NVR ke baghair): recording (wahi clip-rec\ch<901+>), live ki copy, 📸 tasveer, WhatsApp live / waqt ki video sab wahi; NVR ka 401 / rasta is par asar nahi, is ka 401 = sirf yeh camera ruka (DCBAD); Save par ek dafa 🔎 rabta test (billClipPc.dct). · v2.23 (24 Nov): sirf pc-names v1.2 ke liye dobara shuru (KEIME1D ka camera ab RN6QU6D ka) · v2.22 (23 Nov raat, malik: 'recording ko PC mein save karne ki zaroorat nahi — sab cameras ki screen record ho'): billClip.rkd 1 se kam = GHANTE (0.125 = 3 ghante, kam az kam 3) — har camera ki alag recording sirf bill / gate pass video ke liye; lambi recording = live-cam v2.3 ki 🎛 Sab cameras wali ek video (sab-rec).
+const DIR = __dirname, BUSINESS_ID = 'noor-traders', LOCK_PORT = 47843, VER = '2.25';   // v2.25 (28 Nov raat, malik: 'jab bhi camera ka setup na chale to WhatsApp par SMS aa jaye, har ghante baad'): 📲 camAlarm — recording 10 min ruki = malik ko waOut rp-cam-* (kaun sa camera · kab se · wajah), har 1 ghante dobara, theek = '✅ chal pare'; billClip.wa false = band; haal cam-alarm.json (restart par dohra nahi). · v2.24 (28 Nov, malik: 'galla camera direct system mein · recording bhi'): 🌐 SEEDHA camera — 📹 mazeed camera par IP + password (billClip.xc[].ip / pw, malik-only doc) = PC camera se seedha RTSP (NVR ke baghair): recording (wahi clip-rec\ch<901+>), live ki copy, 📸 tasveer, WhatsApp live / waqt ki video sab wahi; NVR ka 401 / rasta is par asar nahi, is ka 401 = sirf yeh camera ruka (DCBAD); Save par ek dafa 🔎 rabta test (billClipPc.dct). · v2.23 (24 Nov): sirf pc-names v1.2 ke liye dobara shuru (KEIME1D ka camera ab RN6QU6D ka) · v2.22 (23 Nov raat, malik: 'recording ko PC mein save karne ki zaroorat nahi — sab cameras ki screen record ho'): billClip.rkd 1 se kam = GHANTE (0.125 = 3 ghante, kam az kam 3) — har camera ki alag recording sirf bill / gate pass video ke liye; lambi recording = live-cam v2.3 ki 🎛 Sab cameras wali ek video (sab-rec).
 // v2.20 (22 Nov, malik: 'sab model lagao godam wale cameras mein · HD kar do'): 🎞 HD recording — godam ke camera (📦 ginti / 🚪 gate pass / naam se) khud MAIN stream (HD) par record (isHd), malik ⚙️ se har camera HD on/off (billClip.hdc [{ch, hd 0|1}] — list, merge mein poori badalti); counter camera pehle jaisa chhota · HD badla = us channel ki recording naye stream se dobara · 🏬 godam ka HAR WAQIA = video: gintiEv (ginti-cam v2.0: ⬆ / ⬇ maal, 🧍 uthaya) → us godam ke 1-2 camera (gpCam) t0 − 20 s → t1 + 20 s (6 min tak) → billClip/gv~<evId> (+ gv~<evId>b) · 📹 0 (transfer note bana magar camera ne kuch nahi gina) = note ke waqt − 30 s → + 5 min billClip/gv~d-<key> (ms 1) · apni line (gvRun), SIRF apni recording · haal billClipPc.gv.
 // v2.21 (22 Nov, malik: 'AI ko filhal band kar do'): gintiCam.ai (1 = chalu) na ho = godam camera ka AUTO HD band (halki recording) + 🏬 waqie ki nayi video nahi. Malik ka 🎞 HD chip (hdc) phir bhi chalta hai. Recording / bill / gate pass video wahi.
 // v2.19 (21 Nov, malik: 'aik hi godam par two cameras hain — dono side by side dikha diya karo'): 🚪 har godam par 2 camera (billClip.gc [{g, c, i 1|2}], auto = 📦 ginti + naam se jitne milein, 2 tak) — har camera ki apni clip (doosra = billClip/<SaleID>~g<godam>b, ci 2), dono ka WAHI waqt · WhatsApp (group + 'video <bill>') = EK video mein ek ke upar doosra (640x720), akela = 640x360 · patti camera ki ghari ke neeche (y0 48). gpm mein cam2 / how2 / r2.
@@ -103,7 +103,7 @@ function cfApply(d) {
   CF = { on: d.on !== false && !!d.ip, kind: /hik/i.test(d.kind || '') ? 'hik' : 'dahua', ip: String(d.ip || '').trim(), port: Math.max(1, Math.min(65535, Number(d.port) || 554)),
     user: String(d.user || 'admin').trim(), pw: String(d.pw || ''), sub: d.sub === 0 || d.sub === '0' ? 0 : 1,
     pre: d.pre === 0 || d.pre === '0' ? 0 : Math.max(10, Math.min(600, Number(d.pre) || 300)), post: Math.max(0, Math.min(90, Number(d.post) || 20)), rk: Number(d.rkd) > 0 && Number(d.rkd) < 1 ? Math.max(180, Math.round(Number(d.rkd) * 1440)) : (Number(d.rkd) > 0 ? Math.max(1, Math.min(90, Math.round(Number(d.rkd)))) : 10) * 1440, rdrv: RD.letter(d.rdrv), keep: Math.max(1, Math.min(7, Number(d.keep) || 2)),
-    onSw: d.on !== false, xc: xcParse(d.xc),   // v2.10: 📹 mazeed cameras · v2.24: 🌐 seedha camera (ip) — NVR ke baghair
+    onSw: d.on !== false, wa: d.wa !== false, xc: xcParse(d.xc),   // v2.10: 📹 mazeed cameras · v2.24: 🌐 seedha camera (ip) — NVR ke baghair
     ch: (d.ch && typeof d.ch === 'object') ? d.ch : {}, rep: /^\d{1,2}:\d{2}$/.test(String(d.rep || '')) ? String(d.rep) : '20:30', maxs: Math.max(30, Math.min(700, Number(d.maxs) || 630)),
     hdc: (Array.isArray(d.hdc) ? d.hdc : []).reduce((o, x) => { const ch = Math.floor(Number(x && x.ch) || 0); if (ch > 0 && ch < 1000 && x && (x.hd === 0 || x.hd === 1 || x.hd === '0' || x.hd === '1')) o[ch] = Number(x.hd) ? 1 : 0; return o; }, {}),   // v2.20: 🎞 HD on/off (malik) — na ho = auto (godam camera HD)
     gpv: d.gpv !== false, gc: (Array.isArray(d.gc) ? d.gc : []).reduce((o, x) => { const g = Math.floor(Number(x && x.g) || 0), c = String((x && x.c) || '').trim().slice(0, 30), i = Number(x && x.i) === 2 ? 1 : 0; if (g > 0 && g < 10000 && c) { const k = String(g); o[k] = o[k] || ['', '']; o[k][i] = c; } return o; }, {}) };   // v2.18: 🚪 godam ka camera [{g, c ('-' = koi nahi), i (v2.19: 1 | 2 — doosra camera)}] — list (merge mein poori badalti) → {g: [slot1, slot2]} ('' = auto)
@@ -1326,6 +1326,52 @@ async function cleanup() {
   } catch (e) { log('⚠️ safai: ' + e.message); }
 }
 
+// ---------- 📲 v2.25: CAMERA BAND = malik ko WhatsApp (har ghante jab tak theek na ho) ----------
+// 'band' = recording chahiye (system ON, camera list mein) magar pichhle 5 min ka koi tukra nahi. 10 min lagatar = pehla paigham, phir har 60 min;
+// sab chal parein (2 jaanch) = ek '✅'. Sirf malik (waParchi prFrom[0]) — number repo mein nahi. PC band / internet band = paigham nahi (us ke liye phone ka 🚨 Dukan nigrani).
+const CA_FILE = path.join(DIR, 'cam-alarm.json'), CA_FIRST = 10 * 60000, CA_EVERY = 60 * 60000, CA_STALE = 5 * 60000;
+let CA = (() => { try { return JSON.parse(fs.readFileSync(CA_FILE, 'utf8')) || {}; } catch { return {}; } })();
+const caSave = () => { try { fs.writeFileSync(CA_FILE, JSON.stringify(CA)); } catch {} };
+const caT = ms => { const d = new Date(ms + PK); let h = d.getUTCHours(); const ap = h < 12 ? 'am' : 'pm'; h = h % 12 || 12; return h + ':' + String(d.getUTCMinutes()).padStart(2, '0') + ' ' + ap; };
+function caNames() { const m = new Map(); for (const [k, v] of Object.entries(CF.ch || {})) if (Number(v) > 0) m.set(Number(v), '🖥 ' + k); for (const x of CF.xc || []) if (!m.has(x.ch)) m.set(x.ch, (x.ip ? '🌐 ' : '📹 ') + x.n); return m; }
+function caBad(now) {   // [{ch, n, why}] — jin ki recording ruki hai
+  if (!cfReady || !CF.onSw) return []; const nm = caNames(), out = [];
+  for (const ch of recChannels()) {
+    const dc = dcOf(ch); if (!dc && !CF.ip) continue;
+    let last = 0; try { const l = segList(ch); last = l.length ? (l[l.length - 1].t1 || l[l.length - 1].t0 || 0) : 0; } catch {}
+    const st = recs.get(ch); if (st && st.p && now - last < CA_STALE) continue; if (now - last < CA_STALE) continue;
+    const why = dc ? ((DCBAD.get(ch) || {}).err || dcHint((st && st.lastErr) || '') || 'camera se video nahi aa rahi') : AUTHBAD ? 'NVR ka password ghalat (401)' : NETBAD ? 'NVR tak rasta nahi' : hint((st && st.lastErr) || '') || 'video nahi aa rahi';
+    out.push({ ch, n: nm.get(ch) || 'ch ' + ch, why: String(why).replace(/rtsp:\/\/\S+/g, '').slice(0, 110) });
+  }
+  return out;
+}
+function caText(bad, since, now, again) {
+  const all = bad.length >= recChannels().length, w = [...new Set(bad.map(b => b.why))];
+  const net = !bad.every(b => dcOf(b.ch)) && NETBAD && NET ? `\nServer PC ${(NET.my || []).join(', ') || '?'} · NVR ${NET.ip || CF.ip}${NET.same ? '' : ' — ⚠️ dono alag network par'}` : '';
+  return [`🎥 *${all ? 'Sab cameras' : bad.length + ' camera'} ki recording BAND*${again ? ' (abhi tak)' : ''}`, `Kab se: ${caT(since)} (${Math.max(1, Math.round((now - since) / 60000))} min)`,
+    all && w.length === 1 ? 'Wajah: ' + w[0] : bad.slice(0, 8).map(b => `• ${b.n}: ${b.why}`).join('\n') + (bad.length > 8 ? `\n… aur ${bad.length - 8}` : ''), net.trim(),
+    'Bill ki video / live / recording ruki hai. Dekhein: Blue Khata → Bill tally ⋮ → ⚙️ Camera setup. Theek hone tak har ghante yaad.'].filter(Boolean).join('\n');
+}
+async function caTo() { try { const w = await biz.collection('blueAccess').doc('waParchi').get(); const f = w.exists ? w.data().prFrom : null; return String((Array.isArray(f) ? f[0] : f) || '').replace(/\D/g, ''); } catch { return ''; } }
+async function caPut(txt, tag) { const to = await caTo(); if (to.length < 10) { log('⚠️ 📲 camera alarm: malik ka number (WhatsApp setting ①) nahi'); return false; } const eid = 'rp-cam-' + tag; try { await biz.collection('waOut').doc(eid).create({ st: 'new', at: Date.now(), to, nm: 'Malik', kind: 'rem', eid, txt }); return true; } catch (e) { if (/exists/i.test(e.message)) return true; log('⚠️ 📲 camera alarm: ' + e.message); return false; } }
+let caBusy = false, caUp = Date.now();
+async function camAlarm() {
+  if (caBusy || !cfReady) return; const now = Date.now(); if (now - caUp < 3 * 60000) return;   // shuru ke 3 min: recording ko jurne do
+  caBusy = true;
+  try {
+    const bad = CF.wa === false ? [] : caBad(now);
+    if (bad.length) {
+      CA.ok = 0; if (!CA.since) { CA.since = now; CA.sent = 0; CA.n = 0; caSave(); }
+      const due = !CA.sent ? now - CA.since >= CA_FIRST : now - CA.sent >= CA_EVERY;
+      if (due && await caPut(caText(bad, CA.since, now, !!CA.sent), String(CA.since) + '-' + (CA.n || 0))) { CA.sent = now; CA.n = (CA.n || 0) + 1; caSave(); log(`📲 camera alarm malik ko (${bad.length} band, ${CA.n} dafa)`); }
+    } else if (CA.since) {
+      CA.ok = (CA.ok || 0) + 1;
+      if (CA.ok >= 2) { if (CA.sent && CF.wa !== false && CF.onSw) await caPut(`✅ *Cameras chal pare* — ${caT(now)}\nBand rahe: ${caT(CA.since)} se (${Math.max(1, Math.round((now - CA.since) / 60000))} min)`, String(CA.since) + '-ok'); CA = {}; caSave(); }
+    }
+  } catch (e) { log('⚠️ camAlarm: ' + e.message); }
+  caBusy = false;
+}
+
 // ---------- shaam ki ek line malik ko (waOut, naya number) ----------
 let repDay = '';
 async function report() {
@@ -1351,7 +1397,7 @@ async function main() {
   await loadKnown();
   fs.mkdirSync(REC, { recursive: true });
   pushSt(true);
-  setInterval(ZINDA.guard ? ZINDA.guard(() => { recTick(); recSync(); kick(); pushSt(); report(); }, 10 * 60000, 'tick') : () => { recTick(); recSync(); kick(); pushSt(); report(); }, 30000);
+  setInterval(ZINDA.guard ? ZINDA.guard(() => { recTick(); recSync(); kick(); pushSt(); report(); camAlarm(); }, 10 * 60000, 'tick') : () => { recTick(); recSync(); kick(); pushSt(); report(); camAlarm(); }, 30000);
   process.on('exit', () => recStopAll(''));
   setInterval(() => cleanup().catch(() => {}), 60 * 60000); setTimeout(() => cleanup().catch(() => {}), 90000);
   kick(); waOn = true; waKick();   // v2.8

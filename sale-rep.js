@@ -6,7 +6,7 @@
 // Data WAHI: posSales/<din> {bills[], sum} (PC pos-sales-dekho — nayi SQL nahi, PC ki koi file nahi badli). SIRF DIKHANA — Daily Sale ka hisaab is se nahi badalta.
 // sum ki raqam RUPAY mein (sum.amt PAISA); Daily ki raqam PAISA. AI NAHI.
 let C = null, DAY = '', DOC = undefined, stop = null, IT = undefined, stop2 = null, itQ = '', itTab = 'pl', itAsk = 0;
-import { smartFind } from './dukan/dhoond.js?v=2.398.0';
+import { smartFind } from './dukan/dhoond.js?v=2.399.0';
 const E = s => C.esc(String(s ?? ''));
 const R = x => C.money(Math.round((Number(x) || 0) * 100));          // rupay -> 'Rs …'
 const J = x => { try { const v = typeof x === 'string' ? JSON.parse(x) : x; return Array.isArray(v) ? v : []; } catch { return []; } };

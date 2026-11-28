@@ -6294,3 +6294,16 @@ PC live-cam v2.11: xc parse mein ip · liveUrl dcOf · srcSync seedhe camera ki 
    IP / 401 nahi dekhta · seedhe camera ka 401 baqi live ko nahi rokta.
 Test: node — xcParse / liveUrl / dcOf (Galla 901 + NVR ch 4 + ghalat IP), app IP parse (ip, ip:port, khali / ghalat). Asal camera par azmaya NAHI.
 Shart (malik ko bataya): server PC aur camera ek router / network par; IP DMSS -> galla -> Device info / Network; sirf Dahua. AI: nahi.
+
+=== v2.399.0 (2026-11-28 raat) — 📲 CAMERA BAND = MALIK KO WHATSAPP, HAR GHANTE · PC bill-clip v2.25 ===
+Malik (28 Nov 19:14, NVR ka network toota — recording 6:32 pm se band, pata der se chala): 'jab bhi camera ka setup na chale to WhatsApp par SMS aa jaye,
+jaise har ghanta baad' + plan par 'Ok ha'.
+PC bill-clip v2.25 `camAlarm` (har 30 s tick mein): caBad = recording chahiye (CF.onSw, recChannels) magar pichhle 5 min ka koi tukra nahi (segList) ->
+ 10 min lagatar = waOut `rp-cam-<since>-<n>` {kind rem, to = waParchi.prFrom[0]} : kaun sa camera (🖥 counter / 📹 mazeed / 🌐 seedha) · kab se · wajah
+ (AUTHBAD / NETBAD + server PC / NVR ke IP 'alag network' / DCBAD / hint) -> har 60 min dobara '(abhi tak)' -> sab chal parein (2 jaanch) = '✅ Cameras chal pare'.
+ Haal cam-alarm.json (restart / naye din ke exit par dohra nahi; create() + pakka id). Shuru ke 3 min chup (recording jurne do). Number repo mein nahi.
+App tally.js ⚙️ Camera setup: chip '📲 Band ho to WhatsApp' (billClip.wa, na ho = ON).
+Hadd (malik ko bataya): PC band / PC ka internet band = paigham nahi (phone ka 🚨 Dukan nigrani). Sirf malik ko. AI nahi. Asal PC par azmaya nahi.
+Saath ka waqia (sabaq): maine 🌐 seedha camera ke liye likha 'server PC aur camera ek router par hon' — NVR ka network isi shaam toota (NVR main router par
+ static 192.168.10.7 jo us router ka network hi nahi; PC doosre router 192.168.1.x par). Malik ne NVR ko DHCP -> 192.168.0.101 Static kiya; PC se rasta
+ ab bhi nahi (subah NVR ki taar PC wale router mein + naya IP app mein). 'Ek network par' kehte waqt saaf likho KIS ko hilana hai (camera, PC nahi).
